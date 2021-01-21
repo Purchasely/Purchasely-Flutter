@@ -1,3 +1,5 @@
+![Purchasely](images/icon.png)
+
 # Purchasely
 
 Purchasely is a solution to ease the integration and boost your In-App Purchase & Subscriptions on the App Store, Google Play Store and Huawei App Gallery.
