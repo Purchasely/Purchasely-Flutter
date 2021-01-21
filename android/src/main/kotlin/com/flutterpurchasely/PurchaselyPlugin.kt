@@ -1,4 +1,4 @@
-package com.purchasely.flutter.purchasely
+package com.flutterpurchasely
 
 import android.app.Activity
 import android.content.Context
@@ -22,9 +22,6 @@ import io.purchasely.ext.*
 import io.purchasely.models.PLYPlan
 import io.purchasely.models.PLYProduct
 import kotlinx.coroutines.*
-import kotlin.IllegalStateException
-import kotlin.coroutines.resumeWithException
-import kotlin.coroutines.suspendCoroutine
 
 /** PurchaselyPlugin */
 class PurchaselyPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, CoroutineScope {
