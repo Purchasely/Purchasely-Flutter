@@ -25,6 +25,7 @@ class _MyAppState extends State<MyApp> {
     try {
       await Purchasely.startWithApiKey(
           'afa96c76-1d8e-4e3c-a48f-204a3cd93a15', ['Google']);
+      Purchasely.setLogLevel(LogLevel.debug);
       String anonymousId = await Purchasely.anonymousUserId;
       print('Anonymous Id : $anonymousId');
       Map<dynamic, dynamic> product =

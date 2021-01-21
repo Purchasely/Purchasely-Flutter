@@ -43,9 +43,9 @@ class Purchasely {
     return await _channel.invokeMethod("userLogout");
   }
 
-  static Future<bool> setLogLevel(int logLevel) async {
-    final bool restored = await _channel
-        .invokeMethod('setLogLevel', <String, dynamic>{'logLevel': logLevel});
+  static Future<bool> setLogLevel(LogLevel logLevel) async {
+    final bool restored = await _channel.invokeMethod('setLogLevel',
+        <String, dynamic>{'logLevel': logLevel.toString().split('.').last});
     return restored;
   }
 
@@ -100,3 +100,5 @@ class Purchasely {
     subscription.cancel();
   }
 }
+
+enum LogLevel { debug, info, warn, error }
