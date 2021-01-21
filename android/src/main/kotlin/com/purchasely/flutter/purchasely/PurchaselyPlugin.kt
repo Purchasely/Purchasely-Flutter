@@ -91,7 +91,7 @@ class PurchaselyPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, Corouti
             }
             "userLogout" -> userLogout()
             "setLogLevel" -> {
-                setLogLevel(call.argument<Int>("logLevel"))
+                setLogLevel(call.argument<String>("logLevel"))
                 result.success(true)
             }
             "isReadyToPurchase" -> {
@@ -247,8 +247,13 @@ class PurchaselyPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, Corouti
         Purchasely.userLogout()
     }
 
-    private fun setLogLevel(logLevel: Int?) {
-        Purchasely.logLevel = LogLevel.values()[logLevel ?: 0]
+    private fun setLogLevel(logLevel: String?) {
+        Purchasely.logLevel = when(logLevel) {
+            LOG_LEVEL_DEBUG -> LogLevel.DEBUG
+            LOG_LEVEL_INFO -> LogLevel.INFO
+            LOG_LEVEL_WARN -> LogLevel.WARN
+            else -> LogLevel.ERROR
+        }
     }
 
     private fun isReadyToPurchase(readyToPurchase: Boolean?) {
@@ -307,6 +312,10 @@ class PurchaselyPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, Corouti
             presentationResult = null
         }
 
+        private const val LOG_LEVEL_DEBUG = "debug"
+        private const val LOG_LEVEL_INFO = "info"
+        private const val LOG_LEVEL_WARN = "warn"
+        private const val LOG_LEVEL_ERROR = "error"
     }
 
     private fun getStoresInstances(stores: List<String>?): ArrayList<Store> {
