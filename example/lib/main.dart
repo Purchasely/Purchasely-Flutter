@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
 
-import 'package:flutter/services.dart';
 import 'package:purchasely/purchasely.dart';
 
 void main() {
@@ -17,21 +16,25 @@ class _MyAppState extends State<MyApp> {
   @override
   void initState() {
     super.initState();
-    initPlatformState();
+    initPurchaselySdk();
   }
 
   // Platform messages are asynchronous, so we initialize in an async method.
-  Future<void> initPlatformState() async {
+  Future<void> initPurchaselySdk() async {
     try {
-      Purchasely.startWithApiKey(
-          'afa96c76-1d8e-4e3c-a48f-204a3cd93a15', ['Google']);
+      Purchasely.startWithApiKey('afa96c76-1d8e-4e3c-a48f-204a3cd93a15',
+          ['Google'], null, LogLevel.error);
+
       Purchasely.setLogLevel(LogLevel.debug);
       String anonymousId = await Purchasely.anonymousUserId;
       print('Anonymous Id : $anonymousId');
+
       Map<dynamic, dynamic> product =
           await Purchasely.productWithIdentifier("PURCHASELY_PLUS");
       print('Product is $product');
+
       Purchasely.listenToEvents();
+
       var subscriptions = await Purchasely.userSubscriptions();
       subscriptions.forEach((element) {
         print('Subscription : $element');

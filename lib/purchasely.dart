@@ -8,10 +8,14 @@ class Purchasely {
 
   static var subscription;
 
-  static Future<void> startWithApiKey(
-      String apiKey, List<String> stores) async {
-    await _channel.invokeMethod('startWithApiKey',
-        <String, dynamic>{'apiKey': apiKey, 'stores': stores});
+  static Future<void> startWithApiKey(String apiKey, List<String> stores,
+      String userId, LogLevel logLevel) async {
+    await _channel.invokeMethod('startWithApiKey', <String, dynamic>{
+      'apiKey': apiKey,
+      'stores': stores,
+      'userId': userId,
+      'logLevel': logLevel.toString().split('.').last
+    });
   }
 
   static Future<Map<dynamic, dynamic>> presentProductWithIdentifier(
@@ -35,7 +39,7 @@ class Purchasely {
 
   static Future<bool> userLogin(String userId) async {
     final bool restored = await _channel
-        .invokeMethod('setAppUserId', <String, dynamic>{'userId': userId});
+        .invokeMethod('userLogin', <String, dynamic>{'userId': userId});
     return restored;
   }
 
@@ -78,6 +82,10 @@ class Purchasely {
 
   static Future<void> presentSubscriptions() async {
     _channel.invokeMethod('presentSubscriptions');
+  }
+
+  static Future<void> displaySubscriptionCancellationInstruction() async {
+    _channel.invokeMethod('displaySubscriptionCancellationInstruction');
   }
 
   static Future<List> userSubscriptions() async {
