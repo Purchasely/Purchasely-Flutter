@@ -62,7 +62,8 @@ class PurchaselyPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, Corouti
     override fun onMethodCall(@NonNull call: MethodCall, @NonNull result: Result) {
         when(call.method) {
             "startWithApiKey" -> {
-                startWithApiKey(call.argument<String>("apiKey"), call.argument<List<String>>("stores"))
+                startWithApiKey(call.argument<String>("apiKey"), call.argument<List<String>>("stores"),
+                        call.argument<String>("userId"), call.argument<String>("logLevel"))
                 result.success(true)
             }
             "close" -> {
@@ -135,15 +136,19 @@ class PurchaselyPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, Corouti
     }
 
     //region Purchasely
-    private fun startWithApiKey(apiKey: String?, stores: List<String>?) {
+    private fun startWithApiKey(apiKey: String?, stores: List<String>?,
+                                userId: String?, logLevel: String?) {
         if(apiKey == null) throw IllegalArgumentException("Api key must not be null")
 
       Purchasely.Builder(context)
               .apiKey(apiKey)
               .stores(getStoresInstances(stores))
               .logLevel(LogLevel.DEBUG)
+              .userId(userId)
               .build()
               .start()
+
+        setLogLevel(logLevel)
     }
 
     private fun close() {
