@@ -98,9 +98,9 @@ class Purchasely {
         .invokeMethod('handle', <String, dynamic>{'deeplink': deepLink});
   }
 
-  static void listenToEvents() {
+  static void listenToEvents(Function block) {
     subscription = _stream.receiveBroadcastStream().listen((event) {
-      print('Event $event');
+      block(event);
     });
   }
 

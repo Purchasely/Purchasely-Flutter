@@ -33,7 +33,9 @@ class _MyAppState extends State<MyApp> {
           await Purchasely.productWithIdentifier("PURCHASELY_PLUS");
       print('Product is $product');
 
-      Purchasely.listenToEvents();
+      Purchasely.listenToEvents((event) {
+        print('Event : $event');
+      });
 
       var subscriptions = await Purchasely.userSubscriptions();
       subscriptions.forEach((element) {
