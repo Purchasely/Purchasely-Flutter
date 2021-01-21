@@ -23,7 +23,7 @@ class _MyAppState extends State<MyApp> {
   // Platform messages are asynchronous, so we initialize in an async method.
   Future<void> initPlatformState() async {
     try {
-      await Purchasely.startWithApiKey(
+      Purchasely.startWithApiKey(
           'afa96c76-1d8e-4e3c-a48f-204a3cd93a15', ['Google']);
       Purchasely.setLogLevel(LogLevel.debug);
       String anonymousId = await Purchasely.anonymousUserId;

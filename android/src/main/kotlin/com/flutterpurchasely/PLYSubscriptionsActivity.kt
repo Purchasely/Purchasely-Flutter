@@ -1,4 +1,4 @@
-package com.purchasely.flutter.purchasely
+package com.flutterpurchasely
 
 import android.os.Bundle
 import androidx.fragment.app.FragmentActivity

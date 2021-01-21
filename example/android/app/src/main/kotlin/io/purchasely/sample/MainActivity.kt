@@ -1,4 +1,4 @@
-package com.purchasely.flutter.purchasely_example
+package io.purchasely.sample
 
 import io.flutter.embedding.android.FlutterFragmentActivity
 

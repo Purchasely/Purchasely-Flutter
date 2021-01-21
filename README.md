@@ -1,15 +1,33 @@
-# purchasely
+# Purchasely
 
-A new flutter plugin project.
+Purchasely is a solution to ease the integration and boost your In-App Purchase & Subscriptions on the App Store, Google Play Store and Huawei App Gallery.
 
-## Getting Started
+## Installation
 
-This project is a starting point for a Flutter
-[plug-in package](https://flutter.dev/developing-packages/),
-a specialized package that includes platform-specific implementation code for
-Android and/or iOS.
+```
+dependencies:
+  purchasely: ^0.0.1
+```
 
-For help getting started with Flutter, view our
-[online documentation](https://flutter.dev/docs), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Usage
 
+```dart
+import 'package:purchasely/purchasely.dart';
+
+// ...
+
+Purchasely.startWithAPIKey(
+  'afa96c76-1d8e-4e3c-a48f-204a3cd93a15',
+  ['Google'],
+  null,
+  LogLevels.WARNING
+);
+
+var data = await Purchasely.presentProductWithIdentifier(
+            'PURCHASELY_PLUS', null
+          );
+print('Result : $data');
+```
+
+## 🏁 Documentation
+A complete documentation is available on our website [https://docs.purchasely.com](https://docs.purchasely.com)

@@ -1,5 +1,5 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-  package="com.purchasely.flutter.purchasely">
+  package="com.flutterpurchasely">
 
     <application>
         <activity android:name=".PLYProductActivity" android:theme="@style/Theme.AppCompat.Light.NoActionBar" />

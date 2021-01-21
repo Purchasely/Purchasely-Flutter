@@ -1,4 +1,4 @@
-group 'com.purchasely.flutter.purchasely'
+group 'com.flutterpurchasely'
 version '1.0-SNAPSHOT'
 
 buildscript {
@@ -9,7 +9,7 @@ buildscript {
     }
 
     dependencies {
-        classpath 'com.android.tools.build:gradle:4.1.1'
+        classpath 'com.android.tools.build:gradle:4.1.2'
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
     }
 }
