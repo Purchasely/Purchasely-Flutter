@@ -70,9 +70,8 @@ class PurchaselyPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, Corouti
                 close()
                 result.success(true)
             }
-            "presentProductWithIdentifier" -> {
-                presentProductWithIdentifier(
-                        call.argument<String>("productVendorId"),
+            "presentPresentationWithIdentifier" -> {
+                presentPresentationWithIdentifier(
                         call.argument<String>("presentationVendorId")
                 )
                 presentationResult = result
@@ -155,13 +154,9 @@ class PurchaselyPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, Corouti
         Purchasely.close()
     }
 
-    private fun presentProductWithIdentifier(
-            productVendorId: String?,
-            presentationVendorId: String?) {
-        if(productVendorId == null) throw IllegalArgumentException("productVendorId must not be null")
+    private fun presentPresentationWithIdentifier(presentationVendorId: String?) {
 
         val intent = Intent(context, PLYProductActivity::class.java)
-        intent.putExtra("productId", productVendorId)
         intent.putExtra("presentationId", presentationVendorId)
         activity?.startActivity(intent)
     }
