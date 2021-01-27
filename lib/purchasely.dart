@@ -18,13 +18,10 @@ class Purchasely {
     });
   }
 
-  static Future<Map<dynamic, dynamic>> presentProductWithIdentifier(
-      String productVendorId, String presentationVendorId) async {
-    return await _channel.invokeMethod(
-        'presentProductWithIdentifier', <String, dynamic>{
-      'productVendorId': productVendorId,
-      'presentationVendorId': presentationVendorId
-    });
+  static Future<Map<dynamic, dynamic>> presentPresentationWithIdentifier(
+      String presentationVendorId) async {
+    return await _channel.invokeMethod('presentPresentationWithIdentifier',
+        <String, dynamic>{'presentationVendorId': presentationVendorId});
   }
 
   static Future<bool> restoreAllProducts() async {

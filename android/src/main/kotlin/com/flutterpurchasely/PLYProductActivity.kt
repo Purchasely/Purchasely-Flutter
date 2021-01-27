@@ -14,20 +14,11 @@ class PLYProductActivity : FragmentActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_ply_product_activity)
 
-        val productId = intent.extras?.getString("productId") ?: let {
-            supportFinishAfterTransition()
-            return
-        }
         val presentationId = intent.extras?.getString("presentationId")
 
-        val fragment: Fragment = Purchasely.productFragment(
-                productId,
-                presentationId,
-                object: ProductViewResultListener {
-                    override fun onResult(result: PLYProductViewResult, plan: PLYPlan?) {
-                        PurchaselyPlugin.sendPresentationResult(result, plan)
-                    }
-                })
+        val fragment: Fragment = Purchasely.presentationFragment(presentationId) { result, plan ->
+            PurchaselyPlugin.sendPresentationResult(result, plan)
+        }
 
         supportFragmentManager
                 .beginTransaction()
