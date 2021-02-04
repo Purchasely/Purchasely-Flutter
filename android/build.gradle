@@ -2,7 +2,7 @@ group 'com.flutterpurchasely'
 version '1.0-SNAPSHOT'
 
 buildscript {
-    ext.kotlin_version = '1.4.21'
+    ext.kotlin_version = '1.4.30'
     repositories {
         google()
         jcenter()
@@ -44,5 +44,5 @@ dependencies {
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.4.1'
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.4.1'
 
-    api 'io.purchasely:core:2.2.0'
+    api 'io.purchasely:core:2.2.2'
 }

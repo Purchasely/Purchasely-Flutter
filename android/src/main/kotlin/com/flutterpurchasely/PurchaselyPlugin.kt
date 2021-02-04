@@ -76,6 +76,28 @@ class PurchaselyPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, Corouti
                 )
                 presentationResult = result
             }
+            "presentProductWithIdentifier" -> {
+                val productId = call.argument<String>("productVendorId") ?: let {
+                    result.error("-1", "product vendor id must not be null", null)
+                    return
+                }
+                presentProductWithIdentifier(
+                        productId,
+                        call.argument<String>("presentationVendorId")
+                )
+                presentationResult = result
+            }
+            "presentPlanWithIdentifier" -> {
+                val planId = call.argument<String>("planVendorId") ?: let {
+                    result.error("-1", "plan vendor id must not be null", null)
+                    return
+                }
+                presentPlanWithIdentifier(
+                        planId,
+                        call.argument<String>("presentationVendorId")
+                )
+                presentationResult = result
+            }
             "restoreAllProducts" -> restoreAllProducts(result)
             "getAnonymousUserId" -> result.success(getAnonymousUserId())
             "userLogin" -> {
@@ -158,6 +180,20 @@ class PurchaselyPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, Corouti
 
         val intent = Intent(context, PLYProductActivity::class.java)
         intent.putExtra("presentationId", presentationVendorId)
+        activity?.startActivity(intent)
+    }
+
+    private fun presentProductWithIdentifier(productVendorId: String, presentationVendorId: String?) {
+        val intent = Intent(context, PLYProductActivity::class.java)
+        intent.putExtra("presentationId", presentationVendorId)
+        intent.putExtra("productId", productVendorId)
+        activity?.startActivity(intent)
+    }
+
+    private fun presentPlanWithIdentifier(planVendorId: String, presentationVendorId: String?) {
+        val intent = Intent(context, PLYProductActivity::class.java)
+        intent.putExtra("presentationId", presentationVendorId)
+        intent.putExtra("planId", planVendorId)
         activity?.startActivity(intent)
     }
 
