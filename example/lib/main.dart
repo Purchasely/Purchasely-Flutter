@@ -53,7 +53,8 @@ class _MyAppState extends State<MyApp> {
 
   Future<void> displayPresentation() async {
     try {
-      var data = await Purchasely.presentPresentationWithIdentifier(null);
+      var data = await Purchasely.presentProductWithIdentifier(
+          "PURCHASELY_PLUS", null);
       print('Result : $data');
     } catch (e) {
       print(e);
