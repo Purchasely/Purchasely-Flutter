@@ -41,6 +41,24 @@ class _MyAppState extends State<MyApp> {
       subscriptions.forEach((element) {
         print('Subscription : $element');
       });
+
+      var products = await Purchasely.allProducts();
+      products.forEach((element) {
+        print('Product : $element');
+      });
+
+      Purchasely.setDefaultPresentationResultCallback(
+          (Map<dynamic, dynamic> value) {
+        print('Default with $value');
+      });
+
+      Purchasely.setLoginTappedCallback(() {
+        Purchasely.onUserLoggedIn(true);
+      });
+
+      Purchasely.setPurchaseCompletionCallback(() {
+        Purchasely.processToPayment(true);
+      });
     } catch (e) {
       print(e);
     }

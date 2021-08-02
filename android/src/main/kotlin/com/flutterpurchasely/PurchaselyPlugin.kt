@@ -22,6 +22,9 @@ import io.purchasely.ext.*
 import io.purchasely.models.PLYPlan
 import io.purchasely.models.PLYProduct
 import kotlinx.coroutines.*
+import io.purchasely.ext.Purchasely
+import io.purchasely.ext.Purchasely.purchaseListener
+
 
 /** PurchaselyPlugin */
 class PurchaselyPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, CoroutineScope {
@@ -29,8 +32,8 @@ class PurchaselyPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, Corouti
     ///
     /// This local reference serves to register the plugin with the Flutter Engine and unregister it
     /// when the Flutter Engine is detached from the Activity
-    private lateinit var channel : MethodChannel
     private lateinit var eventChannel: EventChannel
+    private lateinit var purchaseChannel: EventChannel
 
     private lateinit var context: Context
     private var activity: Activity? = null
@@ -41,6 +44,7 @@ class PurchaselyPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, Corouti
         context = flutterPluginBinding.applicationContext
 
         eventChannel = EventChannel(flutterPluginBinding.binaryMessenger, "purchasely-events")
+        purchaseChannel = EventChannel(flutterPluginBinding.binaryMessenger, "purchasely-purchases")
 
         eventChannel.setStreamHandler(object: EventChannel.StreamHandler {
             override fun onListen(arguments: Any?, events: EventChannel.EventSink?) {
@@ -57,19 +61,39 @@ class PurchaselyPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, Corouti
             }
 
         })
+
+        purchaseChannel.setStreamHandler(object: EventChannel.StreamHandler {
+            override fun onListen(arguments: Any?, events: EventChannel.EventSink?) {
+                Purchasely.purchaseListener =
+                    object: PurchaseListener {
+                        override fun onPurchaseStateChanged(state: State) {
+                            if (state is State.PurchaseComplete || state is State.RestorationComplete) {
+                                events?.success(null);
+                            }
+                        }
+                    }
+            }
+
+            override fun onCancel(arguments: Any?) {
+                Purchasely.purchaseListener = null
+            }
+
+        })
     }
 
     override fun onMethodCall(@NonNull call: MethodCall, @NonNull result: Result) {
         when(call.method) {
             "startWithApiKey" -> {
                 startWithApiKey(call.argument<String>("apiKey"), call.argument<List<String>>("stores"),
-                        call.argument<String>("userId"), call.argument<String>("logLevel"))
+                        call.argument<String>("userId"), call.argument<Int>("logLevel"))
                 result.success(true)
             }
             "close" -> {
                 close()
                 result.success(true)
             }
+            "setDefaultPresentationResultHandler" -> setDefaultPresentationResultHandler(result)
+            "synchronize" -> synchronize()
             "presentPresentationWithIdentifier" -> {
                 presentPresentationWithIdentifier(
                         call.argument<String>("presentationVendorId")
@@ -105,12 +129,11 @@ class PurchaselyPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, Corouti
                     result.error("-1", "user id must not be null", null)
                     return
                 }
-                userLogin(userId)
-                result.success(true)
+                userLogin(userId, result)
             }
             "userLogout" -> userLogout()
             "setLogLevel" -> {
-                setLogLevel(call.argument<String>("logLevel"))
+                setLogLevel(call.argument<Int>("logLevel"))
                 result.success(true)
             }
             "isReadyToPurchase" -> {
@@ -145,11 +168,17 @@ class PurchaselyPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, Corouti
                     }
                 }
             }
+            "allProducts" -> launch { allProducts(result) }
             "purchaseWithPlanVendorId" -> purchaseWithPlanVendorId(call.argument<String>("vendorId"), result)
             "displaySubscriptionCancellationInstruction" -> displaySubscriptionCancellationInstruction()
             "handle" -> handle(call.argument<String>("deeplink"), result)
             "userSubscriptions" -> launch { userSubscriptions(result) }
             "presentSubscriptions" -> presentSubscriptions()
+            "setAttribute" -> setAttribute(call.argument<Int>("attribute"), call.argument<String>("value"))
+            "setLoginTappedHandler" -> setLoginTappedHandler(result)
+            "onUserLoggedIn" -> onUserLoggedIn(call.argument<Boolean>("userLoggedIn") ?: false)
+            "setConfirmPurchaseHandler" -> setConfirmPurchaseHandler(result)
+            "processToPayment" -> processToPayment(call.argument<Boolean>("processToPayment") ?: false)
             else -> {
                 result.notImplemented()
             }
@@ -158,18 +187,19 @@ class PurchaselyPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, Corouti
 
     //region Purchasely
     private fun startWithApiKey(apiKey: String?, stores: List<String>?,
-                                userId: String?, logLevel: String?) {
+                                userId: String?, logLevel: Int?) {
         if(apiKey == null) throw IllegalArgumentException("Api key must not be null")
 
-      Purchasely.Builder(context)
+        Purchasely.Builder(context)
               .apiKey(apiKey)
               .stores(getStoresInstances(stores))
-              .logLevel(LogLevel.DEBUG)
+              .logLevel(LogLevel.values()[logLevel ?: 0])
               .userId(userId)
               .build()
-              .start()
 
-        setLogLevel(logLevel)
+        Purchasely.appTechnology = PLYAppTechnology.FLUTTER
+
+        Purchasely.start()
     }
 
     private fun close() {
@@ -198,67 +228,35 @@ class PurchaselyPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, Corouti
     }
 
     private fun restoreAllProducts(result: Result) {
-        val listener = object: PurchaseListener {
-            override fun onPurchaseStateChanged(state: State) {
-                when(state) {
-                    is State.RestorationComplete -> {
-                        Purchasely.purchaseListener = null
-                        result.success(true)
-                    }
-                    is State.RestorationFailed -> {
-                        Purchasely.purchaseListener = null
-                        result.error("-1", state.error.message, state.error)
-                    }
-                    is State.RestorationNoProducts -> {
-                        Purchasely.purchaseListener = null
-                        result.success(false)
-                    }
-                    is State.Error -> {
-                        Purchasely.purchaseListener = null
-                        state.error?.let {
-                            result.error("-1", it.message, it)
-                        } ?: let {
-                            result.error("-1", "Unknown error", null)
-                        }
-                    }
-                    else -> {
-                        //do nothing
-                    }
+        Purchasely.restoreAllProducts(
+            success = { plan ->
+                result.success(true)
+            }, error = { error ->
+                error?.let {
+                    result.error("-1", it.message, it)
+                } ?: let {
+                    result.error("-1", "Unknown error", null)
                 }
             }
-        }
-
-        Purchasely.restoreAllProducts(listener)
+        )
     }
 
     private fun purchaseWithPlanVendorId(planVendorId: String?, result: Result) {
-        val listener = object: PurchaseListener {
-            override fun onPurchaseStateChanged(state: State) {
-                when(state) {
-                    is State.PurchaseComplete -> {
-                        Purchasely.purchaseListener = null
-                        result.success(state.plan?.toMap())
-                    }
-                    is State.PurchaseFailed -> {
-                        Purchasely.purchaseListener = null
-                        result.error("-1", state.error.message, state.error)
-                    }
-                    is State.Error -> {
-                        Purchasely.purchaseListener = null
-                        result.error("-1", state.error?.message, state.error)
-                    }
-                    else -> {
-                        //do nothing
-                    }
-                }
-            }
-        }
-
         launch {
             try {
-                val plan = Purchasely.getPlan(planVendorId ?: "")
+                val plan = Purchasely.plan(planVendorId ?: "")
                 if(plan != null && activity != null) {
-                    Purchasely.purchase(activity!!, plan, listener)
+                    Purchasely.purchase(activity!!, plan,
+                        success = {
+                            result.success(it?.toMap())
+                        }, error = { error ->
+                            error?.let {
+                                result.error("-1", it.message, it)
+                            } ?: let {
+                                result.error("-1", "Unknown error", null)
+                            }
+                        }
+                    )
                 } else {
                     result.error("-1","plan $planVendorId not found", null)
                 }
@@ -272,33 +270,52 @@ class PurchaselyPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, Corouti
         return Purchasely.anonymousUserId
     }
 
-    private fun userLogin(userId: String) {
-        Purchasely.userLogin(userId)
+    private fun userLogin(userId: String, result: Result) {
+        Purchasely.userLogin(userId) { refresh -> result.success(refresh) }
     }
 
     private fun userLogout() {
         Purchasely.userLogout()
     }
 
-    private fun setLogLevel(logLevel: String?) {
-        Purchasely.logLevel = when(logLevel) {
-            LOG_LEVEL_DEBUG -> LogLevel.DEBUG
-            LOG_LEVEL_INFO -> LogLevel.INFO
-            LOG_LEVEL_WARN -> LogLevel.WARN
-            else -> LogLevel.ERROR
-        }
+    private fun setLogLevel(logLevel: Int?) {
+        Purchasely.logLevel = LogLevel.values()[logLevel ?: 0]
     }
 
     private fun isReadyToPurchase(readyToPurchase: Boolean?) {
         Purchasely.isReadyToPurchase = readyToPurchase ?: true
     }
 
+    private fun setDefaultPresentationResultHandler(result: Result) {
+        defaultPresentationResult = result
+        Purchasely.setDefaultPresentationResultHandler { result2, plan ->
+            sendPresentationResult(result2, plan)
+        }
+    }
+
+    private fun synchronize() {
+        Purchasely.synchronize()
+    }
+
     private suspend fun productWithIdentifier(vendorId: String?) : PLYProduct? {
-        return Purchasely.getProduct(vendorId ?: "")
+        return Purchasely.product(vendorId ?: "")
     }
 
     private suspend fun planWithIdentifier(vendorId: String?) : PLYPlan? {
-        return Purchasely.getPlan(vendorId ?: "")
+        return Purchasely.plan(vendorId ?: "")
+    }
+
+    private suspend fun allProducts(result: Result) {
+        try {
+            val products = Purchasely.allProducts()
+            val list = arrayListOf<Map<String, Any?>>()
+            for (product in products) {
+                list.add(product.toMap())
+            }
+            result.success(list)
+        } catch (e: Exception) {
+            result.error("-1", e.message, e)
+        }
     }
 
     private fun handle(deeplink: String?, result: Result) {
@@ -319,7 +336,7 @@ class PurchaselyPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, Corouti
 
     private suspend fun userSubscriptions(result: Result) {
         try {
-            val subscriptions = Purchasely.getUserSubscriptions()
+            val subscriptions = Purchasely.userSubscriptions()
             val list = arrayListOf<Map<String, Any?>>()
             for (data in subscriptions) {
                 list.add(data.toMap())
@@ -335,20 +352,56 @@ class PurchaselyPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, Corouti
         activity?.startActivity(intent)
     }
 
+    private fun setAttribute(attribute: Int?, value: String?) {
+        value?.let { Purchasely.setAttribute(Attribute.values()[attribute ?: 0], it) }
+    }
+
+    private fun setLoginTappedHandler(result: Result) {
+        Purchasely.setLoginTappedHandler { _, refreshPresentation ->
+            loginCompletionHandler = refreshPresentation
+            result.success(null)
+        }
+    }
+
+    private fun onUserLoggedIn(userLoggedIn: Boolean) {
+        loginCompletionHandler?.invoke(userLoggedIn)
+    }
+
+    private fun setConfirmPurchaseHandler(result: Result) {
+        Purchasely.setConfirmPurchaseHandler { _, processToPayment ->
+            processToPaymentHandler = processToPayment
+            result.success(null)
+        }
+    }
+
+    private fun processToPayment(processToPayment: Boolean) {
+        activity?.runOnUiThread {
+            processToPaymentHandler?.invoke(processToPayment)
+        }
+    }
+
     //endregion
 
     companion object {
         var presentationResult: Result? = null
+        var defaultPresentationResult: Result? = null
+        var loginCompletionHandler: PLYLoginCompletionHandler? = null
+        var processToPaymentHandler: PLYProcessToPaymentHandler? = null
+        private lateinit var channel : MethodChannel
 
         fun sendPresentationResult(result: PLYProductViewResult, plan: PLYPlan?) {
-            presentationResult?.success(mapOf(Pair("result", result.name), Pair("plan", plan?.toMap() ?: emptyMap())))
-            presentationResult = null
-        }
+            if(presentationResult != null) {
+                presentationResult?.success(
+                    mapOf(Pair("result", result.name), Pair("plan", plan?.toMap() ?: emptyMap()))
+                )
+                presentationResult = null
+            } else if(defaultPresentationResult != null) {
+                defaultPresentationResult?.success(
+                    mapOf(Pair("result", result.name), Pair("plan", plan?.toMap() ?: emptyMap()))
+                )
+            }
 
-        private const val LOG_LEVEL_DEBUG = "debug"
-        private const val LOG_LEVEL_INFO = "info"
-        private const val LOG_LEVEL_WARN = "warn"
-        private const val LOG_LEVEL_ERROR = "error"
+        }
     }
 
     private fun getStoresInstances(stores: List<String>?): ArrayList<Store> {
