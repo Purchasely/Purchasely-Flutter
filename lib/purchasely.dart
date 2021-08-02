@@ -5,8 +5,10 @@ import 'package:flutter/services.dart';
 class Purchasely {
   static const MethodChannel _channel = const MethodChannel('purchasely');
   static const EventChannel _stream = EventChannel('purchasely-events');
+  static const EventChannel _purchases = EventChannel('purchasely-purchases');
 
-  static var subscription;
+  static var events;
+  static var purchases;
 
   static Future<void> startWithApiKey(String apiKey, List<String> stores,
       String userId, LogLevel logLevel) async {
@@ -14,7 +16,7 @@ class Purchasely {
       'apiKey': apiKey,
       'stores': stores,
       'userId': userId,
-      'logLevel': logLevel.toString().split('.').last
+      'logLevel': logLevel.index
     });
   }
 
@@ -63,8 +65,8 @@ class Purchasely {
   }
 
   static Future<bool> setLogLevel(LogLevel logLevel) async {
-    final bool restored = await _channel.invokeMethod('setLogLevel',
-        <String, dynamic>{'logLevel': logLevel.toString().split('.').last});
+    final bool restored = await _channel.invokeMethod(
+        'setLogLevel', <String, dynamic>{'logLevel': logLevel.index});
     return restored;
   }
 
@@ -95,6 +97,11 @@ class Purchasely {
     return product;
   }
 
+  static Future<List> allProducts() async {
+    final List products = await _channel.invokeMethod('allProducts');
+    return products;
+  }
+
   static Future<void> presentSubscriptions() async {
     _channel.invokeMethod('presentSubscriptions');
   }
@@ -114,14 +121,108 @@ class Purchasely {
   }
 
   static void listenToEvents(Function block) {
-    subscription = _stream.receiveBroadcastStream().listen((event) {
+    events = _stream.receiveBroadcastStream().listen((event) {
       block(event);
     });
   }
 
   static void stopListeningToEvents() {
-    subscription.cancel();
+    events.cancel();
+  }
+
+  static void listenToPurchases(Function block) {
+    purchases = _purchases.receiveBroadcastStream().listen((event) {
+      block(event);
+    });
+  }
+
+  static void stopListeningToPurchases() {
+    purchases.cancel();
+  }
+
+  static Future<void> setAttribute(Attribute attribute, String value) async {
+    return await _channel.invokeMethod('setAttribute',
+        <String, dynamic>{'attribute': attribute.index, 'value': value});
+  }
+
+  static Future<void> synchronize() async {
+    return await _channel.invokeMethod('synchronize');
+  }
+
+  static Future<Map<dynamic, dynamic>>
+      setDefaultPresentationResultHandler() async {
+    return await _channel.invokeMethod('setDefaultPresentationResultHandler');
+  }
+
+  static Future<Map<dynamic, dynamic>> purchasedSubscription() async {
+    return await _channel.invokeMethod('purchasedSubscription');
+  }
+
+  static Future<void> setLoginTappedHandler() async {
+    return await _channel.invokeMethod('setLoginTappedHandler');
+  }
+
+  static Future<void> onUserLoggedIn(bool userLoggedIn) async {
+    return await _channel.invokeMethod(
+        'onUserLoggedIn', <String, dynamic>{'userLoggedIn': userLoggedIn});
+  }
+
+  static Future<void> setConfirmPurchaseHandler() async {
+    return await _channel.invokeMethod('setConfirmPurchaseHandler');
+  }
+
+  static Future<void> processToPayment(bool processToPayment) async {
+    return await _channel.invokeMethod('processToPayment', <String, dynamic>{
+      'processToPaymesetLoginTappedCallbacknt': processToPayment
+    });
+  }
+
+  static void setDefaultPresentationResultCallback(Function callback) {
+    setDefaultPresentationResultHandler().then((value) {
+      setDefaultPresentationResultCallback(callback);
+      try {
+        callback();
+      } catch (e) {
+        print('[Purchasely] Error with callback for default presentation result handler: $e');
+      }
+    });
+  }
+
+  static void setLoginTappedCallback(Function callback) {
+    setLoginTappedHandler().then((value) {
+      setLoginTappedCallback(callback);
+      try {
+        callback();
+      } catch (e) {
+        print('[Purchasely] Error with callback for loggin tapped handler: $e');
+      }
+    });
+  }
+
+  static void setPurchaseCompletionCallback(Function callback) {
+    setConfirmPurchaseHandler().then((value) {
+      setPurchaseCompletionCallback(callback);
+      try {
+        callback();
+      } catch (e) {
+        print(
+            '[Purchasely] Error with callback for confirm purchase handler: $e');
+      }
+    });
   }
 }
 
 enum LogLevel { debug, info, warn, error }
+enum Attribute {
+  amplitude_session_id,
+  firebase_app_instance_id,
+  airship_channel_id
+}
+enum PurchaseResult { purchased, cancelled, restored }
+enum SubscriptionSource {
+  appleAppStore,
+  googlePlayStore,
+  amazonAppstore,
+  huaweiAppGallery,
+  none
+}

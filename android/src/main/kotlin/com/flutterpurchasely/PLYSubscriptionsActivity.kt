@@ -1,10 +1,12 @@
 package com.flutterpurchasely
 
 import android.os.Bundle
+import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.FragmentActivity
+import io.purchasely.ext.Purchasely
 import io.purchasely.views.subscriptions.PLYSubscriptionsFragment
 
-class PLYSubscriptionsActivity : FragmentActivity() {
+class PLYSubscriptionsActivity : AppCompatActivity() {
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
@@ -12,8 +14,15 @@ class PLYSubscriptionsActivity : FragmentActivity() {
 
     supportFragmentManager
       .beginTransaction()
-      .replace(R.id.fragmentContainer, PLYSubscriptionsFragment())
-      .commit()
+      .addToBackStack(null)
+      .replace(R.id.fragmentContainer, Purchasely.subscriptionsFragment(), "SubscriptionsFragment")
+      .commitAllowingStateLoss()
+
+    supportFragmentManager.addOnBackStackChangedListener {
+      if(supportFragmentManager.backStackEntryCount == 0) {
+        supportFinishAfterTransition()
+      }
+    }
   }
 
 }
