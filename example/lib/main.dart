@@ -22,10 +22,19 @@ class _MyAppState extends State<MyApp> {
   // Platform messages are asynchronous, so we initialize in an async method.
   Future<void> initPurchaselySdk() async {
     try {
-      Purchasely.startWithApiKey('afa96c76-1d8e-4e3c-a48f-204a3cd93a15',
-          ['Google'], null, LogLevel.error);
+      bool configured = await Purchasely.startWithApiKey(
+          'afa96c76-1d8e-4e3c-a48f-204a3cd93a15',
+          ['Google'],
+          null,
+          LogLevel.error);
+
+      if (!configured) {
+        print('Purchasely SDK not configured');
+        return;
+      }
 
       Purchasely.setLogLevel(LogLevel.debug);
+
       String anonymousId = await Purchasely.anonymousUserId;
       print('Anonymous Id : $anonymousId');
 
@@ -72,7 +81,7 @@ class _MyAppState extends State<MyApp> {
   Future<void> displayPresentation() async {
     try {
       var data = await Purchasely.presentProductWithIdentifier(
-          "PURCHASELY_PLUS", null);
+          "PURCHASELY_PLUS", null, 'my_content_id');
       print('Result : $data');
     } catch (e) {
       print(e);
@@ -89,8 +98,8 @@ class _MyAppState extends State<MyApp> {
 
   Future<void> purchase() async {
     try {
-      Map<dynamic, dynamic> plan =
-          await Purchasely.purchaseWithPlanVendorId('PURCHASELY_PLUS_MONTHLY');
+      Map<dynamic, dynamic> plan = await Purchasely.purchaseWithPlanVendorId(
+          'PURCHASELY_PLUS_MONTHLY', 'my_content_id');
       print('Plan is $plan');
     } catch (e) {
       print(e);

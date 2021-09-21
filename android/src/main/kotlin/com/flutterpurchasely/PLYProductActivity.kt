@@ -17,18 +17,22 @@ class PLYProductActivity : FragmentActivity() {
         val presentationId = intent.extras?.getString("presentationId")
         val productId = intent.extras?.getString("productId")
         val planId = intent.extras?.getString("planId")
+        val contentId = intent.extras?.getString("contentId")
 
         val fragment = when {
             planId.isNullOrEmpty().not() -> Purchasely.planFragment(
                     planId,
                     presentationId,
+                    contentId,
                     callback)
             productId.isNullOrEmpty().not() -> Purchasely.productFragment(
                     productId,
                     presentationId,
+                    contentId,
                     callback)
             else -> Purchasely.presentationFragment(
                     presentationId,
+                    contentId,
                     callback)
         }
 
