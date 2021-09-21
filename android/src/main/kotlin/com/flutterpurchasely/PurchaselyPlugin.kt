@@ -23,7 +23,6 @@ import io.purchasely.models.PLYPlan
 import io.purchasely.models.PLYProduct
 import kotlinx.coroutines.*
 import io.purchasely.ext.Purchasely
-import io.purchasely.ext.Purchasely.purchaseListener
 
 
 /** PurchaselyPlugin */
@@ -85,8 +84,7 @@ class PurchaselyPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, Corouti
         when(call.method) {
             "startWithApiKey" -> {
                 startWithApiKey(call.argument<String>("apiKey"), call.argument<List<String>>("stores"),
-                        call.argument<String>("userId"), call.argument<Int>("logLevel"))
-                result.success(true)
+                        call.argument<String>("userId"), call.argument<Int>("logLevel"), result)
             }
             "close" -> {
                 close()
@@ -96,7 +94,8 @@ class PurchaselyPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, Corouti
             "synchronize" -> synchronize()
             "presentPresentationWithIdentifier" -> {
                 presentPresentationWithIdentifier(
-                        call.argument<String>("presentationVendorId")
+                        call.argument<String>("presentationVendorId"),
+                        call.argument<String>("contentId")
                 )
                 presentationResult = result
             }
@@ -107,7 +106,8 @@ class PurchaselyPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, Corouti
                 }
                 presentProductWithIdentifier(
                         productId,
-                        call.argument<String>("presentationVendorId")
+                        call.argument<String>("presentationVendorId"),
+                        call.argument<String>("contentId")
                 )
                 presentationResult = result
             }
@@ -118,7 +118,8 @@ class PurchaselyPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, Corouti
                 }
                 presentPlanWithIdentifier(
                         planId,
-                        call.argument<String>("presentationVendorId")
+                        call.argument<String>("presentationVendorId"),
+                        call.argument<String>("contentId")
                 )
                 presentationResult = result
             }
@@ -169,7 +170,10 @@ class PurchaselyPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, Corouti
                 }
             }
             "allProducts" -> launch { allProducts(result) }
-            "purchaseWithPlanVendorId" -> purchaseWithPlanVendorId(call.argument<String>("vendorId"), result)
+            "purchaseWithPlanVendorId" -> purchaseWithPlanVendorId(
+                call.argument<String>("vendorId"),
+                call.argument<String>("contentId"),
+                result)
             "displaySubscriptionCancellationInstruction" -> displaySubscriptionCancellationInstruction()
             "handle" -> handle(call.argument<String>("deeplink"), result)
             "userSubscriptions" -> launch { userSubscriptions(result) }
@@ -186,8 +190,10 @@ class PurchaselyPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, Corouti
     }
 
     //region Purchasely
-    private fun startWithApiKey(apiKey: String?, stores: List<String>?,
-                                userId: String?, logLevel: Int?) {
+    private fun startWithApiKey(
+        apiKey: String?, stores: List<String>?,
+        userId: String?, logLevel: Int?,
+        result: Result) {
         if(apiKey == null) throw IllegalArgumentException("Api key must not be null")
 
         Purchasely.Builder(context)
@@ -199,31 +205,39 @@ class PurchaselyPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, Corouti
 
         Purchasely.appTechnology = PLYAppTechnology.FLUTTER
 
-        Purchasely.start()
+        Purchasely.start { result.success(it) }
     }
 
     private fun close() {
         Purchasely.close()
     }
 
-    private fun presentPresentationWithIdentifier(presentationVendorId: String?) {
+    private fun presentPresentationWithIdentifier(presentationVendorId: String?,
+                                                  contentId: String?) {
 
         val intent = Intent(context, PLYProductActivity::class.java)
         intent.putExtra("presentationId", presentationVendorId)
+        intent.putExtra("contentId", contentId)
         activity?.startActivity(intent)
     }
 
-    private fun presentProductWithIdentifier(productVendorId: String, presentationVendorId: String?) {
+    private fun presentProductWithIdentifier(productVendorId: String,
+                                             presentationVendorId: String?,
+                                             contentId: String?) {
         val intent = Intent(context, PLYProductActivity::class.java)
         intent.putExtra("presentationId", presentationVendorId)
         intent.putExtra("productId", productVendorId)
+        intent.putExtra("contentId", contentId)
         activity?.startActivity(intent)
     }
 
-    private fun presentPlanWithIdentifier(planVendorId: String, presentationVendorId: String?) {
+    private fun presentPlanWithIdentifier(planVendorId: String,
+                                          presentationVendorId: String?,
+                                          contentId: String?) {
         val intent = Intent(context, PLYProductActivity::class.java)
         intent.putExtra("presentationId", presentationVendorId)
         intent.putExtra("planId", planVendorId)
+        intent.putExtra("contentId", contentId)
         activity?.startActivity(intent)
     }
 
@@ -241,12 +255,14 @@ class PurchaselyPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, Corouti
         )
     }
 
-    private fun purchaseWithPlanVendorId(planVendorId: String?, result: Result) {
+    private fun purchaseWithPlanVendorId(planVendorId: String?,
+                                         contentId: String?,
+                                         result: Result) {
         launch {
             try {
                 val plan = Purchasely.plan(planVendorId ?: "")
                 if(plan != null && activity != null) {
-                    Purchasely.purchase(activity!!, plan,
+                    Purchasely.purchase(activity!!, plan, contentId,
                         success = {
                             result.success(it?.toMap())
                         }, error = { error ->

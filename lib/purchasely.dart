@@ -10,7 +10,7 @@ class Purchasely {
   static var events;
   static var purchases;
 
-  static Future<void> startWithApiKey(String apiKey, List<String> stores,
+  static Future<bool> startWithApiKey(String apiKey, List<String> stores,
       String userId, LogLevel logLevel) async {
     await _channel.invokeMethod('startWithApiKey', <String, dynamic>{
       'apiKey': apiKey,
@@ -21,26 +21,35 @@ class Purchasely {
   }
 
   static Future<Map<dynamic, dynamic>> presentPresentationWithIdentifier(
-      String presentationVendorId) async {
-    return await _channel.invokeMethod('presentPresentationWithIdentifier',
-        <String, dynamic>{'presentationVendorId': presentationVendorId});
+      String presentationVendorId, String contentId) async {
+    return await _channel.invokeMethod(
+        'presentPresentationWithIdentifier', <String, dynamic>{
+      'presentationVendorId': presentationVendorId,
+      'contentId': contentId
+    });
   }
 
   static Future<Map<dynamic, dynamic>> presentProductWithIdentifier(
-      String productVendorId, String presentationVendorId) async {
-    return await _channel.invokeMethod(
-        'presentPresentationWithIdentifier', <String, dynamic>{
+      String productVendorId,
+      String presentationVendorId,
+      String contentId) async {
+    return await _channel
+        .invokeMethod('presentPresentationWithIdentifier', <String, dynamic>{
       'productVendorId': productVendorId,
-      'presentationVendorId': presentationVendorId
+      'presentationVendorId': presentationVendorId,
+      'contentId': contentId
     });
   }
 
   static Future<Map<dynamic, dynamic>> presentPlanWithIdentifier(
-      String planVendorId, String presentationVendorId) async {
+      String planVendorId,
+      String presentationVendorId,
+      String contentId) async {
     return await _channel
         .invokeMethod('presentPresentationWithIdentifier', <String, dynamic>{
       'planVendorId': planVendorId,
       'presentationVendorId': presentationVendorId,
+      'contentId': contentId
     });
   }
 
@@ -91,9 +100,12 @@ class Purchasely {
   }
 
   static Future<Map<dynamic, dynamic>> purchaseWithPlanVendorId(
-      String vendorId) async {
+      String vendorId, String contentId) async {
     final Map<dynamic, dynamic> product = await _channel.invokeMethod(
-        'purchaseWithPlanVendorId', <String, dynamic>{'vendorId': vendorId});
+        'purchaseWithPlanVendorId', <String, dynamic>{
+          'vendorId': vendorId,
+          'contentId': contentId
+        });
     return product;
   }
 
@@ -183,7 +195,8 @@ class Purchasely {
       try {
         callback();
       } catch (e) {
-        print('[Purchasely] Error with callback for default presentation result handler: $e');
+        print(
+            '[Purchasely] Error with callback for default presentation result handler: $e');
       }
     });
   }
