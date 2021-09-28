@@ -21,7 +21,8 @@ class Purchasely {
   }
 
   static Future<Map<dynamic, dynamic>> presentPresentationWithIdentifier(
-      String presentationVendorId, String contentId) async {
+      String presentationVendorId,
+      [String contentId]) async {
     return await _channel.invokeMethod(
         'presentPresentationWithIdentifier', <String, dynamic>{
       'presentationVendorId': presentationVendorId,
@@ -31,8 +32,8 @@ class Purchasely {
 
   static Future<Map<dynamic, dynamic>> presentProductWithIdentifier(
       String productVendorId,
-      String presentationVendorId,
-      String contentId) async {
+      [String presentationVendorId,
+      String contentId]) async {
     return await _channel
         .invokeMethod('presentPresentationWithIdentifier', <String, dynamic>{
       'productVendorId': productVendorId,
@@ -43,8 +44,8 @@ class Purchasely {
 
   static Future<Map<dynamic, dynamic>> presentPlanWithIdentifier(
       String planVendorId,
-      String presentationVendorId,
-      String contentId) async {
+      [String presentationVendorId,
+      String contentId]) async {
     return await _channel
         .invokeMethod('presentPresentationWithIdentifier', <String, dynamic>{
       'planVendorId': planVendorId,
@@ -99,13 +100,11 @@ class Purchasely {
     return product;
   }
 
-  static Future<Map<dynamic, dynamic>> purchaseWithPlanVendorId(
-      String vendorId, String contentId) async {
+  static Future<Map<dynamic, dynamic>> purchaseWithPlanVendorId(String vendorId,
+      [String contentId]) async {
     final Map<dynamic, dynamic> product = await _channel.invokeMethod(
-        'purchaseWithPlanVendorId', <String, dynamic>{
-          'vendorId': vendorId,
-          'contentId': contentId
-        });
+        'purchaseWithPlanVendorId',
+        <String, dynamic>{'vendorId': vendorId, 'contentId': contentId});
     return product;
   }
 
@@ -238,4 +237,11 @@ enum SubscriptionSource {
   amazonAppstore,
   huaweiAppGallery,
   none
+}
+enum PlanType {
+  consumable,
+  nonConsumable,
+  autoRenewingSubscription,
+  nonRenewingSubscription,
+  unknown
 }

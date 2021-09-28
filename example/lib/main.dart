@@ -81,7 +81,7 @@ class _MyAppState extends State<MyApp> {
   Future<void> displayPresentation() async {
     try {
       var data = await Purchasely.presentProductWithIdentifier(
-          "PURCHASELY_PLUS", null, 'my_content_id');
+          "PURCHASELY_PLUS");
       print('Result : $data');
     } catch (e) {
       print(e);
@@ -99,7 +99,7 @@ class _MyAppState extends State<MyApp> {
   Future<void> purchase() async {
     try {
       Map<dynamic, dynamic> plan = await Purchasely.purchaseWithPlanVendorId(
-          'PURCHASELY_PLUS_MONTHLY', 'my_content_id');
+          'PURCHASELY_PLUS_MONTHLY');
       print('Plan is $plan');
     } catch (e) {
       print(e);
