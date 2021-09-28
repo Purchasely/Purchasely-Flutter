@@ -205,7 +205,13 @@ class PurchaselyPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, Corouti
 
         Purchasely.appTechnology = PLYAppTechnology.FLUTTER
 
-        Purchasely.start { result.success(it) }
+        Purchasely.start { isConfigured, error ->
+            if(isConfigured) {
+                result.success(true)
+            } else {
+                result.error("0", error?.message ?: "Purchasely SDK not configured", error)
+            }
+        }
     }
 
     private fun close() {
