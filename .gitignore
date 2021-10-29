@@ -9,4 +9,6 @@ build/
 .idea/
 android/.idea
 
+.vscode/
+
 doc/
