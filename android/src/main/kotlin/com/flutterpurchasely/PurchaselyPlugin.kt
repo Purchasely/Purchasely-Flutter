@@ -23,6 +23,7 @@ import io.purchasely.models.PLYPlan
 import io.purchasely.models.PLYProduct
 import kotlinx.coroutines.*
 import io.purchasely.ext.Purchasely
+import java.lang.ref.WeakReference
 
 
 /** PurchaselyPlugin */
@@ -379,32 +380,57 @@ class PurchaselyPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, Corouti
     }
 
     private fun setLoginTappedHandler(result: Result) {
-        Purchasely.setLoginTappedHandler { _, refreshPresentation ->
+        Purchasely.setLoginTappedHandler { purchaselyActivity, refreshPresentation ->
             loginCompletionHandler = refreshPresentation
+            activity?.let {
+                it.startActivity(Intent(purchaselyActivity, it::class.java).apply {
+                    flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
+                })
+            }
             result.success(null)
         }
     }
 
     private fun onUserLoggedIn(userLoggedIn: Boolean) {
-        loginCompletionHandler?.invoke(userLoggedIn)
+        launch {
+            if(productActivity?.relaunch(activity) == false) {
+                //wait for activity to relaunch
+                withContext(Dispatchers.Default) { delay(500) }
+            }
+            productActivity?.activity?.get()?.runOnUiThread {
+                loginCompletionHandler?.invoke(userLoggedIn)
+            }
+        }
     }
 
     private fun setConfirmPurchaseHandler(result: Result) {
-        Purchasely.setConfirmPurchaseHandler { _, processToPayment ->
+        Purchasely.setConfirmPurchaseHandler { purchaselyActivity, processToPayment ->
             processToPaymentHandler = processToPayment
+            activity?.let {
+                it.startActivity(Intent(purchaselyActivity, it::class.java).apply {
+                    flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
+                })
+            }
             result.success(null)
         }
     }
 
     private fun processToPayment(processToPayment: Boolean) {
-        activity?.runOnUiThread {
-            processToPaymentHandler?.invoke(processToPayment)
+        launch {
+            if(productActivity?.relaunch(activity) == false) {
+                //wait for activity to relaunch
+                withContext(Dispatchers.Default) { delay(500) }
+            }
+            productActivity?.activity?.get()?.runOnUiThread {
+                processToPaymentHandler?.invoke(processToPayment)
+            }
         }
     }
 
     //endregion
 
     companion object {
+        var productActivity: ProductActivity? = null
         var presentationResult: Result? = null
         var defaultPresentationResult: Result? = null
         var loginCompletionHandler: PLYLoginCompletionHandler? = null
@@ -470,4 +496,36 @@ class PurchaselyPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, Corouti
 
     private val job = SupervisorJob()
     override val coroutineContext = job + Dispatchers.Main
+
+    class ProductActivity(
+        val presentationId: String? = null,
+        val productId: String? = null,
+        val planId: String? = null,
+        val contentId: String? = null) {
+
+        var activity: WeakReference<PLYProductActivity>? = null
+
+        fun relaunch(flutterActivity: Activity?) : Boolean {
+            if(flutterActivity == null) return false
+
+            val backgroundActivity = activity?.get()
+            return if(backgroundActivity != null
+                && !backgroundActivity.isFinishing) {
+                flutterActivity.startActivity(
+                    Intent(flutterActivity, backgroundActivity::class.java).apply {
+                        flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
+                    }
+                )
+                true
+            } else {
+                val intent = PLYProductActivity.newIntent(flutterActivity)
+                intent.putExtra("presentationId", presentationId)
+                intent.putExtra("productId", productId)
+                intent.putExtra("planId", planId)
+                intent.putExtra("contentId", contentId)
+                flutterActivity.startActivity(intent)
+                return false
+            }
+        }
+    }
 }
