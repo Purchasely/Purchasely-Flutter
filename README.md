@@ -25,10 +25,12 @@ Purchasely.startWithAPIKey(
   LogLevels.WARNING
 );
 
-var data = await Purchasely.presentProductWithIdentifier(
-            'PURCHASELY_PLUS', null
-          );
-print('Result : $data');
+var result = await Purchasely.presentProductWithIdentifier("PURCHASELY_PLUS");
+if (result['result'] == PurchaseResult.cancelled) {
+  print("User cancelled purchased");
+} else {
+  print("User purchased " + result['plan']['name']);
+}
 ```
 
 ## 🏁 Documentation

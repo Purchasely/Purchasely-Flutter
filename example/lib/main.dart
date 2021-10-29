@@ -26,14 +26,14 @@ class _MyAppState extends State<MyApp> {
           'afa96c76-1d8e-4e3c-a48f-204a3cd93a15',
           ['Google'],
           null,
-          LogLevel.error);
+          LogLevel.debug);
 
       if (!configured) {
         print('Purchasely SDK not configured');
         return;
       }
 
-      Purchasely.setLogLevel(LogLevel.debug);
+      //Purchasely.setLogLevel(LogLevel.debug);
 
       String anonymousId = await Purchasely.anonymousUserId;
       print('Anonymous Id : $anonymousId');
@@ -62,11 +62,14 @@ class _MyAppState extends State<MyApp> {
       });
 
       Purchasely.setLoginTappedCallback(() {
+        print('login tapped handler');
+        Purchasely.userLogin('user_id');
         Purchasely.onUserLoggedIn(true);
       });
 
       Purchasely.setPurchaseCompletionCallback(() {
-        Purchasely.processToPayment(true);
+        //display your screen
+        print('Purchase completion handler');
       });
     } catch (e) {
       print(e);
@@ -80,9 +83,14 @@ class _MyAppState extends State<MyApp> {
 
   Future<void> displayPresentation() async {
     try {
-      var data = await Purchasely.presentProductWithIdentifier(
-          "PURCHASELY_PLUS");
-      print('Result : $data');
+      var result =
+          await Purchasely.presentProductWithIdentifier("PURCHASELY_PLUS");
+      print('Result : $result');
+      if (result['result'] == PurchaseResult.cancelled) {
+        print("User cancelled purchased");
+      } else {
+        print("User purchased " + result['plan']['name']);
+      }
     } catch (e) {
       print(e);
     }
@@ -96,10 +104,14 @@ class _MyAppState extends State<MyApp> {
     }
   }
 
+  Future<void> continuePurchase() async {
+    Purchasely.processToPayment(true);
+  }
+
   Future<void> purchase() async {
     try {
-      Map<dynamic, dynamic> plan = await Purchasely.purchaseWithPlanVendorId(
-          'PURCHASELY_PLUS_MONTHLY');
+      Map<dynamic, dynamic> plan =
+          await Purchasely.purchaseWithPlanVendorId('PURCHASELY_PLUS_MONTHLY');
       print('Plan is $plan');
     } catch (e) {
       print(e);
@@ -139,6 +151,15 @@ class _MyAppState extends State<MyApp> {
                 displayPresentation();
               },
               child: Text('Display presentation'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                padding: EdgeInsets.only(left: 20.0, right: 30.0),
+              ),
+              onPressed: () {
+                continuePurchase();
+              },
+              child: Text('Continue purchase'),
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(

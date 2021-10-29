@@ -12,7 +12,7 @@ class Purchasely {
 
   static Future<bool> startWithApiKey(String apiKey, List<String> stores,
       String userId, LogLevel logLevel) async {
-    await _channel.invokeMethod('startWithApiKey', <String, dynamic>{
+    return await _channel.invokeMethod('startWithApiKey', <String, dynamic>{
       'apiKey': apiKey,
       'stores': stores,
       'userId': userId,
@@ -80,10 +80,9 @@ class Purchasely {
     return restored;
   }
 
-  static Future<bool> isReadyToPurchase(bool readyToPurchase) async {
-    final bool restored = await _channel.invokeMethod('isReadyToPurchase',
+  static Future<void> isReadyToPurchase(bool readyToPurchase) async {
+    _channel.invokeMethod('isReadyToPurchase',
         <String, dynamic>{'readyToPurchase': readyToPurchase});
-    return restored;
   }
 
   static Future<Map<dynamic, dynamic>> productWithIdentifier(
@@ -184,7 +183,7 @@ class Purchasely {
 
   static Future<void> processToPayment(bool processToPayment) async {
     return await _channel.invokeMethod('processToPayment', <String, dynamic>{
-      'processToPaymesetLoginTappedCallbacknt': processToPayment
+      'processToPayment': processToPayment
     });
   }
 
