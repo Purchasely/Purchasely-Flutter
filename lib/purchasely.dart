@@ -20,38 +20,48 @@ class Purchasely {
     });
   }
 
-  static Future<Map<dynamic, dynamic>> presentPresentationWithIdentifier(
-      String presentationVendorId,
-      [String contentId]) async {
-    return await _channel.invokeMethod(
+  static Future<PresentPresentationResult> presentPresentationWithIdentifier(
+      String? presentationVendorId,
+      [String? contentId]) async {
+    final result = await _channel.invokeMethod(
         'presentPresentationWithIdentifier', <String, dynamic>{
       'presentationVendorId': presentationVendorId,
       'contentId': contentId
     });
+    return PresentPresentationResult(PurchaseResult.values[result['result']],
+        transformToPurchaselyPlan(result['plan']));
   }
 
-  static Future<Map<dynamic, dynamic>> presentProductWithIdentifier(
+  static Future<PresentPresentationResult> presentProductWithIdentifier(
       String productVendorId,
-      [String presentationVendorId,
-      String contentId]) async {
-    return await _channel
+      [String? presentationVendorId,
+      String? contentId]) async {
+    final result = await _channel
         .invokeMethod('presentPresentationWithIdentifier', <String, dynamic>{
       'productVendorId': productVendorId,
       'presentationVendorId': presentationVendorId,
       'contentId': contentId
     });
+    PurchaselyPlan? plan;
+    if (!result['plan'].isEmpty)
+      plan = transformToPurchaselyPlan(result['plan']);
+
+    return PresentPresentationResult(
+        PurchaseResult.values[result['result']], plan);
   }
 
-  static Future<Map<dynamic, dynamic>> presentPlanWithIdentifier(
+  static Future<PresentPresentationResult> presentPlanWithIdentifier(
       String planVendorId,
-      [String presentationVendorId,
-      String contentId]) async {
-    return await _channel
+      [String? presentationVendorId,
+      String? contentId]) async {
+    final result = await _channel
         .invokeMethod('presentPresentationWithIdentifier', <String, dynamic>{
       'planVendorId': planVendorId,
       'presentationVendorId': presentationVendorId,
       'contentId': contentId
     });
+    return PresentPresentationResult(PurchaseResult.values[result['result']],
+        transformToPurchaselyPlan(result['plan']));
   }
 
   static Future<bool> restoreAllProducts() async {
@@ -85,22 +95,24 @@ class Purchasely {
         <String, dynamic>{'readyToPurchase': readyToPurchase});
   }
 
-  static Future<Map<dynamic, dynamic>> productWithIdentifier(
+  static Future<PurchaselyProduct> productWithIdentifier(
       String vendorId) async {
-    final Map<dynamic, dynamic> product = await _channel.invokeMethod(
+    final Map<dynamic, dynamic> result = await _channel.invokeMethod(
         'productWithIdentifier', <String, dynamic>{'vendorId': vendorId});
-    return product;
+    final List<PurchaselyPlan> plans = new List.empty(growable: true);
+    result['plans']
+        .forEach((k, plan) => plans.add(transformToPurchaselyPlan(plan)));
+    return PurchaselyProduct(result['name'], result['vendorId'], plans);
   }
 
-  static Future<Map<dynamic, dynamic>> planWithIdentifier(
-      String vendorId) async {
-    final Map<dynamic, dynamic> product = await _channel.invokeMethod(
+  static Future<PurchaselyPlan> planWithIdentifier(String vendorId) async {
+    final Map<dynamic, dynamic> result = await _channel.invokeMethod(
         'planWithIdentifier', <String, dynamic>{'vendorId': vendorId});
-    return product;
+    return transformToPurchaselyPlan(result);
   }
 
   static Future<Map<dynamic, dynamic>> purchaseWithPlanVendorId(String vendorId,
-      [String contentId]) async {
+      [String? contentId]) async {
     final Map<dynamic, dynamic> product = await _channel.invokeMethod(
         'purchaseWithPlanVendorId',
         <String, dynamic>{'vendorId': vendorId, 'contentId': contentId});
@@ -121,7 +133,24 @@ class Purchasely {
   }
 
   static Future<List> userSubscriptions() async {
-    final List subscriptions = await _channel.invokeMethod('userSubscriptions');
+    final Map<dynamic, dynamic> result =
+        await _channel.invokeMethod('userSubscriptions');
+
+    final List subscriptions = new List.empty(growable: true);
+    result.forEach((key, value) {
+      final List<PurchaselyPlan> plans = new List.empty(growable: true);
+      value['product']['plans']
+          .forEach((k, plan) => plans.add(transformToPurchaselyPlan(plan)));
+
+      subscriptions.add(PurchaselySubscription(
+          value['purchaseToken'],
+          SubscriptionSource.values[value['subscriptionSource']],
+          value['nextRenewalDate'],
+          value['cancelledDate'],
+          transformToPurchaselyPlan(value['plan']),
+          PurchaselyProduct(
+              value['product']['name'], value['product']['vendorId'], plans)));
+    });
     return subscriptions;
   }
 
@@ -159,13 +188,11 @@ class Purchasely {
     return await _channel.invokeMethod('synchronize');
   }
 
-  static Future<Map<dynamic, dynamic>>
-      setDefaultPresentationResultHandler() async {
-    return await _channel.invokeMethod('setDefaultPresentationResultHandler');
-  }
-
-  static Future<Map<dynamic, dynamic>> purchasedSubscription() async {
-    return await _channel.invokeMethod('purchasedSubscription');
+  static Future<PresentPresentationResult> setDefaultPresentationResultHandler() async {
+    final result =
+        await _channel.invokeMethod('setDefaultPresentationResultHandler');
+    return PresentPresentationResult(PurchaseResult.values[result['result']],
+        transformToPurchaselyPlan(result['plan']));
   }
 
   static Future<void> setLoginTappedHandler() async {
@@ -182,9 +209,8 @@ class Purchasely {
   }
 
   static Future<void> processToPayment(bool processToPayment) async {
-    return await _channel.invokeMethod('processToPayment', <String, dynamic>{
-      'processToPayment': processToPayment
-    });
+    return await _channel.invokeMethod('processToPayment',
+        <String, dynamic>{'processToPayment': processToPayment});
   }
 
   static void setDefaultPresentationResultCallback(Function callback) {
@@ -221,6 +247,30 @@ class Purchasely {
       }
     });
   }
+
+  static PurchaselyPlan transformToPurchaselyPlan(Map<dynamic, dynamic> plan) {
+    PlanType type = PlanType.unknown;
+    try {
+      type = PlanType.values[plan['type']];
+    } catch (e) {
+      print(e);
+    }
+    return PurchaselyPlan(
+        plan['vendorId'],
+        plan['name'],
+        type,
+        plan['amount'],
+        plan['currencyCode'],
+        plan['currencySymbol'],
+        plan['price'],
+        plan['period'],
+        plan['hasIntroductoryPrice'],
+        plan['introPrice'],
+        plan['introAmount'],
+        plan['introDuration'],
+        plan['introPeriod'],
+        plan['hasFreeTrial']);
+  }
 }
 
 enum LogLevel { debug, info, warn, error }
@@ -243,4 +293,64 @@ enum PlanType {
   autoRenewingSubscription,
   nonRenewingSubscription,
   unknown
+}
+
+class PurchaselyPlan {
+  String vendorId;
+  String name;
+  PlanType type;
+  double amount;
+  String currencyCode;
+  String currencySymbol;
+  String price;
+  String period;
+  bool hasIntroductoryPrice;
+  String introPrice;
+  double introAmount;
+  String introDuration;
+  String introPeriod;
+  bool hasFreeTrial;
+
+  PurchaselyPlan(
+      this.vendorId,
+      this.name,
+      this.type,
+      this.amount,
+      this.currencyCode,
+      this.currencySymbol,
+      this.price,
+      this.period,
+      this.hasIntroductoryPrice,
+      this.introPrice,
+      this.introAmount,
+      this.introDuration,
+      this.introPeriod,
+      this.hasFreeTrial);
+}
+
+class PurchaselyProduct {
+  String name;
+  String vendorId;
+  List<PurchaselyPlan> plans;
+
+  PurchaselyProduct(this.name, this.vendorId, this.plans);
+}
+
+class PurchaselySubscription {
+  String? purchaseToken;
+  SubscriptionSource subscriptionSource;
+  String nextRenewalDate;
+  String cancelledDate;
+  PurchaselyPlan plan;
+  PurchaselyProduct product;
+
+  PurchaselySubscription(this.purchaseToken, this.subscriptionSource,
+      this.nextRenewalDate, this.cancelledDate, this.plan, this.product);
+}
+
+class PresentPresentationResult {
+  PurchaseResult result;
+  PurchaselyPlan? plan;
+
+  PresentPresentationResult(this.result, this.plan);
 }

@@ -4,6 +4,8 @@ import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import androidx.annotation.NonNull
 import androidx.fragment.app.FragmentActivity
@@ -51,7 +53,9 @@ class PurchaselyPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, Corouti
                 Purchasely.eventListener = object: EventListener {
                     override fun onEvent(event: PLYEvent) {
                         val properties = event.properties?.toMap() ?: emptyMap()
-                        events?.success(mapOf(Pair("name", event.name), Pair("properties", properties)))
+                        Handler(Looper.getMainLooper()).post {
+                            events?.success(mapOf(Pair("name", event.name), Pair("properties", properties)))
+                        }
                     }
                 }
             }
@@ -68,7 +72,9 @@ class PurchaselyPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, Corouti
                     object: PurchaseListener {
                         override fun onPurchaseStateChanged(state: State) {
                             if (state is State.PurchaseComplete || state is State.RestorationComplete) {
-                                events?.success(null);
+                                Handler(Looper.getMainLooper()).post {
+                                    events?.success(null)
+                                }
                             }
                         }
                     }
@@ -147,7 +153,13 @@ class PurchaselyPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, Corouti
                     try {
                         val product = productWithIdentifier(call.argument<String>("vendorId"))
                         if(product != null) {
-                            result.success(product.toMap())
+                            val plans = HashMap<String?, Any>()
+                            product.plans.map {
+                                plans.put(it.name, transformPlanToMap(it))
+                            }
+                            result.success(product.toMap().toMutableMap().apply {
+                                this["plans"] = plans
+                            })
                         } else {
                             result.error("-1", "product ${call.argument<String>("vendorId")} not found", null)
                         }
@@ -161,7 +173,7 @@ class PurchaselyPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, Corouti
                     try {
                         val plan = planWithIdentifier(call.argument<String>("vendorId"))
                         if(plan != null) {
-                            result.success(plan.toMap())
+                            result.success(transformPlanToMap(plan))
                         } else {
                             result.error("-1", "plan ${call.argument<String>("vendorId")} not found", null)
                         }
@@ -186,6 +198,21 @@ class PurchaselyPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, Corouti
             "processToPayment" -> processToPayment(call.argument<Boolean>("processToPayment") ?: false)
             else -> {
                 result.notImplemented()
+            }
+        }
+    }
+
+    private fun transformPlanToMap(plan: PLYPlan?): Map<String, Any?> {
+        if(plan == null) return emptyMap()
+
+        return plan.toMap().toMutableMap().apply {
+            this["type"] = when(plan.type) {
+                DistributionType.RENEWING_SUBSCRIPTION -> DistributionType.RENEWING_SUBSCRIPTION.ordinal
+                DistributionType.NON_RENEWING_SUBSCRIPTION -> DistributionType.NON_RENEWING_SUBSCRIPTION.ordinal
+                DistributionType.CONSUMABLE -> DistributionType.CONSUMABLE.ordinal
+                DistributionType.NON_CONSUMABLE -> DistributionType.NON_CONSUMABLE.ordinal
+                DistributionType.UNKNOWN -> DistributionType.UNKNOWN.ordinal
+                else -> null
             }
         }
     }
@@ -360,9 +387,28 @@ class PurchaselyPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, Corouti
     private suspend fun userSubscriptions(result: Result) {
         try {
             val subscriptions = Purchasely.userSubscriptions()
-            val list = arrayListOf<Map<String, Any?>>()
+            val list = HashMap<String?, Any?>()
             for (data in subscriptions) {
-                list.add(data.toMap())
+                val map = data.data.toMap().toMutableMap().apply {
+                    this["subscriptionSource"] = when(data.data.storeType) {
+                        StoreType.GOOGLE_PLAY_STORE -> StoreType.GOOGLE_PLAY_STORE.ordinal
+                        StoreType.HUAWEI_APP_GALLERY -> StoreType.HUAWEI_APP_GALLERY.ordinal
+                        StoreType.AMAZON_APP_STORE -> StoreType.AMAZON_APP_STORE.ordinal
+                        StoreType.APPLE_APP_STORE -> StoreType.APPLE_APP_STORE.ordinal
+                        else -> null
+                    }
+
+                    this["plan"] = transformPlanToMap(data.plan)
+
+                    val plans = HashMap<String?, Any>()
+                    data.product.plans.map {
+                        plans.put(it.name, transformPlanToMap(it))
+                    }
+                    this["product"] = data.product.toMap().toMutableMap().apply {
+                        this["plans"] = plans
+                    }
+                }
+                list[data.data.id] = map
             }
             result.success(list)
         } catch (e: Exception) {
@@ -438,14 +484,20 @@ class PurchaselyPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, Corouti
         private lateinit var channel : MethodChannel
 
         fun sendPresentationResult(result: PLYProductViewResult, plan: PLYPlan?) {
+            val productViewResult = when(result) {
+                PLYProductViewResult.PURCHASED -> PLYProductViewResult.PURCHASED.ordinal
+                PLYProductViewResult.CANCELLED -> PLYProductViewResult.CANCELLED.ordinal
+                PLYProductViewResult.RESTORED -> PLYProductViewResult.RESTORED.ordinal
+            }
+
             if(presentationResult != null) {
                 presentationResult?.success(
-                    mapOf(Pair("result", result.name), Pair("plan", plan?.toMap() ?: emptyMap()))
+                    mapOf(Pair("result", productViewResult), Pair("plan", plan?.toMap() ?: emptyMap()))
                 )
                 presentationResult = null
             } else if(defaultPresentationResult != null) {
                 defaultPresentationResult?.success(
-                    mapOf(Pair("result", result.name), Pair("plan", plan?.toMap() ?: emptyMap()))
+                    mapOf(Pair("result", productViewResult), Pair("plan", plan?.toMap() ?: emptyMap()))
                 )
             }
 

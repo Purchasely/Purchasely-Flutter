@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
+import 'dart:developer';
 
 import 'package:purchasely/purchasely.dart';
 
@@ -38,9 +39,10 @@ class _MyAppState extends State<MyApp> {
       String anonymousId = await Purchasely.anonymousUserId;
       print('Anonymous Id : $anonymousId');
 
-      Map<dynamic, dynamic> product =
+      PurchaselyProduct product =
           await Purchasely.productWithIdentifier("PURCHASELY_PLUS");
-      print('Product is $product');
+      print('Product found');
+      inspect(product);
 
       Purchasely.listenToEvents((event) {
         print('Event : $event');
@@ -48,16 +50,11 @@ class _MyAppState extends State<MyApp> {
 
       var subscriptions = await Purchasely.userSubscriptions();
       subscriptions.forEach((element) {
-        print('Subscription : $element');
-      });
-
-      var products = await Purchasely.allProducts();
-      products.forEach((element) {
-        print('Product : $element');
+        inspect(element);
       });
 
       Purchasely.setDefaultPresentationResultCallback(
-          (Map<dynamic, dynamic> value) {
+          (PresentPresentationResult value) {
         print('Default with $value');
       });
 
@@ -86,10 +83,10 @@ class _MyAppState extends State<MyApp> {
       var result =
           await Purchasely.presentProductWithIdentifier("PURCHASELY_PLUS");
       print('Result : $result');
-      if (result['result'] == PurchaseResult.cancelled) {
+      if (result.result == PurchaseResult.cancelled) {
         print("User cancelled purchased");
       } else {
-        print("User purchased " + result['plan']['name']);
+        print("User purchased " + result.plan.name);
       }
     } catch (e) {
       print(e);
