@@ -351,10 +351,10 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
         let controller = Purchasely.subscriptionsController()
         
         let navCtrl = UINavigationController.init(rootViewController: controller)
-        navCtrl.navigationItem.leftBarButtonItem = UIBarButtonItem(barButtonSystemItem: .done, target: navCtrl, action: #selector(UIViewController.close))
+        navCtrl.navigationBar.topItem?.leftBarButtonItem = UIBarButtonItem(barButtonSystemItem: .done, target: navCtrl, action: #selector(UIViewController.close))
         
         DispatchQueue.main.async {
-            Purchasely.showController(controller, type: .subscriptionList)
+            Purchasely.showController(navCtrl, type: .subscriptionList)
         }
     }
     
