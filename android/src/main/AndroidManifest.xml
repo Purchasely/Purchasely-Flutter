@@ -1,8 +1,3 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-  package="com.flutterpurchasely">
-
-    <application>
-        <activity android:name=".PLYProductActivity" android:theme="@style/Theme.AppCompat.Light.NoActionBar" />
-        <activity android:name=".PLYSubscriptionsActivity" android:theme="@style/Theme.AppCompat.Light.NoActionBar" />
-    </application>
+  package="io.purchasely.purchasely_flutter">
 </manifest>

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 import 'dart:developer';
 
-import 'package:purchasely/purchasely.dart';
+import 'package:purchasely_flutter/purchasely_flutter.dart';
 
 void main() {
   runApp(MyApp());
@@ -24,7 +24,7 @@ class _MyAppState extends State<MyApp> {
   Future<void> initPurchaselySdk() async {
     try {
       bool configured = await Purchasely.startWithApiKey(
-          'afa96c76-1d8e-4e3c-a48f-204a3cd93a15',
+          'fcb39be4-2ba4-4db7-bde3-2a5a1e20745d',
           ['Google'],
           null,
           LogLevel.debug);
@@ -40,7 +40,7 @@ class _MyAppState extends State<MyApp> {
       print('Anonymous Id : $anonymousId');
 
       PurchaselyProduct product =
-          await Purchasely.productWithIdentifier("PURCHASELY_PLUS");
+      await Purchasely.productWithIdentifier("PURCHASELY_PLUS");
       print('Product found');
       inspect(product);
 
@@ -54,9 +54,9 @@ class _MyAppState extends State<MyApp> {
       });
 
       Purchasely.setDefaultPresentationResultCallback(
-          (PresentPresentationResult value) {
-        print('Default with $value');
-      });
+              (PresentPresentationResult value) {
+            print('Default with $value');
+          });
 
       Purchasely.setLoginTappedCallback(() {
         print('login tapped handler');
@@ -81,12 +81,12 @@ class _MyAppState extends State<MyApp> {
   Future<void> displayPresentation() async {
     try {
       var result =
-          await Purchasely.presentProductWithIdentifier("PURCHASELY_PLUS");
+      await Purchasely.presentProductWithIdentifier("PURCHASELY_PLUS");
       print('Result : $result');
       if (result.result == PurchaseResult.cancelled) {
         print("User cancelled purchased");
       } else {
-        print("User purchased " + result.plan.name);
+        print('User purchased: $result.plan.name');
       }
     } catch (e) {
       print(e);
@@ -108,7 +108,7 @@ class _MyAppState extends State<MyApp> {
   Future<void> purchase() async {
     try {
       Map<dynamic, dynamic> plan =
-          await Purchasely.purchaseWithPlanVendorId('PURCHASELY_PLUS_MONTHLY');
+      await Purchasely.purchaseWithPlanVendorId('PURCHASELY_PLUS_MONTHLY');
       print('Plan is $plan');
     } catch (e) {
       print(e);
@@ -137,56 +137,56 @@ class _MyAppState extends State<MyApp> {
         ),
         body: Center(
             child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            Text('Purchasely sample'),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                padding: EdgeInsets.only(left: 20.0, right: 30.0),
-              ),
-              onPressed: () {
-                displayPresentation();
-              },
-              child: Text('Display presentation'),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                padding: EdgeInsets.only(left: 20.0, right: 30.0),
-              ),
-              onPressed: () {
-                continuePurchase();
-              },
-              child: Text('Continue purchase'),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                padding: EdgeInsets.only(left: 20.0, right: 30.0),
-              ),
-              onPressed: () {
-                purchase();
-              },
-              child: Text('Purchase'),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                padding: EdgeInsets.only(left: 20.0, right: 30.0),
-              ),
-              onPressed: () {
-                displaySubscriptions();
-              },
-              child: Text('Display subscriptions'),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                padding: EdgeInsets.only(left: 20.0, right: 30.0),
-              ),
-              onPressed: () {
-                restoreAllProducts();
-              },
-              child: Text('Restore purchases'),
-            ),
-          ],
-        )),
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: <Widget>[
+                Text('Purchasely sample'),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    padding: EdgeInsets.only(left: 20.0, right: 30.0),
+                  ),
+                  onPressed: () {
+                    displayPresentation();
+                  },
+                  child: Text('Display presentation'),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    padding: EdgeInsets.only(left: 20.0, right: 30.0),
+                  ),
+                  onPressed: () {
+                    continuePurchase();
+                  },
+                  child: Text('Continue purchase'),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    padding: EdgeInsets.only(left: 20.0, right: 30.0),
+                  ),
+                  onPressed: () {
+                    purchase();
+                  },
+                  child: Text('Purchase'),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    padding: EdgeInsets.only(left: 20.0, right: 30.0),
+                  ),
+                  onPressed: () {
+                    displaySubscriptions();
+                  },
+                  child: Text('Display subscriptions'),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    padding: EdgeInsets.only(left: 20.0, right: 30.0),
+                  ),
+                  onPressed: () {
+                    restoreAllProducts();
+                  },
+                  child: Text('Restore purchases'),
+                ),
+              ],
+            )),
       ),
     );
   }
