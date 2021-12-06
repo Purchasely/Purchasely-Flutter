@@ -35,7 +35,7 @@ class Purchasely {
   static Future<PresentPresentationResult> presentProductWithIdentifier(
       String productVendorId,
       [String? presentationVendorId,
-        String? contentId]) async {
+      String? contentId]) async {
     final result = await _channel
         .invokeMethod('presentPresentationWithIdentifier', <String, dynamic>{
       'productVendorId': productVendorId,
@@ -53,7 +53,7 @@ class Purchasely {
   static Future<PresentPresentationResult> presentPlanWithIdentifier(
       String planVendorId,
       [String? presentationVendorId,
-        String? contentId]) async {
+      String? contentId]) async {
     final result = await _channel
         .invokeMethod('presentPresentationWithIdentifier', <String, dynamic>{
       'planVendorId': planVendorId,
@@ -101,7 +101,9 @@ class Purchasely {
         'productWithIdentifier', <String, dynamic>{'vendorId': vendorId});
     final List<PurchaselyPlan> plans = new List.empty(growable: true);
     result['plans']
-        .forEach((k, plan) => plans.add(transformToPurchaselyPlan(plan)));
+        .forEach((k, plan) => {
+          plans.add(transformToPurchaselyPlan(plan))
+        });
     return PurchaselyProduct(result['name'], result['vendorId'], plans);
   }
 
@@ -134,7 +136,7 @@ class Purchasely {
 
   static Future<List> userSubscriptions() async {
     final List<dynamic> result =
-    await _channel.invokeMethod('userSubscriptions');
+        await _channel.invokeMethod('userSubscriptions');
 
     final List subscriptions = new List.empty(growable: true);
     result.forEach((element) {
@@ -148,8 +150,8 @@ class Purchasely {
           element['nextRenewalDate'],
           element['cancelledDate'],
           transformToPurchaselyPlan(element['plan']),
-          PurchaselyProduct(
-              element['product']['name'], element['product']['vendorId'], plans)));
+          PurchaselyProduct(element['product']['name'],
+              element['product']['vendorId'], plans)));
     });
     return subscriptions;
   }
@@ -188,9 +190,10 @@ class Purchasely {
     return await _channel.invokeMethod('synchronize');
   }
 
-  static Future<PresentPresentationResult> setDefaultPresentationResultHandler() async {
+  static Future<PresentPresentationResult>
+      setDefaultPresentationResultHandler() async {
     final result =
-    await _channel.invokeMethod('setDefaultPresentationResultHandler');
+        await _channel.invokeMethod('setDefaultPresentationResultHandler');
     return PresentPresentationResult(PurchaseResult.values[result['result']],
         transformToPurchaselyPlan(result['plan']));
   }
@@ -300,9 +303,9 @@ class PurchaselyPlan {
   String? name;
   PlanType type;
   double amount;
-  String currencyCode;
-  String currencySymbol;
-  String price;
+  String? currencyCode;
+  String? currencySymbol;
+  String? price;
   String? period;
   bool? hasIntroductoryPrice;
   String? introPrice;
@@ -338,11 +341,11 @@ class PurchaselyProduct {
 
 class PurchaselySubscription {
   String? purchaseToken;
-  SubscriptionSource subscriptionSource;
-  String nextRenewalDate;
-  String cancelledDate;
-  PurchaselyPlan plan;
-  PurchaselyProduct product;
+  SubscriptionSource? subscriptionSource;
+  String? nextRenewalDate;
+  String? cancelledDate;
+  PurchaselyPlan? plan;
+  PurchaselyProduct? product;
 
   PurchaselySubscription(this.purchaseToken, this.subscriptionSource,
       this.nextRenewalDate, this.cancelledDate, this.plan, this.product);

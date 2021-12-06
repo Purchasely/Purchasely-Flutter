@@ -24,7 +24,7 @@ class _MyAppState extends State<MyApp> {
   Future<void> initPurchaselySdk() async {
     try {
       bool configured = await Purchasely.startWithApiKey(
-          'fcb39be4-2ba4-4db7-bde3-2a5a1e20745d',
+          'afa96c76-1d8e-4e3c-a48f-204a3cd93a15',
           ['Google'],
           null,
           LogLevel.debug);

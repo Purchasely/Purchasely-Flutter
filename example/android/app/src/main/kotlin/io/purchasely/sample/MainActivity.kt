@@ -1,4 +1,4 @@
-package io.purchasely.purchasely_flutter_example
+package io.purchasely.sample
 
 import io.flutter.embedding.android.FlutterActivity
 
