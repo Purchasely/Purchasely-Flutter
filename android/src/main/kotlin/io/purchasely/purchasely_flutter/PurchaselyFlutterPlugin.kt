@@ -56,7 +56,7 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
           override fun onListen(arguments: Any?, events: EventChannel.EventSink?) {
               Purchasely.eventListener = object: EventListener {
                   override fun onEvent(event: PLYEvent) {
-                      val properties = event.properties?.toMap() ?: emptyMap()
+                      val properties = event.properties.toMap() ?: emptyMap()
                       Handler(Looper.getMainLooper()).post {
                           events?.success(mapOf(Pair("name", event.name), Pair("properties", properties)))
                       }
@@ -95,7 +95,8 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
       when(call.method) {
           "startWithApiKey" -> {
               startWithApiKey(call.argument<String>("apiKey"), call.argument<List<String>>("stores"),
-                      call.argument<String>("userId"), call.argument<Int>("logLevel"), result)
+                        call.argument<String>("userId"), call.argument<Int>("logLevel"),
+                        call.argument<Int>("runningMode"), result)
           }
           "close" -> {
               close()
@@ -196,10 +197,9 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
           "userSubscriptions" -> launch { userSubscriptions(result) }
           "presentSubscriptions" -> presentSubscriptions()
           "setAttribute" -> setAttribute(call.argument<Int>("attribute"), call.argument<String>("value"))
-          "setLoginTappedHandler" -> setLoginTappedHandler(result)
-          "onUserLoggedIn" -> onUserLoggedIn(call.argument<Boolean>("userLoggedIn") ?: false)
-          "setConfirmPurchaseHandler" -> setConfirmPurchaseHandler(result)
-          "processToPayment" -> processToPayment(call.argument<Boolean>("processToPayment") ?: false)
+          "setPaywallActionInterceptor" -> setPaywallActionInterceptor(result)
+          "onProcessAction" -> onProcessAction(call.argument<Boolean>("processAction") ?: false)
+          "closePaywall" -> closePaywall()
           else -> {
               result.notImplemented()
           }
@@ -225,13 +225,20 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
   private fun startWithApiKey(
       apiKey: String?, stores: List<String>?,
       userId: String?, logLevel: Int?,
-      result: Result) {
+      runningMode: Int?, result: Result) {
       if(apiKey == null) throw IllegalArgumentException("Api key must not be null")
 
       Purchasely.Builder(context)
             .apiKey(apiKey)
             .stores(getStoresInstances(stores))
             .logLevel(LogLevel.values()[logLevel ?: 0])
+              .runningMode(when(runningMode) {
+                  0 -> PLYRunningMode.TransactionOnly
+                  1 -> PLYRunningMode.Observer
+                  2 -> PLYRunningMode.PaywallOnly
+                  3 -> PLYRunningMode.PaywallObserver
+                  else -> PLYRunningMode.Full
+              })
             .userId(userId)
             .build()
 
@@ -430,53 +437,47 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
       value?.let { Purchasely.setAttribute(Attribute.values()[attribute ?: 0], it) }
   }
 
-  private fun setLoginTappedHandler(result: Result) {
-      Purchasely.setLoginTappedHandler { purchaselyActivity, refreshPresentation ->
-          loginCompletionHandler = refreshPresentation
-          activity?.let {
-              it.startActivity(Intent(purchaselyActivity, it::class.java).apply {
-                  flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
-              })
-          }
-          result.success(null)
-      }
-  }
+    private fun setPaywallActionInterceptor(result: Result) {
+        Purchasely.setPaywallActionsInterceptor { activity, action, parameters, processAction ->
+            paywallActionHandler = processAction
 
-  private fun onUserLoggedIn(userLoggedIn: Boolean) {
-      launch {
-          if(productActivity?.relaunch(activity) == false) {
-              //wait for activity to relaunch
-              withContext(Dispatchers.Default) { delay(500) }
-          }
-          productActivity?.activity?.get()?.runOnUiThread {
-              loginCompletionHandler?.invoke(userLoggedIn)
-          }
-      }
-  }
+            val parametersForReact = parameters
+                .mapKeys { it.key.toString().lowercase() }
+                .mapValues {
+                    val value = it.value
+                    if(value is PLYPlan) {
+                        transformPlanToMap(value)
+                    } else {
+                        value.toString()
+                    }
+                }
 
-  private fun setConfirmPurchaseHandler(result: Result) {
-      Purchasely.setConfirmPurchaseHandler { purchaselyActivity, processToPayment ->
-          processToPaymentHandler = processToPayment
-          activity?.let {
-              it.startActivity(Intent(purchaselyActivity, it::class.java).apply {
-                  flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
-              })
-          }
-          result.success(null)
-      }
-  }
+            result.success(mapOf(
+                Pair("action", action.value),
+                Pair("parameters", parametersForReact)
+            ))
+        }
+    }
 
-  private fun processToPayment(processToPayment: Boolean) {
-      launch {
-          if(productActivity?.relaunch(activity) == false) {
-              //wait for activity to relaunch
-              withContext(Dispatchers.Default) { delay(500) }
-          }
-          productActivity?.activity?.get()?.runOnUiThread {
-              processToPaymentHandler?.invoke(processToPayment)
-          }
-      }
-  }
+    private fun onProcessAction(processAction: Boolean) {
+        launch {
+            if(productActivity?.relaunch(activity) == false) {
+                //wait for activity to relaunch
+                withContext(Dispatchers.Default) { delay(500) }
+            }
+            productActivity?.activity?.get()?.runOnUiThread {
+                paywallActionHandler?.invoke(processAction)
+            }
+        }
+    }
+
+    private fun closePaywall() {
+        activity?.let {
+            it.startActivity(Intent(productActivity?.activity?.get() ?: it, it::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
+            })
+        }
+    }
 
   //endregion
 
@@ -484,8 +485,7 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
       var productActivity: ProductActivity? = null
       var presentationResult: Result? = null
       var defaultPresentationResult: Result? = null
-      var loginCompletionHandler: PLYLoginCompletionHandler? = null
-      var processToPaymentHandler: PLYProcessToPaymentHandler? = null
+      var paywallActionHandler: PLYCompletionHandler? = null
       private lateinit var channel : MethodChannel
 
       fun sendPresentationResult(result: PLYProductViewResult, plan: PLYPlan?) {

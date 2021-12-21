@@ -11,12 +11,13 @@ class Purchasely {
   static var purchases;
 
   static Future<bool> startWithApiKey(String apiKey, List<String> stores,
-      String? userId, LogLevel logLevel) async {
+      String? userId, LogLevel logLevel, RunningMode runningMode) async {
     return await _channel.invokeMethod('startWithApiKey', <String, dynamic>{
       'apiKey': apiKey,
       'stores': stores,
       'userId': userId,
-      'logLevel': logLevel.index
+      'logLevel': logLevel.index,
+      'runningMode': runningMode.index
     });
   }
 
@@ -198,22 +199,30 @@ class Purchasely {
         transformToPurchaselyPlan(result['plan']));
   }
 
-  static Future<void> setLoginTappedHandler() async {
-    return await _channel.invokeMethod('setLoginTappedHandler');
+  static Future<PaywallActionInterceptorResult>
+      setPaywallActionInterceptor() async {
+    final result =
+        await _channel.invokeMethod('setPaywallActionInterceptor');
+    final Map<dynamic, dynamic>? plan = result['parameters']['plan'];
+    return PaywallActionInterceptorResult(
+          PLYPaywallAction.values.firstWhere((e) => e.toString() == 'PLYPaywallAction.' + result['action']),
+          PLYPaywallActionParameters(
+            result['parameters']['url'],
+            result['parameters']['title'],
+            plan != null ? transformToPurchaselyPlan(plan) : null,
+            result['parameters']['presentation']
+          )
+        );
   }
 
-  static Future<void> onUserLoggedIn(bool userLoggedIn) async {
+  static Future<void> onProcessAction(bool processAction) async {
     return await _channel.invokeMethod(
-        'onUserLoggedIn', <String, dynamic>{'userLoggedIn': userLoggedIn});
+      'onProcessAction',
+       <String, dynamic>{'processAction': processAction});
   }
 
-  static Future<void> setConfirmPurchaseHandler() async {
-    return await _channel.invokeMethod('setConfirmPurchaseHandler');
-  }
-
-  static Future<void> processToPayment(bool processToPayment) async {
-    return await _channel.invokeMethod('processToPayment',
-        <String, dynamic>{'processToPayment': processToPayment});
+  static Future<void> closePaywall() async {
+    return await _channel.invokeMethod('closePaywall');
   }
 
   static void setDefaultPresentationResultCallback(Function callback) {
@@ -228,25 +237,13 @@ class Purchasely {
     });
   }
 
-  static void setLoginTappedCallback(Function callback) {
-    setLoginTappedHandler().then((value) {
-      setLoginTappedCallback(callback);
+  static void setPaywallActionInterceptorCallback(Function callback) {
+    setPaywallActionInterceptor().then((value) {
+      setPaywallActionInterceptorCallback(callback);
       try {
-        callback();
+        callback(value);
       } catch (e) {
-        print('[Purchasely] Error with callback for loggin tapped handler: $e');
-      }
-    });
-  }
-
-  static void setPurchaseCompletionCallback(Function callback) {
-    setConfirmPurchaseHandler().then((value) {
-      setPurchaseCompletionCallback(callback);
-      try {
-        callback();
-      } catch (e) {
-        print(
-            '[Purchasely] Error with callback for confirm purchase handler: $e');
+        print('[Purchasely] Error with callback for paywall action interceptor handler: $e');
       }
     });
   }
@@ -277,6 +274,7 @@ class Purchasely {
 }
 
 enum LogLevel { debug, info, warn, error }
+enum RunningMode { transactionOnly, observer, paywallOnly, paywallObserver, full }
 enum Attribute {
   amplitude_session_id,
   firebase_app_instance_id,
@@ -296,6 +294,16 @@ enum PlanType {
   autoRenewingSubscription,
   nonRenewingSubscription,
   unknown
+}
+
+enum PLYPaywallAction {
+  close,
+  login,
+  navigate,
+  purchase,
+  restore,
+  open_presentation,
+  promo_code,
 }
 
 class PurchaselyPlan {
@@ -356,4 +364,25 @@ class PresentPresentationResult {
   PurchaselyPlan? plan;
 
   PresentPresentationResult(this.result, this.plan);
+}
+
+class PaywallActionInterceptorResult {
+  PLYPaywallAction action;
+  PLYPaywallActionParameters parameters;
+
+  PaywallActionInterceptorResult(this.action, this.parameters);
+}
+
+class PLYPaywallActionParameters {
+  String? url;
+  String? title;
+  PurchaselyPlan? plan;
+  String? presentation;
+
+  PLYPaywallActionParameters(
+    this.url,
+    this.title,
+    this.plan,
+    this.presentation
+  );
 }

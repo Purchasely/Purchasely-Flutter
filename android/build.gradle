@@ -50,5 +50,5 @@ dependencies {
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.5.2'
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.5.2'
 
-    api 'io.purchasely:core:2.7.5'
+    api 'io.purchasely:core:3.0.0-alpha08'
 }

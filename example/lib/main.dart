@@ -27,7 +27,8 @@ class _MyAppState extends State<MyApp> {
           'afa96c76-1d8e-4e3c-a48f-204a3cd93a15',
           ['Google'],
           null,
-          LogLevel.debug);
+          LogLevel.debug,
+          RunningMode.full);
 
       if (!configured) {
         print('Purchasely SDK not configured');
@@ -54,20 +55,43 @@ class _MyAppState extends State<MyApp> {
       });
 
       Purchasely.setDefaultPresentationResultCallback(
-              (PresentPresentationResult value) {
-            print('Default with $value');
-          });
-
-      Purchasely.setLoginTappedCallback(() {
-        print('login tapped handler');
-        Purchasely.userLogin('user_id');
-        Purchasely.onUserLoggedIn(true);
+        (PresentPresentationResult value) {
+        print('Default with $value');
       });
 
-      Purchasely.setPurchaseCompletionCallback(() {
-        //display your screen
-        print('Purchase completion handler');
+      Purchasely.setPaywallActionInterceptorCallback(
+        (PaywallActionInterceptorResult result) {
+        print(result.toString());
+        print('Received action from paywall');
+
+        if (result.action == PLYPaywallAction.navigate) {
+          Purchasely.onProcessAction(true);
+        } else if (result.action == PLYPaywallAction.close) {
+          print('User wants to close paywall');
+          Purchasely.onProcessAction(true);
+        } else if (result.action == PLYPaywallAction.login) {
+          print('User wants to login');
+          //Present your own screen for user to log in
+          Purchasely.closePaywall();
+          Purchasely.userLogin('MY_USER_ID');
+          //Call this method to update Purchasely Paywall
+          Purchasely.onProcessAction(true);
+        } else if (result.action == PLYPaywallAction.open_presentation) {
+          print('User wants to open a new paywall');
+          Purchasely.onProcessAction(true);
+        } else if (result.action == PLYPaywallAction.purchase) {
+          print('User wants to purchase');
+          //If you want to intercept it, close paywall and display your screen
+          Purchasely.closePaywall();
+        } else if (result.action == PLYPaywallAction.restore) {
+          print('User wants to restore his purchases');
+          Purchasely.onProcessAction(true);
+        } else {
+          print('Action unknown ' + result.action.toString());
+          Purchasely.onProcessAction(true);
+        }
       });
+
     } catch (e) {
       print(e);
     }
@@ -102,7 +126,7 @@ class _MyAppState extends State<MyApp> {
   }
 
   Future<void> continuePurchase() async {
-    Purchasely.processToPayment(true);
+    Purchasely.onProcessAction(true);
   }
 
   Future<void> purchase() async {
