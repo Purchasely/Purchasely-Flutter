@@ -96,6 +96,11 @@ class Purchasely {
         <String, dynamic>{'readyToPurchase': readyToPurchase});
   }
 
+  static Future<void> setLanguage(String language) async {
+    _channel.invokeMethod('setLanguage',
+        <String, dynamic>{'language': language});
+  }
+
   static Future<PurchaselyProduct> productWithIdentifier(
       String vendorId) async {
     final Map<dynamic, dynamic> result = await _channel.invokeMethod(
@@ -278,7 +283,8 @@ enum RunningMode { transactionOnly, observer, paywallOnly, paywallObserver, full
 enum Attribute {
   amplitude_session_id,
   firebase_app_instance_id,
-  airship_channel_id
+  airship_channel_id,
+  batch_installation_id
 }
 enum PurchaseResult { purchased, cancelled, restored }
 enum SubscriptionSource {

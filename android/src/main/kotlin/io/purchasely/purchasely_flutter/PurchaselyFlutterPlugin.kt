@@ -21,11 +21,15 @@ import androidx.fragment.app.FragmentActivity
 
 import io.purchasely.billing.Store
 import io.purchasely.ext.*
+import io.purchasely.ext.EventListener
 import io.purchasely.models.PLYPlan
 import io.purchasely.models.PLYProduct
 import kotlinx.coroutines.*
 import io.purchasely.ext.Purchasely
 import java.lang.ref.WeakReference
+import java.util.*
+import kotlin.collections.ArrayList
+import kotlin.collections.HashMap
 
 /** PurchaselyFlutterPlugin */
 class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, CoroutineScope {
@@ -151,6 +155,10 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
           }
           "isReadyToPurchase" -> {
               isReadyToPurchase(call.argument<Boolean>("readyToPurchase"))
+              result.success(true)
+          }
+          "setLanguage" -> {
+              setLanguage(call.argument<String>("language"))
               result.success(true)
           }
           "productWithIdentifier" -> {
@@ -436,6 +444,14 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
   private fun setAttribute(attribute: Int?, value: String?) {
       value?.let { Purchasely.setAttribute(Attribute.values()[attribute ?: 0], it) }
   }
+
+    fun setLanguage(language: String?) {
+        Purchasely.language = try {
+            if(language != null) Locale(language) else Locale.getDefault()
+        } catch (e: Exception) {
+            Locale.getDefault()
+        }
+    }
 
     private fun setPaywallActionInterceptor(result: Result) {
         Purchasely.setPaywallActionsInterceptor { activity, action, parameters, processAction ->
