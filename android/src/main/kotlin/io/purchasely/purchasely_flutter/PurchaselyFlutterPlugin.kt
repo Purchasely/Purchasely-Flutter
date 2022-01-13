@@ -140,6 +140,7 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
               presentationResult = result
           }
           "restoreAllProducts" -> restoreAllProducts(result)
+          "silentRestoreAllProducts" -> restoreAllProducts(result)
           "getAnonymousUserId" -> result.success(getAnonymousUserId())
           "userLogin" -> {
               val userId = call.argument<String>("userId") ?: let {

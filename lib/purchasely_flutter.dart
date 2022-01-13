@@ -71,7 +71,8 @@ class Purchasely {
   }
 
   static Future<bool> silentRestoreAllProducts() async {
-    final bool restored = await _channel.invokeMethod('silentRestoreAllProducts');
+    final bool restored =
+        await _channel.invokeMethod('silentRestoreAllProducts');
     return restored;
   }
 
@@ -104,6 +105,10 @@ class Purchasely {
   static Future<void> setLanguage(String language) async {
     _channel
         .invokeMethod('setLanguage', <String, dynamic>{'language': language});
+  }
+
+  static Future<void> close() async {
+    _channel.invokeMethod('close');
   }
 
   static Future<PLYProduct> productWithIdentifier(String vendorId) async {
