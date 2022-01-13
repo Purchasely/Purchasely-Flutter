@@ -25,6 +25,10 @@ extension PLYPlan {
         if let name = self.name {
             result["name"] = name
         }
+
+        if let productId = self.appleProductId {
+            result["productId"] = productId
+        }
         
         if let price = self.localizedFullPrice(language: nil) {
             result["price"] = price

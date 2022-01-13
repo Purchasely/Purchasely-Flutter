@@ -12,8 +12,7 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
     
     var presentedPresentationViewController: UIViewController?
     
-    var loginClosedHandler: ((Bool) -> Void)?
-    var authorizedPurchaseHandler: ((Bool) -> Void)?
+    var onProcessActionHandler: ((Bool) -> Void)?
     
     public init(with registrar: FlutterPluginRegistrar) {
         self.eventChannel = FlutterEventChannel(name: "purchasely-events",
@@ -39,7 +38,6 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
     
     public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         let arguments = call.arguments as? [String: Any]
-        print("method called: \(call.method)")
         switch call.method {
         case "startWithApiKey":
             startWithApiKey(arguments: call.arguments as? [String: Any], result: result)
@@ -57,6 +55,8 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             presentPlanWithIdentifier(arguments: arguments, result: result)
         case "restoreAllProducts":
             restoreAllProducts(result)
+        case "silentRestoreAllProducts":
+            silentRestoreAllProducts(result)
         case "getAnonymousUserId":
             DispatchQueue.main.async { [weak self] in
                 guard let `self` = self else { return }
@@ -93,16 +93,13 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             presentSubscriptions()
         case "setAttribute":
             setAttribute(arguments: arguments)
-        case "setLoginTappedHandler":
-            setLoginTappedHandler(result: result)
-        case "onUserLoggedIn":
-            let parameter = arguments?["userLoggedIn"] as? Bool
-            onUserLoggedIn(parameter ?? false)
-        case "setConfirmPurchaseHandler":
-            setConfirmPurchaseHandler(result: result)
-        case "processToPayment":
-            let parameter = arguments?["processToPayment"] as? Bool
-            processToPayment(parameter ?? false)
+        case "setPaywallActionInterceptor":
+            setPaywallActionInterceptor(result: result)
+        case "onProcessAction":
+            let parameter = arguments?["proceed"] as? Bool
+            onProcessAction(parameter ?? true)
+        case "closePaywall":
+            closePaywall()
         case "synchronize", "displaySubscriptionCancellationInstruction":
             result(FlutterMethodNotImplemented)
         default:
@@ -116,16 +113,20 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             return
         }
         
-        Purchasely.setEnvironment(.staging)
         Purchasely.setAppTechnology(PLYAppTechnology.flutter)
         
         
         let logLevel = PLYLogger.LogLevel(rawValue: (arguments["logLevel"] as? Int) ?? PLYLogger.LogLevel.debug.rawValue) ?? PLYLogger.LogLevel.debug
         let userId = arguments["userId"] as? String
+        let runningMode = PLYRunningMode(rawValue: (arguments["runningMode"] as? Int) ?? PLYRunningMode.full.rawValue) ?? PLYRunningMode.full
+        
         DispatchQueue.main.async {
             Purchasely.start(withAPIKey: apiKey,
                              appUserId: userId,
-                             observerMode: false,
+                             runningMode: runningMode,
+                             eventDelegate: nil,
+                             uiDelegate: nil,
+                             paywallActionsInterceptor: nil,
                              logLevel: logLevel) { success, error in
                 if success {
                     result(success)
@@ -141,23 +142,27 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
         let presentationVendorId = arguments?["presentationVendorId"] as? String
         let contentId = arguments?["contentId"] as? String
         
-        let controller = Purchasely.presentationController(with: presentationVendorId, contentId: contentId) { productResult, plan in
+        let controller = Purchasely.presentationController(with: presentationVendorId,
+                                                           contentId: contentId,
+                                                           loaded: nil) { productResult, plan in
             let value: [String: Any] = ["result": productResult.rawValue, "plan": plan?.toMap ?? [:]]
             DispatchQueue.main.async {
                 result(value)
             }
         }
-        
-        let navCtrl = UINavigationController(rootViewController: controller)
-        navCtrl.navigationBar.isTranslucent = true
-        navCtrl.navigationBar.setBackgroundImage(UIImage(), for: .default)
-        navCtrl.navigationBar.shadowImage = UIImage()
-        navCtrl.navigationBar.tintColor = UIColor.white
-        
-        self.presentedPresentationViewController = navCtrl
-        
-        DispatchQueue.main.async {
-            Purchasely.showController(navCtrl, type: .productPage)
+
+        if let controller = controller {
+            let navCtrl = UINavigationController(rootViewController: controller)
+            navCtrl.navigationBar.isTranslucent = true
+            navCtrl.navigationBar.setBackgroundImage(UIImage(), for: .default)
+            navCtrl.navigationBar.shadowImage = UIImage()
+            navCtrl.navigationBar.tintColor = UIColor.white
+            
+            self.presentedPresentationViewController = navCtrl
+            
+            DispatchQueue.main.async {
+                Purchasely.showController(navCtrl, type: .productPage)
+            }
         }
     }
     
@@ -170,23 +175,28 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
         let presentationVendorId = arguments["presentationVendorId"] as? String
         let contentId = arguments["contentId"] as? String
         
-        let controller = Purchasely.productController(for: productVendorId, with: presentationVendorId, contentId: contentId) { productResult, plan in
+        let controller = Purchasely.productController(for: productVendorId,
+                                                         with: presentationVendorId,
+                                                         contentId: contentId,
+                                                         loaded: nil) { productResult, plan in
             let value: [String: Any] = ["result": productResult.rawValue, "plan": plan?.toMap ?? [:]]
             DispatchQueue.main.async {
                 result(value)
             }
         }
         
-        let navCtrl = UINavigationController(rootViewController: controller)
-        navCtrl.navigationBar.isTranslucent = true
-        navCtrl.navigationBar.setBackgroundImage(UIImage(), for: .default)
-        navCtrl.navigationBar.shadowImage = UIImage()
-        navCtrl.navigationBar.tintColor = UIColor.white
-        
-        self.presentedPresentationViewController = navCtrl
-        
-        DispatchQueue.main.async {
-            Purchasely.showController(navCtrl, type: .productPage)
+        if let controller = controller {
+            let navCtrl = UINavigationController(rootViewController: controller)
+            navCtrl.navigationBar.isTranslucent = true
+            navCtrl.navigationBar.setBackgroundImage(UIImage(), for: .default)
+            navCtrl.navigationBar.shadowImage = UIImage()
+            navCtrl.navigationBar.tintColor = UIColor.white
+            
+            self.presentedPresentationViewController = navCtrl
+            
+            DispatchQueue.main.async {
+                Purchasely.showController(navCtrl, type: .productPage)
+            }
         }
     }
     
@@ -199,29 +209,44 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
         let presentationVendorId = arguments["presentationVendorId"] as? String
         let contentId = arguments["contentId"] as? String
         
-        let controller = Purchasely.planController(for: planVendorId, with: presentationVendorId, contentId: contentId) { productResult, plan in
+        let controller = Purchasely.planController(for: planVendorId,
+                                                      with: presentationVendorId,
+                                                      contentId: contentId,
+                                                      loaded:nil) { productResult, plan in
             let value: [String: Any] = ["result": productResult.rawValue, "plan": plan?.toMap ?? [:]]
             DispatchQueue.main.async {
                 result(value)
             }
         }
         
-        let navCtrl = UINavigationController(rootViewController: controller)
-        navCtrl.navigationBar.isTranslucent = true
-        navCtrl.navigationBar.setBackgroundImage(UIImage(), for: .default)
-        navCtrl.navigationBar.shadowImage = UIImage()
-        navCtrl.navigationBar.tintColor = UIColor.white
-        
-        self.presentedPresentationViewController = navCtrl
-        
-        DispatchQueue.main.async {
-            Purchasely.showController(navCtrl, type: .productPage)
+        if let controller = controller {
+            let navCtrl = UINavigationController(rootViewController: controller)
+            navCtrl.navigationBar.isTranslucent = true
+            navCtrl.navigationBar.setBackgroundImage(UIImage(), for: .default)
+            navCtrl.navigationBar.shadowImage = UIImage()
+            navCtrl.navigationBar.tintColor = UIColor.white
+            
+            self.presentedPresentationViewController = navCtrl
+            
+            DispatchQueue.main.async {
+                Purchasely.showController(navCtrl, type: .productPage)
+            }
         }
     }
     
     private func restoreAllProducts(_ result: @escaping FlutterResult) {
         DispatchQueue.main.async {
             Purchasely.restoreAllProducts {
+                result(true)
+            } failure: { error in
+                result(FlutterError.error(code: "-1", message: "Restore failed", error: error))
+            }
+        }
+    }
+    
+    private func silentRestoreAllProducts(_ result: @escaping FlutterResult) {
+        DispatchQueue.main.async {
+            Purchasely.silentRestoreAllProducts {
                 result(true)
             } failure: { error in
                 result(FlutterError.error(code: "-1", message: "Restore failed", error: error))
@@ -348,13 +373,13 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
     }
     
     private func presentSubscriptions() {
-        let controller = Purchasely.subscriptionsController()
-        
-        let navCtrl = UINavigationController.init(rootViewController: controller)
-        navCtrl.navigationBar.topItem?.leftBarButtonItem = UIBarButtonItem(barButtonSystemItem: .done, target: navCtrl, action: #selector(UIViewController.close))
-        
-        DispatchQueue.main.async {
-            Purchasely.showController(navCtrl, type: .subscriptionList)
+        if let controller = Purchasely.subscriptionsController() {
+            let navCtrl = UINavigationController.init(rootViewController: controller)
+            navCtrl.navigationBar.topItem?.leftBarButtonItem = UIBarButtonItem(barButtonSystemItem: .done, target: navCtrl, action: #selector(UIViewController.close))
+            
+            DispatchQueue.main.async {
+                Purchasely.showController(navCtrl, type: .subscriptionList)
+            }
         }
     }
     
@@ -366,48 +391,62 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
         Purchasely.setAttribute(attr, value: value)
     }
     
-    private func setLoginTappedHandler(result: @escaping FlutterResult) {
-        
+    private func setPaywallActionInterceptor(result: @escaping FlutterResult) {
         DispatchQueue.main.async {
-            Purchasely.setLoginTappedHandler { [weak self] controller, userLoggedIn in
+            Purchasely.setPaywallActionsInterceptor { [weak self] action, parameters, info, onProcessAction in
                 guard let `self` = self else { return }
-                self.loginClosedHandler = userLoggedIn
+                self.onProcessActionHandler = onProcessAction
+                var value = [String: Any]()
                 
-                self.presentedPresentationViewController?.dismiss(animated: true, completion: {
-                    result(nil)
-                })
+                var actionString: String?
+                switch action {
+                case .login:
+                    actionString = "login"
+                case .purchase:
+                    actionString = "purchase"
+                case .close:
+                    actionString = "close"
+                case .restore:
+                    actionString = "restore"
+                case .navigate:
+                    actionString = "navigate"
+                case .promoCode:
+                    actionString = "promo_code"
+                case .openPresentation:
+                    actionString = "open_presentation"
+                @unknown default:
+                    actionString = nil
+                }
+                if let actionString = actionString {
+                    value["action"] = actionString
+                }
+                
+                if let info = info {
+                    value["info"] = info.toMap
+                }
+
+                if let parameters = parameters {
+                    value["parameters"] = parameters.toMap
+                }
+                
+                result(value)
             }
         }
     }
     
-    private func onUserLoggedIn(_ onUserLoggedIn: Bool) {
+    private func onProcessAction(_ proceed: Bool) {
         DispatchQueue.main.async { [weak self] in
-            guard let `self` = self, let presentedViewController = self.presentedPresentationViewController else { return }
-            Purchasely.showController(presentedViewController, type: .productPage)
-            self.loginClosedHandler?(onUserLoggedIn)
+            self?.onProcessActionHandler?(proceed)
         }
     }
     
-    private func setConfirmPurchaseHandler(result: @escaping FlutterResult) {
-        DispatchQueue.main.async { [weak self] in
-            guard let `self` = self else { return }
-            Purchasely.setConfirmPurchaseHandler { controller, authorizePurchase in
-                self.authorizedPurchaseHandler = authorizePurchase
-                self.presentedPresentationViewController?.dismiss(animated: true, completion: {
-                    result(nil)
-                })
+    private func closePaywall() {
+        if let presentedPresentationViewController = presentedPresentationViewController {
+            DispatchQueue.main.async {
+                presentedPresentationViewController.dismiss(animated: true, completion: nil)
             }
         }
     }
-    
-    private func processToPayment(_ processToPayment: Bool) {
-        DispatchQueue.main.async { [weak self] in
-            guard let `self` = self, let presentedViewController = self.presentedPresentationViewController else { return }
-            Purchasely.showController(presentedViewController, type: .productPage)
-            self.authorizedPurchaseHandler?(processToPayment)
-        }
-    }
-    
 }
 
 extension FlutterError {
@@ -452,7 +491,6 @@ class SwiftEventHandler: NSObject, FlutterStreamHandler, PLYEventDelegate {
     func eventTriggered(_ event: PLYEvent, properties: [String : Any]?) {
         guard let eventSink = self.eventSink else { return }
         DispatchQueue.main.async {
-            print("event: \(["name": event.name, "properties": properties ?? [:]])")
             eventSink(["name": event.name, "properties": properties ?? [:]])
         }
     }
