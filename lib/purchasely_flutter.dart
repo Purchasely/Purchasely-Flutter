@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/services.dart';
+import 'package:collection/collection.dart';
 
 class Purchasely {
   static const MethodChannel _channel = const MethodChannel('purchasely');
@@ -97,23 +98,22 @@ class Purchasely {
   }
 
   static Future<void> setLanguage(String language) async {
-    _channel.invokeMethod('setLanguage',
-        <String, dynamic>{'language': language});
+    _channel
+        .invokeMethod('setLanguage', <String, dynamic>{'language': language});
   }
 
   static Future<PurchaselyProduct> productWithIdentifier(
       String vendorId) async {
     final Map<dynamic, dynamic> result = await _channel.invokeMethod(
         'productWithIdentifier', <String, dynamic>{'vendorId': vendorId});
-    final List<PurchaselyPlan> plans = new List.empty(growable: true);
+    final List<PurchaselyPlan?> plans = new List.empty(growable: true);
     result['plans']
-        .forEach((k, plan) => {
-          plans.add(transformToPurchaselyPlan(plan))
-        });
-    return PurchaselyProduct(result['name'], result['vendorId'], plans);
+        .forEach((k, plan) => {plans.add(transformToPurchaselyPlan(plan))});
+    return PurchaselyProduct(
+        result['name'], result['vendorId'], plans.whereNotNull().toList());
   }
 
-  static Future<PurchaselyPlan> planWithIdentifier(String vendorId) async {
+  static Future<PurchaselyPlan?> planWithIdentifier(String vendorId) async {
     final Map<dynamic, dynamic> result = await _channel.invokeMethod(
         'planWithIdentifier', <String, dynamic>{'vendorId': vendorId});
     return transformToPurchaselyPlan(result);
@@ -146,7 +146,7 @@ class Purchasely {
 
     final List subscriptions = new List.empty(growable: true);
     result.forEach((element) {
-      final List<PurchaselyPlan> plans = new List.empty(growable: true);
+      final List<PurchaselyPlan?> plans = new List.empty(growable: true);
       element['product']['plans']
           .forEach((k, plan) => plans.add(transformToPurchaselyPlan(plan)));
 
@@ -157,7 +157,7 @@ class Purchasely {
           element['cancelledDate'],
           transformToPurchaselyPlan(element['plan']),
           PurchaselyProduct(element['product']['name'],
-              element['product']['vendorId'], plans)));
+              element['product']['vendorId'], plans.whereNotNull().toList())));
     });
     return subscriptions;
   }
@@ -206,24 +206,23 @@ class Purchasely {
 
   static Future<PaywallActionInterceptorResult>
       setPaywallActionInterceptor() async {
-    final result =
-        await _channel.invokeMethod('setPaywallActionInterceptor');
+    final result = await _channel.invokeMethod('setPaywallActionInterceptor');
     final Map<dynamic, dynamic>? plan = result['parameters']['plan'];
     return PaywallActionInterceptorResult(
-          PLYPaywallAction.values.firstWhere((e) => e.toString() == 'PLYPaywallAction.' + result['action']),
-          PLYPaywallActionParameters(
+        PLYPaywallInfo(
+            result['info']['contentId'], result['info']['presentationId']),
+        PLYPaywallAction.values.firstWhere(
+            (e) => e.toString() == 'PLYPaywallAction.' + result['action']),
+        PLYPaywallActionParameters(
             result['parameters']['url'],
             result['parameters']['title'],
             plan != null ? transformToPurchaselyPlan(plan) : null,
-            result['parameters']['presentation']
-          )
-        );
+            result['parameters']['presentation']));
   }
 
   static Future<void> onProcessAction(bool processAction) async {
     return await _channel.invokeMethod(
-      'onProcessAction',
-       <String, dynamic>{'processAction': processAction});
+        'onProcessAction', <String, dynamic>{'processAction': processAction});
   }
 
   static Future<void> closePaywall() async {
@@ -248,12 +247,15 @@ class Purchasely {
       try {
         callback(value);
       } catch (e) {
-        print('[Purchasely] Error with callback for paywall action interceptor handler: $e');
+        print(
+            '[Purchasely] Error with callback for paywall action interceptor handler: $e');
       }
     });
   }
 
-  static PurchaselyPlan transformToPurchaselyPlan(Map<dynamic, dynamic> plan) {
+  static PurchaselyPlan? transformToPurchaselyPlan(Map<dynamic, dynamic> plan) {
+    if (plan.isEmpty) return null;
+
     PlanType type = PlanType.unknown;
     try {
       type = PlanType.values[plan['type']];
@@ -262,6 +264,7 @@ class Purchasely {
     }
     return PurchaselyPlan(
         plan['vendorId'],
+        plan['productId'],
         plan['name'],
         type,
         plan['amount'],
@@ -279,7 +282,13 @@ class Purchasely {
 }
 
 enum LogLevel { debug, info, warn, error }
-enum RunningMode { transactionOnly, observer, paywallOnly, paywallObserver, full }
+enum RunningMode {
+  transactionOnly,
+  observer,
+  paywallOnly,
+  paywallObserver,
+  full
+}
 enum Attribute {
   amplitude_session_id,
   firebase_app_instance_id,
@@ -313,10 +322,11 @@ enum PLYPaywallAction {
 }
 
 class PurchaselyPlan {
-  String vendorId;
+  String? vendorId;
+  String? productId;
   String? name;
   PlanType type;
-  double amount;
+  double? amount;
   String? currencyCode;
   String? currencySymbol;
   String? price;
@@ -330,6 +340,7 @@ class PurchaselyPlan {
 
   PurchaselyPlan(
       this.vendorId,
+      this.productId,
       this.name,
       this.type,
       this.amount,
@@ -373,10 +384,11 @@ class PresentPresentationResult {
 }
 
 class PaywallActionInterceptorResult {
+  PLYPaywallInfo info;
   PLYPaywallAction action;
   PLYPaywallActionParameters parameters;
 
-  PaywallActionInterceptorResult(this.action, this.parameters);
+  PaywallActionInterceptorResult(this.info, this.action, this.parameters);
 }
 
 class PLYPaywallActionParameters {
@@ -386,9 +398,12 @@ class PLYPaywallActionParameters {
   String? presentation;
 
   PLYPaywallActionParameters(
-    this.url,
-    this.title,
-    this.plan,
-    this.presentation
-  );
+      this.url, this.title, this.plan, this.presentation);
+}
+
+class PLYPaywallInfo {
+  String? contentId;
+  String? presentationId;
+
+  PLYPaywallInfo(this.contentId, this.presentationId);
 }

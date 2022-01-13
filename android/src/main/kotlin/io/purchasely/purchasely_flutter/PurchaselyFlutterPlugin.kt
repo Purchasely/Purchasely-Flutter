@@ -454,23 +454,24 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
     }
 
     private fun setPaywallActionInterceptor(result: Result) {
-        Purchasely.setPaywallActionsInterceptor { activity, action, parameters, processAction ->
+        Purchasely.setPaywallActionsInterceptor { info, action, parameters, processAction ->
             paywallActionHandler = processAction
 
-            val parametersForReact = parameters
-                .mapKeys { it.key.toString().lowercase() }
-                .mapValues {
-                    val value = it.value
-                    if(value is PLYPlan) {
-                        transformPlanToMap(value)
-                    } else {
-                        value.toString()
-                    }
-                }
+            val parametersForFlutter = hashMapOf<String, Any?>();
+
+            parametersForFlutter["title"] = parameters.title
+            parametersForFlutter["url"] = parameters.url?.toString()
+            parametersForFlutter["plan"] = transformPlanToMap(parameters.plan)
+            parametersForFlutter["presentation"] = parameters.presentation
+
 
             result.success(mapOf(
+                Pair("info", mapOf(
+                    Pair("contentId", info?.contentId),
+                    Pair("presentationId", info?.presentationId)
+                )),
                 Pair("action", action.value),
-                Pair("parameters", parametersForReact)
+                Pair("parameters", parametersForFlutter)
             ))
         }
     }

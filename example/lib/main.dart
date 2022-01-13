@@ -41,7 +41,7 @@ class _MyAppState extends State<MyApp> {
       print('Anonymous Id : $anonymousId');
 
       PurchaselyProduct product =
-      await Purchasely.productWithIdentifier("PURCHASELY_PLUS");
+          await Purchasely.productWithIdentifier("PURCHASELY_PLUS");
       print('Product found');
       inspect(product);
 
@@ -55,14 +55,14 @@ class _MyAppState extends State<MyApp> {
       });
 
       Purchasely.setDefaultPresentationResultCallback(
-        (PresentPresentationResult value) {
+          (PresentPresentationResult value) {
         print('Default with $value');
       });
 
       Purchasely.setPaywallActionInterceptorCallback(
-        (PaywallActionInterceptorResult result) {
-        print(result.toString());
+          (PaywallActionInterceptorResult result) {
         print('Received action from paywall');
+        inspect(result);
 
         if (result.action == PLYPaywallAction.navigate) {
           Purchasely.onProcessAction(true);
@@ -91,7 +91,6 @@ class _MyAppState extends State<MyApp> {
           Purchasely.onProcessAction(true);
         }
       });
-
     } catch (e) {
       print(e);
     }
@@ -105,7 +104,7 @@ class _MyAppState extends State<MyApp> {
   Future<void> displayPresentation() async {
     try {
       var result =
-      await Purchasely.presentProductWithIdentifier("PURCHASELY_PLUS");
+          await Purchasely.presentProductWithIdentifier("PURCHASELY_PLUS");
       print('Result : $result');
       if (result.result == PurchaseResult.cancelled) {
         print("User cancelled purchased");
@@ -132,7 +131,7 @@ class _MyAppState extends State<MyApp> {
   Future<void> purchase() async {
     try {
       Map<dynamic, dynamic> plan =
-      await Purchasely.purchaseWithPlanVendorId('PURCHASELY_PLUS_MONTHLY');
+          await Purchasely.purchaseWithPlanVendorId('PURCHASELY_PLUS_MONTHLY');
       print('Plan is $plan');
     } catch (e) {
       print(e);
@@ -161,56 +160,56 @@ class _MyAppState extends State<MyApp> {
         ),
         body: Center(
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: <Widget>[
-                Text('Purchasely sample'),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    padding: EdgeInsets.only(left: 20.0, right: 30.0),
-                  ),
-                  onPressed: () {
-                    displayPresentation();
-                  },
-                  child: Text('Display presentation'),
-                ),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    padding: EdgeInsets.only(left: 20.0, right: 30.0),
-                  ),
-                  onPressed: () {
-                    continuePurchase();
-                  },
-                  child: Text('Continue purchase'),
-                ),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    padding: EdgeInsets.only(left: 20.0, right: 30.0),
-                  ),
-                  onPressed: () {
-                    purchase();
-                  },
-                  child: Text('Purchase'),
-                ),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    padding: EdgeInsets.only(left: 20.0, right: 30.0),
-                  ),
-                  onPressed: () {
-                    displaySubscriptions();
-                  },
-                  child: Text('Display subscriptions'),
-                ),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    padding: EdgeInsets.only(left: 20.0, right: 30.0),
-                  ),
-                  onPressed: () {
-                    restoreAllProducts();
-                  },
-                  child: Text('Restore purchases'),
-                ),
-              ],
-            )),
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: <Widget>[
+            Text('Purchasely sample'),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                padding: EdgeInsets.only(left: 20.0, right: 30.0),
+              ),
+              onPressed: () {
+                displayPresentation();
+              },
+              child: Text('Display presentation'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                padding: EdgeInsets.only(left: 20.0, right: 30.0),
+              ),
+              onPressed: () {
+                continuePurchase();
+              },
+              child: Text('Continue purchase'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                padding: EdgeInsets.only(left: 20.0, right: 30.0),
+              ),
+              onPressed: () {
+                purchase();
+              },
+              child: Text('Purchase'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                padding: EdgeInsets.only(left: 20.0, right: 30.0),
+              ),
+              onPressed: () {
+                displaySubscriptions();
+              },
+              child: Text('Display subscriptions'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                padding: EdgeInsets.only(left: 20.0, right: 30.0),
+              ),
+              onPressed: () {
+                restoreAllProducts();
+              },
+              child: Text('Restore purchases'),
+            ),
+          ],
+        )),
       ),
     );
   }
