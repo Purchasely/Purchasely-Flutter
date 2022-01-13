@@ -27,8 +27,8 @@ class _MyAppState extends State<MyApp> {
           'afa96c76-1d8e-4e3c-a48f-204a3cd93a15',
           ['Google'],
           null,
-          LogLevel.debug,
-          RunningMode.full);
+          PLYLogLevel.debug,
+          PLYRunningMode.full);
 
       if (!configured) {
         print('Purchasely SDK not configured');
@@ -40,13 +40,14 @@ class _MyAppState extends State<MyApp> {
       String anonymousId = await Purchasely.anonymousUserId;
       print('Anonymous Id : $anonymousId');
 
-      PurchaselyProduct product =
+      PLYProduct product =
           await Purchasely.productWithIdentifier("PURCHASELY_PLUS");
       print('Product found');
       inspect(product);
 
       Purchasely.listenToEvents((event) {
-        print('Event : $event');
+        print('Event : ${event.name}');
+        inspect(event);
       });
 
       var subscriptions = await Purchasely.userSubscriptions();
@@ -106,7 +107,7 @@ class _MyAppState extends State<MyApp> {
       var result =
           await Purchasely.presentProductWithIdentifier("PURCHASELY_PLUS");
       print('Result : $result');
-      if (result.result == PurchaseResult.cancelled) {
+      if (result.result == PLYPurchaseResult.cancelled) {
         print("User cancelled purchased");
       } else {
         print('User purchased: $result.plan.name');

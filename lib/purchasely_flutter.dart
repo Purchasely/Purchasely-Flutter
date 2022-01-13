@@ -12,7 +12,7 @@ class Purchasely {
   static var purchases;
 
   static Future<bool> startWithApiKey(String apiKey, List<String> stores,
-      String? userId, LogLevel logLevel, RunningMode runningMode) async {
+      String? userId, PLYLogLevel logLevel, PLYRunningMode runningMode) async {
     return await _channel.invokeMethod('startWithApiKey', <String, dynamic>{
       'apiKey': apiKey,
       'stores': stores,
@@ -30,8 +30,8 @@ class Purchasely {
       'presentationVendorId': presentationVendorId,
       'contentId': contentId
     });
-    return PresentPresentationResult(PurchaseResult.values[result['result']],
-        transformToPurchaselyPlan(result['plan']));
+    return PresentPresentationResult(PLYPurchaseResult.values[result['result']],
+        transformToPLYPlan(result['plan']));
   }
 
   static Future<PresentPresentationResult> presentProductWithIdentifier(
@@ -44,12 +44,11 @@ class Purchasely {
       'presentationVendorId': presentationVendorId,
       'contentId': contentId
     });
-    PurchaselyPlan? plan;
-    if (!result['plan'].isEmpty)
-      plan = transformToPurchaselyPlan(result['plan']);
+    PLYPlan? plan;
+    if (!result['plan'].isEmpty) plan = transformToPLYPlan(result['plan']);
 
     return PresentPresentationResult(
-        PurchaseResult.values[result['result']], plan);
+        PLYPurchaseResult.values[result['result']], plan);
   }
 
   static Future<PresentPresentationResult> presentPlanWithIdentifier(
@@ -62,8 +61,8 @@ class Purchasely {
       'presentationVendorId': presentationVendorId,
       'contentId': contentId
     });
-    return PresentPresentationResult(PurchaseResult.values[result['result']],
-        transformToPurchaselyPlan(result['plan']));
+    return PresentPresentationResult(PLYPurchaseResult.values[result['result']],
+        transformToPLYPlan(result['plan']));
   }
 
   static Future<bool> restoreAllProducts() async {
@@ -86,7 +85,7 @@ class Purchasely {
     return await _channel.invokeMethod("userLogout");
   }
 
-  static Future<bool> setLogLevel(LogLevel logLevel) async {
+  static Future<bool> setLogLevel(PLYLogLevel logLevel) async {
     final bool restored = await _channel.invokeMethod(
         'setLogLevel', <String, dynamic>{'logLevel': logLevel.index});
     return restored;
@@ -102,21 +101,19 @@ class Purchasely {
         .invokeMethod('setLanguage', <String, dynamic>{'language': language});
   }
 
-  static Future<PurchaselyProduct> productWithIdentifier(
-      String vendorId) async {
+  static Future<PLYProduct> productWithIdentifier(String vendorId) async {
     final Map<dynamic, dynamic> result = await _channel.invokeMethod(
         'productWithIdentifier', <String, dynamic>{'vendorId': vendorId});
-    final List<PurchaselyPlan?> plans = new List.empty(growable: true);
-    result['plans']
-        .forEach((k, plan) => {plans.add(transformToPurchaselyPlan(plan))});
-    return PurchaselyProduct(
+    final List<PLYPlan?> plans = new List.empty(growable: true);
+    result['plans'].forEach((k, plan) => {plans.add(transformToPLYPlan(plan))});
+    return PLYProduct(
         result['name'], result['vendorId'], plans.whereNotNull().toList());
   }
 
-  static Future<PurchaselyPlan?> planWithIdentifier(String vendorId) async {
+  static Future<PLYPlan?> planWithIdentifier(String vendorId) async {
     final Map<dynamic, dynamic> result = await _channel.invokeMethod(
         'planWithIdentifier', <String, dynamic>{'vendorId': vendorId});
-    return transformToPurchaselyPlan(result);
+    return transformToPLYPlan(result);
   }
 
   static Future<Map<dynamic, dynamic>> purchaseWithPlanVendorId(String vendorId,
@@ -146,18 +143,18 @@ class Purchasely {
 
     final List subscriptions = new List.empty(growable: true);
     result.forEach((element) {
-      final List<PurchaselyPlan?> plans = new List.empty(growable: true);
+      final List<PLYPlan?> plans = new List.empty(growable: true);
       element['product']['plans']
-          .forEach((k, plan) => plans.add(transformToPurchaselyPlan(plan)));
+          .forEach((k, plan) => plans.add(transformToPLYPlan(plan)));
 
-      subscriptions.add(PurchaselySubscription(
+      subscriptions.add(PLYSubscription(
           element['purchaseToken'],
-          SubscriptionSource.values[element['subscriptionSource']],
+          PLYSubscriptionSource.values[element['subscriptionSource']],
           element['nextRenewalDate'],
           element['cancelledDate'],
-          transformToPurchaselyPlan(element['plan']),
-          PurchaselyProduct(element['product']['name'],
-              element['product']['vendorId'], plans.whereNotNull().toList())));
+          transformToPLYPlan(element['plan']),
+          PLYProduct(element['product']['name'], element['product']['vendorId'],
+              plans.whereNotNull().toList())));
     });
     return subscriptions;
   }
@@ -167,9 +164,18 @@ class Purchasely {
         .invokeMethod('handle', <String, dynamic>{'deeplink': deepLink});
   }
 
-  static void listenToEvents(Function block) {
+  static void listenToEvents(Function(PLYEvent) block) {
     events = _stream.receiveBroadcastStream().listen((event) {
-      block(event);
+      PLYEventName eventName = PLYEventName.APP_CONFIGURED;
+      try {
+        eventName = PLYEventName.values
+            .firstWhere((e) => e.toString() == 'PLYEventName.' + event['name']);
+      } catch (e) {
+        print(e);
+      }
+
+      block(PLYEvent(
+          eventName, transformToPLYEventProperties(event['properties'])));
     });
   }
 
@@ -187,7 +193,7 @@ class Purchasely {
     purchases.cancel();
   }
 
-  static Future<void> setAttribute(Attribute attribute, String value) async {
+  static Future<void> setAttribute(PLYAttribute attribute, String value) async {
     return await _channel.invokeMethod('setAttribute',
         <String, dynamic>{'attribute': attribute.index, 'value': value});
   }
@@ -200,8 +206,8 @@ class Purchasely {
       setDefaultPresentationResultHandler() async {
     final result =
         await _channel.invokeMethod('setDefaultPresentationResultHandler');
-    return PresentPresentationResult(PurchaseResult.values[result['result']],
-        transformToPurchaselyPlan(result['plan']));
+    return PresentPresentationResult(PLYPurchaseResult.values[result['result']],
+        transformToPLYPlan(result['plan']));
   }
 
   static Future<PaywallActionInterceptorResult>
@@ -216,7 +222,7 @@ class Purchasely {
         PLYPaywallActionParameters(
             result['parameters']['url'],
             result['parameters']['title'],
-            plan != null ? transformToPurchaselyPlan(plan) : null,
+            plan != null ? transformToPLYPlan(plan) : null,
             result['parameters']['presentation']));
   }
 
@@ -253,16 +259,16 @@ class Purchasely {
     });
   }
 
-  static PurchaselyPlan? transformToPurchaselyPlan(Map<dynamic, dynamic> plan) {
+  static PLYPlan? transformToPLYPlan(Map<dynamic, dynamic> plan) {
     if (plan.isEmpty) return null;
 
-    PlanType type = PlanType.unknown;
+    PLYPlanType type = PLYPlanType.unknown;
     try {
-      type = PlanType.values[plan['type']];
+      type = PLYPlanType.values[plan['type']];
     } catch (e) {
       print(e);
     }
-    return PurchaselyPlan(
+    return PLYPlan(
         plan['vendorId'],
         plan['productId'],
         plan['name'],
@@ -279,31 +285,108 @@ class Purchasely {
         plan['introPeriod'],
         plan['hasFreeTrial']);
   }
+
+  static PLYEventProperties transformToPLYEventProperties(
+      Map<dynamic, dynamic> properties) {
+    PLYEventName eventName = PLYEventName.APP_CONFIGURED;
+    try {
+      eventName = PLYEventName.values.firstWhere(
+          (e) => e.toString() == 'PLYEventName.' + properties['event_name']);
+    } catch (e) {
+      print(e);
+    }
+
+    List<PLYEventPropertyPlan> plans = new List.empty(growable: true);
+    properties['purchasable_plans']?.forEach((element) => plans.add(
+        PLYEventPropertyPlan(
+            element['type'],
+            element['purchasely_plan_id'],
+            element['store'],
+            element['store_country'],
+            element['store_product_id'],
+            element['price_in_customer_currency'],
+            element['customer_currency'],
+            element['period'],
+            element['duration'],
+            element['intro_price_in_customer_currency'],
+            element['intro_period'],
+            element['intro_duration'],
+            element['has_free_trial'],
+            element['free_trial_period'],
+            element['free_trial_duration'],
+            element['discount_referent'],
+            element['discount_percentage_comparison_to_referent'],
+            element['discount_price_comparison_to_referent'],
+            element['is_default'])));
+
+    List<PLYEventPropertyCarousel> carousels = new List.empty(growable: true);
+    properties['carousels']?.forEach((element) => carousels.add(
+        PLYEventPropertyCarousel(
+            element['selected_slide'],
+            element['number_of_slides'],
+            element['is_carousel_auto_playing'],
+            element['default_slide'],
+            element['previous_slide'])));
+
+    List<PLYEventPropertySubscription> subscriptions =
+        new List.empty(growable: true);
+    properties['running_subscriptions']?.forEach((element) => subscriptions.add(
+        PLYEventPropertySubscription(element['plan'], element['product'])));
+
+    return PLYEventProperties(
+        properties['sdk_version'],
+        eventName,
+        properties['event_created_at_ms'],
+        properties['event_created_at'],
+        properties['displayed_presentation'],
+        properties['user_id'],
+        properties['anonymous_user_id'],
+        plans,
+        properties['deeplink_identifier'],
+        properties['source_identifier'],
+        properties['selected_plan'],
+        properties['previous_selected_plan'],
+        properties['selected_presentation'],
+        properties['previous_selected_presentation'],
+        properties['link_identifier'],
+        carousels,
+        properties['language'],
+        properties['device'],
+        properties['os_version'],
+        properties['device_type'],
+        properties['error_message'],
+        properties['cancellation_reason_id'],
+        properties['cancellation_reason'],
+        properties['plan'],
+        properties['selected_product'],
+        properties['plan_change_type'],
+        subscriptions);
+  }
 }
 
-enum LogLevel { debug, info, warn, error }
-enum RunningMode {
+enum PLYLogLevel { debug, info, warn, error }
+enum PLYRunningMode {
   transactionOnly,
   observer,
   paywallOnly,
   paywallObserver,
   full
 }
-enum Attribute {
+enum PLYAttribute {
   amplitude_session_id,
   firebase_app_instance_id,
   airship_channel_id,
   batch_installation_id
 }
-enum PurchaseResult { purchased, cancelled, restored }
-enum SubscriptionSource {
+enum PLYPurchaseResult { purchased, cancelled, restored }
+enum PLYSubscriptionSource {
   appleAppStore,
   googlePlayStore,
   amazonAppstore,
   huaweiAppGallery,
   none
 }
-enum PlanType {
+enum PLYPlanType {
   consumable,
   nonConsumable,
   autoRenewingSubscription,
@@ -321,11 +404,11 @@ enum PLYPaywallAction {
   promo_code,
 }
 
-class PurchaselyPlan {
+class PLYPlan {
   String? vendorId;
   String? productId;
   String? name;
-  PlanType type;
+  PLYPlanType type;
   double? amount;
   String? currencyCode;
   String? currencySymbol;
@@ -338,7 +421,7 @@ class PurchaselyPlan {
   String? introPeriod;
   bool? hasFreeTrial;
 
-  PurchaselyPlan(
+  PLYPlan(
       this.vendorId,
       this.productId,
       this.name,
@@ -356,29 +439,29 @@ class PurchaselyPlan {
       this.hasFreeTrial);
 }
 
-class PurchaselyProduct {
+class PLYProduct {
   String name;
   String vendorId;
-  List<PurchaselyPlan> plans;
+  List<PLYPlan> plans;
 
-  PurchaselyProduct(this.name, this.vendorId, this.plans);
+  PLYProduct(this.name, this.vendorId, this.plans);
 }
 
-class PurchaselySubscription {
+class PLYSubscription {
   String? purchaseToken;
-  SubscriptionSource? subscriptionSource;
+  PLYSubscriptionSource? subscriptionSource;
   String? nextRenewalDate;
   String? cancelledDate;
-  PurchaselyPlan? plan;
-  PurchaselyProduct? product;
+  PLYPlan? plan;
+  PLYProduct? product;
 
-  PurchaselySubscription(this.purchaseToken, this.subscriptionSource,
+  PLYSubscription(this.purchaseToken, this.subscriptionSource,
       this.nextRenewalDate, this.cancelledDate, this.plan, this.product);
 }
 
 class PresentPresentationResult {
-  PurchaseResult result;
-  PurchaselyPlan? plan;
+  PLYPurchaseResult result;
+  PLYPlan? plan;
 
   PresentPresentationResult(this.result, this.plan);
 }
@@ -394,7 +477,7 @@ class PaywallActionInterceptorResult {
 class PLYPaywallActionParameters {
   String? url;
   String? title;
-  PurchaselyPlan? plan;
+  PLYPlan? plan;
   String? presentation;
 
   PLYPaywallActionParameters(
@@ -406,4 +489,170 @@ class PLYPaywallInfo {
   String? presentationId;
 
   PLYPaywallInfo(this.contentId, this.presentationId);
+}
+
+enum PLYEventName {
+  APP_INSTALLED,
+  APP_CONFIGURED,
+  APP_UPDATED,
+  APP_STARTED,
+  CANCELLATION_REASON_PUBLISHED,
+  IN_APP_PURCHASING,
+  IN_APP_PURCHASED,
+  IN_APP_RESTORED,
+  IN_APP_DEFERRED,
+  IN_APP_PURCHASE_FAILED,
+  IN_APP_NOT_AVAILABLE,
+  PURCHASE_CANCELLED_BY_APP,
+  CAROUSEL_SLIDE_SWIPED,
+  DEEPLINK_OPENED,
+  LINK_OPENED,
+  LOGIN_TAPPED,
+  PLAN_SELECTED,
+  PRESENTATION_VIEWED,
+  PRESENTATION_OPENED,
+  PRESENTATION_SELECTED,
+  PROMO_CODE_TAPPED,
+  PURCHASE_CANCELLED,
+  PURCHASE_TAPPED,
+  RESTORE_TAPPED,
+  RECEIPT_CREATED,
+  RECEIPT_VALIDATED,
+  RECEIPT_FAILED,
+  RESTORE_STARTED,
+  RESTORE_SUCCEEDED,
+  RESTORE_FAILED,
+  SUBSCRIPTIONS_LIST_VIEWED,
+  SUBSCRIPTION_DETAILS_VIEWED,
+  SUBSCRIPTION_CANCEL_TAPPED,
+  SUBSCRIPTION_PLAN_TAPPED,
+  SUBSCRIPTIONS_TRANSFERRED,
+  USER_LOGGED_IN,
+  USER_LOGGED_OUT
+}
+
+class PLYEventPropertyPlan {
+  String? type;
+  String? purchasely_plan_id;
+  String? store;
+  String? store_country;
+  String? store_product_id;
+  double? price_in_customer_currency;
+  String? customer_currency;
+  String? period;
+  int? duration;
+  double? intro_price_in_customer_currency;
+  String? intro_period;
+  String? intro_duration;
+  bool? has_free_trial;
+  String? free_trial_period;
+  int? free_trial_duration;
+  String? discount_referent;
+  String? discount_percentage_comparison_to_referent;
+  String? discount_price_comparison_to_referent;
+  bool? is_default;
+  PLYEventPropertyPlan(
+      this.type,
+      this.purchasely_plan_id,
+      this.store,
+      this.store_country,
+      this.store_product_id,
+      this.price_in_customer_currency,
+      this.customer_currency,
+      this.period,
+      this.duration,
+      this.intro_price_in_customer_currency,
+      this.intro_period,
+      this.intro_duration,
+      this.has_free_trial,
+      this.free_trial_period,
+      this.free_trial_duration,
+      this.discount_referent,
+      this.discount_percentage_comparison_to_referent,
+      this.discount_price_comparison_to_referent,
+      this.is_default);
+}
+
+class PLYEvent {
+  PLYEventName name;
+  PLYEventProperties properties;
+
+  PLYEvent(this.name, this.properties);
+}
+
+class PLYEventProperties {
+  String? sdk_version;
+  PLYEventName event_name;
+  int event_created_at_ms;
+  String event_created_at;
+  String? displayed_presentation;
+  String? user_id;
+  String? anonymous_user_id;
+  List<PLYEventPropertyPlan>? purchasable_plans;
+  String? deeplink_identifier;
+  String? source_identifier;
+  String? selected_plan;
+  String? previous_selected_plan;
+  String? selected_presentation;
+  String? previous_selected_presentation;
+  String? link_identifier;
+  List<PLYEventPropertyCarousel> carousels;
+  String? language;
+  String? device;
+  String? os_version;
+  String? device_type;
+  String? error_message;
+  String? cancellation_reason_id;
+  String? cancellation_reason;
+  String? plan;
+  String? selected_product;
+  String? plan_change_type;
+  List<PLYEventPropertySubscription> running_subscriptions;
+
+  PLYEventProperties(
+      this.sdk_version,
+      this.event_name,
+      this.event_created_at_ms,
+      this.event_created_at,
+      this.displayed_presentation,
+      this.user_id,
+      this.anonymous_user_id,
+      this.purchasable_plans,
+      this.deeplink_identifier,
+      this.source_identifier,
+      this.selected_plan,
+      this.previous_selected_plan,
+      this.selected_presentation,
+      this.previous_selected_presentation,
+      this.link_identifier,
+      this.carousels,
+      this.language,
+      this.device,
+      this.os_version,
+      this.device_type,
+      this.error_message,
+      this.cancellation_reason_id,
+      this.cancellation_reason,
+      this.plan,
+      this.selected_product,
+      this.plan_change_type,
+      this.running_subscriptions);
+}
+
+class PLYEventPropertyCarousel {
+  int? selected_slide;
+  int? number_of_slides;
+  bool is_carousel_auto_playing;
+  int? default_slide;
+  int? previous_slide;
+
+  PLYEventPropertyCarousel(this.selected_slide, this.number_of_slides,
+      this.is_carousel_auto_playing, this.default_slide, this.previous_slide);
+}
+
+class PLYEventPropertySubscription {
+  String? plan;
+  String? product;
+
+  PLYEventPropertySubscription(this.plan, this.product);
 }
