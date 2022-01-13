@@ -42,6 +42,23 @@ class _MyAppState extends State<MyApp> {
       String anonymousId = await Purchasely.anonymousUserId;
       print('Anonymous Id : $anonymousId');
 
+      try {
+        List<PLYSubscription> subscriptions =
+            await Purchasely.userSubscriptions();
+        print(' ==> Subscriptions');
+        if (subscriptions.isNotEmpty) {
+          print(subscriptions.first.plan);
+          print(subscriptions.first.subscriptionSource);
+          print(subscriptions.first.nextRenewalDate);
+          print(subscriptions.first.cancelledDate);
+        }
+      } catch (e) {
+        print(e);
+      }
+
+      List<PLYProduct> products = await Purchasely.allProducts();
+      inspect(products);
+
       PLYProduct product =
           await Purchasely.productWithIdentifier("PURCHASELY_PLUS");
       print('Product found');
@@ -52,14 +69,13 @@ class _MyAppState extends State<MyApp> {
         inspect(event);
       });
 
-      var subscriptions = await Purchasely.userSubscriptions();
-      subscriptions.forEach((element) {
-        inspect(element);
-      });
-
       Purchasely.setDefaultPresentationResultCallback(
           (PresentPresentationResult value) {
-        print('Default with $value');
+        print('Presentation Result : ' + value.result.toString());
+
+        if (value.plan != null) {
+          //User bought a plan
+        }
       });
 
       Purchasely.setPaywallActionInterceptorCallback(
@@ -114,7 +130,7 @@ class _MyAppState extends State<MyApp> {
       if (result.result == PLYPurchaseResult.cancelled) {
         print("User cancelled purchased");
       } else {
-        print('User purchased: $result.plan.name');
+        print('User purchased: ${result.plan?.name}');
       }
     } catch (e) {
       print(e);

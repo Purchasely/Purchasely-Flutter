@@ -215,21 +215,6 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
       }
   }
 
-  private fun transformPlanToMap(plan: PLYPlan?): Map<String, Any?> {
-      if(plan == null) return emptyMap()
-
-      return plan.toMap().toMutableMap().apply {
-          this["type"] = when(plan.type) {
-              DistributionType.RENEWING_SUBSCRIPTION -> DistributionType.RENEWING_SUBSCRIPTION.ordinal
-              DistributionType.NON_RENEWING_SUBSCRIPTION -> DistributionType.NON_RENEWING_SUBSCRIPTION.ordinal
-              DistributionType.CONSUMABLE -> DistributionType.CONSUMABLE.ordinal
-              DistributionType.NON_CONSUMABLE -> DistributionType.NON_CONSUMABLE.ordinal
-              DistributionType.UNKNOWN -> DistributionType.UNKNOWN.ordinal
-              else -> null
-          }
-      }
-  }
-
   //region Purchasely
   private fun startWithApiKey(
       apiKey: String?, stores: List<String>?,
@@ -299,12 +284,14 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
       Purchasely.restoreAllProducts(
           success = { plan ->
               result.success(true)
+              Purchasely.restoreAllProducts(null)
           }, error = { error ->
               error?.let {
                   result.error("-1", it.message, it)
               } ?: let {
                   result.error("-1", "Unknown error", null)
               }
+              Purchasely.restoreAllProducts(null)
           }
       )
   }
@@ -380,7 +367,13 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
           val products = Purchasely.allProducts()
           val list = arrayListOf<Map<String, Any?>>()
           for (product in products) {
-              list.add(product.toMap())
+              list.add(product.toMap().toMutableMap().apply {
+                  val plans: MutableMap<String?, Any> = HashMap()
+                  product.plans.forEach { plan ->
+                      plans[plan.name] = transformPlanToMap(plan)
+                  }
+                  this["plans"] = plans
+              })
           }
           result.success(list)
       } catch (e: Exception) {
@@ -515,15 +508,30 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
 
           if(presentationResult != null) {
               presentationResult?.success(
-                  mapOf(Pair("result", productViewResult), Pair("plan", plan?.toMap() ?: emptyMap()))
+                  mapOf(Pair("result", productViewResult), Pair("plan", transformPlanToMap(plan)))
               )
               presentationResult = null
           } else if(defaultPresentationResult != null) {
               defaultPresentationResult?.success(
-                  mapOf(Pair("result", productViewResult), Pair("plan", plan?.toMap() ?: emptyMap()))
+                  mapOf(Pair("result", productViewResult), Pair("plan", transformPlanToMap(plan)))
               )
           }
 
+      }
+
+      private fun transformPlanToMap(plan: PLYPlan?): Map<String, Any?> {
+          if(plan == null) return emptyMap()
+
+          return plan.toMap().toMutableMap().apply {
+              this["type"] = when(plan.type) {
+                  DistributionType.RENEWING_SUBSCRIPTION -> DistributionType.RENEWING_SUBSCRIPTION.ordinal
+                  DistributionType.NON_RENEWING_SUBSCRIPTION -> DistributionType.NON_RENEWING_SUBSCRIPTION.ordinal
+                  DistributionType.CONSUMABLE -> DistributionType.CONSUMABLE.ordinal
+                  DistributionType.NON_CONSUMABLE -> DistributionType.NON_CONSUMABLE.ordinal
+                  DistributionType.UNKNOWN -> DistributionType.UNKNOWN.ordinal
+                  else -> null
+              }
+          }
       }
   }
 

@@ -134,8 +134,16 @@ class Purchasely {
     return product;
   }
 
-  static Future<List> allProducts() async {
-    final List products = await _channel.invokeMethod('allProducts');
+  static Future<List<PLYProduct>> allProducts() async {
+    final List result = await _channel.invokeMethod('allProducts');
+    List<PLYProduct> products = new List.empty(growable: true);
+    result.forEach((element) {
+      final List<PLYPlan?> plans = new List.empty(growable: true);
+      element['plans']
+          .forEach((k, plan) => {plans.add(transformToPLYPlan(plan))});
+      products.add(PLYProduct(
+          element['name'], element['vendorId'], plans.whereNotNull().toList()));
+    });
     return products;
   }
 
@@ -147,11 +155,11 @@ class Purchasely {
     _channel.invokeMethod('displaySubscriptionCancellationInstruction');
   }
 
-  static Future<List> userSubscriptions() async {
+  static Future<List<PLYSubscription>> userSubscriptions() async {
     final List<dynamic> result =
         await _channel.invokeMethod('userSubscriptions');
 
-    final List subscriptions = new List.empty(growable: true);
+    final List<PLYSubscription> subscriptions = new List.empty(growable: true);
     result.forEach((element) {
       final List<PLYPlan?> plans = new List.empty(growable: true);
       element['product']['plans']
