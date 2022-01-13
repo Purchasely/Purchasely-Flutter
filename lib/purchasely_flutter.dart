@@ -70,6 +70,11 @@ class Purchasely {
     return restored;
   }
 
+  static Future<bool> silentRestoreAllProducts() async {
+    final bool restored = await _channel.invokeMethod('silentRestoreAllProducts');
+    return restored;
+  }
+
   static Future<String> get anonymousUserId async {
     final String id = await _channel.invokeMethod('getAnonymousUserId');
     return id;
@@ -336,7 +341,6 @@ class Purchasely {
     return PLYEventProperties(
         properties['sdk_version'],
         eventName,
-        properties['event_created_at_ms'],
         properties['event_created_at'],
         properties['displayed_presentation'],
         properties['user_id'],
@@ -583,7 +587,6 @@ class PLYEvent {
 class PLYEventProperties {
   String? sdk_version;
   PLYEventName event_name;
-  int event_created_at_ms;
   String event_created_at;
   String? displayed_presentation;
   String? user_id;
@@ -612,7 +615,6 @@ class PLYEventProperties {
   PLYEventProperties(
       this.sdk_version,
       this.event_name,
-      this.event_created_at_ms,
       this.event_created_at,
       this.displayed_presentation,
       this.user_id,

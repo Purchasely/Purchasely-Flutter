@@ -10,7 +10,7 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
     let purchaseChannel: FlutterEventChannel
     let purchaseHandler: SwiftPurchaseHandler
     
-    var presentedPresentationViewController: UIViewController?
+    weak var presentedPresentationViewController: UIViewController?
     
     var onProcessActionHandler: ((Bool) -> Void)?
     
@@ -95,8 +95,11 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             setAttribute(arguments: arguments)
         case "setPaywallActionInterceptor":
             setPaywallActionInterceptor(result: result)
+        case "setLanguage":
+            let parameter = arguments?["language"] as? String
+            setLanguage(with: parameter)
         case "onProcessAction":
-            let parameter = arguments?["proceed"] as? Bool
+            let parameter = arguments?["processAction"] as? Bool
             onProcessAction(parameter ?? true)
         case "closePaywall":
             closePaywall()
@@ -163,6 +166,8 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             DispatchQueue.main.async {
                 Purchasely.showController(navCtrl, type: .productPage)
             }
+        } else {
+            result(FlutterError.error(code: "-1", message: "You are using a running mode that prevent paywalls to be displayed", error: nil))
         }
     }
     
@@ -197,6 +202,8 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             DispatchQueue.main.async {
                 Purchasely.showController(navCtrl, type: .productPage)
             }
+        } else {
+            result(FlutterError.error(code: "-1", message: "You are using a running mode that prevent paywalls to be displayed", error: nil))
         }
     }
     
@@ -231,6 +238,8 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             DispatchQueue.main.async {
                 Purchasely.showController(navCtrl, type: .productPage)
             }
+        } else {
+            result(FlutterError.error(code: "-1", message: "You are using a running mode that prevent paywalls to be displayed", error: nil))
         }
     }
     
@@ -256,6 +265,12 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
     
     private func getAnonymousUserId() -> String {
         return Purchasely.anonymousUserId
+    }
+    
+    private func setLanguage(with language: String?) {
+        guard let language = language else { return }
+        let locale = Locale(identifier: language)
+        Purchasely.setLanguage(from: locale)
     }
     
     private func userLogin(arguments: [String: Any]?, result: @escaping FlutterResult) {
@@ -421,13 +436,8 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
                     value["action"] = actionString
                 }
                 
-                if let info = info {
-                    value["info"] = info.toMap
-                }
-
-                if let parameters = parameters {
-                    value["parameters"] = parameters.toMap
-                }
+                value["info"] = info?.toMap ?? [:]
+                value["parameters"] = parameters?.toMap ?? [:]
                 
                 result(value)
             }

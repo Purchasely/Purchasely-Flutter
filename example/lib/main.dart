@@ -37,6 +37,8 @@ class _MyAppState extends State<MyApp> {
 
       //Purchasely.setLogLevel(LogLevel.debug);
 
+      Purchasely.setLanguage("en");
+
       String anonymousId = await Purchasely.anonymousUserId;
       print('Anonymous Id : $anonymousId');
 
@@ -66,10 +68,11 @@ class _MyAppState extends State<MyApp> {
         inspect(result);
 
         if (result.action == PLYPaywallAction.navigate) {
+          print('User wants to navigate');
           Purchasely.onProcessAction(true);
         } else if (result.action == PLYPaywallAction.close) {
           print('User wants to close paywall');
-          Purchasely.onProcessAction(true);
+          Purchasely.onProcessAction(false);
         } else if (result.action == PLYPaywallAction.login) {
           print('User wants to login');
           //Present your own screen for user to log in
@@ -84,6 +87,7 @@ class _MyAppState extends State<MyApp> {
           print('User wants to purchase');
           //If you want to intercept it, close paywall and display your screen
           Purchasely.closePaywall();
+          Purchasely.onProcessAction(false);
         } else if (result.action == PLYPaywallAction.restore) {
           print('User wants to restore his purchases');
           Purchasely.onProcessAction(true);
