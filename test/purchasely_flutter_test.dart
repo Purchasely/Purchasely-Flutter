@@ -17,7 +17,7 @@ void main() {
     channel.setMockMethodCallHandler(null);
   });
 
-  test('getPlatformVersion', () async {
-    expect(await PurchaselyFlutter.platformVersion, '42');
-  });
+  /*test('getPlatformVersion', () async {
+    expect(await Purchasely.platformVersion, '42');
+  });*/
 }

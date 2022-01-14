@@ -8,6 +8,7 @@ environment:
   flutter: ">=1.20.0"
 
 dependencies:
+  collection: ^1.15.0
   flutter:
     sdk: flutter
 
@@ -31,6 +32,9 @@ flutter:
         pluginClass: PurchaselyFlutterPlugin
       ios:
         pluginClass: PurchaselyFlutterPlugin
+
+  assets:
+    - images/icon.png
 
   # To add assets to your plugin package, add an assets section, like this:
   # assets:
