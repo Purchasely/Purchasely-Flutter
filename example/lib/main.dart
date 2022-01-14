@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 import 'dart:developer';
 
-import 'package:purchasely/purchasely.dart';
+import 'package:purchasely_flutter/purchasely_flutter.dart';
 
 void main() {
   runApp(MyApp());
@@ -27,7 +27,8 @@ class _MyAppState extends State<MyApp> {
           'afa96c76-1d8e-4e3c-a48f-204a3cd93a15',
           ['Google'],
           null,
-          LogLevel.debug);
+          PLYLogLevel.debug,
+          PLYRunningMode.full);
 
       if (!configured) {
         print('Purchasely SDK not configured');
@@ -36,37 +37,80 @@ class _MyAppState extends State<MyApp> {
 
       //Purchasely.setLogLevel(LogLevel.debug);
 
+      Purchasely.setLanguage("en");
+
       String anonymousId = await Purchasely.anonymousUserId;
       print('Anonymous Id : $anonymousId');
 
-      PurchaselyProduct product =
+      try {
+        List<PLYSubscription> subscriptions =
+            await Purchasely.userSubscriptions();
+        print(' ==> Subscriptions');
+        if (subscriptions.isNotEmpty) {
+          print(subscriptions.first.plan);
+          print(subscriptions.first.subscriptionSource);
+          print(subscriptions.first.nextRenewalDate);
+          print(subscriptions.first.cancelledDate);
+        }
+      } catch (e) {
+        print(e);
+      }
+
+      List<PLYProduct> products = await Purchasely.allProducts();
+      inspect(products);
+
+      PLYProduct product =
           await Purchasely.productWithIdentifier("PURCHASELY_PLUS");
       print('Product found');
       inspect(product);
 
       Purchasely.listenToEvents((event) {
-        print('Event : $event');
-      });
-
-      var subscriptions = await Purchasely.userSubscriptions();
-      subscriptions.forEach((element) {
-        inspect(element);
+        print('Event : ${event.name}');
+        inspect(event);
       });
 
       Purchasely.setDefaultPresentationResultCallback(
           (PresentPresentationResult value) {
-        print('Default with $value');
+        print('Presentation Result : ' + value.result.toString());
+
+        if (value.plan != null) {
+          //User bought a plan
+        }
       });
 
-      Purchasely.setLoginTappedCallback(() {
-        print('login tapped handler');
-        Purchasely.userLogin('user_id');
-        Purchasely.onUserLoggedIn(true);
-      });
+      Purchasely.setPaywallActionInterceptorCallback(
+          (PaywallActionInterceptorResult result) {
+        print('Received action from paywall');
+        inspect(result);
 
-      Purchasely.setPurchaseCompletionCallback(() {
-        //display your screen
-        print('Purchase completion handler');
+        if (result.action == PLYPaywallAction.navigate) {
+          print('User wants to navigate');
+          Purchasely.onProcessAction(true);
+        } else if (result.action == PLYPaywallAction.close) {
+          print('User wants to close paywall');
+          Purchasely.onProcessAction(false);
+        } else if (result.action == PLYPaywallAction.login) {
+          print('User wants to login');
+          //Present your own screen for user to log in
+          Purchasely.closePaywall();
+          Purchasely.userLogin('MY_USER_ID');
+          //Call this method to update Purchasely Paywall
+          Purchasely.onProcessAction(true);
+        } else if (result.action == PLYPaywallAction.open_presentation) {
+          print('User wants to open a new paywall');
+          Purchasely.onProcessAction(true);
+        } else if (result.action == PLYPaywallAction.purchase) {
+          print('User wants to purchase');
+          //If you want to intercept it, close paywall and display your screen
+          Purchasely.closePaywall();
+          Purchasely.onProcessAction(false);
+        } else if (result.action == PLYPaywallAction.restore) {
+          print('User wants to restore his purchases');
+          Purchasely.onProcessAction(true);
+        } else {
+          print('Action unknown ' + result.action.toString());
+          Purchasely.onProcessAction(true);
+        }
       });
     } catch (e) {
       print(e);
@@ -83,10 +127,10 @@ class _MyAppState extends State<MyApp> {
       var result =
           await Purchasely.presentProductWithIdentifier("PURCHASELY_PLUS");
       print('Result : $result');
-      if (result.result == PurchaseResult.cancelled) {
+      if (result.result == PLYPurchaseResult.cancelled) {
         print("User cancelled purchased");
       } else {
-        print("User purchased " + result.plan.name);
+        print('User purchased: ${result.plan?.name}');
       }
     } catch (e) {
       print(e);
@@ -102,7 +146,7 @@ class _MyAppState extends State<MyApp> {
   }
 
   Future<void> continuePurchase() async {
-    Purchasely.processToPayment(true);
+    Purchasely.onProcessAction(true);
   }
 
   Future<void> purchase() async {

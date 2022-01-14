@@ -1,4 +1,4 @@
-package com.flutterpurchasely
+package io.purchasely.purchasely_flutter
 
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
@@ -12,10 +12,15 @@ class PLYSubscriptionsActivity : AppCompatActivity() {
     super.onCreate(savedInstanceState)
     setContentView(R.layout.activity_ply_product_activity)
 
+    val fragment = Purchasely.subscriptionsFragment() ?: let {
+      supportFinishAfterTransition()
+      return
+    }
+
     supportFragmentManager
       .beginTransaction()
       .addToBackStack(null)
-      .replace(R.id.fragmentContainer, Purchasely.subscriptionsFragment(), "SubscriptionsFragment")
+      .replace(R.id.fragmentContainer, fragment, "SubscriptionsFragment")
       .commitAllowingStateLoss()
 
     supportFragmentManager.addOnBackStackChangedListener {

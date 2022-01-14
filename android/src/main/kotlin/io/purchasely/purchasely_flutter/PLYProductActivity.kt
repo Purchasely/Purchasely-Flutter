@@ -1,4 +1,4 @@
-package com.flutterpurchasely
+package io.purchasely.purchasely_flutter
 
 import android.app.Activity
 import android.content.Intent
@@ -27,16 +27,24 @@ class PLYProductActivity : FragmentActivity() {
                     planId,
                     presentationId,
                     contentId,
+                null,
                     callback)
             productId.isNullOrEmpty().not() -> Purchasely.productFragment(
                     productId,
                     presentationId,
                     contentId,
+                null,
                     callback)
             else -> Purchasely.presentationFragment(
                     presentationId,
                     contentId,
+                null,
                     callback)
+        }
+
+        if(fragment == null) {
+            supportFinishAfterTransition()
+            return
         }
 
         supportFragmentManager
@@ -44,7 +52,7 @@ class PLYProductActivity : FragmentActivity() {
                 .replace(R.id.fragmentContainer, fragment)
                 .commit()
 
-        PurchaselyPlugin.productActivity = PurchaselyPlugin.ProductActivity(
+        PurchaselyFlutterPlugin.productActivity = PurchaselyFlutterPlugin.ProductActivity(
             presentationId = presentationId,
             productId = productId,
             planId = planId,
@@ -55,12 +63,12 @@ class PLYProductActivity : FragmentActivity() {
     }
 
     override fun onDestroy() {
-        PurchaselyPlugin.productActivity?.activity = null
+        PurchaselyFlutterPlugin.productActivity?.activity = null
         super.onDestroy()
     }
 
     private val callback: (PLYProductViewResult, PLYPlan?) -> Unit = { result, plan ->
-        PurchaselyPlugin.sendPresentationResult(result, plan)
+        PurchaselyFlutterPlugin.sendPresentationResult(result, plan)
     }
 
     companion object {

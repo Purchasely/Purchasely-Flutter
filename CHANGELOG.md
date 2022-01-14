@@ -1,9 +1,3 @@
-## 0.0.2
-
-- Require Dart version 2.12.0 minimum
-- Compatible with null safety
-- Add classes for purchasely product, plan and subscription
-
-## 0.0.1
-
-Beta release with Android SDK 2.7.3
+## 1.0.0
+First version of Purchasely Flutter SDK with integration of Purchasely SDK Android and iOS 3.0.0
+Full documentation is available here: https://docs.purchasely.com/
