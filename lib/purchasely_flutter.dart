@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ffi';
 
 import 'package:flutter/services.dart';
 import 'package:collection/collection.dart';
@@ -24,11 +25,13 @@ class Purchasely {
 
   static Future<PresentPresentationResult> presentPresentationWithIdentifier(
       String? presentationVendorId,
-      [String? contentId]) async {
+      {String? contentId,
+      bool isFullscreen = false}) async {
     final result = await _channel.invokeMethod(
         'presentPresentationWithIdentifier', <String, dynamic>{
       'presentationVendorId': presentationVendorId,
-      'contentId': contentId
+      'contentId': contentId,
+      'isFullscreen': isFullscreen
     });
     return PresentPresentationResult(PLYPurchaseResult.values[result['result']],
         transformToPLYPlan(result['plan']));
@@ -36,13 +39,15 @@ class Purchasely {
 
   static Future<PresentPresentationResult> presentProductWithIdentifier(
       String productVendorId,
-      [String? presentationVendorId,
-      String? contentId]) async {
+      {String? presentationVendorId,
+      String? contentId,
+      bool isFullscreen = false}) async {
     final result = await _channel
-        .invokeMethod('presentPresentationWithIdentifier', <String, dynamic>{
+        .invokeMethod('presentProductWithIdentifier', <String, dynamic>{
       'productVendorId': productVendorId,
       'presentationVendorId': presentationVendorId,
-      'contentId': contentId
+      'contentId': contentId,
+      'isFullscreen': isFullscreen
     });
     PLYPlan? plan;
     if (!result['plan'].isEmpty) plan = transformToPLYPlan(result['plan']);
@@ -53,13 +58,15 @@ class Purchasely {
 
   static Future<PresentPresentationResult> presentPlanWithIdentifier(
       String planVendorId,
-      [String? presentationVendorId,
-      String? contentId]) async {
+      {String? presentationVendorId,
+      String? contentId,
+      bool isFullscreen = false}) async {
     final result = await _channel
-        .invokeMethod('presentPresentationWithIdentifier', <String, dynamic>{
+        .invokeMethod('presentPlanWithIdentifier', <String, dynamic>{
       'planVendorId': planVendorId,
       'presentationVendorId': presentationVendorId,
-      'contentId': contentId
+      'contentId': contentId,
+      'isFullscreen': isFullscreen
     });
     return PresentPresentationResult(PLYPurchaseResult.values[result['result']],
         transformToPLYPlan(result['plan']));

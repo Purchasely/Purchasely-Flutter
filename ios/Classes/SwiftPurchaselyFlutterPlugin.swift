@@ -163,6 +163,10 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             
             self.presentedPresentationViewController = navCtrl
             
+            if let isFullscreen = arguments?["isFullscreen"] as? Bool, isFullscreen {
+                navCtrl.modalPresentationStyle = .fullScreen
+            }
+            
             DispatchQueue.main.async {
                 Purchasely.showController(navCtrl, type: .productPage)
             }
@@ -199,6 +203,10 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             
             self.presentedPresentationViewController = navCtrl
             
+            if let isFullscreen = arguments["isFullscreen"] as? Bool, isFullscreen {
+                navCtrl.modalPresentationStyle = .fullScreen
+            }
+            
             DispatchQueue.main.async {
                 Purchasely.showController(navCtrl, type: .productPage)
             }
@@ -234,6 +242,10 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             navCtrl.navigationBar.tintColor = UIColor.white
             
             self.presentedPresentationViewController = navCtrl
+            
+            if let isFullscreen = arguments["isFullscreen"] as? Bool, isFullscreen {
+                navCtrl.modalPresentationStyle = .fullScreen
+            }
             
             DispatchQueue.main.async {
                 Purchasely.showController(navCtrl, type: .productPage)
