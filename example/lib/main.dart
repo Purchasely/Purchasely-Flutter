@@ -125,7 +125,7 @@ class _MyAppState extends State<MyApp> {
   Future<void> displayPresentation() async {
     try {
       var result =
-          await Purchasely.presentProductWithIdentifier("PURCHASELY_PLUS");
+          await Purchasely.presentPresentationWithIdentifier("PURCHASELY_PLUS", isFullscreen: true);
       print('Result : $result');
       if (result.result == PLYPurchaseResult.cancelled) {
         print("User cancelled purchased");
