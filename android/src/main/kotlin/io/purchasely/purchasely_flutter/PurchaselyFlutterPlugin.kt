@@ -111,7 +111,8 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
           "presentPresentationWithIdentifier" -> {
               presentPresentationWithIdentifier(
                       call.argument<String>("presentationVendorId"),
-                      call.argument<String>("contentId")
+                      call.argument<String>("contentId"),
+                      call.argument<Boolean>("isFullscreen")
               )
               presentationResult = result
           }
@@ -123,7 +124,8 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
               presentProductWithIdentifier(
                       productId,
                       call.argument<String>("presentationVendorId"),
-                      call.argument<String>("contentId")
+                      call.argument<String>("contentId"),
+                      call.argument<Boolean>("isFullscreen")
               )
               presentationResult = result
           }
@@ -135,7 +137,8 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
               presentPlanWithIdentifier(
                       planId,
                       call.argument<String>("presentationVendorId"),
-                      call.argument<String>("contentId")
+                      call.argument<String>("contentId"),
+                      call.argument<Boolean>("isFullscreen")
               )
               presentationResult = result
           }
@@ -252,31 +255,36 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
   }
 
   private fun presentPresentationWithIdentifier(presentationVendorId: String?,
-                                                contentId: String?) {
-
+                                                contentId: String?,
+                                                isFullscreen: Boolean?) {
       val intent = Intent(context, PLYProductActivity::class.java)
       intent.putExtra("presentationId", presentationVendorId)
       intent.putExtra("contentId", contentId)
+      intent.putExtra("isFullScreen", isFullscreen ?: false)
       activity?.startActivity(intent)
   }
 
   private fun presentProductWithIdentifier(productVendorId: String,
                                             presentationVendorId: String?,
-                                            contentId: String?) {
+                                            contentId: String?,
+                                            isFullscreen: Boolean?) {
       val intent = Intent(context, PLYProductActivity::class.java)
       intent.putExtra("presentationId", presentationVendorId)
       intent.putExtra("productId", productVendorId)
       intent.putExtra("contentId", contentId)
+      intent.putExtra("isFullScreen", isFullscreen ?: false)
       activity?.startActivity(intent)
   }
 
   private fun presentPlanWithIdentifier(planVendorId: String,
                                         presentationVendorId: String?,
-                                        contentId: String?) {
+                                        contentId: String?,
+                                        isFullscreen: Boolean?) {
       val intent = Intent(context, PLYProductActivity::class.java)
       intent.putExtra("presentationId", presentationVendorId)
       intent.putExtra("planId", planVendorId)
       intent.putExtra("contentId", contentId)
+      intent.putExtra("isFullScreen", isFullscreen ?: false)
       activity?.startActivity(intent)
   }
 

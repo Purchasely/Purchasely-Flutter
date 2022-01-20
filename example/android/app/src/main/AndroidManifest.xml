@@ -1,4 +1,5 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     package="io.purchasely.sample">
    <application
         android:label="purchasely_flutter_example"
@@ -32,6 +33,12 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
+
+       <activity
+           tools:replace="android:theme"
+           android:name="io.purchasely.purchasely_flutter.PLYProductActivity"
+           android:theme="@style/Theme.Purchasely.Fullscreen.Light" />
+
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data
