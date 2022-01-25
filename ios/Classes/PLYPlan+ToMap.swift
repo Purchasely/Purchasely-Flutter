@@ -38,6 +38,10 @@ extension PLYPlan {
             result["amount"] = amount
         }
 
+        if let localizedAmount = self.localizedPrice(language: nil) {
+            result["localizedAmount"] = amount
+        }
+        
         if let introAmount = self.introAmount {
             result["introAmount"] = introAmount
         }
