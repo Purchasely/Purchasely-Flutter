@@ -24,7 +24,7 @@ class _MyAppState extends State<MyApp> {
   Future<void> initPurchaselySdk() async {
     try {
       bool configured = await Purchasely.startWithApiKey(
-          'afa96c76-1d8e-4e3c-a48f-204a3cd93a15',
+          'fcb39be4-2ba4-4db7-bde3-2a5a1e20745d',
           ['Google'],
           null,
           PLYLogLevel.debug,
@@ -64,6 +64,9 @@ class _MyAppState extends State<MyApp> {
       print('Product found');
       inspect(product);
 
+      List<PLYSubscription> subscriptions = await Purchasely.userSubscriptions();
+      inspect(subscriptions);
+
       Purchasely.listenToEvents((event) {
         print('Event : ${event.name}');
         inspect(event);
@@ -102,8 +105,8 @@ class _MyAppState extends State<MyApp> {
         } else if (result.action == PLYPaywallAction.purchase) {
           print('User wants to purchase');
           //If you want to intercept it, close paywall and display your screen
-          Purchasely.closePaywall();
-          Purchasely.onProcessAction(false);
+          //Purchasely.closePaywall();
+          Purchasely.onProcessAction(true);
         } else if (result.action == PLYPaywallAction.restore) {
           print('User wants to restore his purchases');
           Purchasely.onProcessAction(true);
@@ -125,7 +128,7 @@ class _MyAppState extends State<MyApp> {
   Future<void> displayPresentation() async {
     try {
       var result =
-          await Purchasely.presentPresentationWithIdentifier("PURCHASELY_PLUS", isFullscreen: true);
+          await Purchasely.presentPresentationWithIdentifier("PURCHASELY_PLUS", isFullscreen: false);
       print('Result : $result');
       if (result.result == PLYPurchaseResult.cancelled) {
         print("User cancelled purchased");

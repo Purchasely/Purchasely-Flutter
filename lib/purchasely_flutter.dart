@@ -168,18 +168,12 @@ class Purchasely {
 
     final List<PLYSubscription> subscriptions = new List.empty(growable: true);
     result.forEach((element) {
-      final List<PLYPlan?> plans = new List.empty(growable: true);
-      element['product']['plans']
-          .forEach((k, plan) => plans.add(transformToPLYPlan(plan)));
-
       subscriptions.add(PLYSubscription(
           element['purchaseToken'],
           PLYSubscriptionSource.values[element['subscriptionSource']],
           element['nextRenewalDate'],
           element['cancelledDate'],
-          transformToPLYPlan(element['plan']),
-          PLYProduct(element['product']['name'], element['product']['vendorId'],
-              plans.whereNotNull().toList())));
+          transformToPLYPlan(element['plan'])));
     });
     return subscriptions;
   }
@@ -477,10 +471,9 @@ class PLYSubscription {
   String? nextRenewalDate;
   String? cancelledDate;
   PLYPlan? plan;
-  PLYProduct? product;
 
   PLYSubscription(this.purchaseToken, this.subscriptionSource,
-      this.nextRenewalDate, this.cancelledDate, this.plan, this.product);
+      this.nextRenewalDate, this.cancelledDate, this.plan);
 }
 
 class PresentPresentationResult {
