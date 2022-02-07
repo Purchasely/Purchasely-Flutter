@@ -27,8 +27,8 @@ class Purchasely {
       String? presentationVendorId,
       {String? contentId,
       bool isFullscreen = false}) async {
-    final result = await _channel.invokeMethod(
-        'presentPresentationWithIdentifier', <String, dynamic>{
+    final result = await _channel
+        .invokeMethod('presentPresentationWithIdentifier', <String, dynamic>{
       'presentationVendorId': presentationVendorId,
       'contentId': contentId,
       'isFullscreen': isFullscreen
@@ -434,6 +434,7 @@ class PLYPlan {
   String? name;
   PLYPlanType type;
   double? amount;
+  String? localizedAmount;
   String? currencyCode;
   String? currencySymbol;
   String? price;
@@ -451,6 +452,7 @@ class PLYPlan {
       this.name,
       this.type,
       this.amount,
+      this.localizedAmount,
       this.currencyCode,
       this.currencySymbol,
       this.price,
