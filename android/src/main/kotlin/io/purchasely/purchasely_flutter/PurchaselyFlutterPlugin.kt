@@ -116,6 +116,14 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
               )
               presentationResult = result
           }
+          "presentPresentationForPlacement" -> {
+              presentPresentationForPlacement(
+                  call.argument<String>("placementVendorId"),
+                  call.argument<String>("contentId"),
+                  call.argument<Boolean>("isFullscreen")
+              )
+              presentationResult = result
+          }
           "presentProductWithIdentifier" -> {
               val productId = call.argument<String>("productVendorId") ?: let {
                   result.error("-1", "product vendor id must not be null", null)
@@ -263,6 +271,16 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
       intent.putExtra("isFullScreen", isFullscreen ?: false)
       activity?.startActivity(intent)
   }
+
+    private fun presentPresentationForPlacement(placementVendorId: String?,
+                                                contentId: String?,
+                                                isFullscreen: Boolean?) {
+        val intent = Intent(context, PLYProductActivity::class.java)
+        intent.putExtra("placementId", placementVendorId)
+        intent.putExtra("contentId", contentId)
+        intent.putExtra("isFullScreen", isFullscreen ?: false)
+        activity?.startActivity(intent)
+    }
 
   private fun presentProductWithIdentifier(productVendorId: String,
                                             presentationVendorId: String?,
@@ -470,7 +488,8 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
             result.success(mapOf(
                 Pair("info", mapOf(
                     Pair("contentId", info?.contentId),
-                    Pair("presentationId", info?.presentationId)
+                    Pair("presentationId", info?.presentationId),
+                    Pair("placementId", info?.placementId)
                 )),
                 Pair("action", action.value),
                 Pair("parameters", parametersForFlutter)
