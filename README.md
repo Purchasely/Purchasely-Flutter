@@ -8,7 +8,7 @@ Purchasely is a solution to ease the integration and boost your In-App Purchase 
 
 ```
 dependencies:
-  purchasely_flutter: ^1.0.1
+  purchasely_flutter: ^1.1.0
 ```
 
 ## Usage
