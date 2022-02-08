@@ -37,6 +37,20 @@ class Purchasely {
         transformToPLYPlan(result['plan']));
   }
 
+  static Future<PresentPresentationResult> presentPresentationForPlacement(
+      String? placementVendorId,
+      {String? contentId,
+      bool isFullscreen = false}) async {
+    final result = await _channel
+        .invokeMethod('presentPresentationForPlacement', <String, dynamic>{
+      'placementVendorId': placementVendorId,
+      'contentId': contentId,
+      'isFullscreen': isFullscreen
+    });
+    return PresentPresentationResult(PLYPurchaseResult.values[result['result']],
+        transformToPLYPlan(result['plan']));
+  }
+
   static Future<PresentPresentationResult> presentProductWithIdentifier(
       String productVendorId,
       {String? presentationVendorId,
@@ -240,8 +254,8 @@ class Purchasely {
     final result = await _channel.invokeMethod('setPaywallActionInterceptor');
     final Map<dynamic, dynamic>? plan = result['parameters']['plan'];
     return PaywallActionInterceptorResult(
-        PLYPaywallInfo(
-            result['info']['contentId'], result['info']['presentationId']),
+        PLYPaywallInfo(result['info']['contentId'],
+            result['info']['presentationId'], result['info']['placementId']),
         PLYPaywallAction.values.firstWhere(
             (e) => e.toString() == 'PLYPaywallAction.' + result['action']),
         PLYPaywallActionParameters(
@@ -299,6 +313,7 @@ class Purchasely {
         plan['name'],
         type,
         plan['amount'],
+        plan['localizedAmount'],
         plan['currencyCode'],
         plan['currencySymbol'],
         plan['price'],
@@ -513,8 +528,9 @@ class PLYPaywallActionParameters {
 class PLYPaywallInfo {
   String? contentId;
   String? presentationId;
+  String? placementId;
 
-  PLYPaywallInfo(this.contentId, this.presentationId);
+  PLYPaywallInfo(this.contentId, this.presentationId, this.placementId);
 }
 
 enum PLYEventName {
