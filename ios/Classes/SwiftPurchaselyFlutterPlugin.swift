@@ -53,6 +53,8 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             presentProductWithIdentifier(arguments: arguments, result: result)
         case "presentPlanWithIdentifier":
             presentPlanWithIdentifier(arguments: arguments, result: result)
+        case "presentPresentationForPlacement":
+            presentPresentationForPlacement(arguments: arguments, result: result)
         case "restoreAllProducts":
             restoreAllProducts(result)
         case "silentRestoreAllProducts":
@@ -146,6 +148,41 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
         let contentId = arguments?["contentId"] as? String
         
         let controller = Purchasely.presentationController(with: presentationVendorId,
+                                                           contentId: contentId,
+                                                           loaded: nil) { productResult, plan in
+            let value: [String: Any] = ["result": productResult.rawValue, "plan": plan?.toMap ?? [:]]
+            DispatchQueue.main.async {
+                result(value)
+            }
+        }
+
+        if let controller = controller {
+            let navCtrl = UINavigationController(rootViewController: controller)
+            navCtrl.navigationBar.isTranslucent = true
+            navCtrl.navigationBar.setBackgroundImage(UIImage(), for: .default)
+            navCtrl.navigationBar.shadowImage = UIImage()
+            navCtrl.navigationBar.tintColor = UIColor.white
+            
+            self.presentedPresentationViewController = navCtrl
+            
+            if let isFullscreen = arguments?["isFullscreen"] as? Bool, isFullscreen {
+                navCtrl.modalPresentationStyle = .fullScreen
+            }
+            
+            DispatchQueue.main.async {
+                Purchasely.showController(navCtrl, type: .productPage)
+            }
+        } else {
+            result(FlutterError.error(code: "-1", message: "You are using a running mode that prevent paywalls to be displayed", error: nil))
+        }
+    }
+    
+    private func presentPresentationForPlacement(arguments: [String: Any]?, result: @escaping FlutterResult) {
+
+        let placementVendorId = (arguments?["placementVendorId"] as? String) ?? ""
+        let contentId = arguments?["contentId"] as? String
+        
+        let controller = Purchasely.presentationController(for: placementVendorId,
                                                            contentId: contentId,
                                                            loaded: nil) { productResult, plan in
             let value: [String: Any] = ["result": productResult.rawValue, "plan": plan?.toMap ?? [:]]

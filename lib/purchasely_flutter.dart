@@ -313,6 +313,7 @@ class Purchasely {
         plan['name'],
         type,
         plan['amount'],
+        plan['localizedAmount'],
         plan['currencyCode'],
         plan['currencySymbol'],
         plan['price'],
