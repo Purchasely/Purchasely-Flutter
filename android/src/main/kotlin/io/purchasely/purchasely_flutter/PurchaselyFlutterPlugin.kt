@@ -100,7 +100,8 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
           "startWithApiKey" -> {
               startWithApiKey(call.argument<String>("apiKey"), call.argument<List<String>>("stores"),
                         call.argument<String>("userId"), call.argument<Int>("logLevel"),
-                        call.argument<Int>("runningMode"), result)
+                        call.argument<Int>("runningMode"),
+                        result)
           }
           "close" -> {
               close()
@@ -247,6 +248,7 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
             .userId(userId)
             .build()
 
+	  Purchasely.sdkBridgeVersion = "1.1.0"
       Purchasely.appTechnology = PLYAppTechnology.FLUTTER
 
       Purchasely.start { isConfigured, error ->
