@@ -414,7 +414,10 @@ enum PLYAttribute {
   amplitude_session_id,
   firebase_app_instance_id,
   airship_channel_id,
-  batch_installation_id
+  batch_installation_id,
+  adjust_id,
+  appsflyer_id,
+  onesignal_player_id
 }
 enum PLYPurchaseResult { purchased, cancelled, restored }
 enum PLYSubscriptionSource {
