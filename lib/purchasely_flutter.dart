@@ -253,8 +253,12 @@ class Purchasely {
     final result = await _channel.invokeMethod('setPaywallActionInterceptor');
     final Map<dynamic, dynamic>? plan = result['parameters']['plan'];
     return PaywallActionInterceptorResult(
-        PLYPaywallInfo(result['info']['contentId'],
-            result['info']['presentationId'], result['info']['placementId']),
+        PLYPaywallInfo(
+            result['info']['contentId'],
+            result['info']['presentationId'],
+            result['info']['placementId'],
+            result['info']['abTestId'],
+            result['info']['abTestVariantId']),
         PLYPaywallAction.values.firstWhere(
             (e) => e.toString() == 'PLYPaywallAction.' + result['action']),
         PLYPaywallActionParameters(
@@ -531,8 +535,11 @@ class PLYPaywallInfo {
   String? contentId;
   String? presentationId;
   String? placementId;
+  String? abTestId;
+  String? abTestVariantId;
 
-  PLYPaywallInfo(this.contentId, this.presentationId, this.placementId);
+  PLYPaywallInfo(this.contentId, this.presentationId, this.placementId,
+      this.abTestId, this.abTestVariantId);
 }
 
 enum PLYEventName {

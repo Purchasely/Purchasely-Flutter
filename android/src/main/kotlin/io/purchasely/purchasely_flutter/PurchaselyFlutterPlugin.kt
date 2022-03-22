@@ -491,7 +491,9 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
                 Pair("info", mapOf(
                     Pair("contentId", info?.contentId),
                     Pair("presentationId", info?.presentationId),
-                    Pair("placementId", info?.placementId)
+                    Pair("placementId", info?.placementId),
+                    Pair("abTestId", info?.abTestId),
+                    Pair("abTestVariantId", info?.abTestVariantId)
                 )),
                 Pair("action", action.value),
                 Pair("parameters", parametersForFlutter)
