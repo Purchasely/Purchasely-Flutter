@@ -25,6 +25,14 @@ extension PLYPresentationInfo {
             result["placementId"] = placementId
         }
         
+        if let abTestId = abTestId {
+            result["abTestId"] = abTestId
+        }
+        
+        if let abTestVariantId = abTestVariantId {
+            result["abTestVariantId"] = abTestVariantId
+        }
+
         return result
     }
     

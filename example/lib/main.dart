@@ -69,6 +69,8 @@ class _MyAppState extends State<MyApp> {
         inspect(event);
       });
 
+      Purchasely.setAttribute(PLYAttribute.onesignal_player_id, "flutter_onesignal_id");
+      
       Purchasely.setDefaultPresentationResultCallback(
           (PresentPresentationResult value) {
         print('Presentation Result : ' + value.result.toString());
