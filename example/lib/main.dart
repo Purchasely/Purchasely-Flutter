@@ -69,8 +69,6 @@ class _MyAppState extends State<MyApp> {
         inspect(event);
       });
 
-      Purchasely.setAttribute(PLYAttribute.onesignal_player_id, "flutter_onesignal_id");
-      
       Purchasely.setDefaultPresentationResultCallback(
           (PresentPresentationResult value) {
         print('Presentation Result : ' + value.result.toString());
@@ -126,8 +124,8 @@ class _MyAppState extends State<MyApp> {
 
   Future<void> displayPresentation() async {
     try {
-      var result = await Purchasely.presentPresentationWithIdentifier(
-          "CAROUSEL",
+      var result = await Purchasely.presentPresentationForPlacement(
+          "onboarding",
           isFullscreen: true);
 
       print('Result : $result');
