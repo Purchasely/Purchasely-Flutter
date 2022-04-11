@@ -124,8 +124,8 @@ class _MyAppState extends State<MyApp> {
 
   Future<void> displayPresentation() async {
     try {
-      var result = await Purchasely.presentPresentationWithIdentifier(
-          "CAROUSEL",
+      var result = await Purchasely.presentPresentationForPlacement(
+          "onboarding",
           isFullscreen: true);
 
       print('Result : $result');

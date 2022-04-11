@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:ffi';
 
 import 'package:flutter/services.dart';
 import 'package:collection/collection.dart';
@@ -254,8 +253,12 @@ class Purchasely {
     final result = await _channel.invokeMethod('setPaywallActionInterceptor');
     final Map<dynamic, dynamic>? plan = result['parameters']['plan'];
     return PaywallActionInterceptorResult(
-        PLYPaywallInfo(result['info']['contentId'],
-            result['info']['presentationId'], result['info']['placementId']),
+        PLYPaywallInfo(
+            result['info']['contentId'],
+            result['info']['presentationId'],
+            result['info']['placementId'],
+            result['info']['abTestId'],
+            result['info']['abTestVariantId']),
         PLYPaywallAction.values.firstWhere(
             (e) => e.toString() == 'PLYPaywallAction.' + result['action']),
         PLYPaywallActionParameters(
@@ -415,7 +418,10 @@ enum PLYAttribute {
   amplitude_session_id,
   firebase_app_instance_id,
   airship_channel_id,
-  batch_installation_id
+  batch_installation_id,
+  adjust_id,
+  appsflyer_id,
+  onesignal_player_id
 }
 enum PLYPurchaseResult { purchased, cancelled, restored }
 enum PLYSubscriptionSource {
@@ -529,8 +535,11 @@ class PLYPaywallInfo {
   String? contentId;
   String? presentationId;
   String? placementId;
+  String? abTestId;
+  String? abTestVariantId;
 
-  PLYPaywallInfo(this.contentId, this.presentationId, this.placementId);
+  PLYPaywallInfo(this.contentId, this.presentationId, this.placementId,
+      this.abTestId, this.abTestVariantId);
 }
 
 enum PLYEventName {
