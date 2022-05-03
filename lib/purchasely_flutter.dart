@@ -421,7 +421,9 @@ enum PLYAttribute {
   batch_installation_id,
   adjust_id,
   appsflyer_id,
-  onesignal_player_id
+  onesignal_player_id,
+  mixpanel_distinct_id,
+  clever_tap_id
 }
 enum PLYPurchaseResult { purchased, cancelled, restored }
 enum PLYSubscriptionSource {
