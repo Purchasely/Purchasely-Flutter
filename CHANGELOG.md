@@ -1,3 +1,9 @@
+## 1.2.1
+### New integrations
+This version also adds support for new third party integrations:
+- [Mixpanel](https://docs.purchasely.com/integrations/mixpanel)
+- CleverTap
+
 ## 1.2.0
 ### A/B Tests
 This version brings native A/B tests to Purchasely. No need to use another tool, you can do it all and pilot it from Purchasely.
@@ -15,7 +21,6 @@ A/B tests are applied on _Placements_ that we brought to you with SDK 1.1.0. If 
 
 > ⚠️ This feature will be activated in your console very soon.
 > If you want it now, please request the support using the chat in the console.
-
 
 ### New integrations
 This version also adds support for new third party integrations:
