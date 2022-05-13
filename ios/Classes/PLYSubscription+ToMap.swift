@@ -14,13 +14,17 @@ extension PLYSubscription {
         var result = [String: Any]()
         result["plan"] = plan.toMap
         result["subscriptionSource"] = subscriptionSource.rawValue
+        result["product"] = product.toMap
+        
+        let dateFormat = DateFormatter()
+        dateFormat.dateFormat = "yyyy-MM-dd'T'HH:mm:ssZ"
         
         if let date = nextRenewalDate {
-            result["nextRenewalDate"] = date.timeIntervalSince1970
+            result["nextRenewalDate"] = dateFormat.string(from:date)
         }
         
         if let date = cancelledDate {
-            result["cancelledDate"] = date.timeIntervalSince1970
+            result["cancelledDate"] = dateFormat.string(from:date)
         }
         
         return result
