@@ -1,3 +1,6 @@
+## 1.2.2
+Fix: add product linked to a subscription for iOS devices
+
 ## 1.2.1
 ### New integrations
 This version also adds support for new third party integrations:
