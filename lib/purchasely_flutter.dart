@@ -182,8 +182,15 @@ class Purchasely {
     final List<PLYSubscription> subscriptions = new List.empty(growable: true);
     result.forEach((element) {
       final List<PLYPlan?> plans = new List.empty(growable: true);
-      element['product']['plans']
-          .forEach((k, plan) => plans.add(transformToPLYPlan(plan)));
+
+      var product = null;
+      if (element['product'] != null) {
+        element['product']['plans']
+            ?.forEach((k, plan) => plans.add(transformToPLYPlan(plan)));
+
+        product = PLYProduct(element['product']['name'],
+            element['product']['vendorId'], plans.whereNotNull().toList());
+      }
 
       subscriptions.add(PLYSubscription(
           element['purchaseToken'],
@@ -191,8 +198,7 @@ class Purchasely {
           element['nextRenewalDate'],
           element['cancelledDate'],
           transformToPLYPlan(element['plan']),
-          PLYProduct(element['product']['name'], element['product']['vendorId'],
-              plans.whereNotNull().toList())));
+          product));
     });
     return subscriptions;
   }

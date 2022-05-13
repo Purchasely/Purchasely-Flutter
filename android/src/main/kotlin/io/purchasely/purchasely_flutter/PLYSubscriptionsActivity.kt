@@ -1,12 +1,10 @@
 package io.purchasely.purchasely_flutter
 
 import android.os.Bundle
-import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.FragmentActivity
 import io.purchasely.ext.Purchasely
-import io.purchasely.views.subscriptions.PLYSubscriptionsFragment
 
-class PLYSubscriptionsActivity : AppCompatActivity() {
+class PLYSubscriptionsActivity : FragmentActivity() {
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
