@@ -66,6 +66,7 @@ class PLYProductActivity : FragmentActivity() {
 
         PurchaselyFlutterPlugin.productActivity = PurchaselyFlutterPlugin.ProductActivity(
             presentationId = presentationId,
+            placementId = placementId,
             productId = productId,
             planId = planId,
             contentId = contentId

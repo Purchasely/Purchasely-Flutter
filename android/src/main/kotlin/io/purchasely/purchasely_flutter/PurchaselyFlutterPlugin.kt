@@ -608,6 +608,7 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
 
   class ProductActivity(
       val presentationId: String? = null,
+      val placementId: String? = null,
       val productId: String? = null,
       val planId: String? = null,
       val contentId: String? = null) {
@@ -629,6 +630,7 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
           } else {
               val intent = PLYProductActivity.newIntent(flutterActivity)
               intent.putExtra("presentationId", presentationId)
+              intent.putExtra("placementId", placementId)
               intent.putExtra("productId", productId)
               intent.putExtra("planId", planId)
               intent.putExtra("contentId", contentId)
