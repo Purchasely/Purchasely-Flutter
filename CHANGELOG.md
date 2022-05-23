@@ -1,3 +1,6 @@
+## 1.2.3
+Fix: add static_framework to the iOS podspec.
+
 ## 1.2.2
 Fix: add product linked to a subscription for iOS devices
 
