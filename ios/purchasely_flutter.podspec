@@ -22,4 +22,6 @@ Flutter Plugin for Purchasely SDK
   s.swift_version = '5.0'
 
   s.dependency 'Purchasely', '3.2.2'
+  s.static_framework = true
+  
 end
