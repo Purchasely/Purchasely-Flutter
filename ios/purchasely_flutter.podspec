@@ -4,7 +4,7 @@
 #
 Pod::Spec.new do |s|
   s.name             = 'purchasely_flutter'
-  s.version          = '1.2.3'
+  s.version          = '1.2.4'
   s.summary          = 'Flutter Plugin for Purchasely SDK'
   s.description      = <<-DESC
 Flutter Plugin for Purchasely SDK
@@ -21,7 +21,7 @@ Flutter Plugin for Purchasely SDK
   s.pod_target_xcconfig = { 'DEFINES_MODULE' => 'YES', 'EXCLUDED_ARCHS[sdk=iphonesimulator*]' => 'i386' }
   s.swift_version = '5.0'
 
-  s.dependency 'Purchasely', '3.2.2'
+  s.dependency 'Purchasely', '3.2.3'
   s.static_framework = true
   
 end

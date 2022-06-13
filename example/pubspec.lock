@@ -112,9 +112,9 @@ packages:
   purchasely_flutter:
     dependency: "direct main"
     description:
-      name: purchasely_flutter
-      url: "https://pub.dartlang.org"
-    source: hosted
+      path: ".."
+      relative: true
+    source: path
     version: "1.2.3"
   sky_engine:
     dependency: transitive
