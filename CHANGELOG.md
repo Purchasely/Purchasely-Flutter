@@ -1,3 +1,6 @@
+## 1.2.4
+Fix: non Mac M1 support.
+
 ## 1.2.3
 Fix: add static_framework to the iOS podspec.
 
