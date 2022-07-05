@@ -248,7 +248,7 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
             .userId(userId)
             .build()
 
-	  Purchasely.sdkBridgeVersion = "1.2.4"
+	  Purchasely.sdkBridgeVersion = "1.2.5"
       Purchasely.appTechnology = PLYAppTechnology.FLUTTER
 
       Purchasely.start { isConfigured, error ->
@@ -478,6 +478,7 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
     private fun setPaywallActionInterceptor(result: Result) {
         Purchasely.setPaywallActionsInterceptor { info, action, parameters, processAction ->
             paywallActionHandler = processAction
+            paywallAction = action
 
             val parametersForFlutter = hashMapOf<String, Any?>();
 
@@ -495,7 +496,15 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
                     Pair("abTestId", info?.abTestId),
                     Pair("abTestVariantId", info?.abTestVariantId)
                 )),
-                Pair("action", action.value),
+                Pair("action", when(action) {
+                    PLYPresentationAction.PURCHASE -> "purchase"
+                    PLYPresentationAction.CLOSE -> "close"
+                    PLYPresentationAction.LOGIN -> "login"
+                    PLYPresentationAction.NAVIGATE -> "navigate"
+                    PLYPresentationAction.RESTORE -> "restore"
+                    PLYPresentationAction.OPEN_PRESENTATION -> "open_presentation"
+                    PLYPresentationAction.PROMO_CODE -> "promo_code"
+                }),
                 Pair("parameters", parametersForFlutter)
             ))
         }
@@ -503,10 +512,21 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
 
     private fun onProcessAction(processAction: Boolean) {
         launch {
-            if(productActivity?.relaunch(activity) == false) {
-                //wait for activity to relaunch
-                withContext(Dispatchers.Default) { delay(500) }
+            when(paywallAction) {
+                PLYPresentationAction.PROMO_CODE,
+                PLYPresentationAction.RESTORE,
+                PLYPresentationAction.PURCHASE,
+                PLYPresentationAction.LOGIN,
+                PLYPresentationAction.OPEN_PRESENTATION -> {
+                    if(productActivity?.relaunch(activity) == false) {
+                        //wait for activity to relaunch
+                        withContext(Dispatchers.Default) { delay(500) }
+                    }
+                }
+                //We should not open purchasely paywall for others actions
+                else -> {}
             }
+
             productActivity?.activity?.get()?.runOnUiThread {
                 paywallActionHandler?.invoke(processAction)
             }
@@ -514,8 +534,10 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
     }
 
     private fun closePaywall() {
-        activity?.let {
-            it.startActivity(Intent(productActivity?.activity?.get() ?: it, it::class.java).apply {
+        val flutterActivity = activity
+        val currentActivity = productActivity?.activity?.get() ?: flutterActivity
+        if(flutterActivity != null && currentActivity != null) {
+            flutterActivity.startActivity(Intent(currentActivity, flutterActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
             })
         }
@@ -528,6 +550,7 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
       var presentationResult: Result? = null
       var defaultPresentationResult: Result? = null
       var paywallActionHandler: PLYCompletionHandler? = null
+      var paywallAction: PLYPresentationAction? = null
       private lateinit var channel : MethodChannel
 
       fun sendPresentationResult(result: PLYProductViewResult, plan: PLYPlan?) {
