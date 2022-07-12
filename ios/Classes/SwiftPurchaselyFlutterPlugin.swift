@@ -68,7 +68,7 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             userLogin(arguments: arguments, result: result)
         case "userLogout":
             userLogout()
-        case "isReadytoPurchase":
+        case "isReadyToPurchase":
             let parameter = arguments?["readyToPurchase"] as? Bool
             isReadyToPurchase(readyToPurchase: parameter)
         case "setLogLevel":

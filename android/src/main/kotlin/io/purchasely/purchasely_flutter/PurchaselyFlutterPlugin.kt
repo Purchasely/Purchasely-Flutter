@@ -586,7 +586,7 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
                   else -> null
               }
 
-              this["isEligibleToIntroOffer"] = plan.isEligibleToIntroOffer()
+              this["isEligibleForIntroOffer"] = plan.isEligibleToIntroOffer()
           }
       }
   }
