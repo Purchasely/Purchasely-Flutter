@@ -585,6 +585,8 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
                   DistributionType.UNKNOWN -> DistributionType.UNKNOWN.ordinal
                   else -> null
               }
+
+              this["isEligibleToIntroOffer"] = plan.isEligibleToIntroOffer()
           }
       }
   }
