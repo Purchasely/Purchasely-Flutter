@@ -103,7 +103,6 @@ class _MyAppState extends State<MyApp> {
           print('User wants to purchase');
           //If you want to intercept it, close paywall and display your screen
           Purchasely.closePaywall();
-          Purchasely.onProcessAction(false);
         } else if (result.action == PLYPaywallAction.restore) {
           print('User wants to restore his purchases');
           Purchasely.onProcessAction(true);

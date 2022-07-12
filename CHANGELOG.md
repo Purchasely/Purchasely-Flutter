@@ -1,3 +1,5 @@
+## 1.2.5
+Fix: Paywall action interceptor for promo code on Android
 ## 1.2.4
 Fix: non Mac M1 support.
 
