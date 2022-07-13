@@ -332,7 +332,8 @@ class Purchasely {
         plan['introAmount'],
         plan['introDuration'],
         plan['introPeriod'],
-        plan['hasFreeTrial']);
+        plan['hasFreeTrial'],
+        plan['isEligibleForIntroOffer']);
   }
 
   static PLYEventProperties transformToPLYEventProperties(
@@ -413,6 +414,7 @@ class Purchasely {
 }
 
 enum PLYLogLevel { debug, info, warn, error }
+
 enum PLYRunningMode {
   transactionOnly,
   observer,
@@ -420,6 +422,7 @@ enum PLYRunningMode {
   paywallObserver,
   full
 }
+
 enum PLYAttribute {
   amplitude_session_id,
   firebase_app_instance_id,
@@ -429,9 +432,15 @@ enum PLYAttribute {
   appsflyer_id,
   onesignal_player_id,
   mixpanel_distinct_id,
-  clever_tap_id
+  clever_tap_id,
+  sendinblueUserEmail,
+  iterableUserId,
+  iterableUserEmail,
+  atInternetIdClient
 }
+
 enum PLYPurchaseResult { purchased, cancelled, restored }
+
 enum PLYSubscriptionSource {
   appleAppStore,
   googlePlayStore,
@@ -439,6 +448,7 @@ enum PLYSubscriptionSource {
   huaweiAppGallery,
   none
 }
+
 enum PLYPlanType {
   consumable,
   nonConsumable,
@@ -474,6 +484,7 @@ class PLYPlan {
   String? introDuration;
   String? introPeriod;
   bool? hasFreeTrial;
+  bool? isEligibleForIntroOffer;
 
   PLYPlan(
       this.vendorId,
@@ -491,7 +502,8 @@ class PLYPlan {
       this.introAmount,
       this.introDuration,
       this.introPeriod,
-      this.hasFreeTrial);
+      this.hasFreeTrial,
+      this.isEligibleForIntroOffer);
 }
 
 class PLYProduct {

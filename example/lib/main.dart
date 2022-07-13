@@ -23,6 +23,8 @@ class _MyAppState extends State<MyApp> {
   // Platform messages are asynchronous, so we initialize in an async method.
   Future<void> initPurchaselySdk() async {
     try {
+      Purchasely.isReadyToPurchase(true);
+      
       bool configured = await Purchasely.startWithApiKey(
           'afa96c76-1d8e-4e3c-a48f-204a3cd93a15',
           ['Google'],
