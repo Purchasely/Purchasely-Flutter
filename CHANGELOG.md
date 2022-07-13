@@ -1,3 +1,22 @@
+## 1.3.0
+### Previews
+
+If your app already integrates deeplinks from Purchasely, you can now scan our new QR Code available in your Purchasely console to preview your drafted paywalls directly in your app.
+
+### Eligibility for introductory offers
+
+Beforehand, it was not possible to check if your current user is eligible for introductory offers. You can know check directly with a property added to `PLYPlan` called `isEligibleForIntroOffer`. Furthermore, Your paywalls will only display introductory offers automatically to clients eligible to.
+
+### 3rd parties integrated
+New 3rd parties have been integrated: `Sendinblue`, `Iterable`, and `AT Internet`
+
+#### `PRESENTATION_CLOSED` SDK Event added
+
+A new event has been added to let you know when your current user has tapped on the close button.
+
+### Stability improvements and bug fixes
+
+Under the hood, we provide some stability improvements and several bug fixes, focusing on Sandbox receipt errors.
 ## 1.2.5
 Fix: Paywall action interceptor for promo code on Android
 ## 1.2.4
