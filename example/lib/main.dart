@@ -25,6 +25,8 @@ class _MyAppState extends State<MyApp> {
     try {
       Purchasely.isReadyToPurchase(true);
       
+      Purchasely.userDidConsumeSubscriptionContent();
+      
       bool configured = await Purchasely.startWithApiKey(
           'afa96c76-1d8e-4e3c-a48f-204a3cd93a15',
           ['Google'],

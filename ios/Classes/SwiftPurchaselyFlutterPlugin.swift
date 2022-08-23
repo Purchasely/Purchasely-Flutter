@@ -105,6 +105,8 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             onProcessAction(parameter ?? true)
         case "closePaywall":
             closePaywall()
+        case "userDidConsumeSubscriptionContent":
+            userDidConsumeSubscriptionContent()
         case "synchronize", "displaySubscriptionCancellationInstruction":
             result(FlutterMethodNotImplemented)
         default:
@@ -505,6 +507,10 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
                 presentedPresentationViewController.dismiss(animated: true, completion: nil)
             }
         }
+    }
+    
+    private func userDidConsumeSubscriptionContent() {
+        Purchasely.userDidConsumeSubscriptionContent()
     }
 }
 

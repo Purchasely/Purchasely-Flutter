@@ -283,6 +283,10 @@ class Purchasely {
     return await _channel.invokeMethod('closePaywall');
   }
 
+  static Future<void> userDidConsumeSubscriptionContent() async {
+    return await _channel.invokeMethod('userDidConsumeSubscriptionContent');
+  }
+
   static void setDefaultPresentationResultCallback(Function callback) {
     setDefaultPresentationResultHandler().then((value) {
       setDefaultPresentationResultCallback(callback);
