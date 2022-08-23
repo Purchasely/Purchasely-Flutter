@@ -68,7 +68,7 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             userLogin(arguments: arguments, result: result)
         case "userLogout":
             userLogout()
-        case "isReadytoPurchase":
+        case "isReadyToPurchase":
             let parameter = arguments?["readyToPurchase"] as? Bool
             isReadyToPurchase(readyToPurchase: parameter)
         case "setLogLevel":
@@ -118,7 +118,7 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             return
         }
 
-		Purchasely.setSdkBridgeVersion("1.2.5")
+		Purchasely.setSdkBridgeVersion("1.3.0")
         Purchasely.setAppTechnology(PLYAppTechnology.flutter)
 
         let logLevel = PLYLogger.LogLevel(rawValue: (arguments["logLevel"] as? Int) ?? PLYLogger.LogLevel.debug.rawValue) ?? PLYLogger.LogLevel.debug
