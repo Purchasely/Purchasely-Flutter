@@ -174,6 +174,10 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
               setLanguage(call.argument<String>("language"))
               result.success(true)
           }
+          "userDidConsumeSubscriptionContent" -> {
+              Purchasely.userDidConsumeSubscriptionContent()
+              result.success(true)
+          }
           "productWithIdentifier" -> {
               launch {
                   try {
