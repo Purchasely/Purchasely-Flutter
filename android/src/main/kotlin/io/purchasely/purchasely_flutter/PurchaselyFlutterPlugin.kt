@@ -174,6 +174,10 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
               setLanguage(call.argument<String>("language"))
               result.success(true)
           }
+          "userDidConsumeSubscriptionContent" -> {
+              Purchasely.userDidConsumeSubscriptionContent()
+              result.success(true)
+          }
           "productWithIdentifier" -> {
               launch {
                   try {
@@ -248,7 +252,7 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
             .userId(userId)
             .build()
 
-	  Purchasely.sdkBridgeVersion = "1.3.0"
+	  Purchasely.sdkBridgeVersion = "1.3.1"
       Purchasely.appTechnology = PLYAppTechnology.FLUTTER
 
       Purchasely.start { isConfigured, error ->

@@ -105,6 +105,8 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             onProcessAction(parameter ?? true)
         case "closePaywall":
             closePaywall()
+        case "userDidConsumeSubscriptionContent":
+            userDidConsumeSubscriptionContent()
         case "synchronize", "displaySubscriptionCancellationInstruction":
             result(FlutterMethodNotImplemented)
         default:
@@ -118,7 +120,7 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             return
         }
 
-		Purchasely.setSdkBridgeVersion("1.3.0")
+		Purchasely.setSdkBridgeVersion("1.3.1")
         Purchasely.setAppTechnology(PLYAppTechnology.flutter)
 
         let logLevel = PLYLogger.LogLevel(rawValue: (arguments["logLevel"] as? Int) ?? PLYLogger.LogLevel.debug.rawValue) ?? PLYLogger.LogLevel.debug
@@ -505,6 +507,10 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
                 presentedPresentationViewController.dismiss(animated: true, completion: nil)
             }
         }
+    }
+    
+    private func userDidConsumeSubscriptionContent() {
+        Purchasely.userDidConsumeSubscriptionContent()
     }
 }
 
