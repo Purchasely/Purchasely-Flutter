@@ -1,3 +1,7 @@
+## 1.3.1
+📈 Some new properties have been added to our SDK events, focusing on session and screen durations to help you understand when and how a user converts.
+⭐️ A new public method has been added to help us understand your users premium content usage. This method userDidConsumeSubscriptionContent() should be call whenever your user is using a feature or content that is protected behind a paywall.
+🐞 Minor fixes, mainly regarding our `contentId` that previously could not be sent in particular contexs.
 ## 1.3.0
 ### Previews
 
