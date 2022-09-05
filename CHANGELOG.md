@@ -1,3 +1,5 @@
+## 1.3.2
+⚠️ Important Patch fix on android to receive a callback on paywall display for a purchase, restore or cancel result
 ## 1.3.1
 📈 Some new properties have been added to our SDK events, focusing on session and screen durations to help you understand when and how a user converts.
 ⭐️ A new public method has been added to help us understand your users premium content usage. This method userDidConsumeSubscriptionContent() should be call whenever your user is using a feature or content that is protected behind a paywall.
