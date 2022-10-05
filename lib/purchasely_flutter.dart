@@ -497,6 +497,8 @@ enum PLYRunningMode {
 
 enum PLYAttribute {
   amplitude_session_id,
+  amplitudeUserId,
+  amplitudeDeviceId,
   firebase_app_instance_id,
   airship_channel_id,
   batch_installation_id,
@@ -508,7 +510,11 @@ enum PLYAttribute {
   sendinblueUserEmail,
   iterableUserId,
   iterableUserEmail,
-  atInternetIdClient
+  atInternetIdClient,
+  mParticleUserId,
+  branchUserDeveloperIdentity,
+  customerioUserEmai,
+  customerioUserId,
 }
 
 enum PLYPurchaseResult { purchased, cancelled, restored }
