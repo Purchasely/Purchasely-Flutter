@@ -287,6 +287,74 @@ class Purchasely {
     return await _channel.invokeMethod('userDidConsumeSubscriptionContent');
   }
 
+  static Future<void> setUserAttributeWithString(
+      String key, String value) async {
+    _channel.invokeMethod('setUserAttributeWithString',
+        <String, dynamic>{'key': key, 'value': value});
+  }
+
+  static Future<void> setUserAttributeWithInt(String key, int value) async {
+    _channel.invokeMethod('setUserAttributeWithInt',
+        <String, dynamic>{'key': key, 'value': value});
+  }
+
+  static Future<void> setUserAttributeWithDouble(
+      String key, double value) async {
+    _channel.invokeMethod('setUserAttributeWithDouble',
+        <String, dynamic>{'key': key, 'value': value});
+  }
+
+  static Future<void> setUserAttributeWithBoolean(
+      String key, bool value) async {
+    _channel.invokeMethod('setUserAttributeWithBoolean',
+        <String, dynamic>{'key': key, 'value': value});
+  }
+
+  static Future<void> setUserAttributeWithDate(
+      String key, DateTime value) async {
+    DateTime date = DateTime(value.year, value.month, value.day, value.hour,
+            value.minute, value.second, value.millisecond)
+        .toUtc();
+    _channel.invokeMethod('setUserAttributeWithDate',
+        <String, dynamic>{'key': key, 'value': date.toIso8601String()});
+  }
+
+  static Future<dynamic> userAttribute(String key) async {
+    dynamic value = await _channel
+        .invokeMethod('userAttribute', <String, dynamic>{'key': key});
+
+    try {
+      value = DateTime.parse(value);
+    } catch (FormatException) {
+      //do nothing it is not a date
+    }
+
+    return value;
+  }
+
+  static Future<Map<dynamic, dynamic>> userAttributes() async {
+    Map<dynamic, dynamic> attributes =
+        await _channel.invokeMethod('userAttributes');
+
+    return attributes.map((key, value) {
+      dynamic attributeValue = value;
+      try {
+        attributeValue = DateTime.parse(value);
+      } catch (FormatException) {
+        //do nothing it is not a date
+      }
+      return MapEntry(key, attributeValue);
+    });
+  }
+
+  static void clearUserAttribute(String key) async {
+    _channel.invokeMethod('clearUserAttribute');
+  }
+
+  static void clearUserAttributes() async {
+    _channel.invokeMethod('clearUserAttributes');
+  }
+
   static void setDefaultPresentationResultCallback(Function callback) {
     setDefaultPresentationResultHandler().then((value) {
       setDefaultPresentationResultCallback(callback);

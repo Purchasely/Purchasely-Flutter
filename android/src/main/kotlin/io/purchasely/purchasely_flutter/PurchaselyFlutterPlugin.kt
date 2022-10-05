@@ -13,6 +13,7 @@ import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
@@ -27,6 +28,7 @@ import io.purchasely.models.PLYProduct
 import kotlinx.coroutines.*
 import io.purchasely.ext.Purchasely
 import java.lang.ref.WeakReference
+import java.text.SimpleDateFormat
 import java.util.*
 import kotlin.collections.ArrayList
 import kotlin.collections.HashMap
@@ -222,6 +224,41 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
           "userSubscriptions" -> launch { userSubscriptions(result) }
           "presentSubscriptions" -> presentSubscriptions()
           "setAttribute" -> setAttribute(call.argument<Int>("attribute"), call.argument<String>("value"))
+          "setUserAttributeWithString" -> {
+              val key = call.argument<String>("key") ?: return
+              val value = call.argument<String>("value") ?: return
+              setUserAttributeWithString(key, value)
+          }
+          "setUserAttributeWithInt" -> {
+              val key = call.argument<String>("key") ?: return
+              val value = call.argument<Int>("value") ?: return
+              setUserAttributeWithInt(key, value)
+          }
+          "setUserAttributeWithDouble" -> {
+              val key = call.argument<String>("key") ?: return
+              val value = call.argument<Double>("value") ?: return
+              setUserAttributeWithDouble(key, value)
+          }
+          "setUserAttributeWithBoolean" -> {
+              val key = call.argument<String>("key") ?: return
+              val value = call.argument<Boolean>("value") ?: return
+              setUserAttributeWithBoolean(key, value)
+          }
+          "setUserAttributeWithDate" -> {
+              val key = call.argument<String>("key") ?: return
+              val value = call.argument<String>("value") ?: return
+              setUserAttributeWithDate(key, value)
+          }
+          "userAttribute" -> {
+              val key = call.argument<String>("key") ?: return
+              userAttribute(key, result)
+          }
+          "userAttributes" -> userAttributes(result)
+          "clearUserAttribute" -> {
+              val key = call.argument<String>("key") ?: return
+              clearUserAttribute(key)
+          }
+          "clearUserAttributes" -> clearUserAttributes()
           "setPaywallActionInterceptor" -> setPaywallActionInterceptor(result)
           "onProcessAction" -> onProcessAction(call.argument<Boolean>("processAction") ?: false)
           "closePaywall" -> closePaywall()
@@ -470,6 +507,85 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
   private fun setAttribute(attribute: Int?, value: String?) {
       value?.let { Purchasely.setAttribute(Attribute.values()[attribute ?: 0], it) }
   }
+
+    fun setUserAttributeWithString(key: String, value: String) {
+        Purchasely.setUserAttribute(key, value)
+    }
+
+    fun setUserAttributeWithInt(key: String, value: Int) {
+        Purchasely.setUserAttribute(key, value)
+    }
+
+    fun setUserAttributeWithDouble(key: String, value: Double) {
+        Purchasely.setUserAttribute(key, value.toFloat())
+    }
+
+    fun setUserAttributeWithBoolean(key: String, value: Boolean) {
+        Purchasely.setUserAttribute(key, value)
+    }
+
+    fun setUserAttributeWithDate(key: String, value: String) {
+        Log.d("Attribute", value)
+        val format = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSX", Locale.getDefault())
+        } else {
+            SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.getDefault())
+        }
+        format.timeZone = TimeZone.getTimeZone("GMT")
+        val calendar = Calendar.getInstance()
+        try {
+            format.parse(value)?.let {
+                calendar.time = it
+            }
+            Log.d("Attribute", calendar.time.toString())
+            Purchasely.setUserAttribute(key, calendar.time)
+        } catch (e: Exception) {
+            Log.e("Purchasely", "Cannot save date attribute $key", e)
+        }
+    }
+
+    fun userAttribute(key: String, result: Result) {
+        val value = getUserAttributeValueForFlutter(Purchasely.userAttribute(key))
+        result.success(value)
+    }
+
+    fun userAttributes(result: Result) {
+        val map = Purchasely.userAttributes()
+        result.success(
+            map.mapValues {
+                getUserAttributeValueForFlutter(it.value)
+            }
+        )
+    }
+
+    private fun getUserAttributeValueForFlutter(value: Any?): Any? {
+        return when (value) {
+            is Date -> {
+                val format = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                    SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSX", Locale.getDefault())
+                } else {
+                    SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.getDefault())
+                }
+                format.timeZone = TimeZone.getTimeZone("GMT")
+                try {
+                    format.format(value)
+                } catch (e: Exception) {
+                    ""
+                }
+            }
+            //awful but to keep same precision so 1.2f = 1.2 double and not 1.20000056
+            is Float -> value.toString().toDouble()
+            else -> value
+        }
+    }
+
+    fun clearUserAttribute(key: String) {
+        Purchasely.clearUserAttribute(key)
+    }
+
+    fun clearUserAttributes() {
+        Purchasely.clearUserAttributes()
+    }
 
     fun setLanguage(language: String?) {
         Purchasely.language = try {

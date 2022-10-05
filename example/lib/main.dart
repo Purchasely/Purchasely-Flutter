@@ -80,6 +80,31 @@ class _MyAppState extends State<MyApp> {
         }
       });
 
+      //Attributes
+      Purchasely.setUserAttributeWithString("stringKey", "StringValue");
+      Purchasely.setUserAttributeWithInt("intKey", 3);
+      Purchasely.setUserAttributeWithDouble("doubleKey", 1.2);
+      Purchasely.setUserAttributeWithBoolean("booleanKey", true);
+      Purchasely.setUserAttributeWithDate("dateKey", DateTime.now());
+
+      Map<dynamic, dynamic> attributes = await Purchasely.userAttributes();
+      attributes.forEach((key, value) {
+        print("Attribute $key is $value");
+        if (value is DateTime) {
+          print("Attribute $key is date");
+        }
+      });
+
+      dynamic dateAttribute = await Purchasely.userAttribute("dateKey");
+      print(dateAttribute.year);
+
+      print(await Purchasely.userAttribute("booleanKey"));
+
+      Purchasely.clearUserAttribute("dateKey");
+      print(await Purchasely.userAttribute("dateKey"));
+
+      Purchasely.clearUserAttributes();
+
       Purchasely.setPaywallActionInterceptorCallback(
           (PaywallActionInterceptorResult result) {
         print('Received action from paywall');
