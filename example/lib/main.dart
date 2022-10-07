@@ -25,8 +25,10 @@ class _MyAppState extends State<MyApp> {
     try {
       Purchasely.isReadyToPurchase(true);
 
+      // Apple: fcb39be4-2ba4-4db7-bde3-2a5a1e20745d
+      // Android: afa96c76-1d8e-4e3c-a48f-204a3cd93a15
       bool configured = await Purchasely.startWithApiKey(
-          'afa96c76-1d8e-4e3c-a48f-204a3cd93a15',
+          'fcb39be4-2ba4-4db7-bde3-2a5a1e20745d',
           ['Google'],
           null,
           PLYLogLevel.debug,
@@ -104,6 +106,7 @@ class _MyAppState extends State<MyApp> {
       print(await Purchasely.userAttribute("dateKey"));
 
       Purchasely.clearUserAttributes();
+      print(await Purchasely.userAttributes());
 
       Purchasely.setPaywallActionInterceptorCallback(
           (PaywallActionInterceptorResult result) {

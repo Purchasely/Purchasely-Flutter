@@ -348,7 +348,8 @@ class Purchasely {
   }
 
   static void clearUserAttribute(String key) async {
-    _channel.invokeMethod('clearUserAttribute');
+     _channel.invokeMethod('clearUserAttribute',
+        <String, dynamic>{'key': key});
   }
 
   static void clearUserAttributes() async {
