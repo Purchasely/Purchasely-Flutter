@@ -95,6 +95,12 @@ class _MyAppState extends State<MyApp> {
         if (value is DateTime) {
           print("Attribute $key is date");
         }
+        if (value is double) {
+          print("Attribute $key is double");
+        }
+        if (value is int) {
+          print("Attribute $key is int");
+        }
       });
 
       dynamic dateAttribute = await Purchasely.userAttribute("dateKey");
