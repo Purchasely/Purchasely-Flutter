@@ -92,24 +92,12 @@ class _MyAppState extends State<MyApp> {
       Map<dynamic, dynamic> attributes = await Purchasely.userAttributes();
       attributes.forEach((key, value) {
         print("Attribute $key is $value");
-        if (value is DateTime) {
-          print("Attribute $key is date");
-        }
-        if (value is double) {
-          print("Attribute $key is double");
-        }
-        if (value is int) {
-          print("Attribute $key is int");
-        }
       });
 
       dynamic dateAttribute = await Purchasely.userAttribute("dateKey");
       print(dateAttribute.year);
 
-      print(await Purchasely.userAttribute("booleanKey"));
-
       Purchasely.clearUserAttribute("dateKey");
-      print(await Purchasely.userAttribute("dateKey"));
 
       Purchasely.clearUserAttributes();
       print(await Purchasely.userAttributes());
