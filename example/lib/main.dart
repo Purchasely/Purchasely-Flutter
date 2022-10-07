@@ -25,8 +25,10 @@ class _MyAppState extends State<MyApp> {
     try {
       Purchasely.isReadyToPurchase(true);
 
+      // Apple: fcb39be4-2ba4-4db7-bde3-2a5a1e20745d
+      // Android: afa96c76-1d8e-4e3c-a48f-204a3cd93a15
       bool configured = await Purchasely.startWithApiKey(
-          'afa96c76-1d8e-4e3c-a48f-204a3cd93a15',
+          'fcb39be4-2ba4-4db7-bde3-2a5a1e20745d',
           ['Google'],
           null,
           PLYLogLevel.debug,
@@ -79,6 +81,26 @@ class _MyAppState extends State<MyApp> {
           //User bought a plan
         }
       });
+
+      //Attributes
+      Purchasely.setUserAttributeWithString("stringKey", "StringValue");
+      Purchasely.setUserAttributeWithInt("intKey", 3);
+      Purchasely.setUserAttributeWithDouble("doubleKey", 1.2);
+      Purchasely.setUserAttributeWithBoolean("booleanKey", true);
+      Purchasely.setUserAttributeWithDate("dateKey", DateTime.now());
+
+      Map<dynamic, dynamic> attributes = await Purchasely.userAttributes();
+      attributes.forEach((key, value) {
+        print("Attribute $key is $value");
+      });
+
+      dynamic dateAttribute = await Purchasely.userAttribute("dateKey");
+      print(dateAttribute.year);
+
+      Purchasely.clearUserAttribute("dateKey");
+
+      Purchasely.clearUserAttributes();
+      print(await Purchasely.userAttributes());
 
       Purchasely.setPaywallActionInterceptorCallback(
           (PaywallActionInterceptorResult result) {

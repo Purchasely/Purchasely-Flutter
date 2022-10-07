@@ -107,6 +107,24 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             closePaywall()
         case "userDidConsumeSubscriptionContent":
             userDidConsumeSubscriptionContent()
+        case "setUserAttributeWithString":
+            setUserAttributeWithString(arguments: arguments)
+        case "setUserAttributeWithInt":
+            setUserAttributeWithInt(arguments: arguments)
+        case "setUserAttributeWithDouble":
+            setUserAttributeWithDouble(arguments: arguments)
+        case "setUserAttributeWithBoolean":
+            setUserAttributeWithBoolean(arguments: arguments)
+        case "setUserAttributeWithDate":
+            setUserAttributeWithDate(arguments: arguments)
+        case "userAttribute":
+            getUserAttribute(arguments: arguments, result: result)
+        case "userAttributes":
+            getUserAttributes(result: result)
+        case "clearUserAttribute":
+            clearUserAttribute(arguments: arguments)
+        case "clearUserAttributes":
+            clearUserAttributes()
         case "synchronize", "displaySubscriptionCancellationInstruction":
             result(FlutterMethodNotImplemented)
         default:
@@ -120,7 +138,7 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             return
         }
 
-		Purchasely.setSdkBridgeVersion("1.3.2")
+		Purchasely.setSdkBridgeVersion("1.4.0")
         Purchasely.setAppTechnology(PLYAppTechnology.flutter)
 
         let logLevel = PLYLogger.LogLevel(rawValue: (arguments["logLevel"] as? Int) ?? PLYLogger.LogLevel.debug.rawValue) ?? PLYLogger.LogLevel.debug
@@ -456,7 +474,97 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
 
         Purchasely.setAttribute(attr, value: value)
     }
+    
+    private func setUserAttributeWithString(arguments: [String: Any]?) {
+        guard let arguments = arguments, let value = arguments["value"] as? String, let key = arguments["key"] as? String else {
+            return
+        }
+        
+        Purchasely.setUserAttribute(withStringValue: value, forKey: key)
+    }
 
+    private func setUserAttributeWithInt(arguments: [String: Any]?) {
+        guard let arguments = arguments, let value = arguments["value"] as? Int, let key = arguments["key"] as? String else {
+            return
+        }
+        
+        Purchasely.setUserAttribute(withIntValue: value, forKey: key)
+    }
+    
+    private func setUserAttributeWithDouble(arguments: [String: Any]?) {
+        guard let arguments = arguments, let value = arguments["value"] as? Double, let key = arguments["key"] as? String else {
+            return
+        }
+        
+        Purchasely.setUserAttribute(withDoubleValue: value, forKey: key)
+    }
+    
+    private func setUserAttributeWithBoolean(arguments: [String: Any]?) {
+        guard let arguments = arguments, let value = arguments["value"] as? Bool, let key = arguments["key"] as? String else {
+            return
+        }
+        
+        Purchasely.setUserAttribute(withBoolValue: value, forKey: key)
+    }
+    
+    private func setUserAttributeWithDate(arguments: [String: Any]?) {
+        guard let arguments = arguments, let value = arguments["value"] as? String, let key = arguments["key"] as? String else {
+            return
+        }
+        
+        let dateFormatter = DateFormatter()
+        dateFormatter.timeZone = TimeZone(identifier: "GMT")
+        dateFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"
+        if let date = dateFormatter.date(from: value) {
+            Purchasely.setUserAttribute(withDateValue: date, forKey: key)
+        } else {
+            print("Purchasely", "Cannot save date attribute for key \(key)")
+        }
+    }
+    
+    private func clearUserAttribute(arguments: [String: Any]?) {
+        guard let arguments = arguments, let key = arguments["key"] as? String else {
+            return
+        }
+        Purchasely.clearUserAttribute(forKey: key)
+    }
+
+    private func clearUserAttributes() {
+        Purchasely.clearUserAttributes()
+    }
+
+    private func getUserAttribute(arguments: [String: Any]?, result: @escaping FlutterResult) {
+        guard let arguments = arguments, let key = arguments["key"] as? String else {
+            result(FlutterError.error(code: "-1", message: "key must not be nil", error: nil))
+            return
+        }
+
+        let attribute = getUserAttributeForFlutter(with: Purchasely.getUserAttribute(for: key))
+        DispatchQueue.main.async {
+            result(attribute)
+        }
+    }
+    
+    private func getUserAttributes(result: @escaping FlutterResult) {
+        
+        let resultAttributes = Purchasely.userAttributes.mapValues { getUserAttributeForFlutter(with: $0) }
+        DispatchQueue.main.async {
+            result(resultAttributes)
+        }
+    }
+    
+    private func getUserAttributeForFlutter(with value: Any?) -> Any? {
+        
+        if let dateValue = value as? Date {
+            let dateFormatter = DateFormatter()
+            dateFormatter.timeZone = TimeZone(identifier: "GMT")
+            dateFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"
+            return dateFormatter.string(from: dateValue)
+        }
+        
+        return value
+    }
+    
     private func setPaywallActionInterceptor(result: @escaping FlutterResult) {
         DispatchQueue.main.async {
             Purchasely.setPaywallActionsInterceptor { [weak self] action, parameters, info, onProcessAction in

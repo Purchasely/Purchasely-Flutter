@@ -1,3 +1,6 @@
+## 1.4.0
+🔌 We have added the integration of mparticle, Branch and Customer.IO and you can now send user id or device id attributes for Amplitude
+👤️ You can now send custom user attributes to our SDK with Purchasely.userAttributes() they will soon be used for a new feature.
 ## 1.3.2
 ⚠️ Important Patch fix on android to receive a callback on paywall display for a purchase, restore or cancel result
 ## 1.3.1
