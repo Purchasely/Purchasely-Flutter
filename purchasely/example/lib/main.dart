@@ -147,16 +147,20 @@ class _MyAppState extends State<MyApp> {
 
   Future<void> displayPresentation() async {
     try {
-      var result = await Purchasely.presentPresentationForPlacement(
-          "onboarding",
-          isFullscreen: true);
+      var result = await Purchasely.fetchPresentation("JAN_ST", null);
 
-      print('Result : $result');
-      if (result.result == PLYPurchaseResult.cancelled) {
-        print("User cancelled purchased");
-      } else {
-        print('User purchased: ${result.plan?.name}');
-      }
+      var presentation = result.presentation;
+
+      print('Result : $presentation');
+
+      // var presentResult = await Purchasely.presentPresentation(presentation, isFullscreen: false);
+
+      // if (presentResult.result == PLYPurchaseResult.cancelled) {
+      //   print("User cancelled purchased");
+      // } else {
+      //   print('User purchased: ${presentResult.plan?.name}');
+      // }
+
     } catch (e) {
       print(e);
     }
