@@ -41,7 +41,7 @@ class Purchasely {
       {bool isFullscreen = false}) async {
     final result = await _channel
         .invokeMethod('presentPresentation', <String, dynamic>{
-      'presentation': ["toto"],
+      'presentation': transformPLYPresentationToMap(presentation),
       'isFullscreen': isFullscreen
     });
     return PresentPresentationResult(PLYPurchaseResult.values[result['result']],
@@ -472,6 +472,21 @@ class Purchasely {
       presentation['language'],
       type,
       plans);
+  }
+
+  static Map<dynamic, dynamic> transformPLYPresentationToMap(PLYPresentation? presentation) {
+    var presentationMap = new Map();
+
+    presentationMap['id'] = presentation?.id;
+    presentationMap['placementId'] = presentation?.placementId;
+    presentationMap['audienceId'] = presentation?.audienceId;
+    presentationMap['abTestId'] = presentation?.abTestId;
+    presentationMap['abTestVariantId'] = presentation?.abTestVariantId;
+    presentationMap['language'] = presentation?.language;
+    presentationMap['type'] = presentation?.type.index;
+    presentationMap['plans'] = presentation?.plans;
+
+    return presentationMap;
   }
 
   static PLYEventProperties transformToPLYEventProperties(

@@ -153,13 +153,13 @@ class _MyAppState extends State<MyApp> {
 
       print('Result : $presentation');
 
-      // var presentResult = await Purchasely.presentPresentation(presentation, isFullscreen: false);
+      var presentResult = await Purchasely.presentPresentation(presentation, isFullscreen: false);
 
-      // if (presentResult.result == PLYPurchaseResult.cancelled) {
-      //   print("User cancelled purchased");
-      // } else {
-      //   print('User purchased: ${presentResult.plan?.name}');
-      // }
+      if (presentResult.result == PLYPurchaseResult.cancelled) {
+        print("User cancelled purchased");
+      } else {
+        print('User purchased: ${presentResult.plan?.name}');
+      }
 
     } catch (e) {
       print(e);
