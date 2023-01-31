@@ -20,12 +20,15 @@ class PLYProductActivity : FragmentActivity() {
     private var productId: String? = null
     private var planId: String? = null
     private var contentId: String? = null
+    private var isFullScreen: Boolean = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_ply_product_activity)
 
-        if(intent.extras?.getBoolean("isFullScreen") == true) {
+        isFullScreen = intent.extras?.getBoolean("isFullScreen") ?: false
+
+        if(isFullScreen) {
             WindowCompat.setDecorFitsSystemWindows(window, false)
         }
 
@@ -79,7 +82,8 @@ class PLYProductActivity : FragmentActivity() {
             placementId = placementId,
             productId = productId,
             planId = planId,
-            contentId = contentId
+            contentId = contentId,
+            isFullScreen = isFullScreen
         ).apply {
             activity = WeakReference(this@PLYProductActivity)
         }

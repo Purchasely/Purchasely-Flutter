@@ -12,6 +12,9 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
 
     weak var presentedPresentationViewController: UIViewController?
 
+    var purchaseResult: FlutterResult?
+    var presentationsLoaded = [PLYPresentation]()
+    
     var onProcessActionHandler: ((Bool) -> Void)?
 
     public init(with registrar: FlutterPluginRegistrar) {
@@ -47,6 +50,14 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             }
         case "setDefaultPresentationResultHandler":
             setDefaultPresentationResultHandler(result: result)
+        case "fetchPresentation":
+            fetchPresentation(arguments: arguments, result: result)
+        case "presentPresentation":
+            presentPresentation(arguments: arguments, result: result)
+        case "clientPresentationDisplayed":
+            clientPresentationDisplayed(arguments: arguments)
+        case "clientPresentationClosed":
+            clientPresentationClosed(arguments: arguments)
         case "presentPresentationWithIdentifier":
             presentPresentationWithIdentifier(arguments: arguments, result: result)
         case "presentProductWithIdentifier":
@@ -138,7 +149,7 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             return
         }
 
-		Purchasely.setSdkBridgeVersion("1.4.2")
+		Purchasely.setSdkBridgeVersion("1.5.0")
         Purchasely.setAppTechnology(PLYAppTechnology.flutter)
 
         let logLevel = PLYLogger.LogLevel(rawValue: (arguments["logLevel"] as? Int) ?? PLYLogger.LogLevel.debug.rawValue) ?? PLYLogger.LogLevel.debug
@@ -160,6 +171,105 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
                 }
             }
         }
+    }
+
+    private func fetchPresentation(arguments: [String: Any]?, result: @escaping FlutterResult) {
+
+        let placementId = arguments?["placementVendorId"] as? String
+        let presentationId = arguments?["presentationVendorId"] as? String
+        let contentId = arguments?["contentId"] as? String
+
+        if let placementId = placementId {
+            Purchasely.fetchPresentation(for: placementId, contentId: contentId, fetchCompletion: { [weak self] presentation, error in
+                guard let `self` = self else { return }
+                DispatchQueue.main.async {
+                    if let error = error {
+                        result(FlutterError.error(code: "-1", message: "Error while fetching presentation", error: error))
+                    } else if let presentation = presentation {
+                        self.presentationsLoaded.append(presentation)
+                        result(presentation.toMap)
+                    }
+                }
+            }) { [weak self] productResult, plan in
+                guard let `self` = self else { return }
+                let value: [String: Any] = ["result": productResult.rawValue, "plan": plan?.toMap ?? [:]]
+                DispatchQueue.main.async {
+                    self.purchaseResult?(value)
+                }
+            }
+        } else if let presentationId = presentationId {
+            Purchasely.fetchPresentation(with: presentationId, contentId: contentId, fetchCompletion: { [weak self] presentation, error in
+                guard let `self` = self else { return }
+                DispatchQueue.main.async {
+                    if let error = error {
+                        result(FlutterError.error(code: "-1", message: "Error while fetching presentation", error: error))
+                    } else if let presentation = presentation {
+                        self.presentationsLoaded.append(presentation)
+                        result(presentation.toMap)
+                    }
+                }
+            }) { [weak self] productResult, plan in
+                guard let `self` = self else { return }
+                let value: [String: Any] = ["result": productResult.rawValue, "plan": plan?.toMap ?? [:]]
+                DispatchQueue.main.async {
+                    self.purchaseResult?(value)
+                }
+            }
+        }
+    }
+    
+    private func presentPresentation(arguments: [String: Any]?, result: @escaping FlutterResult) {
+        guard let presentationMap = arguments?["presentation"] as? [String: Any] else {
+            result(FlutterError.error(code: "-1", message: "Presentation cannot be nil", error: nil))
+            return
+        }
+        
+        self.purchaseResult = result
+        
+        guard let presentationId = presentationMap["id"] as? String, let presentationLoaded = self.presentationsLoaded.filter({ $0.id == presentationId }).first, let controller = presentationLoaded.controller else {
+            result(FlutterError.error(code: "-1", message: "Presentation not loaded", error: nil))
+            return
+        }
+        
+        self.presentationsLoaded.removeAll(where: { $0.id == presentationId })
+        
+        let navCtrl = UINavigationController(rootViewController: controller)
+        navCtrl.navigationBar.isTranslucent = true
+        navCtrl.navigationBar.setBackgroundImage(UIImage(), for: .default)
+        navCtrl.navigationBar.shadowImage = UIImage()
+        navCtrl.navigationBar.tintColor = UIColor.white
+
+        self.presentedPresentationViewController = navCtrl
+
+        if let isFullscreen = arguments?["isFullscreen"] as? Bool, isFullscreen {
+            navCtrl.modalPresentationStyle = .fullScreen
+        }
+
+        DispatchQueue.main.async {
+            Purchasely.showController(navCtrl, type: .productPage)
+        }
+    }
+    
+    private func clientPresentationDisplayed(arguments: [String: Any]?) {
+        guard let presentationMap = arguments?["presentation"] as? [String: Any] else {
+            print("Presentation cannot be nil")
+            return
+        }
+        
+        guard let presentationId = presentationMap["id"] as? String, let presentationLoaded = self.presentationsLoaded.filter({ $0.id == presentationId }).first else { return }
+        
+        Purchasely.clientPresentationOpened(with: presentationLoaded)
+    }
+
+    private func clientPresentationClosed(arguments: [String: Any]?) {
+        guard let presentationMap = arguments?["presentation"] as? [String: Any] else {
+            print("Presentation cannot be nil")
+            return
+        }
+        
+        guard let presentationId = presentationMap["id"] as? String, let presentationLoaded = self.presentationsLoaded.filter({ $0.id == presentationId }).first else { return }
+        
+        Purchasely.clientPresentationClosed(with: presentationLoaded)
     }
 
     private func presentPresentationWithIdentifier(arguments: [String: Any]?, result: @escaping FlutterResult) {

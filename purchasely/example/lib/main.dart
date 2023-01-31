@@ -148,14 +148,54 @@ class _MyAppState extends State<MyApp> {
   Future<void> displayPresentation() async {
     try {
       var result = await Purchasely.presentPresentationForPlacement(
-          "onboarding",
-          isFullscreen: true);
+          "app_launch_demo",
+          isFullscreen: false);
 
-      print('Result : $result');
-      if (result.result == PLYPurchaseResult.cancelled) {
-        print("User cancelled purchased");
-      } else {
-        print('User purchased: ${result.plan?.name}');
+      switch (result.result) {
+        case PLYPurchaseResult.cancelled:
+          {
+            print("User cancelled purchased");
+          }
+          break;
+        case PLYPurchaseResult.purchased:
+          {
+            print("User purchased ${result.plan?.name}");
+          }
+          break;
+        case PLYPurchaseResult.restored:
+          {
+            print("User restored ${result.plan?.name}");
+          }
+          break;
+      }
+    } catch (e) {
+      print(e);
+    }
+  }
+
+  Future<void> fetchPresentation() async {
+    try {
+      var presentation = await Purchasely.fetchPresentation("ONBOARDING");
+
+      var presentResult = await Purchasely.presentPresentation(presentation,
+          isFullscreen: false);
+
+      switch (presentResult.result) {
+        case PLYPurchaseResult.cancelled:
+          {
+            print("User cancelled purchased");
+          }
+          break;
+        case PLYPurchaseResult.purchased:
+          {
+            print("User purchased ${presentResult.plan?.name}");
+          }
+          break;
+        case PLYPurchaseResult.restored:
+          {
+            print("User restored ${presentResult.plan?.name}");
+          }
+          break;
       }
     } catch (e) {
       print(e);
@@ -217,6 +257,15 @@ class _MyAppState extends State<MyApp> {
                 displayPresentation();
               },
               child: Text('Display presentation'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                padding: EdgeInsets.only(left: 20.0, right: 30.0),
+              ),
+              onPressed: () {
+                fetchPresentation();
+              },
+              child: Text('Fetch presentation'),
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
