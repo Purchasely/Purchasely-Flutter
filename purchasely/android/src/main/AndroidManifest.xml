@@ -9,8 +9,9 @@
         android:required="false" />
 
     <application>
-        <activity android:name=".PLYProductActivity" android:theme="@style/Theme.AppCompat.Light.NoActionBar" />
-        <activity android:name=".PLYSubscriptionsActivity" android:theme="@style/Theme.AppCompat.Light.NoActionBar" />
+        <activity android:name=".PLYProductActivity" android:exported="true" android:theme="@style/Theme.Purchasely" />
+        <activity android:name=".PLYPaywallActivity" android:exported="true" android:theme="@style/Theme.Purchasely" />
+        <activity android:name=".PLYSubscriptionsActivity" android:exported="true" android:theme="@style/Theme.AppCompat.Light.NoActionBar" />
     </application>
 
 </manifest>

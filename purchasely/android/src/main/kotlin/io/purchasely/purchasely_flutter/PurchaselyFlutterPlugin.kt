@@ -111,6 +111,15 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
           }
           "setDefaultPresentationResultHandler" -> setDefaultPresentationResultHandler(result)
           "synchronize" -> synchronize()
+          "fetchPresentation" -> fetchPresentation(
+                  call.argument<String>("placementVendorId"),
+                  call.argument<String>("presentationVendorId"),
+                  call.argument<String>("contentId"),
+                result)
+          "presentPresentation" -> presentPresentation(
+              call.argument<Map<String, Any>>("presentation"),
+              call.argument<Boolean>("isFullscreen") ?: false,
+              result)
           "presentPresentationWithIdentifier" -> {
               presentPresentationWithIdentifier(
                       call.argument<String>("presentationVendorId"),
@@ -180,6 +189,8 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
               Purchasely.userDidConsumeSubscriptionContent()
               result.success(true)
           }
+          "clientPresentationDisplayed" -> clientPresentationDisplayed(call.argument<Map<String, Any>>("presentation"))
+          "clientPresentationClosed" -> clientPresentationClosed(call.argument<Map<String, Any>>("presentation"))
           "productWithIdentifier" -> {
               launch {
                   try {
@@ -282,14 +293,13 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
               .runningMode(when(runningMode) {
                   0 -> PLYRunningMode.TransactionOnly
                   1 -> PLYRunningMode.Observer
-                  2 -> PLYRunningMode.PaywallOnly
-                  3 -> PLYRunningMode.PaywallObserver
+                  2 -> PLYRunningMode.PaywallObserver
                   else -> PLYRunningMode.Full
               })
             .userId(userId)
             .build()
 
-	  Purchasely.sdkBridgeVersion = "1.4.2"
+	  Purchasely.sdkBridgeVersion = "1.5.0"
       Purchasely.appTechnology = PLYAppTechnology.FLUTTER
 
       Purchasely.start { isConfigured, error ->
@@ -304,6 +314,62 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
   private fun close() {
       Purchasely.close()
   }
+
+    private fun fetchPresentation(placementId: String?,
+                          presentationId: String?,
+                          contentId: String?,
+                          result: Result) {
+
+        fetchResult = result
+
+        val properties = PLYPresentationViewProperties(
+            placementId = placementId,
+            presentationId = presentationId,
+            contentId = contentId)
+
+        launch {
+            activity?.let {
+                val intent = PLYPaywallActivity.newIntent(it, properties).apply {
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK xor Intent.FLAG_ACTIVITY_MULTIPLE_TASK
+                }
+                it.startActivity(intent)
+            }
+        }
+
+
+    }
+
+    private fun presentPresentation(presentationMap: Map<String, Any>?,
+                                    isFullScreen: Boolean,
+                                    result: Result) {
+        if (presentationMap == null) {
+            result.error("-1", "presentation cannot be null", null)
+            return
+        }
+
+        if(presentationsLoaded.lastOrNull()?.id != presentationMap["id"]) {
+            result.error("-1", "presentation cannot be fetched", null)
+            return
+        }
+
+        presentationResult = result
+
+        val activity = productActivity?.activity?.get()
+        if(activity is PLYPaywallActivity) {
+            activity.runOnUiThread {
+                activity.updateDisplay(isFullScreen)
+            }
+        }
+
+        activity?.let {
+            it.startActivity(
+                Intent(it, PLYPaywallActivity::class.java).apply {
+                    flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
+                }
+            )
+        }
+
+    }
 
   private fun presentPresentationWithIdentifier(presentationVendorId: String?,
                                                 contentId: String?,
@@ -620,6 +686,34 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
         }
     }
 
+    private fun clientPresentationDisplayed(presentationMap: Map<String, Any>?) {
+        if(presentationMap == null) {
+            PLYLogger.e("presentation cannot be null")
+            return
+        }
+
+        val presentation = presentationsLoaded.firstOrNull { it.id ==  presentationMap["id"]}
+
+        if(presentation != null) {
+            Purchasely.clientPresentationDisplayed(presentation)
+        }
+    }
+
+    private fun clientPresentationClosed(presentationMap: Map<String, Any>?) {
+        if(presentationMap == null) {
+            PLYLogger.e("presentation cannot be null")
+            return
+        }
+
+        val presentation = presentationsLoaded.firstOrNull { it.id ==  presentationMap["id"]}
+
+        if(presentation != null) {
+            Purchasely.clientPresentationClosed(presentation)
+            presentationsLoaded.removeAll { it.id == presentation.id }
+        }
+    }
+
+
     private fun setPaywallActionInterceptor(result: Result) {
         Purchasely.setPaywallActionsInterceptor { info, action, parameters, processAction ->
             paywallActionHandler = processAction
@@ -631,7 +725,6 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
             parametersForFlutter["url"] = parameters.url?.toString()
             parametersForFlutter["plan"] = transformPlanToMap(parameters.plan)
             parametersForFlutter["presentation"] = parameters.presentation
-
 
             result.success(mapOf(
                 Pair("info", mapOf(
@@ -663,17 +756,17 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
                 PLYPresentationAction.PURCHASE,
                 PLYPresentationAction.LOGIN,
                 PLYPresentationAction.OPEN_PRESENTATION -> {
-                    if(productActivity?.relaunch(activity) == false) {
-                        //wait for activity to relaunch
-                        withContext(Dispatchers.Default) { delay(500) }
-                    }
+                    productActivity?.relaunch(activity)
+                    withContext(Dispatchers.Default) { delay(500) }
                 }
-                //We should not open purchasely paywall for others actions
+                //We should not open purchasely paywall for other actions
                 else -> {}
             }
 
-            productActivity?.activity?.get()?.runOnUiThread {
-                paywallActionHandler?.invoke(processAction)
+            productActivity?.activity?.get()?.let {
+                it.runOnUiThread {
+                    paywallActionHandler?.invoke(processAction)
+                }
             }
         }
     }
@@ -693,10 +786,26 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
   companion object {
       var productActivity: ProductActivity? = null
       var presentationResult: Result? = null
+      var fetchResult: Result? = null
       var defaultPresentationResult: Result? = null
       var paywallActionHandler: PLYCompletionHandler? = null
       var paywallAction: PLYPresentationAction? = null
       private lateinit var channel : MethodChannel
+
+      val presentationsLoaded = mutableListOf<PLYPresentation>()
+
+      fun sendFetchResult(presentation: PLYPresentation?, error: Exception?) {
+          if(presentation != null) {
+              presentationsLoaded.add(presentation)
+              fetchResult?.success(presentation.toMap().mapValues {
+                  val value = it.value
+                  if(value is PLYPresentationType) value.ordinal
+                  else value
+              })
+          }
+          if(error != null) fetchResult?.error("467", error.message, error)
+          fetchResult = null
+      }
 
       fun sendPresentationResult(result: PLYProductViewResult, plan: PLYPlan?) {
           val productViewResult = when(result) {
@@ -715,6 +824,8 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
                   mapOf(Pair("result", productViewResult), Pair("plan", transformPlanToMap(plan)))
               )
           }
+
+          productActivity?.activity?.get()?.finish()
 
       }
 
@@ -781,9 +892,10 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
       val placementId: String? = null,
       val productId: String? = null,
       val planId: String? = null,
-      val contentId: String? = null) {
+      val contentId: String? = null,
+      val isFullScreen: Boolean = false) {
 
-      var activity: WeakReference<PLYProductActivity>? = null
+      var activity: WeakReference<Activity>? = null
 
       fun relaunch(flutterActivity: Activity?) : Boolean {
           if(flutterActivity == null) return false
@@ -791,8 +903,8 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
           val backgroundActivity = activity?.get()
           return if(backgroundActivity != null
               && !backgroundActivity.isFinishing) {
-              flutterActivity.startActivity(
-                  Intent(flutterActivity, backgroundActivity::class.java).apply {
+              backgroundActivity.startActivity(
+                  Intent(backgroundActivity, backgroundActivity::class.java).apply {
                       flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
                   }
               )
@@ -804,6 +916,7 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
               intent.putExtra("productId", productId)
               intent.putExtra("planId", planId)
               intent.putExtra("contentId", contentId)
+              intent.putExtra("isFullScreen", isFullScreen)
               flutterActivity.startActivity(intent)
               return false
           }

@@ -22,25 +22,24 @@ class Purchasely {
     });
   }
 
-  static Future<FetchPresentationResult> fetchPresentation(
-      String? placementVendorId,
-      String? presentationVendorId,
+  static Future<PLYPresentation?> fetchPresentation(
+      String? placementVendorId, String? presentationVendorId,
       {String? contentId}) async {
-    final result = await _channel
-        .invokeMethod('fetchPresentation', <String, dynamic>{
+    final result =
+        await _channel.invokeMethod('fetchPresentation', <String, dynamic>{
       'placementVendorId': placementVendorId,
       'presentationVendorId': presentationVendorId,
       'contentId': contentId
     });
-    
-    return FetchPresentationResult(transformToPLYPresentation(result));
+
+    return transformToPLYPresentation(result);
   }
 
-   static Future<PresentPresentationResult> presentPresentation(
+  static Future<PresentPresentationResult> presentPresentation(
       PLYPresentation? presentation,
       {bool isFullscreen = false}) async {
-    final result = await _channel
-        .invokeMethod('presentPresentation', <String, dynamic>{
+    final result =
+        await _channel.invokeMethod('presentPresentation', <String, dynamic>{
       'presentation': transformPLYPresentationToMap(presentation),
       'isFullscreen': isFullscreen
     });
@@ -50,18 +49,14 @@ class Purchasely {
 
   static Future<void> clientPresentationDisplayed(
       PLYPresentation? presentation) async {
-    return await _channel
-        .invokeMethod('clientPresentationDisplayed', <String, dynamic>{
-      'presentation': presentation
-    });
+    return await _channel.invokeMethod('clientPresentationDisplayed',
+        <String, dynamic>{'presentation': presentation});
   }
 
   static Future<void> clientPresentationClosed(
       PLYPresentation? presentation) async {
-    return await _channel
-        .invokeMethod('clientPresentationClosed', <String, dynamic>{
-      'presentation': presentation
-    });
+    return await _channel.invokeMethod('clientPresentationClosed',
+        <String, dynamic>{'presentation': presentation});
   }
 
   static Future<PresentPresentationResult> presentPresentationWithIdentifier(
@@ -257,7 +252,7 @@ class Purchasely {
         eventName = PLYEventName.values
             .firstWhere((e) => e.toString() == 'PLYEventName.' + event['name']);
       } catch (e) {
-        print(e);
+        print("Error $e because event ${event['name']} is not found");
       }
 
       block(PLYEvent(
@@ -390,8 +385,7 @@ class Purchasely {
   }
 
   static void clearUserAttribute(String key) async {
-     _channel.invokeMethod('clearUserAttribute',
-        <String, dynamic>{'key': key});
+    _channel.invokeMethod('clearUserAttribute', <String, dynamic>{'key': key});
   }
 
   static void clearUserAttributes() async {
@@ -451,7 +445,8 @@ class Purchasely {
         plan['isEligibleForIntroOffer']);
   }
 
-  static PLYPresentation? transformToPLYPresentation(Map<dynamic, dynamic> presentation) {
+  static PLYPresentation? transformToPLYPresentation(
+      Map<dynamic, dynamic> presentation) {
     if (presentation.isEmpty) return null;
 
     PLYPresentationType type = PLYPresentationType.normal;
@@ -464,17 +459,18 @@ class Purchasely {
     List<String> plans = List<String>.from(presentation['plans'] as List);
 
     return PLYPresentation(
-      presentation['id'], 
-      presentation['placementId'],
-      presentation['audienceId'],
-      presentation['abTestId'],
-      presentation['abTestVariantId'],
-      presentation['language'],
-      type,
-      plans);
+        presentation['id'],
+        presentation['placementId'],
+        presentation['audienceId'],
+        presentation['abTestId'],
+        presentation['abTestVariantId'],
+        presentation['language'],
+        type,
+        plans);
   }
 
-  static Map<dynamic, dynamic> transformPLYPresentationToMap(PLYPresentation? presentation) {
+  static Map<dynamic, dynamic> transformPLYPresentationToMap(
+      PLYPresentation? presentation) {
     var presentationMap = new Map();
 
     presentationMap['id'] = presentation?.id;
@@ -568,12 +564,7 @@ class Purchasely {
 
 enum PLYLogLevel { debug, info, warn, error }
 
-enum PLYRunningMode {
-  transactionOnly,
-  observer,
-  paywallObserver,
-  full
-}
+enum PLYRunningMode { transactionOnly, observer, paywallObserver, full }
 
 enum PLYAttribute {
   amplitude_session_id,
@@ -600,12 +591,7 @@ enum PLYAttribute {
 
 enum PLYPurchaseResult { purchased, cancelled, restored }
 
-enum PLYPresentationType {
-  normal,
-  fallback,
-  deactivated,
-  client
-}
+enum PLYPresentationType { normal, fallback, deactivated, client }
 
 enum PLYSubscriptionSource {
   appleAppStore,
@@ -690,16 +676,8 @@ class PLYPresentation {
   PLYPresentationType type;
   List<String> plans;
 
-  PLYPresentation(
-    this.id,
-    this.placementId,
-    this.audienceId,
-    this.abTestId,
-    this.abTestVariantId,
-    this.language,
-    this.type,
-    this.plans
-  );
+  PLYPresentation(this.id, this.placementId, this.audienceId, this.abTestId,
+      this.abTestVariantId, this.language, this.type, this.plans);
 }
 
 class PLYSubscription {
@@ -712,12 +690,6 @@ class PLYSubscription {
 
   PLYSubscription(this.purchaseToken, this.subscriptionSource,
       this.nextRenewalDate, this.cancelledDate, this.plan, this.product);
-}
-
-class FetchPresentationResult {
-  PLYPresentation? presentation;
-
-  FetchPresentationResult(this.presentation);
 }
 
 class PresentPresentationResult {
@@ -777,6 +749,8 @@ enum PLYEventName {
   PRESENTATION_VIEWED,
   PRESENTATION_OPENED,
   PRESENTATION_SELECTED,
+  PRESENTATION_LOADED,
+  PRESENTATION_CLOSED,
   PROMO_CODE_TAPPED,
   PURCHASE_CANCELLED,
   PURCHASE_TAPPED,
@@ -787,6 +761,8 @@ enum PLYEventName {
   RESTORE_STARTED,
   RESTORE_SUCCEEDED,
   RESTORE_FAILED,
+  STORE_PRODUCT_FETCH_FAILED,
+  SUBSCRIPTION_CONTENT_USED,
   SUBSCRIPTIONS_LIST_VIEWED,
   SUBSCRIPTION_DETAILS_VIEWED,
   SUBSCRIPTION_CANCEL_TAPPED,
@@ -808,7 +784,7 @@ class PLYEventPropertyPlan {
   int? duration;
   double? intro_price_in_customer_currency;
   String? intro_period;
-  String? intro_duration;
+  int? intro_duration;
   bool? has_free_trial;
   String? free_trial_period;
   int? free_trial_duration;
