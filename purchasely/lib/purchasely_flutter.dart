@@ -22,13 +22,12 @@ class Purchasely {
     });
   }
 
-  static Future<PLYPresentation?> fetchPresentation(
-      String? placementVendorId, String? presentationVendorId,
-      {String? contentId}) async {
+  static Future<PLYPresentation?> fetchPresentation(String? placementId,
+      {String? presentationId, String? contentId}) async {
     final result =
         await _channel.invokeMethod('fetchPresentation', <String, dynamic>{
-      'placementVendorId': placementVendorId,
-      'presentationVendorId': presentationVendorId,
+      'placementVendorId': placementId,
+      'presentationVendorId': presentationId,
       'contentId': contentId
     });
 
@@ -48,15 +47,19 @@ class Purchasely {
   }
 
   static Future<void> clientPresentationDisplayed(
-      PLYPresentation? presentation) async {
-    return await _channel.invokeMethod('clientPresentationDisplayed',
-        <String, dynamic>{'presentation': presentation});
+      PLYPresentation presentation) async {
+    return await _channel.invokeMethod(
+        'clientPresentationDisplayed', <String, dynamic>{
+      'presentation': transformPLYPresentationToMap(presentation)
+    });
   }
 
   static Future<void> clientPresentationClosed(
-      PLYPresentation? presentation) async {
-    return await _channel.invokeMethod('clientPresentationClosed',
-        <String, dynamic>{'presentation': presentation});
+      PLYPresentation presentation) async {
+    return await _channel.invokeMethod(
+        'clientPresentationClosed', <String, dynamic>{
+      'presentation': transformPLYPresentationToMap(presentation)
+    });
   }
 
   static Future<PresentPresentationResult> presentPresentationWithIdentifier(
