@@ -1,3 +1,5 @@
+## 1.5.1
+Add optional argument to closePaywall() method to close definitively the paywall
 ## 1.5.0
 ### New features
 - Fetch presentation before displaying it

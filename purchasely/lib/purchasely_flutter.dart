@@ -319,8 +319,9 @@ class Purchasely {
         'onProcessAction', <String, dynamic>{'processAction': processAction});
   }
 
-  static Future<void> closePaywall() async {
-    return await _channel.invokeMethod('closePaywall');
+  static Future<void> closePaywall({bool definitely = false}) async {
+    return await _channel.invokeMethod(
+        'closePaywall', <String, dynamic>{'definitely': definitely});
   }
 
   static Future<void> userDidConsumeSubscriptionContent() async {

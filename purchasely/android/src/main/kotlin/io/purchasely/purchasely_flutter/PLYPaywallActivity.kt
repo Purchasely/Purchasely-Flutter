@@ -7,12 +7,17 @@ import android.view.View
 import android.widget.FrameLayout
 import androidx.core.view.WindowCompat
 import androidx.fragment.app.FragmentActivity
+import androidx.lifecycle.lifecycleScope
 import io.purchasely.ext.PLYPresentation
 import io.purchasely.ext.PLYPresentationViewProperties
 import io.purchasely.ext.PLYProductViewResult
 import io.purchasely.ext.Purchasely
 import io.purchasely.models.PLYError
 import io.purchasely.models.PLYPlan
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.lang.ref.WeakReference
 
 class PLYPaywallActivity : FragmentActivity() {
@@ -48,19 +53,23 @@ class PLYPaywallActivity : FragmentActivity() {
       ),
       { result: PLYProductViewResult, plan: PLYPlan? ->
         PurchaselyFlutterPlugin.sendPresentationResult(result, plan)
-        supportFinishAfterTransition()
+        finishAffinity()
       }
     ) { presentation: PLYPresentation?, error: PLYError? ->
-      PurchaselyFlutterPlugin.sendFetchResult(presentation, error)
+      lifecycleScope.launch(Dispatchers.Main) {
+        if(presentation?.view != null) {
+          presentationId = presentation.id
+          placementId = presentation.placementId
 
-      if(presentation?.view != null) {
-        presentationId = presentation.id
-        placementId = presentation.placementId
+          paywallView = presentation.view
 
-        paywallView = presentation.view
-        findViewById<FrameLayout>(R.id.container).addView(paywallView)
-      } else {
-        finish()
+          findViewById<FrameLayout>(R.id.container).addView(paywallView)
+          //withContext(Dispatchers.IO) { delay(300) }
+        } else {
+          finishAffinity()
+        }
+
+        PurchaselyFlutterPlugin.sendFetchResult(presentation, error)
       }
     }
 

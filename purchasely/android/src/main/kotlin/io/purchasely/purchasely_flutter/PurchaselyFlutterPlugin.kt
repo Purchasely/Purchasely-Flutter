@@ -272,7 +272,7 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
           "clearUserAttributes" -> clearUserAttributes()
           "setPaywallActionInterceptor" -> setPaywallActionInterceptor(result)
           "onProcessAction" -> onProcessAction(call.argument<Boolean>("processAction") ?: false)
-          "closePaywall" -> closePaywall()
+          "closePaywall" -> closePaywall(call.argument<Boolean>("definitely") ?: false)
           else -> {
               result.notImplemented()
           }
@@ -299,7 +299,7 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
             .userId(userId)
             .build()
 
-	  Purchasely.sdkBridgeVersion = "1.5.0"
+	  Purchasely.sdkBridgeVersion = "1.5.1"
       Purchasely.appTechnology = PLYAppTechnology.FLUTTER
 
       Purchasely.start { isConfigured, error ->
@@ -771,7 +771,20 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
         }
     }
 
-    private fun closePaywall() {
+    private fun closePaywall(definitely: Boolean) {
+        if(definitely) {
+            val openedPaywall = productActivity?.activity?.get()
+            if(openedPaywall is PLYPaywallActivity) {
+                openedPaywall.finishAffinity()
+                productActivity = null
+                return
+            } else if(openedPaywall is PLYProductActivity) {
+                openedPaywall.finish()
+                productActivity = null
+                return
+            }
+        }
+
         val flutterActivity = activity
         val currentActivity = productActivity?.activity?.get() ?: flutterActivity
         if(flutterActivity != null && currentActivity != null) {
@@ -824,9 +837,6 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
                   mapOf(Pair("result", productViewResult), Pair("plan", transformPlanToMap(plan)))
               )
           }
-
-          productActivity?.activity?.get()?.finish()
-
       }
 
       private fun transformPlanToMap(plan: PLYPlan?): Map<String, Any?> {
