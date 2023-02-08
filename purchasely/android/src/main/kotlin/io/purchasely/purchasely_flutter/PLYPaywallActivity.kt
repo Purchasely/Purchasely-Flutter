@@ -32,11 +32,13 @@ class PLYPaywallActivity : FragmentActivity() {
   private var paywallView: View? = null
 
   override fun onCreate(savedInstanceState: Bundle?) {
+    moveTaskToBack(true)
+    PurchaselyFlutterPlugin.productActivity = PurchaselyFlutterPlugin.ProductActivity().apply {
+      activity = WeakReference(this@PLYPaywallActivity)
+    }
     super.onCreate(savedInstanceState)
 
     setContentView(R.layout.activity_ply_paywall_activity)
-
-    moveTaskToBack(false)
 
     presentationId = intent.extras?.getString("presentationId")
     placementId = intent.extras?.getString("placementId")
@@ -56,21 +58,15 @@ class PLYPaywallActivity : FragmentActivity() {
         finishAffinity()
       }
     ) { presentation: PLYPresentation?, error: PLYError? ->
-      lifecycleScope.launch(Dispatchers.Main) {
         if(presentation?.view != null) {
           presentationId = presentation.id
           placementId = presentation.placementId
 
           paywallView = presentation.view
-
-          findViewById<FrameLayout>(R.id.container).addView(paywallView)
-          //withContext(Dispatchers.IO) { delay(300) }
         } else {
           finishAffinity()
         }
-
         PurchaselyFlutterPlugin.sendFetchResult(presentation, error)
-      }
     }
 
   }
@@ -78,6 +74,8 @@ class PLYPaywallActivity : FragmentActivity() {
   fun updateDisplay(isFullScreen: Boolean) {
     this.isFullScreen = isFullScreen
     if(isFullScreen) WindowCompat.setDecorFitsSystemWindows(window, false)
+
+    findViewById<FrameLayout>(R.id.container).addView(paywallView)
   }
 
   override fun onStart() {

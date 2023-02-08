@@ -272,7 +272,7 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
           "clearUserAttributes" -> clearUserAttributes()
           "setPaywallActionInterceptor" -> setPaywallActionInterceptor(result)
           "onProcessAction" -> onProcessAction(call.argument<Boolean>("processAction") ?: false)
-          "closePaywall" -> closePaywall(call.argument<Boolean>("definitely") ?: false)
+          "closePaywall" -> closePaywall(call.argument<Boolean>("definitively") ?: false)
           else -> {
               result.notImplemented()
           }
@@ -299,7 +299,7 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
             .userId(userId)
             .build()
 
-	  Purchasely.sdkBridgeVersion = "1.5.1"
+	  Purchasely.sdkBridgeVersion = "1.5.2"
       Purchasely.appTechnology = PLYAppTechnology.FLUTTER
 
       Purchasely.start { isConfigured, error ->
@@ -327,15 +327,12 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
             presentationId = presentationId,
             contentId = contentId)
 
-        launch {
-            activity?.let {
-                val intent = PLYPaywallActivity.newIntent(it, properties).apply {
-                    flags = Intent.FLAG_ACTIVITY_NEW_TASK xor Intent.FLAG_ACTIVITY_MULTIPLE_TASK
-                }
-                it.startActivity(intent)
+        activity?.let {
+            val intent = PLYPaywallActivity.newIntent(it, properties).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK xor Intent.FLAG_ACTIVITY_MULTIPLE_TASK xor Intent.FLAG_ACTIVITY_NO_ANIMATION
             }
+            it.startActivity(intent)
         }
-
 
     }
 
@@ -354,19 +351,19 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
 
         presentationResult = result
 
-        val activity = productActivity?.activity?.get()
-        if(activity is PLYPaywallActivity) {
-            activity.runOnUiThread {
-                activity.updateDisplay(isFullScreen)
-            }
-        }
-
         activity?.let {
             it.startActivity(
                 Intent(it, PLYPaywallActivity::class.java).apply {
                     flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
                 }
             )
+        }
+
+        val activity = productActivity?.activity?.get()
+        if(activity is PLYPaywallActivity) {
+            activity.runOnUiThread {
+                activity.updateDisplay(isFullScreen)
+            }
         }
 
     }
@@ -555,6 +552,7 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
                   this["product"] = data.product.toMap().toMutableMap().apply {
                       this["plans"] = plans
                   }
+                  remove("subscription_status") //TODO add in a future version after checking with iOS
               }
               list.add(map)
               //list[data.data.id] = map
@@ -592,6 +590,7 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
                   15 -> Attribute.BRANCH_USER_DEVELOPER_IDENTITY
                   16 -> Attribute.CUSTOMERIO_USER_EMAIL
                   17 -> Attribute.CUSTOMERIO_USER_ID
+                  // TODO 18 -> Attribute.moengageUniqueId
                   else -> Attribute.AMPLITUDE_SESSION_ID
               },
               it
@@ -771,8 +770,8 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
         }
     }
 
-    private fun closePaywall(definitely: Boolean) {
-        if(definitely) {
+    private fun closePaywall(definitively: Boolean) {
+        if(definitively) {
             val openedPaywall = productActivity?.activity?.get()
             if(openedPaywall is PLYPaywallActivity) {
                 openedPaywall.finishAffinity()

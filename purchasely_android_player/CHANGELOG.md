@@ -1,3 +1,9 @@
+## 1.5.2
+### Fixes
+- `fetchPresentation()` method for Android to open a paywall asynchronously
+- `closePaywall()`, which hides the paywall by default on Android, can now take optional boolean argument to close the paywall definitively and prevent it from being open again with `onProcessAction()`
+- Remove paywalls from background tasks on Android when closed
+- Remove `subscription_status` attribute from Subscription (temporary until available on all platforms)
 ## 1.5.1
 Add optional argument to closePaywall() method to close definitively the paywall
 ## 1.5.0

@@ -1,6 +1,6 @@
 name: purchasely_flutter
 description: Purchasely is a solution to ease the integration and boost your In-App Purchase & Subscriptions on the App Store, Google Play Store and Huawei App Gallery.
-version: 1.5.1
+version: 1.5.2
 homepage: https://www.purchasely.com/
 
 environment:

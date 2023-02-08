@@ -116,7 +116,7 @@ class _MyAppState extends State<MyApp> {
         } else if (result.action == PLYPaywallAction.login) {
           print('User wants to login');
           //Present your own screen for user to log in
-          Purchasely.closePaywall(definitely: true);
+          Purchasely.closePaywall();
           Purchasely.userLogin('MY_USER_ID');
           //Call this method to update Purchasely Paywall
           Purchasely.onProcessAction(true);
