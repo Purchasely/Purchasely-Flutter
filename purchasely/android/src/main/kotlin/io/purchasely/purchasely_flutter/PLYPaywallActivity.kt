@@ -3,21 +3,16 @@ package io.purchasely.purchasely_flutter
 import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
-import android.view.View
 import android.widget.FrameLayout
 import androidx.core.view.WindowCompat
 import androidx.fragment.app.FragmentActivity
-import androidx.lifecycle.lifecycleScope
 import io.purchasely.ext.PLYPresentation
 import io.purchasely.ext.PLYPresentationViewProperties
 import io.purchasely.ext.PLYProductViewResult
 import io.purchasely.ext.Purchasely
 import io.purchasely.models.PLYError
 import io.purchasely.models.PLYPlan
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import io.purchasely.views.template.PLYTemplateView
 import java.lang.ref.WeakReference
 
 class PLYPaywallActivity : FragmentActivity() {
@@ -29,7 +24,7 @@ class PLYPaywallActivity : FragmentActivity() {
   private var contentId: String? = null
   private var isFullScreen: Boolean = false
 
-  private var paywallView: View? = null
+  private var paywallView: PLYTemplateView? = null
 
   override fun onCreate(savedInstanceState: Bundle?) {
     moveTaskToBack(true)

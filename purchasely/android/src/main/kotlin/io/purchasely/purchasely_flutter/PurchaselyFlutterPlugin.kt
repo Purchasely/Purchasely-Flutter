@@ -299,7 +299,7 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
             .userId(userId)
             .build()
 
-	  Purchasely.sdkBridgeVersion = "1.5.2"
+	  Purchasely.sdkBridgeVersion = "1.6.0"
       Purchasely.appTechnology = PLYAppTechnology.FLUTTER
 
       Purchasely.start { isConfigured, error ->
@@ -329,7 +329,7 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
 
         activity?.let {
             val intent = PLYPaywallActivity.newIntent(it, properties).apply {
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK xor Intent.FLAG_ACTIVITY_MULTIPLE_TASK xor Intent.FLAG_ACTIVITY_NO_ANIMATION
+                flags = Intent.FLAG_ACTIVITY_MULTIPLE_TASK or Intent.FLAG_ACTIVITY_NEW_TASK
             }
             it.startActivity(intent)
         }
@@ -351,6 +351,13 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
 
         presentationResult = result
 
+        val activity = productActivity?.activity?.get()
+        if(activity is PLYPaywallActivity) {
+            activity.runOnUiThread {
+                activity.updateDisplay(isFullScreen)
+            }
+        }
+
         activity?.let {
             it.startActivity(
                 Intent(it, PLYPaywallActivity::class.java).apply {
@@ -359,12 +366,7 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
             )
         }
 
-        val activity = productActivity?.activity?.get()
-        if(activity is PLYPaywallActivity) {
-            activity.runOnUiThread {
-                activity.updateDisplay(isFullScreen)
-            }
-        }
+
 
     }
 

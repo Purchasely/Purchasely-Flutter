@@ -1,3 +1,6 @@
+## 1.6.0
+- Auto import of your subscriptions at the first launch of the SDK
+- Ukrainian language added
 ## 1.5.2
 ### Fixes
 - `fetchPresentation()` method for Android to open a paywall asynchronously
