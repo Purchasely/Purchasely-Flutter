@@ -1,3 +1,5 @@
+## 1.6.1
+- Fix iOS compilation issue
 ## 1.6.0
 - Auto import of your subscriptions at the first launch of the SDK
 - Ukrainian language added

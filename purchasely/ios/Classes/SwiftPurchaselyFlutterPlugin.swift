@@ -14,7 +14,7 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
 
     var purchaseResult: FlutterResult?
     var presentationsLoaded = [PLYPresentation]()
-    
+
     var onProcessActionHandler: ((Bool) -> Void)?
 
     public init(with registrar: FlutterPluginRegistrar) {
@@ -149,7 +149,7 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             return
         }
 
-		Purchasely.setSdkBridgeVersion("1.6.0")
+		Purchasely.setSdkBridgeVersion("1.6.1")
         Purchasely.setAppTechnology(PLYAppTechnology.flutter)
 
         let logLevel = PLYLogger.LogLevel(rawValue: (arguments["logLevel"] as? Int) ?? PLYLogger.LogLevel.debug.rawValue) ?? PLYLogger.LogLevel.debug
@@ -217,22 +217,22 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             }
         }
     }
-    
+
     private func presentPresentation(arguments: [String: Any]?, result: @escaping FlutterResult) {
         guard let presentationMap = arguments?["presentation"] as? [String: Any] else {
             result(FlutterError.error(code: "-1", message: "Presentation cannot be nil", error: nil))
             return
         }
-        
+
         self.purchaseResult = result
-        
+
         guard let presentationId = presentationMap["id"] as? String, let presentationLoaded = self.presentationsLoaded.filter({ $0.id == presentationId }).first, let controller = presentationLoaded.controller else {
             result(FlutterError.error(code: "-1", message: "Presentation not loaded", error: nil))
             return
         }
-        
+
         self.presentationsLoaded.removeAll(where: { $0.id == presentationId })
-        
+
         let navCtrl = UINavigationController(rootViewController: controller)
         navCtrl.navigationBar.isTranslucent = true
         navCtrl.navigationBar.setBackgroundImage(UIImage(), for: .default)
@@ -249,15 +249,15 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             Purchasely.showController(navCtrl, type: .productPage)
         }
     }
-    
+
     private func clientPresentationDisplayed(arguments: [String: Any]?) {
         guard let presentationMap = arguments?["presentation"] as? [String: Any] else {
             print("Presentation cannot be nil")
             return
         }
-        
+
         guard let presentationId = presentationMap["id"] as? String, let presentationLoaded = self.presentationsLoaded.filter({ $0.id == presentationId }).first else { return }
-        
+
         Purchasely.clientPresentationOpened(with: presentationLoaded)
     }
 
@@ -266,9 +266,9 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             print("Presentation cannot be nil")
             return
         }
-        
+
         guard let presentationId = presentationMap["id"] as? String, let presentationLoaded = self.presentationsLoaded.filter({ $0.id == presentationId }).first else { return }
-        
+
         Purchasely.clientPresentationClosed(with: presentationLoaded)
     }
 
@@ -434,7 +434,7 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
 
     private func silentRestoreAllProducts(_ result: @escaping FlutterResult) {
         DispatchQueue.main.async {
-            Purchasely.silentRestoreAllProducts {
+            Purchasely.synchronize {
                 result(true)
             } failure: { error in
                 result(FlutterError.error(code: "-1", message: "Restore failed", error: error))
@@ -584,12 +584,12 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
 
         Purchasely.setAttribute(attr, value: value)
     }
-    
+
     private func setUserAttributeWithString(arguments: [String: Any]?) {
         guard let arguments = arguments, let value = arguments["value"] as? String, let key = arguments["key"] as? String else {
             return
         }
-        
+
         Purchasely.setUserAttribute(withStringValue: value, forKey: key)
     }
 
@@ -597,31 +597,31 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
         guard let arguments = arguments, let value = arguments["value"] as? Int, let key = arguments["key"] as? String else {
             return
         }
-        
+
         Purchasely.setUserAttribute(withIntValue: value, forKey: key)
     }
-    
+
     private func setUserAttributeWithDouble(arguments: [String: Any]?) {
         guard let arguments = arguments, let value = arguments["value"] as? Double, let key = arguments["key"] as? String else {
             return
         }
-        
+
         Purchasely.setUserAttribute(withDoubleValue: value, forKey: key)
     }
-    
+
     private func setUserAttributeWithBoolean(arguments: [String: Any]?) {
         guard let arguments = arguments, let value = arguments["value"] as? Bool, let key = arguments["key"] as? String else {
             return
         }
-        
+
         Purchasely.setUserAttribute(withBoolValue: value, forKey: key)
     }
-    
+
     private func setUserAttributeWithDate(arguments: [String: Any]?) {
         guard let arguments = arguments, let value = arguments["value"] as? String, let key = arguments["key"] as? String else {
             return
         }
-        
+
         let dateFormatter = DateFormatter()
         dateFormatter.timeZone = TimeZone(identifier: "GMT")
         dateFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"
@@ -631,7 +631,7 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             print("Purchasely", "Cannot save date attribute for key \(key)")
         }
     }
-    
+
     private func clearUserAttribute(arguments: [String: Any]?) {
         guard let arguments = arguments, let key = arguments["key"] as? String else {
             return
@@ -654,27 +654,27 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             result(attribute)
         }
     }
-    
+
     private func getUserAttributes(result: @escaping FlutterResult) {
-        
+
         let resultAttributes = Purchasely.userAttributes.mapValues { getUserAttributeForFlutter(with: $0) }
         DispatchQueue.main.async {
             result(resultAttributes)
         }
     }
-    
+
     private func getUserAttributeForFlutter(with value: Any?) -> Any? {
-        
+
         if let dateValue = value as? Date {
             let dateFormatter = DateFormatter()
             dateFormatter.timeZone = TimeZone(identifier: "GMT")
             dateFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"
             return dateFormatter.string(from: dateValue)
         }
-        
+
         return value
     }
-    
+
     private func setPaywallActionInterceptor(result: @escaping FlutterResult) {
         DispatchQueue.main.async {
             Purchasely.setPaywallActionsInterceptor { [weak self] action, parameters, info, onProcessAction in
@@ -726,7 +726,7 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             }
         }
     }
-    
+
     private func userDidConsumeSubscriptionContent() {
         Purchasely.userDidConsumeSubscriptionContent()
     }

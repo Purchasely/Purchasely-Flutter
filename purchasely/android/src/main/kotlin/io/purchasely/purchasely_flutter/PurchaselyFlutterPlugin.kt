@@ -299,7 +299,7 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
             .userId(userId)
             .build()
 
-	  Purchasely.sdkBridgeVersion = "1.6.0"
+	  Purchasely.sdkBridgeVersion = "1.6.1"
       Purchasely.appTechnology = PLYAppTechnology.FLUTTER
 
       Purchasely.start { isConfigured, error ->
