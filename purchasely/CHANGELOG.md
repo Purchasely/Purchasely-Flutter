@@ -1,3 +1,5 @@
+## 1.6.2
+- Fix paywall display on Android with fetchPresentation
 ## 1.6.1
 - Fix iOS compilation issue
 ## 1.6.0

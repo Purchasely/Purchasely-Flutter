@@ -299,7 +299,7 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
             .userId(userId)
             .build()
 
-	  Purchasely.sdkBridgeVersion = "1.6.1"
+	  Purchasely.sdkBridgeVersion = "1.6.2"
       Purchasely.appTechnology = PLYAppTechnology.FLUTTER
 
       Purchasely.start { isConfigured, error ->
@@ -352,11 +352,6 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
         presentationResult = result
 
         val activity = productActivity?.activity?.get()
-        if(activity is PLYPaywallActivity) {
-            activity.runOnUiThread {
-                activity.updateDisplay(isFullScreen)
-            }
-        }
 
         activity?.let {
             it.startActivity(
@@ -366,7 +361,11 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
             )
         }
 
-
+        if(activity is PLYPaywallActivity) {
+            activity.runOnUiThread {
+                activity.updateDisplay(isFullScreen)
+            }
+        }
 
     }
 
