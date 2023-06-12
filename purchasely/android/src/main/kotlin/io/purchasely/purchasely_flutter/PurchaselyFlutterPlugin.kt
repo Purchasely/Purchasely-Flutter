@@ -578,20 +578,22 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
                   2 -> Attribute.AMPLITUDE_DEVICE_ID
                   3 -> Attribute.FIREBASE_APP_INSTANCE_ID
                   4 -> Attribute.AIRSHIP_CHANNEL_ID
-                  5 -> Attribute.BATCH_INSTALLATION_ID
-                  6 -> Attribute.ADJUST_ID
-                  7 -> Attribute.APPSFLYER_ID
-                  8 -> Attribute.ONESIGNAL_PLAYER_ID
-                  9 -> Attribute.MIXPANEL_DISTINCT_ID
-                  10 -> Attribute.CLEVER_TAP_ID
-                  11 -> Attribute.SENDINBLUE_USER_EMAIL
-                  12 -> Attribute.ITERABLE_USER_EMAIL
-                  13 -> Attribute.AT_INTERNET_ID_CLIENT
-                  14 -> Attribute.MPARTICLE_USER_ID
-                  15 -> Attribute.BRANCH_USER_DEVELOPER_IDENTITY
-                  16 -> Attribute.CUSTOMERIO_USER_EMAIL
-                  17 -> Attribute.CUSTOMERIO_USER_ID
-                  // TODO 18 -> Attribute.moengageUniqueId
+                  5 -> Attribute.AIRSHIP_USER_ID
+                  6 -> Attribute.BATCH_INSTALLATION_ID
+                  7 -> Attribute.ADJUST_ID
+                  8 -> Attribute.APPSFLYER_ID
+                  9 -> Attribute.ONESIGNAL_PLAYER_ID
+                  10 -> Attribute.MIXPANEL_DISTINCT_ID
+                  11 -> Attribute.CLEVER_TAP_ID
+                  12 -> Attribute.SENDINBLUE_USER_EMAIL
+                  13 -> Attribute.ITERABLE_USER_ID
+                  14 -> Attribute.ITERABLE_USER_EMAIL
+                  15 -> Attribute.AT_INTERNET_ID_CLIENT
+                  16 -> Attribute.MPARTICLE_USER_ID
+                  17 -> Attribute.BRANCH_USER_DEVELOPER_IDENTITY
+                  18-> Attribute.CUSTOMERIO_USER_EMAIL
+                  19 -> Attribute.CUSTOMERIO_USER_ID
+                  20 -> Attribute.MOENGAGE_UNIQUE_ID
                   else -> Attribute.AMPLITUDE_SESSION_ID
               },
               it
@@ -742,6 +744,7 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
                     PLYPresentationAction.RESTORE -> "restore"
                     PLYPresentationAction.OPEN_PRESENTATION -> "open_presentation"
                     PLYPresentationAction.PROMO_CODE -> "promo_code"
+                    PLYPresentationAction.OPEN_PLACEMENT -> "open_placement"
                 }),
                 Pair("parameters", parametersForFlutter)
             ))

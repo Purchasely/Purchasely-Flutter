@@ -576,6 +576,7 @@ enum PLYAttribute {
   amplitudeDeviceId,
   firebase_app_instance_id,
   airship_channel_id,
+  airship_user_id,
   batch_installation_id,
   adjust_id,
   appsflyer_id,
