@@ -722,7 +722,10 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
     private func closePaywall() {
         if let presentedPresentationViewController = presentedPresentationViewController {
             DispatchQueue.main.async {
-                presentedPresentationViewController.dismiss(animated: true, completion: nil)
+                presentedPresentationViewController.dismiss(animated: true) { [weak self] in
+                    guard let `self` = self else { return }
+                    self.presentedPresentationViewController = nil
+                }
             }
         }
     }
