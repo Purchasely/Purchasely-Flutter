@@ -149,7 +149,7 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             return
         }
 
-		Purchasely.setSdkBridgeVersion("1.6.2")
+		Purchasely.setSdkBridgeVersion("1.7.0")
         Purchasely.setAppTechnology(PLYAppTechnology.flutter)
 
         let logLevel = PLYLogger.LogLevel(rawValue: (arguments["logLevel"] as? Int) ?? PLYLogger.LogLevel.debug.rawValue) ?? PLYLogger.LogLevel.debug
@@ -722,8 +722,14 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
     private func closePaywall() {
         if let presentedPresentationViewController = presentedPresentationViewController {
             DispatchQueue.main.async {
-                presentedPresentationViewController.dismiss(animated: true, completion: nil)
+                var presentingViewController = presentedPresentationViewController;
+                while let presentingController = presentingViewController.presentingViewController {
+                    presentingViewController = presentingController
+                }
+                presentingViewController.dismiss(animated: true, completion: nil)
             }
+        } else {
+            Purchasely.closeDisplayedPresentation()
         }
     }
 

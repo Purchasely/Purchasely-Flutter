@@ -2,12 +2,18 @@ package io.purchasely.purchasely_flutter
 
 import android.app.Activity
 import android.content.Intent
+import android.graphics.Color
 import android.os.Bundle
+import android.view.View
+import android.widget.FrameLayout
 import androidx.core.view.WindowCompat
 import androidx.fragment.app.FragmentActivity
+import io.purchasely.ext.PLYPresentation
+import io.purchasely.ext.PLYPresentationViewProperties
 import io.purchasely.ext.PLYProductViewResult
 import io.purchasely.ext.Purchasely
 import io.purchasely.models.PLYPlan
+import io.purchasely.views.parseColor
 import java.lang.ref.WeakReference
 
 class PLYProductActivity : FragmentActivity() {
@@ -17,16 +23,31 @@ class PLYProductActivity : FragmentActivity() {
     private var productId: String? = null
     private var planId: String? = null
     private var contentId: String? = null
+
+    private var presentation: PLYPresentation? = null
+
     private var isFullScreen: Boolean = false
+    private var backgroundColor: String? = null
+
+    private var paywallView: View? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_ply_product_activity)
 
         isFullScreen = intent.extras?.getBoolean("isFullScreen") ?: false
+        backgroundColor = intent.extras?.getString("background_color")
 
         if(isFullScreen) {
             WindowCompat.setDecorFitsSystemWindows(window, false)
+        }
+
+        setContentView(R.layout.activity_ply_product_activity)
+
+        try {
+            val loadingBackgroundColor = backgroundColor.parseColor(Color.WHITE)
+            findViewById<View>(R.id.container).setBackgroundColor(loadingBackgroundColor)
+        } catch (e: Exception) {
+            //do nothing
         }
 
         presentationId = intent.extras?.getString("presentationId")
@@ -35,52 +56,57 @@ class PLYProductActivity : FragmentActivity() {
         planId = intent.extras?.getString("planId")
         contentId = intent.extras?.getString("contentId")
 
-        val fragment = when {
-            placementId?.isNotBlank() == true -> Purchasely.presentationFragmentForPlacement(
-                placementId!!,
-                contentId,
-                null,
-                callback)
-            planId.isNullOrEmpty().not() -> Purchasely.planFragment(
-                    planId,
-                    presentationId,
-                    contentId,
-                null,
-                    callback)
-            productId.isNullOrEmpty().not() -> Purchasely.productFragment(
-                    productId,
-                    presentationId,
-                    contentId,
-                null,
-                    callback)
-            else -> Purchasely.presentationFragment(
-                    presentationId,
-                    contentId,
-                null,
-                    callback)
+        presentation = intent.extras?.getParcelable("presentation")
+
+        paywallView = if(presentation != null) {
+            presentation?.buildView(this, PLYPresentationViewProperties(
+                onClose = {
+                    supportFinishAfterTransition()
+                }
+            ), callback)
+        } else {
+            Purchasely.presentationView(
+                this@PLYProductActivity,
+                PLYPresentationViewProperties(
+                    placementId = placementId,
+                    contentId = contentId,
+                    presentationId = presentationId,
+                    planId = planId,
+                    productId = productId,
+                    onLoaded = { isLoaded ->
+                        if(!isLoaded) return@PLYPresentationViewProperties
+
+                        val backgroundPaywall = paywallView?.findViewById<FrameLayout>(io.purchasely.R.id.content)?.background
+                        if(backgroundPaywall != null) {
+                            findViewById<View>(R.id.container).background = backgroundPaywall
+                        }
+                    }
+                ),
+                callback
+            )
         }
 
-        if(fragment == null) {
-            supportFinishAfterTransition()
+        if(paywallView == null) {
+            finish()
             return
         }
 
-        supportFragmentManager
-                .beginTransaction()
-                .replace(R.id.fragmentContainer, fragment)
-                .commit()
+
+        findViewById<FrameLayout>(R.id.container).addView(paywallView)
     }
 
     override fun onStart() {
         super.onStart()
 
         PurchaselyFlutterPlugin.productActivity = PurchaselyFlutterPlugin.ProductActivity(
+            presentation = presentation,
             presentationId = presentationId,
             placementId = placementId,
             productId = productId,
             planId = planId,
             contentId = contentId,
-            isFullScreen = isFullScreen
+            isFullScreen = isFullScreen,
+            loadingBackgroundColor = backgroundColor
         ).apply {
             activity = WeakReference(this@PLYProductActivity)
         }
@@ -95,6 +121,7 @@ class PLYProductActivity : FragmentActivity() {
 
     private val callback: (PLYProductViewResult, PLYPlan?) -> Unit = { result, plan ->
         PurchaselyFlutterPlugin.sendPresentationResult(result, plan)
+        supportFinishAfterTransition()
     }
 
     companion object {

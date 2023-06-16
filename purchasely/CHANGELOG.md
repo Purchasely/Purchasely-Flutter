@@ -1,3 +1,17 @@
+## 1.7.0
+### Features
+
+- Support of GIF format for enhanced media capabilities.
+- 🇳🇱 Dutch (NL) Language Support - The SDK now includes language support for Dutch localization.
+- `TRIAL_PRICE` Tag Enhancement - The `TRIAL_PRICE` tag has been updated to consider the introductory price if both a free trial and an introductory price are configured for a subscription on the Google Play Console.
+- `QUARTERLY_AMOUNT` Tag - The new `QUARTERLY_AMOUNT` tag has been added to provide the equivalent subscription price in quarter like it is already possible in daily, weekly, monthly and yearly. PLYPlan now contains the method `quarterlyEquivalentPrice()` to retrieve the value
+- `AIRSHIP_USER_ID` Attribute - An `AIRSHIP_USER_ID` attribute has been introduced to facilitate integration with Airship.
+
+### Fixes
+
+- Carousel paywall restoration - Paywalls with a carousel are now correctly restored when navigating back within the app.
+- Event emission fix - Restoration or Purchase events were not emitted correctly if performed consecutively
+- We also fix several issues, the main one is our SDK is now available starting with iOS 11 (the past couple of releases are only available for iOS13+).
 ## 1.6.2
 - Fix paywall display on Android with fetchPresentation
 ## 1.6.1
