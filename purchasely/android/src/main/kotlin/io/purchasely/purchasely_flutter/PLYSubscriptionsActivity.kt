@@ -8,7 +8,7 @@ class PLYSubscriptionsActivity : FragmentActivity() {
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
-    setContentView(R.layout.activity_ply_product_activity)
+    setContentView(R.layout.activity_ply_subscriptions_activity)
 
     val fragment = Purchasely.subscriptionsFragment() ?: let {
       supportFinishAfterTransition()
@@ -18,7 +18,7 @@ class PLYSubscriptionsActivity : FragmentActivity() {
     supportFragmentManager
       .beginTransaction()
       .addToBackStack(null)
-      .replace(R.id.fragmentContainer, fragment, "SubscriptionsFragment")
+      .replace(R.id.container, fragment, "SubscriptionsFragment")
       .commitAllowingStateLoss()
 
     supportFragmentManager.addOnBackStackChangedListener {

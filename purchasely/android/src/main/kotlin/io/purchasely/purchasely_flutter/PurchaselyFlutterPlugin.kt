@@ -27,6 +27,7 @@ import io.purchasely.models.PLYPlan
 import io.purchasely.models.PLYProduct
 import kotlinx.coroutines.*
 import io.purchasely.ext.Purchasely
+import io.purchasely.models.PLYError
 import java.lang.ref.WeakReference
 import java.text.SimpleDateFormat
 import java.util.*
@@ -320,18 +321,26 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
                           contentId: String?,
                           result: Result) {
 
-        fetchResult = result
-
         val properties = PLYPresentationViewProperties(
             placementId = placementId,
             presentationId = presentationId,
             contentId = contentId)
 
-        activity?.let {
-            val intent = PLYPaywallActivity.newIntent(it, properties).apply {
-                flags = Intent.FLAG_ACTIVITY_MULTIPLE_TASK or Intent.FLAG_ACTIVITY_NEW_TASK
+        Purchasely.fetchPresentation(
+            properties = properties,
+            resultCallback = null) { presentation: PLYPresentation?, error: PLYError? ->
+            if(presentation != null) {
+                presentationsLoaded.removeAll { it.id == presentation.id && it.placementId == presentation.placementId }
+                presentationsLoaded.add(presentation)
+
+                result.success(presentation.toMap().mapValues {
+                    val value = it.value
+                    if(value is PLYPresentationType) value.ordinal
+                    else value
+                })
             }
-            it.startActivity(intent)
+
+            if(error != null) result.error("467", error.message, error)
         }
 
     }
@@ -349,23 +358,26 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
             return
         }
 
+        val presentation = presentationsLoaded.lastOrNull {
+            it.id == presentationMap["id"]
+                    && it.placementId == presentationMap["placementId"]
+        }
+
+        if(presentation == null) {
+            result.error("468", "Presentation not found", NullPointerException("presentation not fond"))
+            return
+        }
+
         presentationResult = result
 
-        val activity = productActivity?.activity?.get()
-
         activity?.let {
-            it.startActivity(
-                Intent(it, PLYPaywallActivity::class.java).apply {
-                    flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
-                }
-            )
+            val intent = PLYProductActivity.newIntent(it).apply {
+                putExtra("presentation", presentation)
+                putExtra("isFullScreen", isFullScreen)
+            }
+            it.startActivity(intent)
         }
 
-        if(activity is PLYPaywallActivity) {
-            activity.runOnUiThread {
-                activity.updateDisplay(isFullScreen)
-            }
-        }
 
     }
 
@@ -777,15 +789,9 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
     private fun closePaywall(definitively: Boolean) {
         if(definitively) {
             val openedPaywall = productActivity?.activity?.get()
-            if(openedPaywall is PLYPaywallActivity) {
-                openedPaywall.finishAffinity()
-                productActivity = null
-                return
-            } else if(openedPaywall is PLYProductActivity) {
-                openedPaywall.finish()
-                productActivity = null
-                return
-            }
+            openedPaywall?.finish()
+            productActivity = null
+            return
         }
 
         val flutterActivity = activity
@@ -802,26 +808,12 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
   companion object {
       var productActivity: ProductActivity? = null
       var presentationResult: Result? = null
-      var fetchResult: Result? = null
       var defaultPresentationResult: Result? = null
       var paywallActionHandler: PLYCompletionHandler? = null
       var paywallAction: PLYPresentationAction? = null
       private lateinit var channel : MethodChannel
 
       val presentationsLoaded = mutableListOf<PLYPresentation>()
-
-      fun sendFetchResult(presentation: PLYPresentation?, error: Exception?) {
-          if(presentation != null) {
-              presentationsLoaded.add(presentation)
-              fetchResult?.success(presentation.toMap().mapValues {
-                  val value = it.value
-                  if(value is PLYPresentationType) value.ordinal
-                  else value
-              })
-          }
-          if(error != null) fetchResult?.error("467", error.message, error)
-          fetchResult = null
-      }
 
       fun sendPresentationResult(result: PLYProductViewResult, plan: PLYPlan?) {
           val productViewResult = when(result) {
@@ -901,12 +893,14 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
   override val coroutineContext = job + Dispatchers.Main
 
   class ProductActivity(
+      val presentation: PLYPresentation? = null,
       val presentationId: String? = null,
       val placementId: String? = null,
       val productId: String? = null,
       val planId: String? = null,
       val contentId: String? = null,
-      val isFullScreen: Boolean = false) {
+      val isFullScreen: Boolean = false,
+      val loadingBackgroundColor: String? = null,) {
 
       var activity: WeakReference<Activity>? = null
 
@@ -924,12 +918,14 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
               true
           } else {
               val intent = PLYProductActivity.newIntent(flutterActivity)
+              intent.putExtra("presentation", presentation)
               intent.putExtra("presentationId", presentationId)
               intent.putExtra("placementId", placementId)
               intent.putExtra("productId", productId)
               intent.putExtra("planId", planId)
               intent.putExtra("contentId", contentId)
               intent.putExtra("isFullScreen", isFullScreen)
+              intent.putExtra("background_color", loadingBackgroundColor)
               flutterActivity.startActivity(intent)
               return false
           }

@@ -10,12 +10,6 @@
 
     <application>
         <activity android:name=".PLYProductActivity" android:exported="true" android:autoRemoveFromRecents="true" android:theme="@style/Theme.Purchasely" />
-        <activity android:name=".PLYPaywallActivity"
-            android:exported="true"
-            android:autoRemoveFromRecents="true"
-            android:theme="@style/Theme.Purchasely"
-            android:taskAffinity=".PLYPaywallActivity"
-           />
         <activity android:name=".PLYSubscriptionsActivity" android:exported="true" android:theme="@style/Theme.AppCompat.Light.NoActionBar" />
     </application>
 
