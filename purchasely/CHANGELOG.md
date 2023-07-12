@@ -1,3 +1,10 @@
+## 1.7.1
+### Fixes on Android
+- Improve paywall engine for default selected plan on display
+- A/B test data for a flow of paywalls
+- - Now, you can override paywall closing **after a purchase** with `PaywallActionInterceptor`
+- Performance improvements on  Purchasely.start() method to retrieve application configuration and google products (pricing and offers)
+
 ## 1.7.0
 ### Features
 
