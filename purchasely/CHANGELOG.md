@@ -1,3 +1,11 @@
+## 1.7.2
+### Enhancements on Android
+- Update Exoplayer dependency to 2.19.0 in player module
+- Update player module to compile with SDK 33
+- Use countdown tag for any labels in your paywalls
+### Enhancements on iOS
+- Improve eligibility check for introductory and promo offers
+- Fixes a bug affecting the price display depending on time period
 ## 1.7.1
 ### Fixes on Android
 - Improve paywall engine for default selected plan on display

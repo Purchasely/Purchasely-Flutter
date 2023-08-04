@@ -41,6 +41,8 @@ class _MyAppState extends State<MyApp> {
 
       //Purchasely.setLogLevel(LogLevel.debug);
 
+      Purchasely.setAttribute(PLYAttribute.adjust_id, "value");
+
       Purchasely.setLanguage("en");
 
       String anonymousId = await Purchasely.anonymousUserId;
@@ -175,7 +177,8 @@ class _MyAppState extends State<MyApp> {
 
   Future<void> fetchPresentation() async {
     try {
-      var presentation = await Purchasely.fetchPresentation("app_launch_demo");
+      var presentation = await Purchasely.fetchPresentation(null,
+          presentationId: "FitnessChallenge");
 
       if (presentation == null) {
         print("No presentation found");
@@ -195,7 +198,7 @@ class _MyAppState extends State<MyApp> {
       //Display Purchasely paywall
 
       var presentResult = await Purchasely.presentPresentation(presentation,
-          isFullscreen: false);
+          isFullscreen: true);
 
       switch (presentResult.result) {
         case PLYPurchaseResult.cancelled:
