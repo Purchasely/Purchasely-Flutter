@@ -2,7 +2,7 @@ group 'io.purchasely.purchasely_flutter'
 version '1.0-SNAPSHOT'
 
 buildscript {
-    ext.kotlin_version = '1.6.21'
+    ext.kotlin_version = '1.7.22'
     repositories {
         google()
         mavenCentral()
@@ -25,7 +25,7 @@ apply plugin: 'com.android.library'
 apply plugin: 'kotlin-android'
 
 android {
-    compileSdkVersion 31
+    compileSdkVersion 33
 
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
@@ -52,5 +52,5 @@ dependencies {
 
     api 'androidx.lifecycle:lifecycle-runtime-ktx:2.4.0'
 
-    api 'io.purchasely:core:3.7.4'
+    api 'io.purchasely:core:4.0.0'
 }
