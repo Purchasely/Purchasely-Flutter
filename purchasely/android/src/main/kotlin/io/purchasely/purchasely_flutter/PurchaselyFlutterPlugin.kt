@@ -178,8 +178,8 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
               setLogLevel(call.argument<Int>("logLevel"))
               result.success(true)
           }
-          "isReadyToPurchase" -> {
-              readyToOpenDeeplink(call.argument<Boolean>("readyToPurchase"))
+          "readyToOpenDeeplink" -> {
+              readyToOpenDeeplink(call.argument<Boolean>("ready"))
               result.success(true)
           }
           "setLanguage" -> {
@@ -232,7 +232,7 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
               call.argument<String>("contentId"),
               result)
           "displaySubscriptionCancellationInstruction" -> displaySubscriptionCancellationInstruction()
-          "handle" -> isDeeplinkHandled(call.argument<String>("deeplink"), result)
+          "isDeeplinkHandled" -> isDeeplinkHandled(call.argument<String>("deeplink"), result)
           "userSubscriptions" -> launch { userSubscriptions(result) }
           "presentSubscriptions" -> presentSubscriptions()
           "setAttribute" -> setAttribute(call.argument<Int>("attribute"), call.argument<String>("value"))
@@ -273,7 +273,8 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
           "clearUserAttributes" -> clearUserAttributes()
           "setPaywallActionInterceptor" -> setPaywallActionInterceptor(result)
           "onProcessAction" -> onProcessAction(call.argument<Boolean>("processAction") ?: false)
-          "closePaywall" -> closePaywall(call.argument<Boolean>("definitively") ?: false)
+          "closePaywall" -> closePaywall()
+          "hidePaywall" -> hidePaywall()
           else -> {
               result.notImplemented()
           }
@@ -785,14 +786,14 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
         }
     }
 
-    private fun closePaywall(definitively: Boolean) {
-        if(definitively) {
-            val openedPaywall = productActivity?.activity?.get()
-            openedPaywall?.finish()
-            productActivity = null
-            return
-        }
+    private fun closePaywall() {
+        val openedPaywall = productActivity?.activity?.get()
+        openedPaywall?.finish()
+        productActivity = null
+        return
+    }
 
+    private fun hidePaywall() {
         val flutterActivity = activity
         val currentActivity = productActivity?.activity?.get() ?: flutterActivity
         if(flutterActivity != null && currentActivity != null) {

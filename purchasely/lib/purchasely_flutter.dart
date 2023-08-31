@@ -157,9 +157,9 @@ class Purchasely {
     return restored;
   }
 
-  static Future<void> isReadyToPurchase(bool readyToPurchase) async {
-    _channel.invokeMethod('isReadyToPurchase',
-        <String, dynamic>{'readyToPurchase': readyToPurchase});
+  static Future<void> readyToOpenDeeplink(bool ready) async {
+    _channel.invokeMethod('readyToOpenDeeplink',
+        <String, dynamic>{'ready': ready});
   }
 
   static Future<void> setLanguage(String language) async {
@@ -243,9 +243,9 @@ class Purchasely {
     return subscriptions;
   }
 
-  static Future<bool> handle(String deepLink) async {
+  static Future<bool> isDeeplinkHandled(String deepLink) async {
     return await _channel
-        .invokeMethod('handle', <String, dynamic>{'deeplink': deepLink});
+        .invokeMethod('isDeeplinkHandled', <String, dynamic>{'deeplink': deepLink});
   }
 
   static void listenToEvents(Function(PLYEvent) block) {
@@ -320,13 +320,11 @@ class Purchasely {
   }
 
   static Future<void> closePaywall() async {
-    return await _channel.invokeMethod(
-        'closePaywall', <String, dynamic>{'definitively': true});
+    return await _channel.invokeMethod('closePaywall');
   }
 
   static Future<void> hidePaywall() async {
-    return await _channel.invokeMethod(
-        'closePaywall', <String, dynamic>{'definitively': false});
+    return await _channel.invokeMethod('hidePaywall');
   }
 
   static Future<void> userDidConsumeSubscriptionContent() async {
