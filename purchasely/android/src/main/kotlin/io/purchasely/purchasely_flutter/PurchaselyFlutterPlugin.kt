@@ -274,7 +274,9 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
           "clearUserAttributes" -> clearUserAttributes()
           "setPaywallActionInterceptor" -> setPaywallActionInterceptor(result)
           "onProcessAction" -> onProcessAction(call.argument<Boolean>("processAction") ?: false)
-          "closePaywall" -> closePaywall(call.argument<Boolean>("definitively") ?: false)
+          "closePresentation" -> closePresentation()
+          "hidePresentation" -> hidePresentation()
+          "showPresentation" -> showPresentation()
           else -> {
               result.notImplemented()
           }
@@ -764,37 +766,28 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
         }
     }
 
-    private fun onProcessAction(processAction: Boolean) {
+    private fun showPresentation() {
         launch {
-            when(paywallAction) {
-                PLYPresentationAction.PROMO_CODE,
-                PLYPresentationAction.RESTORE,
-                PLYPresentationAction.PURCHASE,
-                PLYPresentationAction.LOGIN,
-                PLYPresentationAction.OPEN_PRESENTATION -> {
-                    productActivity?.relaunch(activity)
-                    withContext(Dispatchers.Default) { delay(500) }
-                }
-                //We should not open purchasely paywall for other actions
-                else -> {}
-            }
+            productActivity?.relaunch(activity)
+            withContext(Dispatchers.Default) { delay(500) }
+        }
+    }
 
-            productActivity?.activity?.get()?.let {
-                it.runOnUiThread {
-                    paywallActionHandler?.invoke(processAction)
-                }
+    private fun onProcessAction(processAction: Boolean) {
+        productActivity?.activity?.get()?.let {
+            it.runOnUiThread {
+                paywallActionHandler?.invoke(processAction)
             }
         }
     }
 
-    private fun closePaywall(definitively: Boolean) {
-        if(definitively) {
-            val openedPaywall = productActivity?.activity?.get()
-            openedPaywall?.finish()
-            productActivity = null
-            return
-        }
+    private fun closePresentation() {
+        val openedPaywall = productActivity?.activity?.get()
+        openedPaywall?.finish()
+        productActivity = null
+    }
 
+    private fun hidePresentation() {
         val flutterActivity = activity
         val currentActivity = productActivity?.activity?.get() ?: flutterActivity
         if(flutterActivity != null && currentActivity != null) {

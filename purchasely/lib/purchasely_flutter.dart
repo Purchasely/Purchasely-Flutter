@@ -319,14 +319,16 @@ class Purchasely {
         'onProcessAction', <String, dynamic>{'processAction': processAction});
   }
 
-  static Future<void> closePaywall() async {
-    return await _channel.invokeMethod(
-        'closePaywall', <String, dynamic>{'definitively': true});
+  static Future<void> closePresentation() async {
+    return await _channel.invokeMethod('closePresentation');
   }
 
-  static Future<void> hidePaywall() async {
-    return await _channel.invokeMethod(
-        'closePaywall', <String, dynamic>{'definitively': false});
+  static Future<void> hidePresentation() async {
+    return await _channel.invokeMethod('hidePresentation');
+  }
+
+  static Future<void> showPresentation() async {
+    return await _channel.invokeMethod('showPresentation');
   }
 
   static Future<bool> isAnonymous() async {

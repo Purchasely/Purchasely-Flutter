@@ -121,7 +121,7 @@ class _MyAppState extends State<MyApp> {
         } else if (result.action == PLYPaywallAction.login) {
           print('User wants to login');
           //Present your own screen for user to log in
-          Purchasely.closePaywall();
+          Purchasely.closePresentation();
           Purchasely.userLogin('MY_USER_ID');
           //Call this method to update Purchasely Paywall
           Purchasely.onProcessAction(true);
@@ -131,7 +131,7 @@ class _MyAppState extends State<MyApp> {
         } else if (result.action == PLYPaywallAction.purchase) {
           print('User wants to purchase');
           //If you want to intercept it, close paywall and display your screen
-          Purchasely.closePaywall();
+          Purchasely.closePresentation();
         } else if (result.action == PLYPaywallAction.restore) {
           print('User wants to restore his purchases');
           Purchasely.onProcessAction(true);
