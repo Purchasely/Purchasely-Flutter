@@ -166,6 +166,7 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
           "restoreAllProducts" -> restoreAllProducts(result)
           "silentRestoreAllProducts" -> restoreAllProducts(result)
           "getAnonymousUserId" -> result.success(getAnonymousUserId())
+          "isAnonymous" -> result.success(isAnonymous())
           "userLogin" -> {
               val userId = call.argument<String>("userId") ?: let {
                   result.error("-1", "user id must not be null", null)
@@ -468,9 +469,9 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
       }
   }
 
-  private fun getAnonymousUserId() : String {
-      return Purchasely.anonymousUserId
-  }
+  private fun getAnonymousUserId() : String = Purchasely.anonymousUserId
+
+  private fun isAnonymous() : Boolean = Purchasely.isAnonymous()
 
   private fun userLogin(userId: String, result: Result) {
       Purchasely.userLogin(userId) { refresh -> result.success(refresh) }

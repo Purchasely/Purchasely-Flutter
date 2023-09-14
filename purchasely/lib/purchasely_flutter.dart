@@ -329,6 +329,11 @@ class Purchasely {
         'closePaywall', <String, dynamic>{'definitively': false});
   }
 
+  static Future<bool> isAnonymous() async {
+    final bool isAnonymous = await _channel.invokeMethod('isAnonymous');
+    return isAnonymous;
+  }
+
   static Future<void> userDidConsumeSubscriptionContent() async {
     return await _channel.invokeMethod('userDidConsumeSubscriptionContent');
   }

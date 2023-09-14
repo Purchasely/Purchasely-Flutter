@@ -48,6 +48,9 @@ class _MyAppState extends State<MyApp> {
       String anonymousId = await Purchasely.anonymousUserId;
       print('Anonymous Id : $anonymousId');
 
+      bool isAnonymous = await Purchasely.isAnonymous();
+      print('is Anonymous ? : $isAnonymous');
+
       try {
         List<PLYSubscription> subscriptions =
             await Purchasely.userSubscriptions();
