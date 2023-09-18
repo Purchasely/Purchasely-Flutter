@@ -11,14 +11,30 @@ class Purchasely {
   static var events;
   static var purchases;
 
-  static Future<bool> startWithApiKey(String apiKey, List<String> stores,
-      String? userId, PLYLogLevel logLevel, PLYRunningMode runningMode) async {
+  static Future<bool> startWithApiKey(
+      String apiKey,
+      List<String> stores,
+      String? userId,
+      PLYLogLevel logLevel,
+      PLYRunningMode runningMode
+  ) async {
     return await _channel.invokeMethod('startWithApiKey', <String, dynamic>{
       'apiKey': apiKey,
       'stores': stores,
       'userId': userId,
       'logLevel': logLevel.index,
       'runningMode': runningMode.index
+    });
+  }
+
+  static Future<bool> start(StartParameters parameters) async {
+    return await _channel.invokeMethod('start', <String, dynamic>{
+      'apiKey': parameters.apiKey,
+      'stores': parameters.androidStores,
+      'storeKit1': parameters.storeKit1,
+      'userId': parameters.userId,
+      'logLevel': parameters.logLevel,
+      'runningMode': parameters.runningMode
     });
   }
 
@@ -911,4 +927,22 @@ class PLYEventPropertySubscription {
   String? product;
 
   PLYEventPropertySubscription(this.plan, this.product);
+}
+
+class StartParameters {
+  final String apiKey;
+  final List<String>? androidStores;
+  final bool? storeKit1;
+  final String? userId;
+  final int? logLevel;
+  final int? runningMode;
+
+  StartParameters({
+    required this.apiKey,
+    this.androidStores,
+    this.storeKit1,
+    this.userId,
+    this.logLevel,
+    this.runningMode,
+  });
 }

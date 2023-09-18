@@ -27,12 +27,16 @@ class _MyAppState extends State<MyApp> {
 
       // Apple: fcb39be4-2ba4-4db7-bde3-2a5a1e20745d
       // Android: afa96c76-1d8e-4e3c-a48f-204a3cd93a15
-      bool configured = await Purchasely.startWithApiKey(
-          'fcb39be4-2ba4-4db7-bde3-2a5a1e20745d',
-          ['Google'],
-          null,
-          PLYLogLevel.debug,
-          PLYRunningMode.full);
+      // bool configured = await Purchasely.startWithApiKey(
+      //     'fcb39be4-2ba4-4db7-bde3-2a5a1e20745d',
+      //     ['Google'],
+      //     null,
+      //     PLYLogLevel.debug,
+      //     PLYRunningMode.full);
+
+      bool configured = await Purchasely.start(
+          StartParameters(apiKey: 'fcb39be4-2ba4-4db7-bde3-2a5a1e20745d')
+      );
 
       if (!configured) {
         print('Purchasely SDK not configured');
