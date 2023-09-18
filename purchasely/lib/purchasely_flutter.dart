@@ -157,9 +157,9 @@ class Purchasely {
     return restored;
   }
 
-  static Future<void> isReadyToPurchase(bool readyToPurchase) async {
-    _channel.invokeMethod('isReadyToPurchase',
-        <String, dynamic>{'readyToPurchase': readyToPurchase});
+  static Future<void> readyToOpenDeeplink(bool readyToOpenDeeplink) async {
+    _channel.invokeMethod('readyToOpenDeeplink',
+        <String, dynamic>{'readyToOpenDeeplink': readyToOpenDeeplink});
   }
 
   static Future<void> setLanguage(String language) async {
@@ -243,9 +243,9 @@ class Purchasely {
     return subscriptions;
   }
 
-  static Future<bool> handle(String deepLink) async {
+  static Future<bool> isDeeplinkHandled(String deepLink) async {
     return await _channel
-        .invokeMethod('handle', <String, dynamic>{'deeplink': deepLink});
+        .invokeMethod('isDeeplinkHandled', <String, dynamic>{'deeplink': deepLink});
   }
 
   static void listenToEvents(Function(PLYEvent) block) {

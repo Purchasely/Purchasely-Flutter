@@ -179,8 +179,8 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
               setLogLevel(call.argument<Int>("logLevel"))
               result.success(true)
           }
-          "isReadyToPurchase" -> {
-              isReadyToPurchase(call.argument<Boolean>("readyToPurchase"))
+          "readyToOpenDeeplink" -> {
+              readyToOpenDeeplink(call.argument<Boolean>("readyToOpenDeeplink"))
               result.success(true)
           }
           "setLanguage" -> {
@@ -233,7 +233,7 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
               call.argument<String>("contentId"),
               result)
           "displaySubscriptionCancellationInstruction" -> displaySubscriptionCancellationInstruction()
-          "handle" -> handle(call.argument<String>("deeplink"), result)
+          "isDeeplinkHandled" -> isDeeplinkHandled(call.argument<String>("deeplink"), result)
           "userSubscriptions" -> launch { userSubscriptions(result) }
           "presentSubscriptions" -> presentSubscriptions()
           "setAttribute" -> setAttribute(call.argument<Int>("attribute"), call.argument<String>("value"))
@@ -329,21 +329,23 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
             presentationId = presentationId,
             contentId = contentId)
 
-        Purchasely.fetchPresentation(
-            properties = properties,
-            resultCallback = null) { presentation: PLYPresentation?, error: PLYError? ->
-            if(presentation != null) {
-                presentationsLoaded.removeAll { it.id == presentation.id && it.placementId == presentation.placementId }
-                presentationsLoaded.add(presentation)
+        launch {
+            Purchasely.fetchPresentation(
+                properties = properties
+            ) { presentation: PLYPresentation?, error: PLYError? ->
+                if (presentation != null) {
+                    presentationsLoaded.removeAll { it.id == presentation.id && it.placementId == presentation.placementId }
+                    presentationsLoaded.add(presentation)
 
-                result.success(presentation.toMap().mapValues {
-                    val value = it.value
-                    if(value is PLYPresentationType) value.ordinal
-                    else value
-                })
+                    result.success(presentation.toMap().mapValues {
+                        val value = it.value
+                        if (value is PLYPresentationType) value.ordinal
+                        else value
+                    })
+                }
+
+                if (error != null) result.error("467", error.message, error)
             }
-
-            if(error != null) result.error("467", error.message, error)
         }
 
     }
@@ -430,10 +432,11 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
 
   private fun restoreAllProducts(result: Result) {
       Purchasely.restoreAllProducts(
-          success = { plan ->
+          onSuccess = { plan ->
               result.success(true)
               Purchasely.restoreAllProducts(null)
-          }, error = { error ->
+          },
+          onError = { error ->
               error?.let {
                   result.error("-1", it.message, it)
               } ?: let {
@@ -444,17 +447,16 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
       )
   }
 
-  private fun purchaseWithPlanVendorId(planVendorId: String?,
-                                        contentId: String?,
-                                        result: Result) {
+  private fun purchaseWithPlanVendorId(planVendorId: String?, contentId: String?, result: Result) {
       launch {
           try {
               val plan = Purchasely.plan(planVendorId ?: "")
               if(plan != null && activity != null) {
-                  Purchasely.purchase(activity!!, plan, contentId,
-                      success = {
+                  Purchasely.purchase(activity!!, plan, null, contentId,  //TODO: handle offers
+                      onSuccess = {
                           result.success(it?.toMap())
-                      }, error = { error ->
+                      },
+                      onError = { error ->
                           error?.let {
                               result.error("-1", it.message, it)
                           } ?: let {
@@ -487,8 +489,8 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
       Purchasely.logLevel = LogLevel.values()[logLevel ?: 0]
   }
 
-  private fun isReadyToPurchase(readyToPurchase: Boolean?) {
-      Purchasely.isReadyToPurchase = readyToPurchase ?: true
+  private fun readyToOpenDeeplink(readyToOpenDeeplink: Boolean?) {
+      Purchasely.readyToOpenDeeplink = readyToOpenDeeplink ?: true
   }
 
   private fun setDefaultPresentationResultHandler(result: Result) {
@@ -529,13 +531,13 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
       }
   }
 
-  private fun handle(deeplink: String?, result: Result) {
+  private fun isDeeplinkHandled(deeplink: String?, result: Result) {
       if (deeplink == null) {
           result.error("-1", "Deeplink must not be null", null)
           return
       }
       val uri = Uri.parse(deeplink)
-      result.success(Purchasely.handle(uri))
+      result.success(Purchasely.isDeeplinkHandled(uri))
   }
 
   private fun displaySubscriptionCancellationInstruction() {
@@ -588,7 +590,6 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
       value?.let {
           Purchasely.setAttribute(
               when(attribute) {
-                  0 -> Attribute.AMPLITUDE_SESSION_ID
                   1 -> Attribute.AMPLITUDE_USER_ID
                   2 -> Attribute.AMPLITUDE_DEVICE_ID
                   3 -> Attribute.FIREBASE_APP_INSTANCE_ID
@@ -609,7 +610,7 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
                   18-> Attribute.CUSTOMERIO_USER_EMAIL
                   19 -> Attribute.CUSTOMERIO_USER_ID
                   20 -> Attribute.MOENGAGE_UNIQUE_ID
-                  else -> Attribute.AMPLITUDE_SESSION_ID
+                  else -> Attribute.AMPLITUDE_USER_ID
               },
               it
           )
@@ -740,8 +741,13 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
 
             parametersForFlutter["title"] = parameters.title
             parametersForFlutter["url"] = parameters.url?.toString()
-            parametersForFlutter["plan"] = transformPlanToMap(parameters.plan)
             parametersForFlutter["presentation"] = parameters.presentation
+            parametersForFlutter["placement"] = parameters.placement
+            parametersForFlutter["plan"] = transformPlanToMap(parameters.plan)
+            parametersForFlutter["offer"] = mapOf<String, String?>(
+                "vendorId" to parameters.offer?.vendorId,
+                "storeOfferId" to parameters.offer?.storeOfferId
+            )
 
             result.success(mapOf(
                 Pair("info", mapOf(

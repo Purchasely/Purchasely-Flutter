@@ -23,7 +23,7 @@ class _MyAppState extends State<MyApp> {
   // Platform messages are asynchronous, so we initialize in an async method.
   Future<void> initPurchaselySdk() async {
     try {
-      Purchasely.isReadyToPurchase(true);
+      Purchasely.readyToOpenDeeplink(true);
 
       // Apple: fcb39be4-2ba4-4db7-bde3-2a5a1e20745d
       // Android: afa96c76-1d8e-4e3c-a48f-204a3cd93a15
