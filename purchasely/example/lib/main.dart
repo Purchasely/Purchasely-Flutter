@@ -5,10 +5,12 @@ import 'dart:developer';
 import 'package:purchasely_flutter/purchasely_flutter.dart';
 
 void main() {
-  runApp(MyApp());
+  runApp(const MyApp());
 }
 
 class MyApp extends StatefulWidget {
+  const MyApp({Key? key}) : super(key: key);
+
   @override
   _MyAppState createState() => _MyAppState();
 }
@@ -275,60 +277,60 @@ class _MyAppState extends State<MyApp> {
             child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
-            Text('Purchasely sample'),
+            const Text('Purchasely sample'),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                padding: EdgeInsets.only(left: 20.0, right: 30.0),
+                padding: const EdgeInsets.only(left: 20.0, right: 30.0),
               ),
               onPressed: () {
                 displayPresentation();
               },
-              child: Text('Display presentation'),
+              child: const Text('Display presentation'),
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                padding: EdgeInsets.only(left: 20.0, right: 30.0),
+                padding: const EdgeInsets.only(left: 20.0, right: 30.0),
               ),
               onPressed: () {
                 fetchPresentation();
               },
-              child: Text('Fetch presentation'),
+              child: const Text('Fetch presentation'),
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                padding: EdgeInsets.only(left: 20.0, right: 30.0),
+                padding: const EdgeInsets.only(left: 20.0, right: 30.0),
               ),
               onPressed: () {
                 continuePurchase();
               },
-              child: Text('Continue purchase'),
+              child: const Text('Continue purchase'),
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                padding: EdgeInsets.only(left: 20.0, right: 30.0),
+                padding: const EdgeInsets.only(left: 20.0, right: 30.0),
               ),
               onPressed: () {
                 purchase();
               },
-              child: Text('Purchase'),
+              child: const Text('Purchase'),
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                padding: EdgeInsets.only(left: 20.0, right: 30.0),
+                padding: const EdgeInsets.only(left: 20.0, right: 30.0),
               ),
               onPressed: () {
                 displaySubscriptions();
               },
-              child: Text('Display subscriptions'),
+              child: const Text('Display subscriptions'),
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                padding: EdgeInsets.only(left: 20.0, right: 30.0),
+                padding: const EdgeInsets.only(left: 20.0, right: 30.0),
               ),
               onPressed: () {
                 restoreAllProducts();
               },
-              child: Text('Restore purchases'),
+              child: const Text('Restore purchases'),
             ),
           ],
         )),
