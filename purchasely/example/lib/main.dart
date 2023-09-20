@@ -266,9 +266,8 @@ class _MyAppState extends State<MyApp> {
 
   Future<void> signPromotionalOffer() async {
     try {
-      Map<dynamic, dynamic> plan =
-          await Purchasely.signPromotionalOffer('PURCHASELY_PLUS_YEARLY', 'com.purchasely.plus.yearly.promo');
-      print('Plan is $plan');
+      Map<dynamic, dynamic> signature =
+          await Purchasely.signPromotionalOffer('com.purchasely.plus.yearly', 'com.purchasely.plus.yearly.winback.test');
     } catch (e) {
       print(e);
     }

@@ -206,10 +206,10 @@ class Purchasely {
 
   static Future<Map<dynamic, dynamic>> signPromotionalOffer(String storeProductId,
       String storeOfferId) async {
-    final Map<dynamic, dynamic> product = await _channel.invokeMethod(
+    final Map<dynamic, dynamic> result = await _channel.invokeMethod(
         'signPromotionalOffer',
         <String, dynamic>{'storeProductId': storeProductId, 'storeOfferId': storeOfferId});
-    return product;
+    return result;
   }
 
   static Future<Map<dynamic, dynamic>> purchaseWithPlanVendorId(String vendorId,

@@ -16,7 +16,7 @@ extension PLYOfferSignature {
         result["planVendorId"] = planVendorId
         result["identifier"] = identifier
         result["signature"] = signature
-        result["nonce"] = nonce
+        result["nonce"] = "\(nonce)"
         result["keyIdentifier"] = keyIdentifier
         result["timestamp"] = timestamp
         return result

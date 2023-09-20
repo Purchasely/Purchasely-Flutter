@@ -601,7 +601,6 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
         }
 
         DispatchQueue.main.async {
-            print("###\(storeProductId) \(storeOfferId)")
             if #available(iOS 15.0, macOS 12.0, tvOS 15.0, watchOS 8.0, *) {
                 Purchasely.signPromotionalOffer(storeProductId: storeProductId, storeOfferId: storeOfferId) { signature in
                     result(signature.toMap)
