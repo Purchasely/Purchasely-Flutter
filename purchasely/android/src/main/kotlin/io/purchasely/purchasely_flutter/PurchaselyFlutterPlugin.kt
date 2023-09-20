@@ -243,6 +243,7 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
           "allProducts" -> launch { allProducts(result) }
           "purchaseWithPlanVendorId" -> purchaseWithPlanVendorId(
               call.argument<String>("vendorId"),
+              call.argument<String>("offerId"),
               call.argument<String>("contentId"),
               result)
           "displaySubscriptionCancellationInstruction" -> displaySubscriptionCancellationInstruction()
@@ -484,12 +485,15 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
       )
   }
 
-  private fun purchaseWithPlanVendorId(planVendorId: String?, contentId: String?, result: Result) {
+  private fun purchaseWithPlanVendorId(planVendorId: String?, offerId: String?, contentId: String?, result: Result) {
+      Log.e("TEST", "plan id: $planVendorId")
+      Log.e("TEST", "vendor id: $offerId")
       launch {
           try {
               val plan = Purchasely.plan(planVendorId ?: "")
+              val offer = plan?.promoOffers?.firstOrNull { it.vendorId == offerId }
               if(plan != null && activity != null) {
-                  Purchasely.purchase(activity!!, plan, null, contentId,  //TODO: handle offers
+                  Purchasely.purchase(activity!!, plan, offer, contentId,
                       onSuccess = {
                           result.success(it?.toMap())
                       },
