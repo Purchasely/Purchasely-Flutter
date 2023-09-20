@@ -146,6 +146,8 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             showPresentation()
         case "closePresentation":
             closePresentation()
+        case "signPromotionalOffer":
+            signPromotionalOffer(arguments: arguments, result: result)
         default:
             result(FlutterMethodNotImplemented)
         }
@@ -589,6 +591,28 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             }
         }
     }
+    
+    private func signPromotionalOffer(arguments: [String: Any]?, result: @escaping FlutterResult) {
+        guard let arguments = arguments,
+              let storeProductId = arguments["storeProductId"] as? String,
+              let storeOfferId = arguments["storeOfferId"] as? String else {
+            result(FlutterError.error(code: "-1", message: "storeProductId and storeOfferId must not be nil", error: nil))
+            return
+        }
+
+        DispatchQueue.main.async {
+            print("###\(storeProductId) \(storeOfferId)")
+            if #available(iOS 15.0, macOS 12.0, tvOS 15.0, watchOS 8.0, *) {
+                Purchasely.signPromotionalOffer(storeProductId: storeProductId, storeOfferId: storeOfferId) { signature in
+                    result(signature.toMap)
+                } failure: { error in
+                    result(FlutterError.error(code:"-1", message:"signature failed", error: error))
+                }
+            } else {
+                result(FlutterError.error(code:"-1", message:"Promotional offers signature are only available for iOS 15.0, macOS 12.0, tvOS 15.0, watchOS 8.0", error: nil))
+            }
+        }
+    }
 
     private func purchaseWithPlanVendorId(arguments: [String: Any]?, result: @escaping FlutterResult) {
         guard let arguments = arguments, let vendorId = arguments["vendorId"] as? String else {
@@ -600,12 +624,23 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
 
         DispatchQueue.main.async {
             Purchasely.plan(with: vendorId) { plan in
-                Purchasely.purchase(plan: plan, contentId: contentId) {
-                    result(plan.toMap)
-                } failure: { error in
-                    result(FlutterError.error(code:"-1", message:"purchase failed", error: error))
-                }
 
+                if let offerId = arguments["offerId"] as? String,
+                   let storeOfferId = plan.promoOffers.first(where: { $0.vendorId == offerId })?.storeOfferId,
+                   #available(iOS 15.0, macOS 12.0, tvOS 15.0, watchOS 8.0, *) {
+                    
+                    Purchasely.purchaseWithPromotionalOffer(plan: plan, contentId: contentId, storeOfferId: storeOfferId) {
+                        result(plan.toMap)
+                    } failure: { error in
+                        result(FlutterError.error(code:"-1", message:"purchase failed", error: error))
+                    }
+                } else {
+                    Purchasely.purchase(plan: plan, contentId: contentId) {
+                        result(plan.toMap)
+                    } failure: { error in
+                        result(FlutterError.error(code:"-1", message:"purchase failed", error: error))
+                    }
+                }
             } failure: { error in
                 result(FlutterError.error(code:"-1", message:"plan \(vendorId) not found", error: error))
             }

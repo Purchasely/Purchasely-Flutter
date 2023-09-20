@@ -247,7 +247,27 @@ class _MyAppState extends State<MyApp> {
   Future<void> purchase() async {
     try {
       Map<dynamic, dynamic> plan =
-          await Purchasely.purchaseWithPlanVendorId('PURCHASELY_PLUS_MONTHLY', 'OFFER_TEST');
+          await Purchasely.purchaseWithPlanVendorId('PURCHASELY_PLUS_MONTHLY', null);
+      print('Plan is $plan');
+    } catch (e) {
+      print(e);
+    }
+  }
+
+  Future<void> purchaseWithPromotionalOffer() async {
+    try {
+      Map<dynamic, dynamic> plan =
+          await Purchasely.purchaseWithPlanVendorId('PURCHASELY_PLUS_YEARLY', 'com.purchasely.plus.yearly.promo');
+      print('Plan is $plan');
+    } catch (e) {
+      print(e);
+    }
+  }
+
+  Future<void> signPromotionalOffer() async {
+    try {
+      Map<dynamic, dynamic> plan =
+          await Purchasely.signPromotionalOffer('PURCHASELY_PLUS_YEARLY', 'com.purchasely.plus.yearly.promo');
       print('Plan is $plan');
     } catch (e) {
       print(e);
@@ -350,6 +370,24 @@ class _MyAppState extends State<MyApp> {
                 purchase();
               },
               child: const Text('Purchase'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.only(left: 20.0, right: 30.0),
+              ),
+              onPressed: () {
+                purchaseWithPromotionalOffer();
+              },
+              child: const Text('Purchase with promotional offer'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.only(left: 20.0, right: 30.0),
+              ),
+              onPressed: () {
+                signPromotionalOffer();
+              },
+              child: const Text('Sign promotional offer'),
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
