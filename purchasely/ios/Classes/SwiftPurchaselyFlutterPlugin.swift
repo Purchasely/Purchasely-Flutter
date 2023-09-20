@@ -10,7 +10,7 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
     let purchaseChannel: FlutterEventChannel
     let purchaseHandler: SwiftPurchaseHandler
 
-    weak var presentedPresentationViewController: UIViewController?
+    var presentedPresentationViewController: UIViewController?
 
     var purchaseResult: FlutterResult?
     var presentationsLoaded = [PLYPresentation]()
@@ -42,6 +42,8 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
     public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         let arguments = call.arguments as? [String: Any]
         switch call.method {
+        case "start":
+            start(arguments: call.arguments as? [String: Any], result: result)
         case "startWithApiKey":
             startWithApiKey(arguments: call.arguments as? [String: Any], result: result)
         case "close":
@@ -79,9 +81,9 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             userLogin(arguments: arguments, result: result)
         case "userLogout":
             userLogout()
-        case "isReadyToPurchase":
-            let parameter = arguments?["readyToPurchase"] as? Bool
-            isReadyToPurchase(readyToPurchase: parameter)
+        case "readyToOpenDeeplink":
+            let parameter = arguments?["readyToOpenDeeplink"] as? Bool
+            readyToOpenDeeplink(readyToOpenDeeplink: parameter)
         case "setLogLevel":
             let parameter = (arguments?["logLevel"] as? Int) ?? PLYLogger.LogLevel.debug.rawValue
             let logLevel = PLYLogger.LogLevel(rawValue: parameter) ?? PLYLogger.LogLevel.debug
@@ -97,9 +99,9 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             allProducts(result)
         case "purchaseWithPlanVendorId":
             purchaseWithPlanVendorId(arguments: arguments, result: result)
-        case "handle":
+        case "isDeeplinkHandled":
             let parameter = arguments?["deeplink"] as? String
-            handle(parameter, result: result)
+            isDeeplinkHandled(parameter, result: result)
         case "userSubscriptions":
             userSubscriptions(result)
         case "presentSubscriptions":
@@ -114,8 +116,6 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
         case "onProcessAction":
             let parameter = arguments?["processAction"] as? Bool
             onProcessAction(parameter ?? true)
-        case "closePaywall":
-            closePaywall()
         case "userDidConsumeSubscriptionContent":
             userDidConsumeSubscriptionContent()
         case "setUserAttributeWithString":
@@ -138,8 +138,78 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             clearUserAttributes()
         case "synchronize", "displaySubscriptionCancellationInstruction":
             result(FlutterMethodNotImplemented)
+        case "isAnonymous":
+            isAnonymous(result: result)
+        case "hidePresentation":
+            hidePresentation()
+        case "showPresentation":
+            showPresentation()
+        case "closePresentation":
+            closePresentation()
         default:
             result(FlutterMethodNotImplemented)
+        }
+    }
+
+    private func isAnonymous(result: @escaping FlutterResult) {
+        let returnValue: [String: Any] = ["result": Purchasely.isAnonymous()]
+        result(returnValue)
+    }
+
+    private func hidePresentation() {
+        if let presentedPresentationViewController = presentedPresentationViewController {
+            DispatchQueue.main.async {
+                var presentingViewController = presentedPresentationViewController;
+                while let presentingController = presentingViewController.presentingViewController {
+                    presentingViewController = presentingController
+                }
+                presentingViewController.dismiss(animated: true, completion: nil)
+            }
+        }
+    }
+
+    private func closePresentation() {
+        self.presentedPresentationViewController = nil
+        Purchasely.closeDisplayedPresentation()
+    }
+
+    private func showPresentation() {
+        if let presentedPresentationViewController = presentedPresentationViewController {
+            DispatchQueue.main.async {
+                Purchasely.showController(presentedPresentationViewController, type: .productPage)
+            }
+        }
+    }
+
+    private func start(arguments: [String: Any]?, result: @escaping FlutterResult) {
+
+        guard let arguments = arguments, let apiKey = arguments["apiKey"] as? String else {
+            result(FlutterError.failedArgumentField("apiKey", type: String.self))
+            return
+        }
+
+		Purchasely.setSdkBridgeVersion("4.0.0")
+        Purchasely.setAppTechnology(PLYAppTechnology.flutter)
+
+        let logLevel = PLYLogger.LogLevel(rawValue: (arguments["logLevel"] as? Int) ?? PLYLogger.LogLevel.debug.rawValue) ?? PLYLogger.LogLevel.debug
+        let userId = arguments["userId"] as? String
+        let runningMode = PLYRunningMode(rawValue: (arguments["runningMode"] as? Int) ?? PLYRunningMode.full.rawValue) ?? PLYRunningMode.full
+        let storeKitSettingRawValue = arguments["storeKit1"] as? Bool ?? false
+        let storeKitSetting = storeKitSettingRawValue ? StorekitSettings.storeKit1 : StorekitSettings.storeKit2
+
+        DispatchQueue.main.async {
+            Purchasely.start(withAPIKey: apiKey,
+                             appUserId: userId,
+                             runningMode: runningMode,
+                             paywallActionsInterceptor: nil,
+                             storekitSettings: storeKitSetting,
+                             logLevel: logLevel) { success, error in
+                if success {
+                    result(success)
+                } else {
+                    result(FlutterError.error(code: "0", message: "Purchasely SDK not configured", error: error))
+                }
+            }
         }
     }
 
@@ -149,7 +219,7 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             return
         }
 
-		Purchasely.setSdkBridgeVersion("1.7.2")
+		Purchasely.setSdkBridgeVersion("4.0.0")
         Purchasely.setAppTechnology(PLYAppTechnology.flutter)
 
         let logLevel = PLYLogger.LogLevel(rawValue: (arguments["logLevel"] as? Int) ?? PLYLogger.LogLevel.debug.rawValue) ?? PLYLogger.LogLevel.debug
@@ -160,8 +230,6 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             Purchasely.start(withAPIKey: apiKey,
                              appUserId: userId,
                              runningMode: runningMode,
-                             eventDelegate: nil,
-                             uiDelegate: nil,
                              paywallActionsInterceptor: nil,
                              logLevel: logLevel) { success, error in
                 if success {
@@ -468,8 +536,8 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
         Purchasely.userLogout()
     }
 
-    private func isReadyToPurchase(readyToPurchase: Bool?) {
-        Purchasely.isReadyToPurchase(readyToPurchase ?? true)
+    private func readyToOpenDeeplink(readyToOpenDeeplink: Bool?) {
+        Purchasely.readyToOpenDeeplink(readyToOpenDeeplink ?? true)
     }
 
     private func setDefaultPresentationResultHandler(result: @escaping FlutterResult) {
@@ -544,14 +612,14 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
         }
     }
 
-    private func handle(_ deeplink: String?, result: @escaping FlutterResult) {
+    private func isDeeplinkHandled(_ deeplink: String?, result: @escaping FlutterResult) {
         guard let deeplink = deeplink, let url = URL(string: deeplink) else {
             result(FlutterError.error(code: "-1", message: "deeplink must not be nil", error: nil))
             return
         }
 
         DispatchQueue.main.async {
-            result(Purchasely.handle(deeplink: url))
+            result(Purchasely.isDeeplinkHandled(deeplink: url))
         }
     }
 
@@ -716,20 +784,6 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
     private func onProcessAction(_ proceed: Bool) {
         DispatchQueue.main.async { [weak self] in
             self?.onProcessActionHandler?(proceed)
-        }
-    }
-
-    private func closePaywall() {
-        if let presentedPresentationViewController = presentedPresentationViewController {
-            DispatchQueue.main.async {
-                var presentingViewController = presentedPresentationViewController;
-                while let presentingController = presentingViewController.presentingViewController {
-                    presentingViewController = presentingController
-                }
-                presentingViewController.dismiss(animated: true, completion: nil)
-            }
-        } else {
-            Purchasely.closeDisplayedPresentation()
         }
     }
 

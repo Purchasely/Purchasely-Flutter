@@ -2,7 +2,7 @@ group 'io.purchasely.sample.player.purchasely_android_player'
 version '1.0-SNAPSHOT'
 
 buildscript {
-    ext.kotlin_version = '1.6.10'
+    ext.kotlin_version = '1.7.21'
     repositories {
         google()
         mavenCentral()
@@ -48,5 +48,5 @@ android {
 dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
 
-    api 'io.purchasely:player:3.7.4'
+    api 'io.purchasely:player:4.0.0'
 }

@@ -11,11 +11,29 @@ class Purchasely {
   static var events;
   static var purchases;
 
+  @Deprecated("User start method instead")
   static Future<bool> startWithApiKey(String apiKey, List<String> stores,
       String? userId, PLYLogLevel logLevel, PLYRunningMode runningMode) async {
     return await _channel.invokeMethod('startWithApiKey', <String, dynamic>{
       'apiKey': apiKey,
       'stores': stores,
+      'userId': userId,
+      'logLevel': logLevel.index,
+      'runningMode': runningMode.index
+    });
+  }
+
+  static Future<bool> start(
+      {required final String apiKey,
+      final List<String>? androidStores = const ['Google'],
+      final bool storeKit1 = false,
+      final String? userId,
+      final PLYLogLevel logLevel = PLYLogLevel.error,
+      final PLYRunningMode runningMode = PLYRunningMode.full}) async {
+    return await _channel.invokeMethod('start', <String, dynamic>{
+      'apiKey': apiKey,
+      'stores': androidStores,
+      'storeKit1': storeKit1,
       'userId': userId,
       'logLevel': logLevel.index,
       'runningMode': runningMode.index
@@ -157,9 +175,9 @@ class Purchasely {
     return restored;
   }
 
-  static Future<void> isReadyToPurchase(bool readyToPurchase) async {
-    _channel.invokeMethod('isReadyToPurchase',
-        <String, dynamic>{'readyToPurchase': readyToPurchase});
+  static Future<void> readyToOpenDeeplink(bool readyToOpenDeeplink) async {
+    _channel.invokeMethod('readyToOpenDeeplink',
+        <String, dynamic>{'readyToOpenDeeplink': readyToOpenDeeplink});
   }
 
   static Future<void> setLanguage(String language) async {
@@ -243,9 +261,9 @@ class Purchasely {
     return subscriptions;
   }
 
-  static Future<bool> handle(String deepLink) async {
-    return await _channel
-        .invokeMethod('handle', <String, dynamic>{'deeplink': deepLink});
+  static Future<bool> isDeeplinkHandled(String deepLink) async {
+    return await _channel.invokeMethod(
+        'isDeeplinkHandled', <String, dynamic>{'deeplink': deepLink});
   }
 
   static void listenToEvents(Function(PLYEvent) block) {
@@ -319,9 +337,21 @@ class Purchasely {
         'onProcessAction', <String, dynamic>{'processAction': processAction});
   }
 
-  static Future<void> closePaywall({bool definitively = false}) async {
-    return await _channel.invokeMethod(
-        'closePaywall', <String, dynamic>{'definitively': definitively});
+  static Future<void> closePresentation() async {
+    return await _channel.invokeMethod('closePresentation');
+  }
+
+  static Future<void> hidePresentation() async {
+    return await _channel.invokeMethod('hidePresentation');
+  }
+
+  static Future<void> showPresentation() async {
+    return await _channel.invokeMethod('showPresentation');
+  }
+
+  static Future<bool> isAnonymous() async {
+    final bool isAnonymous = await _channel.invokeMethod('isAnonymous');
+    return isAnonymous;
   }
 
   static Future<void> userDidConsumeSubscriptionContent() async {

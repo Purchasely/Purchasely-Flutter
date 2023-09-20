@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'dart:developer';
+import 'dart:io';
 
 import 'package:purchasely_flutter/purchasely_flutter.dart';
 
 void main() {
-  runApp(MyApp());
+  runApp(const MyApp());
 }
 
 class MyApp extends StatefulWidget {
+  const MyApp({Key? key}) : super(key: key);
+
   @override
   _MyAppState createState() => _MyAppState();
 }
@@ -23,16 +26,20 @@ class _MyAppState extends State<MyApp> {
   // Platform messages are asynchronous, so we initialize in an async method.
   Future<void> initPurchaselySdk() async {
     try {
-      Purchasely.isReadyToPurchase(true);
+      Purchasely.readyToOpenDeeplink(true);
 
-      // Apple: fcb39be4-2ba4-4db7-bde3-2a5a1e20745d
-      // Android: afa96c76-1d8e-4e3c-a48f-204a3cd93a15
-      bool configured = await Purchasely.startWithApiKey(
-          'fcb39be4-2ba4-4db7-bde3-2a5a1e20745d',
-          ['Google'],
-          null,
-          PLYLogLevel.debug,
-          PLYRunningMode.full);
+      bool configured = await Purchasely.start(
+          apiKey: 'fcb39be4-2ba4-4db7-bde3-2a5a1e20745d');
+
+      // Default values
+      /*bool configured = await Purchasely.start(
+        apiKey: 'fcb39be4-2ba4-4db7-bde3-2a5a1e20745d',
+        androidStores: ['Google'],
+        storeKit1: false,
+        logLevel: PLYLogLevel.error,
+        runningMode: PLYRunningMode.full,
+        userId: null,
+      );*/
 
       if (!configured) {
         print('Purchasely SDK not configured');
@@ -47,6 +54,9 @@ class _MyAppState extends State<MyApp> {
 
       String anonymousId = await Purchasely.anonymousUserId;
       print('Anonymous Id : $anonymousId');
+
+      bool isAnonymous = await Purchasely.isAnonymous();
+      print('is Anonymous ? : $isAnonymous');
 
       try {
         List<PLYSubscription> subscriptions =
@@ -118,7 +128,7 @@ class _MyAppState extends State<MyApp> {
         } else if (result.action == PLYPaywallAction.login) {
           print('User wants to login');
           //Present your own screen for user to log in
-          Purchasely.closePaywall();
+          Purchasely.closePresentation();
           Purchasely.userLogin('MY_USER_ID');
           //Call this method to update Purchasely Paywall
           Purchasely.onProcessAction(true);
@@ -128,7 +138,7 @@ class _MyAppState extends State<MyApp> {
         } else if (result.action == PLYPaywallAction.purchase) {
           print('User wants to purchase');
           //If you want to intercept it, close paywall and display your screen
-          Purchasely.closePaywall();
+          Purchasely.closePresentation();
         } else if (result.action == PLYPaywallAction.restore) {
           print('User wants to restore his purchases');
           Purchasely.onProcessAction(true);
@@ -257,6 +267,24 @@ class _MyAppState extends State<MyApp> {
     print('restored ? $restored');
   }
 
+  Future<void> hidePresentation() async {
+    Purchasely.hidePresentation();
+  }
+
+  Future<void> showPresentation() async {
+    Purchasely.showPresentation();
+  }
+
+  Future<void> closePresentation() async {
+    Purchasely.closePresentation();
+  }
+
+  Future<void> testFunction() async {
+    displayPresentation();
+    sleep(const Duration(seconds:3));
+    displayPresentation();
+  }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -268,60 +296,78 @@ class _MyAppState extends State<MyApp> {
             child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
-            Text('Purchasely sample'),
+            const Text('Purchasely sample'),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                padding: EdgeInsets.only(left: 20.0, right: 30.0),
+                padding: const EdgeInsets.only(left: 20.0, right: 30.0),
               ),
               onPressed: () {
                 displayPresentation();
               },
-              child: Text('Display presentation'),
+              child: const Text('Display presentation'),
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                padding: EdgeInsets.only(left: 20.0, right: 30.0),
+                padding: const EdgeInsets.only(left: 20.0, right: 30.0),
               ),
               onPressed: () {
                 fetchPresentation();
               },
-              child: Text('Fetch presentation'),
+              child: const Text('Fetch presentation'),
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                padding: EdgeInsets.only(left: 20.0, right: 30.0),
+                padding: const EdgeInsets.only(left: 20.0, right: 30.0),
+              ),
+              onPressed: () {
+                showPresentation();
+              },
+              child: const Text('Show presentation'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.only(left: 20.0, right: 30.0),
+              ),
+              onPressed: () {
+                closePresentation();
+              },
+              child: const Text('Close presentation'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.only(left: 20.0, right: 30.0),
               ),
               onPressed: () {
                 continuePurchase();
               },
-              child: Text('Continue purchase'),
+              child: const Text('Continue purchase'),
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                padding: EdgeInsets.only(left: 20.0, right: 30.0),
+                padding: const EdgeInsets.only(left: 20.0, right: 30.0),
               ),
               onPressed: () {
                 purchase();
               },
-              child: Text('Purchase'),
+              child: const Text('Purchase'),
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                padding: EdgeInsets.only(left: 20.0, right: 30.0),
+                padding: const EdgeInsets.only(left: 20.0, right: 30.0),
               ),
               onPressed: () {
                 displaySubscriptions();
               },
-              child: Text('Display subscriptions'),
+              child: const Text('Display subscriptions'),
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                padding: EdgeInsets.only(left: 20.0, right: 30.0),
+                padding: const EdgeInsets.only(left: 20.0, right: 30.0),
               ),
               onPressed: () {
                 restoreAllProducts();
               },
-              child: Text('Restore purchases'),
+              child: const Text('Restore purchases'),
             ),
           ],
         )),
