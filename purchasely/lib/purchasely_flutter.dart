@@ -204,19 +204,24 @@ class Purchasely {
     return transformToPLYPlan(result);
   }
 
-  static Future<Map<dynamic, dynamic>> signPromotionalOffer(String storeProductId,
-      String storeOfferId) async {
+  static Future<Map<dynamic, dynamic>> signPromotionalOffer(
+      String storeProductId, String storeOfferId) async {
     final Map<dynamic, dynamic> result = await _channel.invokeMethod(
-        'signPromotionalOffer',
-        <String, dynamic>{'storeProductId': storeProductId, 'storeOfferId': storeOfferId});
+        'signPromotionalOffer', <String, dynamic>{
+      'storeProductId': storeProductId,
+      'storeOfferId': storeOfferId
+    });
     return result;
   }
 
   static Future<Map<dynamic, dynamic>> purchaseWithPlanVendorId(String vendorId,
       [String? offerId, String? contentId]) async {
     final Map<dynamic, dynamic> product = await _channel.invokeMethod(
-        'purchaseWithPlanVendorId',
-        <String, dynamic>{'vendorId': vendorId, 'offerId': offerId, 'contentId': contentId});
+        'purchaseWithPlanVendorId', <String, dynamic>{
+      'vendorId': vendorId,
+      'offerId': offerId,
+      'contentId': contentId
+    });
     return product;
   }
 
@@ -609,7 +614,6 @@ enum PLYLogLevel { debug, info, warn, error }
 enum PLYRunningMode { transactionOnly, observer, paywallObserver, full }
 
 enum PLYAttribute {
-  amplitude_session_id,
   amplitudeUserId,
   amplitudeDeviceId,
   firebase_app_instance_id,

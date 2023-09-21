@@ -137,8 +137,8 @@ class _MyAppState extends State<MyApp> {
           Purchasely.onProcessAction(true);
         } else if (result.action == PLYPaywallAction.purchase) {
           print('User wants to purchase');
-          //If you want to intercept it, close paywall and display your screen
-          Purchasely.closePresentation();
+          //If you want to intercept it, hide paywall and display your screen
+          Purchasely.hidePresentation();
         } else if (result.action == PLYPaywallAction.restore) {
           print('User wants to restore his purchases');
           Purchasely.onProcessAction(true);
@@ -241,13 +241,14 @@ class _MyAppState extends State<MyApp> {
   }
 
   Future<void> continuePurchase() async {
+    Purchasely.showPresentation();
     Purchasely.onProcessAction(true);
   }
 
   Future<void> purchase() async {
     try {
-      Map<dynamic, dynamic> plan =
-          await Purchasely.purchaseWithPlanVendorId('PURCHASELY_PLUS_MONTHLY', null);
+      Map<dynamic, dynamic> plan = await Purchasely.purchaseWithPlanVendorId(
+          'PURCHASELY_PLUS_MONTHLY', null);
       print('Plan is $plan');
     } catch (e) {
       print(e);
@@ -256,8 +257,8 @@ class _MyAppState extends State<MyApp> {
 
   Future<void> purchaseWithPromotionalOffer() async {
     try {
-      Map<dynamic, dynamic> plan =
-          await Purchasely.purchaseWithPlanVendorId('PURCHASELY_PLUS_YEARLY', 'com.purchasely.plus.yearly.promo');
+      Map<dynamic, dynamic> plan = await Purchasely.purchaseWithPlanVendorId(
+          'PURCHASELY_PLUS_YEARLY', 'com.purchasely.plus.yearly.promo');
       print('Plan is $plan');
     } catch (e) {
       print(e);
@@ -266,8 +267,9 @@ class _MyAppState extends State<MyApp> {
 
   Future<void> signPromotionalOffer() async {
     try {
-      Map<dynamic, dynamic> signature =
-          await Purchasely.signPromotionalOffer('com.purchasely.plus.yearly', 'com.purchasely.plus.yearly.winback.test');
+      Map<dynamic, dynamic> signature = await Purchasely.signPromotionalOffer(
+          'com.purchasely.plus.yearly',
+          'com.purchasely.plus.yearly.winback.test');
     } catch (e) {
       print(e);
     }
@@ -300,7 +302,7 @@ class _MyAppState extends State<MyApp> {
 
   Future<void> testFunction() async {
     displayPresentation();
-    sleep(const Duration(seconds:3));
+    sleep(const Duration(seconds: 3));
     displayPresentation();
   }
 
