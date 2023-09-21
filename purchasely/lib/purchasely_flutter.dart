@@ -214,8 +214,8 @@ class Purchasely {
     return result;
   }
 
-  static Future<Map<dynamic, dynamic>> purchaseWithPlanVendorId(String vendorId,
-      [String? offerId, String? contentId]) async {
+  static Future<Map<dynamic, dynamic>> purchaseWithPlanVendorId(
+      {required String vendorId, String? offerId, String? contentId}) async {
     final Map<dynamic, dynamic> product = await _channel.invokeMethod(
         'purchaseWithPlanVendorId', <String, dynamic>{
       'vendorId': vendorId,

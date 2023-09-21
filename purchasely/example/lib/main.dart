@@ -248,7 +248,7 @@ class _MyAppState extends State<MyApp> {
   Future<void> purchase() async {
     try {
       Map<dynamic, dynamic> plan = await Purchasely.purchaseWithPlanVendorId(
-          'PURCHASELY_PLUS_MONTHLY', null);
+          vendorId: 'PURCHASELY_PLUS_MONTHLY');
       print('Plan is $plan');
     } catch (e) {
       print(e);
@@ -258,7 +258,7 @@ class _MyAppState extends State<MyApp> {
   Future<void> purchaseWithPromotionalOffer() async {
     try {
       Map<dynamic, dynamic> plan = await Purchasely.purchaseWithPlanVendorId(
-          'PURCHASELY_PLUS_YEARLY', 'com.purchasely.plus.yearly.promo');
+          vendorId: 'PURCHASELY_PLUS_YEARLY', offerId: 'com.purchasely.plus.yearly.promo');
       print('Plan is $plan');
     } catch (e) {
       print(e);
