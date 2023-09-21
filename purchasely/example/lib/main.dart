@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'dart:developer';
+import 'dart:io';
 
 import 'package:purchasely_flutter/purchasely_flutter.dart';
 
@@ -246,8 +247,27 @@ class _MyAppState extends State<MyApp> {
   Future<void> purchase() async {
     try {
       Map<dynamic, dynamic> plan =
-          await Purchasely.purchaseWithPlanVendorId('PURCHASELY_PLUS_MONTHLY', 'OFFER_TEST');
+          await Purchasely.purchaseWithPlanVendorId('PURCHASELY_PLUS_MONTHLY', null);
       print('Plan is $plan');
+    } catch (e) {
+      print(e);
+    }
+  }
+
+  Future<void> purchaseWithPromotionalOffer() async {
+    try {
+      Map<dynamic, dynamic> plan =
+          await Purchasely.purchaseWithPlanVendorId('PURCHASELY_PLUS_YEARLY', 'com.purchasely.plus.yearly.promo');
+      print('Plan is $plan');
+    } catch (e) {
+      print(e);
+    }
+  }
+
+  Future<void> signPromotionalOffer() async {
+    try {
+      Map<dynamic, dynamic> signature =
+          await Purchasely.signPromotionalOffer('com.purchasely.plus.yearly', 'com.purchasely.plus.yearly.winback.test');
     } catch (e) {
       print(e);
     }
@@ -264,6 +284,24 @@ class _MyAppState extends State<MyApp> {
     }
 
     print('restored ? $restored');
+  }
+
+  Future<void> hidePresentation() async {
+    Purchasely.hidePresentation();
+  }
+
+  Future<void> showPresentation() async {
+    Purchasely.showPresentation();
+  }
+
+  Future<void> closePresentation() async {
+    Purchasely.closePresentation();
+  }
+
+  Future<void> testFunction() async {
+    displayPresentation();
+    sleep(const Duration(seconds:3));
+    displayPresentation();
   }
 
   @override
@@ -301,6 +339,24 @@ class _MyAppState extends State<MyApp> {
                 padding: const EdgeInsets.only(left: 20.0, right: 30.0),
               ),
               onPressed: () {
+                showPresentation();
+              },
+              child: const Text('Show presentation'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.only(left: 20.0, right: 30.0),
+              ),
+              onPressed: () {
+                closePresentation();
+              },
+              child: const Text('Close presentation'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.only(left: 20.0, right: 30.0),
+              ),
+              onPressed: () {
                 continuePurchase();
               },
               child: const Text('Continue purchase'),
@@ -313,6 +369,24 @@ class _MyAppState extends State<MyApp> {
                 purchase();
               },
               child: const Text('Purchase'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.only(left: 20.0, right: 30.0),
+              ),
+              onPressed: () {
+                purchaseWithPromotionalOffer();
+              },
+              child: const Text('Purchase with promotional offer'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.only(left: 20.0, right: 30.0),
+              ),
+              onPressed: () {
+                signPromotionalOffer();
+              },
+              child: const Text('Sign promotional offer'),
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(

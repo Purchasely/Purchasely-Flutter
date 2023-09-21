@@ -486,8 +486,6 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
   }
 
   private fun purchaseWithPlanVendorId(planVendorId: String?, offerId: String?, contentId: String?, result: Result) {
-      Log.e("TEST", "plan id: $planVendorId")
-      Log.e("TEST", "vendor id: $offerId")
       launch {
           try {
               val plan = Purchasely.plan(planVendorId ?: "")
