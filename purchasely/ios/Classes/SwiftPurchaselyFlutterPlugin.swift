@@ -601,7 +601,7 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
         }
 
         DispatchQueue.main.async {
-            if #available(iOS 15.0, macOS 12.0, tvOS 15.0, watchOS 8.0, *) {
+            if #available(iOS 12.2, macOS 12.0, tvOS 15.0, watchOS 8.0, *) {
                 Purchasely.signPromotionalOffer(storeProductId: storeProductId, storeOfferId: storeOfferId) { signature in
                     result(signature.toMap)
                 } failure: { error in
@@ -626,7 +626,7 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
 
                 if let offerId = arguments["offerId"] as? String,
                    let storeOfferId = plan.promoOffers.first(where: { $0.vendorId == offerId })?.storeOfferId,
-                   #available(iOS 15.0, macOS 12.0, tvOS 15.0, watchOS 8.0, *) {
+                   #available(iOS 12.2, macOS 12.0, tvOS 15.0, watchOS 8.0, *) {
                     
                     Purchasely.purchaseWithPromotionalOffer(plan: plan, contentId: contentId, storeOfferId: storeOfferId) {
                         result(plan.toMap)
