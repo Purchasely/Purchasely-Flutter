@@ -29,6 +29,13 @@ extension PLYPresentationActionParameters {
             result["presentation"] = presentation
         }
         
+        if let promoOffer = promoOffer {
+            var offerMap = [String: Any]()
+            offerMap["vendorId"] = promoOffer.vendorId
+            offerMap["storeOfferId"] = promoOffer.storeOfferId
+            result["offer"] = offerMap
+        }
+        
         return result
     }
     
