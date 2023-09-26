@@ -1,3 +1,8 @@
+## 4.0.1
+🚨 Important: This SDK version uses StoreKit 2 by default. Read the [documentation](https://docs.purchasely.com/quick-start-1/sdk-configuration/storekit-2) for more information.
+If you did not configure StoreKit 2 in Purchasely console, the SDK will fallback to StoreKit 1.
+### Major fix
+In this release, we have addressed a bug affecting the purchase action while using the SDK in Observer mode. Please update to this version if you are in paywall observer mode.
 ## 4.0.0
 🚨 Important: This SDK version uses StoreKit 2 by default unless you have not setup credential for SK2 in Purchasely console.
 🚧 Important: Documentation for this release is in progress and will be available in early September. Some methods and properties have undergone changes. Detailed information will follow soon.
