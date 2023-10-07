@@ -794,6 +794,7 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
                 "vendorId" to parameters.offer?.vendorId,
                 "storeOfferId" to parameters.offer?.storeOfferId
             )
+            parametersForFlutter["subscriptionOffer"] = parameters.subscriptionOffer.topMap()
 
             result.success(mapOf(
                 Pair("info", mapOf(

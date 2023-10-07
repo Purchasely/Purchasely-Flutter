@@ -329,6 +329,8 @@ class Purchasely {
       setPaywallActionInterceptor() async {
     final result = await _channel.invokeMethod('setPaywallActionInterceptor');
     final Map<dynamic, dynamic>? plan = result['parameters']['plan'];
+    final Map<dynamic, dynamic>? offer = result['parameters']['offer'];
+    final Map<dynamic, dynamic>? subscriptionOffer = result['parameters']['subscriptionOffer'];
     return PaywallActionInterceptorResult(
         PLYPaywallInfo(
             result['info']['contentId'],
@@ -342,6 +344,8 @@ class Purchasely {
             result['parameters']['url'],
             result['parameters']['title'],
             plan != null ? transformToPLYPlan(plan) : null,
+            offer != null ? transformToPLYPromoOffer(offer) : null,
+            subscriptionOffer != null ? transformToPLYSubscription(subscriptionOffer) : null,
             result['parameters']['presentation']));
   }
 
@@ -489,6 +493,26 @@ class Purchasely {
         plan['introDuration'],
         plan['introPeriod'],
         plan['hasFreeTrial']);
+  }
+
+  static PLYPromoOffer? transformToPLYPromoOffer(Map<dynamic, dynamic> offer) {
+    if (offer.isEmpty) return null;
+
+    return PLYPromoOffer(
+        offer['vendorId'],
+        offer['storeOfferId'],
+    );
+  }
+
+  static PLYSubscriptionOffer? transformToPLYSubscription(Map<dynamic, dynamic> subscriptionOffer) {
+    if (subscriptionOffer.isEmpty) return null;
+
+    return PLYSubscriptionOffer(
+      subscriptionOffer['subscriptionId'],
+      subscriptionOffer['basePlanId'],
+      subscriptionOffer['offerToken'],
+      subscriptionOffer['offerId'],
+    );
   }
 
   static PLYPresentation? transformToPLYPresentation(
@@ -702,6 +726,22 @@ class PLYPlan {
       this.hasFreeTrial);
 }
 
+class PLYPromoOffer {
+  String? vendorId;
+  String? storeOfferId;
+
+  PLYPromoOffer(this.vendorId, this.storeOfferId);
+}
+
+class PLYSubscriptionOffer {
+  String subscriptionId;
+  String? basePlanId;
+  String? offerToken;
+  String? offerId;
+
+  PLYSubscriptionOffer(this.subscriptionId, this.basePlanId, this.offerToken, this.offerId);
+}
+
 class PLYProduct {
   String name;
   String vendorId;
@@ -755,10 +795,12 @@ class PLYPaywallActionParameters {
   String? url;
   String? title;
   PLYPlan? plan;
+  PLYPromoOffer? offer;
+  PLYSubscriptionOffer? subscriptionOffer;
   String? presentation;
 
   PLYPaywallActionParameters(
-      this.url, this.title, this.plan, this.presentation);
+      this.url, this.title, this.plan, this.offer, this.subscriptionOffer, this.presentation);
 }
 
 class PLYPaywallInfo {
