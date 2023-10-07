@@ -180,6 +180,13 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
           "silentRestoreAllProducts" -> restoreAllProducts(result)
           "getAnonymousUserId" -> result.success(getAnonymousUserId())
           "isAnonymous" -> result.success(isAnonymous())
+          "isEligibleForIntroOffer" -> {
+              val planVendorId = call.argument<String>("planVendorId") ?: let {
+                  result.error("-1", "plan vendor id must not be null", null)
+                  return
+              }
+              result.success(isEligibleForIntroOffer(planVendorId)))
+          }
           "userLogin" -> {
               val userId = call.argument<String>("userId") ?: let {
                   result.error("-1", "user id must not be null", null)
@@ -842,6 +849,22 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
         }
     }
 
+    private fun isEligibleForIntroOffer(planVendorId: String) : Boolean {
+        launch {
+            try {
+                val plan = Purchasely.plan(planVendorId)
+                return plan?.let {
+                    it.promoOffers.any { plan.isEligibleToIntroOffer(it.storeOfferId) }
+                } ?: run {
+                    Log.e("Purchasely", "plan $planVendorId not found")
+                    false
+                }
+            } catch (e: Exception) {
+                Log.e("Purchasely", e.message, e)
+            }
+        }
+    }
+
   //endregion
 
   companion object {
@@ -885,8 +908,6 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
                   DistributionType.UNKNOWN -> DistributionType.UNKNOWN.ordinal
                   else -> null
               }
-
-              this["isEligibleForIntroOffer"] = plan.isEligibleToIntroOffer()
           }
       }
   }

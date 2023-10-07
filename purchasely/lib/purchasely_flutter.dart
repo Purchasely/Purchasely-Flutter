@@ -488,8 +488,7 @@ class Purchasely {
         plan['introAmount'],
         plan['introDuration'],
         plan['introPeriod'],
-        plan['hasFreeTrial'],
-        plan['isEligibleForIntroOffer']);
+        plan['hasFreeTrial']);
   }
 
   static PLYPresentation? transformToPLYPresentation(
@@ -683,7 +682,6 @@ class PLYPlan {
   String? introDuration;
   String? introPeriod;
   bool? hasFreeTrial;
-  bool? isEligibleForIntroOffer;
 
   PLYPlan(
       this.vendorId,
@@ -701,8 +699,7 @@ class PLYPlan {
       this.introAmount,
       this.introDuration,
       this.introPeriod,
-      this.hasFreeTrial,
-      this.isEligibleForIntroOffer);
+      this.hasFreeTrial);
 }
 
 class PLYProduct {
