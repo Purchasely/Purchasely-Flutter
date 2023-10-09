@@ -187,8 +187,9 @@ class _MyAppState extends State<MyApp> {
 
   Future<void> fetchPresentation() async {
     try {
-      var presentation = await Purchasely.fetchPresentation(null,
-          presentationId: "FitnessChallenge");
+      var presentation = await Purchasely.fetchPresentation(
+          null,
+          presentationId: "meta-cm");
 
       if (presentation == null) {
         print("No presentation found");
@@ -201,7 +202,7 @@ class _MyAppState extends State<MyApp> {
       }
 
       if (presentation.type == PLYPresentationType.client) {
-        // Display my own paywall
+        print("Presentation metadata: ${presentation.metadata}");
         return;
       }
 

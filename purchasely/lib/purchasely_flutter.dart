@@ -526,17 +526,29 @@ class Purchasely {
       print(e);
     }
 
-    List<String> plans = List<String>.from(presentation['plans'] as List);
+    List<PLYPresentationPlan> plans = (presentation['plans'] as List).map((e) =>
+        PLYPresentationPlan(
+          e['planVendorId'],
+          e['storeProductId'],
+          e['basePlanId'],
+          e['offerId'])
+    ).toList();
+
+    Map<String, dynamic> metadata = {};
+    presentation['metadata'].forEach((key, value) {
+      metadata[key] = value;
+    });
 
     return PLYPresentation(
-        presentation['id'],
-        presentation['placementId'],
-        presentation['audienceId'],
-        presentation['abTestId'],
-        presentation['abTestVariantId'],
-        presentation['language'],
-        type,
-        plans);
+      presentation['id'],
+      presentation['placementId'],
+      presentation['audienceId'],
+      presentation['abTestId'],
+      presentation['abTestVariantId'],
+      presentation['language'],
+      type,
+      plans,
+      metadata);
   }
 
   static Map<dynamic, dynamic> transformPLYPresentationToMap(
@@ -551,6 +563,7 @@ class Purchasely {
     presentationMap['language'] = presentation?.language;
     presentationMap['type'] = presentation?.type.index;
     presentationMap['plans'] = presentation?.plans;
+    presentationMap['metadata'] = presentation?.metadata;
 
     return presentationMap;
   }
@@ -750,6 +763,15 @@ class PLYProduct {
   PLYProduct(this.name, this.vendorId, this.plans);
 }
 
+class PLYPresentationPlan {
+  String? planVendorId;
+  String? storeProductId;
+  String? basePlanId;
+  String? offerId;
+
+  PLYPresentationPlan(this.planVendorId, this.storeProductId, this.basePlanId, this.offerId);
+}
+
 class PLYPresentation {
   String? id;
   String? placementId;
@@ -758,10 +780,11 @@ class PLYPresentation {
   String? abTestVariantId;
   String language;
   PLYPresentationType type;
-  List<String> plans;
+  List<PLYPresentationPlan>? plans;
+  Map<String, dynamic> metadata;
 
   PLYPresentation(this.id, this.placementId, this.audienceId, this.abTestId,
-      this.abTestVariantId, this.language, this.type, this.plans);
+      this.abTestVariantId, this.language, this.type, this.plans, this.metadata);
 }
 
 class PLYSubscription {
