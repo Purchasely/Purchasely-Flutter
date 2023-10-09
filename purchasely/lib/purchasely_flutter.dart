@@ -371,6 +371,12 @@ class Purchasely {
     return isAnonymous;
   }
 
+  static Future<bool> isEligibleForIntroOffer(String planVendorId) async {
+    final bool isEligible = await _channel.invokeMethod(
+        'isEligibleForIntroOffer', <String, dynamic>{'planVendorId': planVendorId});
+    return isEligible;
+  }
+
   static Future<void> userDidConsumeSubscriptionContent() async {
     return await _channel.invokeMethod('userDidConsumeSubscriptionContent');
   }

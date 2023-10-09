@@ -183,11 +183,15 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
           "getAnonymousUserId" -> result.success(getAnonymousUserId())
           "isAnonymous" -> result.success(isAnonymous())
           "isEligibleForIntroOffer" -> {
-              val planVendorId = call.argument<String>("planVendorId") ?: let {
-                  result.error("-1", "plan vendor id must not be null", null)
-                  return
+              launch {
+                  val planVendorId = call.argument<String>("planVendorId")
+                  if(planVendorId == null) {
+                      result.error("-1", "planVendorId must not be null", null)
+                  }
+                  else {
+                      result.success(isEligibleForIntroOffer(planVendorId))
+                  }
               }
-              result.success(isEligibleForIntroOffer(planVendorId)))
           }
           "userLogin" -> {
               val userId = call.argument<String>("userId") ?: let {
@@ -799,7 +803,7 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
                 "vendorId" to parameters.offer?.vendorId,
                 "storeOfferId" to parameters.offer?.storeOfferId
             )
-            parametersForFlutter["subscriptionOffer"] = parameters.subscriptionOffer.topMap()
+            parametersForFlutter["subscriptionOffer"] = parameters.subscriptionOffer?.toMap()
 
             result.success(mapOf(
                 Pair("info", mapOf(
@@ -855,19 +859,18 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
         }
     }
 
-    private fun isEligibleForIntroOffer(planVendorId: String) : Boolean {
-        launch {
-            try {
-                val plan = Purchasely.plan(planVendorId)
-                return plan?.let {
-                    it.promoOffers.any { plan.isEligibleToIntroOffer(it.storeOfferId) }
-                } ?: run {
-                    Log.e("Purchasely", "plan $planVendorId not found")
-                    false
-                }
-            } catch (e: Exception) {
-                Log.e("Purchasely", e.message, e)
+    private suspend fun isEligibleForIntroOffer(planVendorId: String) : Boolean {
+        try {
+            val plan = Purchasely.plan(planVendorId)
+            return plan?.let {
+                it.promoOffers.any { plan.isEligibleToIntroOffer(it.storeOfferId) }
+            } ?: run {
+                Log.e("Purchasely", "plan $planVendorId not found")
+                false
             }
+        } catch (e: Exception) {
+            Log.e("Purchasely", e.message, e)
+            return false
         }
     }
 

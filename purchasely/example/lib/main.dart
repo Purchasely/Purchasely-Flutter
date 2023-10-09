@@ -58,6 +58,9 @@ class _MyAppState extends State<MyApp> {
       bool isAnonymous = await Purchasely.isAnonymous();
       print('is Anonymous ? : $isAnonymous');
 
+      bool isEligible = await Purchasely.isEligibleForIntroOffer('gb-v5-monthly-promo-offers');
+      print('is eligible ? : $isEligible');
+
       try {
         List<PLYSubscription> subscriptions =
             await Purchasely.userSubscriptions();
