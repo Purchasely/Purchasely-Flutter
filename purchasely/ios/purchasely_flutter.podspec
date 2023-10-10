@@ -21,7 +21,7 @@ Flutter Plugin for Purchasely SDK
   s.pod_target_xcconfig = { 'DEFINES_MODULE' => 'YES', 'EXCLUDED_ARCHS[sdk=iphonesimulator*]' => 'i386' }
   s.swift_version = '5.0'
 
-  s.dependency 'Purchasely', '4.0.3'
+  s.dependency 'Purchasely', '4.1.3'
   s.static_framework = true
 
 end

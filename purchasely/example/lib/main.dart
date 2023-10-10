@@ -58,6 +58,9 @@ class _MyAppState extends State<MyApp> {
       bool isAnonymous = await Purchasely.isAnonymous();
       print('is Anonymous ? : $isAnonymous');
 
+      bool isEligible = await Purchasely.isEligibleForIntroOffer('PURCHASELY_PLUS_YEARLY');
+      print('is eligible ? : $isEligible');
+
       try {
         List<PLYSubscription> subscriptions =
             await Purchasely.userSubscriptions();
@@ -187,8 +190,9 @@ class _MyAppState extends State<MyApp> {
 
   Future<void> fetchPresentation() async {
     try {
-      var presentation = await Purchasely.fetchPresentation(null,
-          presentationId: "FitnessChallenge");
+      var presentation = await Purchasely.fetchPresentation(
+          null,
+          presentationId: "meta-cm");
 
       if (presentation == null) {
         print("No presentation found");
@@ -201,7 +205,7 @@ class _MyAppState extends State<MyApp> {
       }
 
       if (presentation.type == PLYPresentationType.client) {
-        // Display my own paywall
+        print("Presentation metadata: ${presentation.metadata}");
         return;
       }
 
@@ -270,6 +274,7 @@ class _MyAppState extends State<MyApp> {
       Map<dynamic, dynamic> signature = await Purchasely.signPromotionalOffer(
           'com.purchasely.plus.yearly',
           'com.purchasely.plus.yearly.winback.test');
+      print('Signature $signature');
     } catch (e) {
       print(e);
     }

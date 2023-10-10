@@ -24,6 +24,8 @@ import io.purchasely.billing.Store
 import io.purchasely.ext.*
 import io.purchasely.ext.EventListener
 import io.purchasely.models.PLYPlan
+import io.purchasely.models.PLYPromoOffer
+import io.purchasely.models.PLYPresentationPlan
 import io.purchasely.models.PLYProduct
 import kotlinx.coroutines.*
 import io.purchasely.ext.Purchasely
@@ -180,6 +182,17 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
           "silentRestoreAllProducts" -> restoreAllProducts(result)
           "getAnonymousUserId" -> result.success(getAnonymousUserId())
           "isAnonymous" -> result.success(isAnonymous())
+          "isEligibleForIntroOffer" -> {
+              launch {
+                  val planVendorId = call.argument<String>("planVendorId")
+                  if(planVendorId == null) {
+                      result.error("-1", "planVendorId must not be null", null)
+                  }
+                  else {
+                      result.success(isEligibleForIntroOffer(planVendorId))
+                  }
+              }
+          }
           "userLogin" -> {
               val userId = call.argument<String>("userId") ?: let {
                   result.error("-1", "user id must not be null", null)
@@ -341,7 +354,7 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
           .userId(userId)
           .build()
 
-	  Purchasely.sdkBridgeVersion = "4.0.1"
+	  Purchasely.sdkBridgeVersion = "4.1.0"
       Purchasely.appTechnology = PLYAppTechnology.FLUTTER
 
       Purchasely.start { isConfigured, error ->
@@ -367,25 +380,28 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
             presentationId = presentationId,
             contentId = contentId)
 
-        launch {
             Purchasely.fetchPresentation(
                 properties = properties
             ) { presentation: PLYPresentation?, error: PLYError? ->
-                if (presentation != null) {
-                    presentationsLoaded.removeAll { it.id == presentation.id && it.placementId == presentation.placementId }
-                    presentationsLoaded.add(presentation)
+                launch {
+                    if (presentation != null) {
+                        presentationsLoaded.removeAll { it.id == presentation.id && it.placementId == presentation.placementId }
+                        presentationsLoaded.add(presentation)
+                        val map = presentation.toMap().mapValues {
+                            val value = it.value
+                            if (value is PLYPresentationType) value.ordinal
+                            else value
+                        }
+                        val mutableMap = map.toMutableMap().apply {
+                            this["metadata"] = presentation.metadata?.toMap()
+                            this["plans"] = (this["plans"] as List<PLYPresentationPlan>).map { it.toMap() }
+                        }
+                        result.success(mutableMap)
+                    }
 
-                    result.success(presentation.toMap().mapValues {
-                        val value = it.value
-                        if (value is PLYPresentationType) value.ordinal
-                        else value
-                    })
+                    if (error != null) result.error("467", error.message, error)
                 }
-
-                if (error != null) result.error("467", error.message, error)
             }
-        }
-
     }
 
     private fun presentPresentation(presentationMap: Map<String, Any>?,
@@ -787,6 +803,7 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
                 "vendorId" to parameters.offer?.vendorId,
                 "storeOfferId" to parameters.offer?.storeOfferId
             )
+            parametersForFlutter["subscriptionOffer"] = parameters.subscriptionOffer?.toMap()
 
             result.success(mapOf(
                 Pair("info", mapOf(
@@ -842,6 +859,21 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
         }
     }
 
+    private suspend fun isEligibleForIntroOffer(planVendorId: String) : Boolean {
+        try {
+            val plan = Purchasely.plan(planVendorId)
+            return plan?.let {
+                it.promoOffers.any { plan.isEligibleToIntroOffer(it.storeOfferId) }
+            } ?: run {
+                Log.e("Purchasely", "plan $planVendorId not found")
+                false
+            }
+        } catch (e: Exception) {
+            Log.e("Purchasely", e.message, e)
+            return false
+        }
+    }
+
   //endregion
 
   companion object {
@@ -885,8 +917,6 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
                   DistributionType.UNKNOWN -> DistributionType.UNKNOWN.ordinal
                   else -> null
               }
-
-              this["isEligibleForIntroOffer"] = plan.isEligibleToIntroOffer()
           }
       }
   }
@@ -970,4 +1000,28 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
           }
       }
   }
+
+    fun PLYPresentationPlan.toMap() : Map<String, String?> {
+        return mapOf(
+            Pair("planVendorId", planVendorId),
+            Pair("storeProductId", storeProductId),
+            Pair("basePlanId", basePlanId),
+            Pair("offerId", offerId)
+        )
+    }
+
+    suspend fun PLYPresentationMetadata.toMap() : Map<String, Any> {
+        val metadata = mutableMapOf<String, Any>()
+        this.keys()?.forEach { key ->
+            val value = when (this.type(key)) {
+                kotlin.String::class.java.simpleName -> this.getString(key)
+                else -> this.get(key)
+            }
+            value?.let {
+                metadata.put(key, it)
+            }
+        }
+
+        return metadata
+    }
 }

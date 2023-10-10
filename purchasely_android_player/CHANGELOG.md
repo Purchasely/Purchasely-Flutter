@@ -1,3 +1,18 @@
+## 4.1.0
+🚨 Important: This SDK version uses StoreKit 2 by default. Read the [documentation](https://docs.purchasely.com/quick-start-1/sdk-configuration/storekit-2) for more information.
+If you did not configure StoreKit 2 in Purchasely console, the SDK will fallback to StoreKit 1.
+
+## Improvements:
+- Purchase with promo offer
+- `isEligibleForIntroOffer` method
+- Metadata handling for 'Use your own paywall'
+
+### iOS only:
+- `signPromotionalOffer` method
+
+### Android only:
+- Added `subscriptionOffer` to Paywall Action Interceptor parameters
+
 ## 4.0.1
 🚨 Important: This SDK version uses StoreKit 2 by default. Read the [documentation](https://docs.purchasely.com/quick-start-1/sdk-configuration/storekit-2) for more information.
 If you did not configure StoreKit 2 in Purchasely console, the SDK will fallback to StoreKit 1.
