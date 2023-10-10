@@ -148,14 +148,15 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             closePresentation()
         case "signPromotionalOffer":
             signPromotionalOffer(arguments: arguments, result: result)
+        case "isEligibleForIntroOffer":
+            isEligibleForIntroOffer(arguments: arguments, result: result)
         default:
             result(FlutterMethodNotImplemented)
         }
     }
 
     private func isAnonymous(result: @escaping FlutterResult) {
-        let returnValue: [String: Any] = ["result": Purchasely.isAnonymous()]
-        result(returnValue)
+        result(Purchasely.isAnonymous())
     }
 
     private func hidePresentation() {
@@ -179,6 +180,23 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
         if let presentedPresentationViewController = presentedPresentationViewController {
             DispatchQueue.main.async {
                 Purchasely.showController(presentedPresentationViewController, type: .productPage)
+            }
+        }
+    }
+    
+    private func isEligibleForIntroOffer(arguments: [String: Any]?, result: @escaping FlutterResult) {
+        guard let arguments = arguments, let planVendorId = arguments["planVendorId"] as? String else {
+            result(FlutterError.failedArgumentField("planVendorId", type: String.self))
+            return
+        }
+        
+        DispatchQueue.main.async {
+            Purchasely.plan(with: planVendorId) { plan in
+                plan.isUserEligibleForIntroductoryOffer { res in
+                    result(res)
+                }
+            } failure: { error in
+                result(FlutterError.error(code:"-1", message:"plan \(planVendorId) not found", error: error))
             }
         }
     }
