@@ -16,7 +16,6 @@ extension PLYPlan {
         
         result["hasIntroductoryPrice"] =  self.hasIntroductoryPrice
         result["type"] = self.type.rawValue
-        result["isEligibleForIntroOffer"] = self.isUserEligibleForIntroductoryOffer
         
         if let introAmount = self.introAmount?.intValue, introAmount == 0, self.hasIntroductoryPrice {
             result.removeValue(forKey: "hasIntroductoryPrice")
