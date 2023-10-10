@@ -35,7 +35,14 @@ extension PLYPresentation {
         
         result["language"] = language
         
-        result["plans"] = self.plans
+        result["plans"] = self.plans.map({
+            var newPresentationPlan: [String : Any?] = [:]
+            newPresentationPlan["offerId"] = $0.offerId
+            newPresentationPlan["storeProductId"] = $0.storeProductId
+            newPresentationPlan["planVendorId"] = $0.planVendorId
+            newPresentationPlan["basePlanId"] = nil
+            return newPresentationPlan
+        })
         
         result["type"] = self.type.rawValue
         
@@ -53,7 +60,7 @@ extension PLYPresentation {
         let semaphore = DispatchSemaphore(value: 0)
 
         for (key, value) in rawMetadata {
-            if let stringValue = value as? String {
+            if let _ = value as? String {
                 group.enter() // Enter the dispatch group before making the async call
 
                 metadata.getString(with: key) { result in

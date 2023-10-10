@@ -274,6 +274,7 @@ class _MyAppState extends State<MyApp> {
       Map<dynamic, dynamic> signature = await Purchasely.signPromotionalOffer(
           'com.purchasely.plus.yearly',
           'com.purchasely.plus.yearly.winback.test');
+      print('Signature $signature');
     } catch (e) {
       print(e);
     }
