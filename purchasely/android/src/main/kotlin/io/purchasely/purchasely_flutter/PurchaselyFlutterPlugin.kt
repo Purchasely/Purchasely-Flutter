@@ -187,10 +187,10 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
                   val planVendorId = call.argument<String>("planVendorId")
                   if(planVendorId == null) {
                       result.error("-1", "planVendorId must not be null", null)
+                      return@launch
                   }
-                  else {
-                      result.success(isEligibleForIntroOffer(planVendorId))
-                  }
+
+                  result.success(isEligibleForIntroOffer(planVendorId))
               }
           }
           "userLogin" -> {
@@ -354,7 +354,7 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
           .userId(userId)
           .build()
 
-	  Purchasely.sdkBridgeVersion = "4.1.0"
+	  Purchasely.sdkBridgeVersion = "4.1.1"
       Purchasely.appTechnology = PLYAppTechnology.FLUTTER
 
       Purchasely.start { isConfigured, error ->
@@ -860,17 +860,17 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
     }
 
     private suspend fun isEligibleForIntroOffer(planVendorId: String) : Boolean {
-        try {
+        return try {
             val plan = Purchasely.plan(planVendorId)
-            return plan?.let {
-                it.promoOffers.any { plan.isEligibleToIntroOffer(it.storeOfferId) }
-            } ?: run {
+            if(plan != null) {
+                plan.isEligibleToIntroOffer()
+            } else {
                 Log.e("Purchasely", "plan $planVendorId not found")
                 false
             }
         } catch (e: Exception) {
             Log.e("Purchasely", e.message, e)
-            return false
+            false
         }
     }
 
