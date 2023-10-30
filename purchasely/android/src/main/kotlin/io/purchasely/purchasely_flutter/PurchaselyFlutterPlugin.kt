@@ -380,28 +380,28 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
             presentationId = presentationId,
             contentId = contentId)
 
-            Purchasely.fetchPresentation(
-                properties = properties
-            ) { presentation: PLYPresentation?, error: PLYError? ->
-                launch {
-                    if (presentation != null) {
-                        presentationsLoaded.removeAll { it.id == presentation.id && it.placementId == presentation.placementId }
-                        presentationsLoaded.add(presentation)
-                        val map = presentation.toMap().mapValues {
-                            val value = it.value
-                            if (value is PLYPresentationType) value.ordinal
-                            else value
-                        }
-                        val mutableMap = map.toMutableMap().apply {
-                            this["metadata"] = presentation.metadata?.toMap()
-                            this["plans"] = (this["plans"] as List<PLYPresentationPlan>).map { it.toMap() }
-                        }
-                        result.success(mutableMap)
+        Purchasely.fetchPresentation(
+            properties = properties
+        ) { presentation: PLYPresentation?, error: PLYError? ->
+            launch {
+                if (presentation != null) {
+                    presentationsLoaded.removeAll { it.id == presentation.id && it.placementId == presentation.placementId }
+                    presentationsLoaded.add(presentation)
+                    val map = presentation.toMap().mapValues {
+                        val value = it.value
+                        if (value is PLYPresentationType) value.ordinal
+                        else value
                     }
-
-                    if (error != null) result.error("467", error.message, error)
+                    val mutableMap = map.toMutableMap().apply {
+                        this["metadata"] = presentation.metadata?.toMap()
+                        this["plans"] = (this["plans"] as List<PLYPresentationPlan>).map { it.toMap() }
+                    }
+                    result.success(mutableMap)
                 }
+
+                if (error != null) result.error("467", error.message, error)
             }
+        }
     }
 
     private fun presentPresentation(presentationMap: Map<String, Any>?,
