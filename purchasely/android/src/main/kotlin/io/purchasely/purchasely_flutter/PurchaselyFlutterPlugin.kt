@@ -187,10 +187,10 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
                   val planVendorId = call.argument<String>("planVendorId")
                   if(planVendorId == null) {
                       result.error("-1", "planVendorId must not be null", null)
+                      return@launch
                   }
-                  else {
-                      result.success(isEligibleForIntroOffer(planVendorId))
-                  }
+
+                  result.success(isEligibleForIntroOffer(planVendorId))
               }
           }
           "userLogin" -> {
@@ -354,7 +354,7 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
           .userId(userId)
           .build()
 
-	  Purchasely.sdkBridgeVersion = "4.1.0"
+	  Purchasely.sdkBridgeVersion = "4.1.1"
       Purchasely.appTechnology = PLYAppTechnology.FLUTTER
 
       Purchasely.start { isConfigured, error ->
@@ -380,28 +380,28 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
             presentationId = presentationId,
             contentId = contentId)
 
-            Purchasely.fetchPresentation(
-                properties = properties
-            ) { presentation: PLYPresentation?, error: PLYError? ->
-                launch {
-                    if (presentation != null) {
-                        presentationsLoaded.removeAll { it.id == presentation.id && it.placementId == presentation.placementId }
-                        presentationsLoaded.add(presentation)
-                        val map = presentation.toMap().mapValues {
-                            val value = it.value
-                            if (value is PLYPresentationType) value.ordinal
-                            else value
-                        }
-                        val mutableMap = map.toMutableMap().apply {
-                            this["metadata"] = presentation.metadata?.toMap()
-                            this["plans"] = (this["plans"] as List<PLYPresentationPlan>).map { it.toMap() }
-                        }
-                        result.success(mutableMap)
+        Purchasely.fetchPresentation(
+            properties = properties
+        ) { presentation: PLYPresentation?, error: PLYError? ->
+            launch {
+                if (presentation != null) {
+                    presentationsLoaded.removeAll { it.id == presentation.id && it.placementId == presentation.placementId }
+                    presentationsLoaded.add(presentation)
+                    val map = presentation.toMap().mapValues {
+                        val value = it.value
+                        if (value is PLYPresentationType) value.ordinal
+                        else value
                     }
-
-                    if (error != null) result.error("467", error.message, error)
+                    val mutableMap = map.toMutableMap().apply {
+                        this["metadata"] = presentation.metadata?.toMap()
+                        this["plans"] = (this["plans"] as List<PLYPresentationPlan>).map { it.toMap() }
+                    }
+                    result.success(mutableMap)
                 }
+
+                if (error != null) result.error("467", error.message, error)
             }
+        }
     }
 
     private fun presentPresentation(presentationMap: Map<String, Any>?,
@@ -860,17 +860,17 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
     }
 
     private suspend fun isEligibleForIntroOffer(planVendorId: String) : Boolean {
-        try {
+        return try {
             val plan = Purchasely.plan(planVendorId)
-            return plan?.let {
-                it.promoOffers.any { plan.isEligibleToIntroOffer(it.storeOfferId) }
-            } ?: run {
+            if(plan != null) {
+                plan.isEligibleToIntroOffer()
+            } else {
                 Log.e("Purchasely", "plan $planVendorId not found")
                 false
             }
         } catch (e: Exception) {
             Log.e("Purchasely", e.message, e)
-            return false
+            false
         }
     }
 
