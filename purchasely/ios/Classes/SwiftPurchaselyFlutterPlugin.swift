@@ -314,7 +314,10 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
 
         self.purchaseResult = result
 
-        guard let presentationId = presentationMap["id"] as? String, let presentationLoaded = self.presentationsLoaded.filter({ $0.id == presentationId }).first, let controller = presentationLoaded.controller else {
+        guard let presentationId = presentationMap["id"] as? String, 
+                let placementId = presentationMap["placementId"] as? String,
+                let presentationLoaded = self.presentationsLoaded.filter({ $0.id == presentationId && $0.placementId == placementId }).first,
+                let controller = presentationLoaded.controller else {
             result(FlutterError.error(code: "-1", message: "Presentation not loaded", error: nil))
             return
         }
@@ -344,7 +347,9 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             return
         }
 
-        guard let presentationId = presentationMap["id"] as? String, let presentationLoaded = self.presentationsLoaded.filter({ $0.id == presentationId }).first else { return }
+        guard let presentationId = presentationMap["id"] as? String, 
+                let placementId = presentationMap["placementId"] as? String,
+                let presentationLoaded = self.presentationsLoaded.filter({ $0.id == presentationId && $0.placementId == placementId }).first else { return }
 
         Purchasely.clientPresentationOpened(with: presentationLoaded)
     }
@@ -355,7 +360,9 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             return
         }
 
-        guard let presentationId = presentationMap["id"] as? String, let presentationLoaded = self.presentationsLoaded.filter({ $0.id == presentationId }).first else { return }
+        guard let presentationId = presentationMap["id"] as? String,
+              let placementId = presentationMap["placementId"] as? String,
+              let presentationLoaded = self.presentationsLoaded.filter({ $0.id == presentationId && $0.placementId == placementId }).first else { return }
 
         Purchasely.clientPresentationClosed(with: presentationLoaded)
     }
