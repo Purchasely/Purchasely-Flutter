@@ -198,6 +198,8 @@ class _MyAppState extends State<MyApp> {
         return;
       }
 
+      print("Presentation: ${presentation}");
+
       if (presentation.type == PLYPresentationType.deactivated) {
         // No paywall to display
         return;

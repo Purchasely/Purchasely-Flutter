@@ -330,7 +330,8 @@ class Purchasely {
     final result = await _channel.invokeMethod('setPaywallActionInterceptor');
     final Map<dynamic, dynamic>? plan = result['parameters']['plan'];
     final Map<dynamic, dynamic>? offer = result['parameters']['offer'];
-    final Map<dynamic, dynamic>? subscriptionOffer = result['parameters']['subscriptionOffer'];
+    final Map<dynamic, dynamic>? subscriptionOffer =
+        result['parameters']['subscriptionOffer'];
     return PaywallActionInterceptorResult(
         PLYPaywallInfo(
             result['info']['contentId'],
@@ -345,7 +346,9 @@ class Purchasely {
             result['parameters']['title'],
             plan != null ? transformToPLYPlan(plan) : null,
             offer != null ? transformToPLYPromoOffer(offer) : null,
-            subscriptionOffer != null ? transformToPLYSubscription(subscriptionOffer) : null,
+            subscriptionOffer != null
+                ? transformToPLYSubscription(subscriptionOffer)
+                : null,
             result['parameters']['presentation']));
   }
 
@@ -373,7 +376,8 @@ class Purchasely {
 
   static Future<bool> isEligibleForIntroOffer(String planVendorId) async {
     final bool isEligible = await _channel.invokeMethod(
-        'isEligibleForIntroOffer', <String, dynamic>{'planVendorId': planVendorId});
+        'isEligibleForIntroOffer',
+        <String, dynamic>{'planVendorId': planVendorId});
     return isEligible;
   }
 
@@ -505,12 +509,13 @@ class Purchasely {
     if (offer.isEmpty) return null;
 
     return PLYPromoOffer(
-        offer['vendorId'],
-        offer['storeOfferId'],
+      offer['vendorId'],
+      offer['storeOfferId'],
     );
   }
 
-  static PLYSubscriptionOffer? transformToPLYSubscription(Map<dynamic, dynamic> subscriptionOffer) {
+  static PLYSubscriptionOffer? transformToPLYSubscription(
+      Map<dynamic, dynamic> subscriptionOffer) {
     if (subscriptionOffer.isEmpty) return null;
 
     return PLYSubscriptionOffer(
@@ -532,29 +537,26 @@ class Purchasely {
       print(e);
     }
 
-    List<PLYPresentationPlan> plans = (presentation['plans'] as List).map((e) =>
-        PLYPresentationPlan(
-          e['planVendorId'],
-          e['storeProductId'],
-          e['basePlanId'],
-          e['offerId'])
-    ).toList();
+    List<PLYPresentationPlan>? plans = (presentation['plans'] as List?)
+        ?.map((e) => PLYPresentationPlan(e['planVendorId'], e['storeProductId'],
+            e['basePlanId'], e['offerId']))
+        .toList();
 
     Map<String, dynamic> metadata = {};
-    presentation['metadata'].forEach((key, value) {
+    presentation['metadata']?.forEach((key, value) {
       metadata[key] = value;
     });
 
     return PLYPresentation(
-      presentation['id'],
-      presentation['placementId'],
-      presentation['audienceId'],
-      presentation['abTestId'],
-      presentation['abTestVariantId'],
-      presentation['language'],
-      type,
-      plans,
-      metadata);
+        presentation['id'],
+        presentation['placementId'],
+        presentation['audienceId'],
+        presentation['abTestId'],
+        presentation['abTestVariantId'],
+        presentation['language'],
+        type,
+        plans,
+        metadata);
   }
 
   static Map<dynamic, dynamic> transformPLYPresentationToMap(
@@ -568,7 +570,14 @@ class Purchasely {
     presentationMap['abTestVariantId'] = presentation?.abTestVariantId;
     presentationMap['language'] = presentation?.language;
     presentationMap['type'] = presentation?.type.index;
-    presentationMap['plans'] = presentation?.plans;
+    presentationMap['plans'] = presentation?.plans
+        ?.map((e) => {
+              "basePlanId": e.basePlanId,
+              "offerId": e.offerId,
+              "planVendorId": e.planVendorId,
+              "storeProductId": e.storeProductId
+            })
+        .toList();
     presentationMap['metadata'] = presentation?.metadata;
 
     return presentationMap;
@@ -758,7 +767,8 @@ class PLYSubscriptionOffer {
   String? offerToken;
   String? offerId;
 
-  PLYSubscriptionOffer(this.subscriptionId, this.basePlanId, this.offerToken, this.offerId);
+  PLYSubscriptionOffer(
+      this.subscriptionId, this.basePlanId, this.offerToken, this.offerId);
 }
 
 class PLYProduct {
@@ -775,7 +785,8 @@ class PLYPresentationPlan {
   String? basePlanId;
   String? offerId;
 
-  PLYPresentationPlan(this.planVendorId, this.storeProductId, this.basePlanId, this.offerId);
+  PLYPresentationPlan(
+      this.planVendorId, this.storeProductId, this.basePlanId, this.offerId);
 }
 
 class PLYPresentation {
@@ -789,8 +800,16 @@ class PLYPresentation {
   List<PLYPresentationPlan>? plans;
   Map<String, dynamic> metadata;
 
-  PLYPresentation(this.id, this.placementId, this.audienceId, this.abTestId,
-      this.abTestVariantId, this.language, this.type, this.plans, this.metadata);
+  PLYPresentation(
+      this.id,
+      this.placementId,
+      this.audienceId,
+      this.abTestId,
+      this.abTestVariantId,
+      this.language,
+      this.type,
+      this.plans,
+      this.metadata);
 }
 
 class PLYSubscription {
@@ -828,8 +847,8 @@ class PLYPaywallActionParameters {
   PLYSubscriptionOffer? subscriptionOffer;
   String? presentation;
 
-  PLYPaywallActionParameters(
-      this.url, this.title, this.plan, this.offer, this.subscriptionOffer, this.presentation);
+  PLYPaywallActionParameters(this.url, this.title, this.plan, this.offer,
+      this.subscriptionOffer, this.presentation);
 }
 
 class PLYPaywallInfo {
