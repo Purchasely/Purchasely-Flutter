@@ -417,7 +417,7 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
         }
 
         if let controller = controller {
-            let navCtrl = UINavigationController(rootViewController: controller)
+            /*let navCtrl = UINavigationController(rootViewController: controller)
             navCtrl.navigationBar.isTranslucent = true
             navCtrl.navigationBar.setBackgroundImage(UIImage(), for: .default)
             navCtrl.navigationBar.shadowImage = UIImage()
@@ -427,10 +427,14 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
 
             if let isFullscreen = arguments?["isFullscreen"] as? Bool, isFullscreen {
                 navCtrl.modalPresentationStyle = .fullScreen
+            }*/
+            
+            if let isFullscreen = arguments?["isFullscreen"] as? Bool, isFullscreen {
+                controller.modalPresentationStyle = .fullScreen
             }
 
             DispatchQueue.main.async {
-                Purchasely.showController(navCtrl, type: .productPage)
+                Purchasely.showController(controller, type: .productPage)
             }
         } else {
             result(FlutterError.error(code: "-1", message: "You are using a running mode that prevent paywalls to be displayed", error: nil))
