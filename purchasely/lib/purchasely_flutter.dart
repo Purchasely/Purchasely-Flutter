@@ -537,13 +537,10 @@ class Purchasely {
       print(e);
     }
 
-    List<PLYPresentationPlan> plans = (presentation['plans'] as List).map((e) =>
-        PLYPresentationPlan(
-          e['planVendorId'],
-          e['storeProductId'],
-          e['basePlanId'],
-          e['offerId'])
-    ).toList();
+    List<PLYPresentationPlan> plans = (presentation['plans'] as List)
+        .map((e) => PLYPresentationPlan(e['planVendorId'], e['storeProductId'],
+            e['basePlanId'], e['offerId']))
+        .toList();
 
     Map<String, dynamic> metadata = {};
     presentation['metadata']?.forEach((key, value) {
@@ -573,27 +570,12 @@ class Purchasely {
     presentationMap['abTestVariantId'] = presentation?.abTestVariantId;
     presentationMap['language'] = presentation?.language;
     presentationMap['type'] = presentation?.type.index;
-<<<<<<< HEAD
-    presentationMap['plans'] = presentation?.plans
-        ?.map((e) => {
-              "basePlanId": e.basePlanId,
-              "offerId": e.offerId,
-              "planVendorId": e.planVendorId,
-              "storeProductId": e.storeProductId
-            })
-        .toList();
-    presentationMap['metadata'] = presentation?.metadata;
-||||||| parent of 3ab5201 (remove plan and metadata in presentation map to send)
-    presentationMap['plans'] = presentation?.plans;
-    presentationMap['metadata'] = presentation?.metadata;
-=======
 
     // Need to convert to list of map if we want to send it over to native bridge
     //presentationMap['plans'] = presentation?.plans;
 
     // No need to send metadata
     //presentationMap['metadata'] = presentation?.metadata;
->>>>>>> 3ab5201 (remove plan and metadata in presentation map to send)
 
     return presentationMap;
   }

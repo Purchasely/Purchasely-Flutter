@@ -1,3 +1,13 @@
+## 4.1.2
+🚨 Important: This SDK version uses StoreKit 2 by default. Read the [documentation](https://docs.purchasely.com/quick-start-1/sdk-configuration/storekit-2) for more information.
+If you did not configure StoreKit 2 in Purchasely console, the SDK will fallback to StoreKit 1.
+
+### Fixes for iOS:
+- Close button always visible even when deactived on Purchasely console
+- Infinite loader when cancelling purchase
+
+### Fix for Android:
+- Possible crash when saving user attributes if application was compiled with Java 8 due to Kotlinx Serialization [issue](https://github.com/Kotlin/kotlinx.serialization/issues/2326)
 ## 4.1.1
 🚨 Important: This SDK version uses StoreKit 2 by default. Read the [documentation](https://docs.purchasely.com/quick-start-1/sdk-configuration/storekit-2) for more information.
 If you did not configure StoreKit 2 in Purchasely console, the SDK will fallback to StoreKit 1.

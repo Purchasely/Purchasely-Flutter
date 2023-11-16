@@ -183,13 +183,13 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             }
         }
     }
-    
+
     private func isEligibleForIntroOffer(arguments: [String: Any]?, result: @escaping FlutterResult) {
         guard let arguments = arguments, let planVendorId = arguments["planVendorId"] as? String else {
             result(FlutterError.failedArgumentField("planVendorId", type: String.self))
             return
         }
-        
+
         DispatchQueue.main.async {
             Purchasely.plan(with: planVendorId) { plan in
                 plan.isUserEligibleForIntroductoryOffer { res in
@@ -208,7 +208,7 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             return
         }
 
-		Purchasely.setSdkBridgeVersion("4.1.1")
+		Purchasely.setSdkBridgeVersion("4.1.2")
         Purchasely.setAppTechnology(PLYAppTechnology.flutter)
 
         let logLevel = PLYLogger.LogLevel(rawValue: (arguments["logLevel"] as? Int) ?? PLYLogger.LogLevel.debug.rawValue) ?? PLYLogger.LogLevel.debug
@@ -239,7 +239,7 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             return
         }
 
-		Purchasely.setSdkBridgeVersion("4.1.1")
+		Purchasely.setSdkBridgeVersion("4.1.2")
         Purchasely.setAppTechnology(PLYAppTechnology.flutter)
 
         let logLevel = PLYLogger.LogLevel(rawValue: (arguments["logLevel"] as? Int) ?? PLYLogger.LogLevel.debug.rawValue) ?? PLYLogger.LogLevel.debug
@@ -314,7 +314,7 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
 
         self.purchaseResult = result
 
-        guard let presentationId = presentationMap["id"] as? String, 
+        guard let presentationId = presentationMap["id"] as? String,
                 let placementId = presentationMap["placementId"] as? String,
                 let presentationLoaded = self.presentationsLoaded.filter({ $0.id == presentationId && $0.placementId == placementId }).first,
                 let controller = presentationLoaded.controller else {
@@ -347,7 +347,7 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             return
         }
 
-        guard let presentationId = presentationMap["id"] as? String, 
+        guard let presentationId = presentationMap["id"] as? String,
                 let placementId = presentationMap["placementId"] as? String,
                 let presentationLoaded = self.presentationsLoaded.filter({ $0.id == presentationId && $0.placementId == placementId }).first else { return }
 
@@ -417,7 +417,7 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
         }
 
         if let controller = controller {
-            /*let navCtrl = UINavigationController(rootViewController: controller)
+            let navCtrl = UINavigationController(rootViewController: controller)
             navCtrl.navigationBar.isTranslucent = true
             navCtrl.navigationBar.setBackgroundImage(UIImage(), for: .default)
             navCtrl.navigationBar.shadowImage = UIImage()
@@ -427,14 +427,10 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
 
             if let isFullscreen = arguments?["isFullscreen"] as? Bool, isFullscreen {
                 navCtrl.modalPresentationStyle = .fullScreen
-            }*/
-            
-            if let isFullscreen = arguments?["isFullscreen"] as? Bool, isFullscreen {
-                controller.modalPresentationStyle = .fullScreen
             }
 
             DispatchQueue.main.async {
-                Purchasely.showController(controller, type: .productPage)
+                Purchasely.showController(navCtrl, type: .productPage)
             }
         } else {
             result(FlutterError.error(code: "-1", message: "You are using a running mode that prevent paywalls to be displayed", error: nil))
@@ -620,7 +616,7 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             }
         }
     }
-    
+
     private func signPromotionalOffer(arguments: [String: Any]?, result: @escaping FlutterResult) {
         guard let arguments = arguments,
               let storeProductId = arguments["storeProductId"] as? String,
@@ -656,7 +652,7 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
                 if let offerId = arguments["offerId"] as? String,
                    let storeOfferId = plan.promoOffers.first(where: { $0.vendorId == offerId })?.storeOfferId,
                    #available(iOS 12.2, macOS 12.0, tvOS 15.0, watchOS 8.0, *) {
-                    
+
                     Purchasely.purchaseWithPromotionalOffer(plan: plan, contentId: contentId, storeOfferId: storeOfferId) {
                         result(plan.toMap)
                     } failure: { error in
