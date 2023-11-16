@@ -164,7 +164,7 @@ class _MyAppState extends State<MyApp> {
   Future<void> displayPresentation() async {
     try {
       var result = await Purchasely.presentPresentationForPlacement(
-          "on_boarding",
+          "ONBOARDING",
           isFullscreen: false);
 
       switch (result.result) {
@@ -191,7 +191,7 @@ class _MyAppState extends State<MyApp> {
 
   Future<void> fetchPresentation() async {
     try {
-      var presentation = await Purchasely.fetchPresentation("onboarding");
+      var presentation = await Purchasely.fetchPresentation("ONBOARDING");
 
       if (presentation == null) {
         print("No presentation found");
