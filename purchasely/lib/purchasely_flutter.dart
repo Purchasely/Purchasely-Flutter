@@ -11,22 +11,10 @@ class Purchasely {
   static var events;
   static var purchases;
 
-  @Deprecated("User start method instead")
-  static Future<bool> startWithApiKey(String apiKey, List<String> stores,
-      String? userId, PLYLogLevel logLevel, PLYRunningMode runningMode) async {
-    return await _channel.invokeMethod('startWithApiKey', <String, dynamic>{
-      'apiKey': apiKey,
-      'stores': stores,
-      'userId': userId,
-      'logLevel': logLevel.index,
-      'runningMode': runningMode.index
-    });
-  }
-
   static Future<bool> start(
       {required final String apiKey,
       final List<String>? androidStores = const ['Google'],
-      final bool storeKit1 = false,
+      required bool storeKit1,
       final String? userId,
       final PLYLogLevel logLevel = PLYLogLevel.error,
       final PLYRunningMode runningMode = PLYRunningMode.full}) async {
