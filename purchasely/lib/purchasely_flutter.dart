@@ -11,6 +11,8 @@ class Purchasely {
   static var events;
   static var purchases;
 
+  // --- Public Methods ---
+
   static Future<bool> start(
       {required final String apiKey,
       final List<String>? androidStores = const ['Google'],
@@ -465,6 +467,13 @@ class Purchasely {
     });
   }
 
+  static Future<void> setThemeMode(PLYThemeMode mode) async {
+    return await _channel
+        .invokeMethod('setThemeMode', <String, dynamic>{'mode': mode.index});
+  }
+
+  // -- Private Methods --
+
   static PLYPlan? transformToPLYPlan(Map<dynamic, dynamic> plan) {
     if (plan.isEmpty) return null;
 
@@ -645,6 +654,8 @@ class Purchasely {
   }
 }
 
+// -- ENUMS --
+
 enum PLYLogLevel { debug, info, warn, error }
 
 enum PLYRunningMode { transactionOnly, observer, paywallObserver, full }
@@ -669,8 +680,11 @@ enum PLYAttribute {
   branchUserDeveloperIdentity,
   customerioUserEmail,
   customerioUserId,
-  moengageUniqueId
+  moengageUniqueId,
+  bacthCustomId,
 }
+
+enum PLYThemeMode { light, dark, system }
 
 enum PLYPurchaseResult { purchased, cancelled, restored }
 
@@ -701,6 +715,52 @@ enum PLYPaywallAction {
   open_presentation,
   promo_code,
 }
+
+enum PLYEventName {
+  APP_INSTALLED,
+  APP_CONFIGURED,
+  APP_UPDATED,
+  APP_STARTED,
+  CANCELLATION_REASON_PUBLISHED,
+  IN_APP_PURCHASING,
+  IN_APP_PURCHASED,
+  IN_APP_RESTORED,
+  IN_APP_DEFERRED,
+  IN_APP_PURCHASE_FAILED,
+  IN_APP_NOT_AVAILABLE,
+  PURCHASE_CANCELLED_BY_APP,
+  CAROUSEL_SLIDE_SWIPED,
+  DEEPLINK_OPENED,
+  LINK_OPENED,
+  LOGIN_TAPPED,
+  PLAN_SELECTED,
+  PRESENTATION_VIEWED,
+  PRESENTATION_OPENED,
+  PRESENTATION_SELECTED,
+  PRESENTATION_LOADED,
+  PRESENTATION_CLOSED,
+  PROMO_CODE_TAPPED,
+  PURCHASE_CANCELLED,
+  PURCHASE_TAPPED,
+  RESTORE_TAPPED,
+  RECEIPT_CREATED,
+  RECEIPT_VALIDATED,
+  RECEIPT_FAILED,
+  RESTORE_STARTED,
+  RESTORE_SUCCEEDED,
+  RESTORE_FAILED,
+  STORE_PRODUCT_FETCH_FAILED,
+  SUBSCRIPTION_CONTENT_USED,
+  SUBSCRIPTIONS_LIST_VIEWED,
+  SUBSCRIPTION_DETAILS_VIEWED,
+  SUBSCRIPTION_CANCEL_TAPPED,
+  SUBSCRIPTION_PLAN_TAPPED,
+  SUBSCRIPTIONS_TRANSFERRED,
+  USER_LOGGED_IN,
+  USER_LOGGED_OUT
+}
+
+// -- CLASSES --
 
 class PLYPlan {
   String? vendorId;
@@ -845,50 +905,6 @@ class PLYPaywallInfo {
 
   PLYPaywallInfo(this.contentId, this.presentationId, this.placementId,
       this.abTestId, this.abTestVariantId);
-}
-
-enum PLYEventName {
-  APP_INSTALLED,
-  APP_CONFIGURED,
-  APP_UPDATED,
-  APP_STARTED,
-  CANCELLATION_REASON_PUBLISHED,
-  IN_APP_PURCHASING,
-  IN_APP_PURCHASED,
-  IN_APP_RESTORED,
-  IN_APP_DEFERRED,
-  IN_APP_PURCHASE_FAILED,
-  IN_APP_NOT_AVAILABLE,
-  PURCHASE_CANCELLED_BY_APP,
-  CAROUSEL_SLIDE_SWIPED,
-  DEEPLINK_OPENED,
-  LINK_OPENED,
-  LOGIN_TAPPED,
-  PLAN_SELECTED,
-  PRESENTATION_VIEWED,
-  PRESENTATION_OPENED,
-  PRESENTATION_SELECTED,
-  PRESENTATION_LOADED,
-  PRESENTATION_CLOSED,
-  PROMO_CODE_TAPPED,
-  PURCHASE_CANCELLED,
-  PURCHASE_TAPPED,
-  RESTORE_TAPPED,
-  RECEIPT_CREATED,
-  RECEIPT_VALIDATED,
-  RECEIPT_FAILED,
-  RESTORE_STARTED,
-  RESTORE_SUCCEEDED,
-  RESTORE_FAILED,
-  STORE_PRODUCT_FETCH_FAILED,
-  SUBSCRIPTION_CONTENT_USED,
-  SUBSCRIPTIONS_LIST_VIEWED,
-  SUBSCRIPTION_DETAILS_VIEWED,
-  SUBSCRIPTION_CANCEL_TAPPED,
-  SUBSCRIPTION_PLAN_TAPPED,
-  SUBSCRIPTIONS_TRANSFERRED,
-  USER_LOGGED_IN,
-  USER_LOGGED_OUT
 }
 
 class PLYEventPropertyPlan {
