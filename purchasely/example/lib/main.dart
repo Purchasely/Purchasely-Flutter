@@ -29,7 +29,7 @@ class _MyAppState extends State<MyApp> {
       Purchasely.readyToOpenDeeplink(true);
 
       bool configured = await Purchasely.start(
-          apiKey: 'fcb39be4-2ba4-4db7-bde3-2a5a1e20745d');
+          apiKey: 'fcb39be4-2ba4-4db7-bde3-2a5a1e20745d', storeKit1: true);
 
       // Default values
       /*bool configured = await Purchasely.start(
@@ -48,7 +48,11 @@ class _MyAppState extends State<MyApp> {
 
       //Purchasely.setLogLevel(LogLevel.debug);
 
-      Purchasely.setAttribute(PLYAttribute.adjust_id, "value");
+      Purchasely.setAttribute(
+          PLYAttribute.amplitudeUserId, "amplitude_user_id");
+      Purchasely.setAttribute(PLYAttribute.adjust_id, "adjust_user_id");
+      Purchasely.setAttribute(
+          PLYAttribute.moengageUniqueId, "momengage_unique_id");
 
       Purchasely.setLanguage("en");
 

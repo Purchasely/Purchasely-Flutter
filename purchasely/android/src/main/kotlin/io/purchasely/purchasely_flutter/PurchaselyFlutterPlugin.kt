@@ -354,7 +354,7 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
           .userId(userId)
           .build()
 
-	  Purchasely.sdkBridgeVersion = "4.1.2"
+	  Purchasely.sdkBridgeVersion = "4.1.3"
       Purchasely.appTechnology = PLYAppTechnology.FLUTTER
 
       Purchasely.start { isConfigured, error ->
@@ -645,26 +645,26 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
       value?.let {
           Purchasely.setAttribute(
               when(attribute) {
-                  1 -> Attribute.AMPLITUDE_USER_ID
-                  2 -> Attribute.AMPLITUDE_DEVICE_ID
-                  3 -> Attribute.FIREBASE_APP_INSTANCE_ID
-                  4 -> Attribute.AIRSHIP_CHANNEL_ID
-                  5 -> Attribute.AIRSHIP_USER_ID
-                  6 -> Attribute.BATCH_INSTALLATION_ID
-                  7 -> Attribute.ADJUST_ID
-                  8 -> Attribute.APPSFLYER_ID
-                  9 -> Attribute.ONESIGNAL_PLAYER_ID
-                  10 -> Attribute.MIXPANEL_DISTINCT_ID
-                  11 -> Attribute.CLEVER_TAP_ID
-                  12 -> Attribute.SENDINBLUE_USER_EMAIL
-                  13 -> Attribute.ITERABLE_USER_ID
-                  14 -> Attribute.ITERABLE_USER_EMAIL
-                  15 -> Attribute.AT_INTERNET_ID_CLIENT
-                  16 -> Attribute.MPARTICLE_USER_ID
-                  17 -> Attribute.BRANCH_USER_DEVELOPER_IDENTITY
-                  18-> Attribute.CUSTOMERIO_USER_EMAIL
-                  19 -> Attribute.CUSTOMERIO_USER_ID
-                  20 -> Attribute.MOENGAGE_UNIQUE_ID
+                  0 -> Attribute.AMPLITUDE_USER_ID
+                  1 -> Attribute.AMPLITUDE_DEVICE_ID
+                  2 -> Attribute.FIREBASE_APP_INSTANCE_ID
+                  3 -> Attribute.AIRSHIP_CHANNEL_ID
+                  4 -> Attribute.AIRSHIP_USER_ID
+                  5 -> Attribute.BATCH_INSTALLATION_ID
+                  6 -> Attribute.ADJUST_ID
+                  7 -> Attribute.APPSFLYER_ID
+                  8 -> Attribute.ONESIGNAL_PLAYER_ID
+                  9 -> Attribute.MIXPANEL_DISTINCT_ID
+                  10 -> Attribute.CLEVER_TAP_ID
+                  11 -> Attribute.SENDINBLUE_USER_EMAIL
+                  12 -> Attribute.ITERABLE_USER_ID
+                  13 -> Attribute.ITERABLE_USER_EMAIL
+                  14 -> Attribute.AT_INTERNET_ID_CLIENT
+                  15 -> Attribute.MPARTICLE_USER_ID
+                  16 -> Attribute.BRANCH_USER_DEVELOPER_IDENTITY
+                  17-> Attribute.CUSTOMERIO_USER_EMAIL
+                  18 -> Attribute.CUSTOMERIO_USER_ID
+                  19 -> Attribute.MOENGAGE_UNIQUE_ID
                   else -> Attribute.AMPLITUDE_USER_ID
               },
               it
