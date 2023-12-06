@@ -1,3 +1,32 @@
+## 4.2.0
+### 🌙 Native Dark Mode Support for Presentations
+
+Dark mode support has been implemented for screens & paywalls, automatically adapting to the user’s system settings for an improved viewing comfort. In the Console, you can now define 2 color sets (light & dark) for the same paywall.
+
+Developers can override the default setting with `Purchasely.setThemeMode(PLYThemeMode.dark);` or `Purchasely.setThemeMode(PLYThemeMode.light);`, enabling more control over the app’s appearance and accommodating user preferences
+
+### 🔍 Augmented Session User Attributes
+
+Additional attributes have been added to track user session activity.
+
+These attributes provide detailed insights into user engagement with the app, like session frequency, interaction with paywalls, and purchase activities.
+
+This level of detail aids in fine-tuning user engagement strategies and understanding user behavior patterns more accurately
+
+### 🏷 Tags System Extended to All Labels
+
+The tags system has been expanded to include all label types, allowing for dynamic display of pricing, introductory offers or promotional offers for any plan any where in the paywalls (an not only in the buttons). This update gives more flexibility in UI customization and dynamic content presentation.
+
+## Improvements and Optimizations
+
+**🔄 New `batchCustomUserId` Attribute for External Integrations**: Enhances data syncing with external systems.
+
+🔧 **Setting a StoreKit version is now mandatory**
+You must know explicitly set a StoreKit setting on SDK initialization
+```dart
+await Purchasely.start(
+          apiKey: 'YOUR_API_KEY', storeKit1: true); // true for StoreKit 1, false for StoreKit 2
+```
 ## 4.1.3
 🚨 Important: This SDK version uses StoreKit 2 by default. Read the [documentation](https://docs.purchasely.com/quick-start-1/sdk-configuration/storekit-2) for more information.
 If you did not configure StoreKit 2 in Purchasely console, the SDK will fallback to StoreKit 1.
@@ -18,7 +47,7 @@ If you did not configure StoreKit 2 in Purchasely console, the SDK will fallback
 🚨 Important: This SDK version uses StoreKit 2 by default. Read the [documentation](https://docs.purchasely.com/quick-start-1/sdk-configuration/storekit-2) for more information.
 If you did not configure StoreKit 2 in Purchasely console, the SDK will fallback to StoreKit 1.
 
-### Improvements:
+## Improvements:
 - Purchase with promo offer
 - `isEligibleForIntroOffer` method
 - Metadata handling for 'Use your own paywall'
@@ -28,7 +57,6 @@ If you did not configure StoreKit 2 in Purchasely console, the SDK will fallback
 
 ### Android only:
 - Added `subscriptionOffer` to Paywall Action Interceptor parameters
-
 ## 4.0.1
 🚨 Important: This SDK version uses StoreKit 2 by default. Read the [documentation](https://docs.purchasely.com/quick-start-1/sdk-configuration/storekit-2) for more information.
 If you did not configure StoreKit 2 in Purchasely console, the SDK will fallback to StoreKit 1.

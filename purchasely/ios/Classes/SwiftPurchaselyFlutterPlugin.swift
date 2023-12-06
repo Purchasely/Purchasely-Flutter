@@ -44,8 +44,6 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
         switch call.method {
         case "start":
             start(arguments: call.arguments as? [String: Any], result: result)
-        case "startWithApiKey":
-            startWithApiKey(arguments: call.arguments as? [String: Any], result: result)
         case "close":
             DispatchQueue.main.async {
                 result(true)
@@ -106,6 +104,8 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             userSubscriptions(result)
         case "presentSubscriptions":
             presentSubscriptions()
+        case "setThemeMode":
+            setThemeMode(arguments: arguments)
         case "setAttribute":
             setAttribute(arguments: arguments)
         case "setPaywallActionInterceptor":
@@ -208,7 +208,7 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             return
         }
 
-		Purchasely.setSdkBridgeVersion("4.1.3")
+		Purchasely.setSdkBridgeVersion("4.2.0")
         Purchasely.setAppTechnology(PLYAppTechnology.flutter)
 
         let logLevel = PLYLogger.LogLevel(rawValue: (arguments["logLevel"] as? Int) ?? PLYLogger.LogLevel.debug.rawValue) ?? PLYLogger.LogLevel.debug
@@ -223,34 +223,6 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
                              runningMode: runningMode,
                              paywallActionsInterceptor: nil,
                              storekitSettings: storeKitSetting,
-                             logLevel: logLevel) { success, error in
-                if success {
-                    result(success)
-                } else {
-                    result(FlutterError.error(code: "0", message: "Purchasely SDK not configured", error: error))
-                }
-            }
-        }
-    }
-
-    private func startWithApiKey(arguments: [String: Any]?, result: @escaping FlutterResult) {
-        guard let arguments = arguments, let apiKey = arguments["apiKey"] as? String else {
-            result(FlutterError.failedArgumentField("apiKey", type: String.self))
-            return
-        }
-
-		Purchasely.setSdkBridgeVersion("4.1.3")
-        Purchasely.setAppTechnology(PLYAppTechnology.flutter)
-
-        let logLevel = PLYLogger.LogLevel(rawValue: (arguments["logLevel"] as? Int) ?? PLYLogger.LogLevel.debug.rawValue) ?? PLYLogger.LogLevel.debug
-        let userId = arguments["userId"] as? String
-        let runningMode = PLYRunningMode(rawValue: (arguments["runningMode"] as? Int) ?? PLYRunningMode.full.rawValue) ?? PLYRunningMode.full
-
-        DispatchQueue.main.async {
-            Purchasely.start(withAPIKey: apiKey,
-                             appUserId: userId,
-                             runningMode: runningMode,
-                             paywallActionsInterceptor: nil,
                              logLevel: logLevel) { success, error in
                 if success {
                     result(success)
@@ -702,6 +674,14 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
                 Purchasely.showController(navCtrl, type: .subscriptionList)
             }
         }
+    }
+    
+    private func setThemeMode(arguments: [String: Any]?) {
+        guard let arguments = arguments, let mode = arguments["mode"] as? Int, let themeMode = Purchasely.PLYThemeMode(rawValue: mode) else {
+            return
+        }
+
+        Purchasely.setThemeMode(themeMode)
     }
 
     private func setAttribute(arguments: [String: Any]?) {
