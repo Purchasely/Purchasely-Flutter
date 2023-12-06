@@ -19,7 +19,7 @@ The tags system has been expanded to include all label types, allowing for dynam
 
 ## Improvements and Optimizations
 
-**🔄 New `batchCustomId` Attribute for External Integrations**: Enhances data syncing with external systems.
+**🔄 New `batchCustomUserId` Attribute for External Integrations**: Enhances data syncing with external systems.
 
 🔧 **Setting a StoreKit version is now mandatory**
 You must know explicitly set a StoreKit setting on SDK initialization

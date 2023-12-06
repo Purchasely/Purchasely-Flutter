@@ -681,7 +681,7 @@ enum PLYAttribute {
   customerioUserEmail,
   customerioUserId,
   moengageUniqueId,
-  bacthCustomId,
+  batchCustomUserId,
 }
 
 enum PLYThemeMode { light, dark, system }
