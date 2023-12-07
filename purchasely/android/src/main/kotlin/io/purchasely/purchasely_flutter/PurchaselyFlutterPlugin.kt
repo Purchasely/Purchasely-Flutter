@@ -623,34 +623,9 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
     }
 
     private fun setAttribute(attribute: Int?, value: String?) {
-        value?.let {
-            Purchasely.setAttribute(
-                when(attribute) {
-                    0 -> Attribute.AMPLITUDE_USER_ID
-                    1 -> Attribute.AMPLITUDE_DEVICE_ID
-                    2 -> Attribute.FIREBASE_APP_INSTANCE_ID
-                    3 -> Attribute.AIRSHIP_CHANNEL_ID
-                    4 -> Attribute.AIRSHIP_USER_ID
-                    5 -> Attribute.BATCH_INSTALLATION_ID
-                    6 -> Attribute.ADJUST_ID
-                    7 -> Attribute.APPSFLYER_ID
-                    8 -> Attribute.ONESIGNAL_PLAYER_ID
-                    9 -> Attribute.MIXPANEL_DISTINCT_ID
-                    10 -> Attribute.CLEVER_TAP_ID
-                    11 -> Attribute.SENDINBLUE_USER_EMAIL
-                    12 -> Attribute.ITERABLE_USER_ID
-                    13 -> Attribute.ITERABLE_USER_EMAIL
-                    14 -> Attribute.AT_INTERNET_ID_CLIENT
-                    15 -> Attribute.MPARTICLE_USER_ID
-                    16 -> Attribute.BRANCH_USER_DEVELOPER_IDENTITY
-                    17-> Attribute.CUSTOMERIO_USER_EMAIL
-                    18 -> Attribute.CUSTOMERIO_USER_ID
-                    19 -> Attribute.MOENGAGE_UNIQUE_ID
-                    else -> Attribute.AMPLITUDE_USER_ID
-                },
-                it
-            )
-        }
+        if(attribute == null || value == null) return
+
+        Purchasely.setAttribute(attribute = Attribute.values()[attribute], value = value)
     }
 
     fun setUserAttributeWithString(key: String, value: String) {
