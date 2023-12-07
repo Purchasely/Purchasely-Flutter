@@ -661,8 +661,6 @@ enum PLYLogLevel { debug, info, warn, error }
 enum PLYRunningMode { transactionOnly, observer, paywallObserver, full }
 
 enum PLYAttribute {
-  amplitudeUserId,
-  amplitudeDeviceId,
   firebase_app_instance_id,
   airship_channel_id,
   airship_user_id,
@@ -673,14 +671,17 @@ enum PLYAttribute {
   mixpanel_distinct_id,
   clever_tap_id,
   sendinblueUserEmail,
-  iterableUserId,
   iterableUserEmail,
+  iterableUserId,
   atInternetIdClient,
   mParticleUserId,
-  branchUserDeveloperIdentity,
-  customerioUserEmail,
   customerioUserId,
+  customerioUserEmail,
+  branchUserDeveloperIdentity,
+  amplitudeUserId,
+  amplitudeDeviceId,
   moengageUniqueId,
+  oneSignalExternalId,
   batchCustomUserId,
 }
 
