@@ -299,17 +299,9 @@ class _MyAppState extends State<MyApp> {
     print('restored ? $restored');
   }
 
-    Future<void> synchronize() async {
-    bool restored;
-    print('start synchronization');
-    try {
-      restored = await Purchasely.synchronize();
-    } catch (e) {
-      print('Exception $e');
-      restored = false;
-    }
-
-    print('synchronized ? $restored');
+  Future<void> synchronize() async {
+    Purchasely.synchronize();
+    print('synchronization with Purchasely');
   }
 
   Future<void> hidePresentation() async {

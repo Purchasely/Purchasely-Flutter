@@ -144,10 +144,8 @@ class Purchasely {
     return restored;
   }
 
-  static Future<bool> synchronize() async {
-    final bool synchronized =
-        await _channel.invokeMethod('synchronize');
-    return synchronized;
+  static Future<void> synchronize() async {
+    return await _channel.invokeMethod('synchronize');
   }
 
   static Future<String> get anonymousUserId async {

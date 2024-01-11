@@ -514,9 +514,9 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
     private func synchronize(_ result: @escaping FlutterResult) {
         DispatchQueue.main.async {
             Purchasely.synchronize {
-                result(true)
+                //result(true)
             } failure: { error in
-                result(FlutterError.error(code: "-1", message: "Synchronization failed", error: error))
+                //result(FlutterError.error(code: "-1", message: "Synchronization failed", error: error))
             }
         }
     }
@@ -687,7 +687,7 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             }
         }
     }
-    
+
     private func setThemeMode(arguments: [String: Any]?) {
         guard let arguments = arguments, let mode = arguments["mode"] as? Int, let themeMode = Purchasely.PLYThemeMode(rawValue: mode) else {
             return
