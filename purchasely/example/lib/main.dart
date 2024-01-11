@@ -299,6 +299,19 @@ class _MyAppState extends State<MyApp> {
     print('restored ? $restored');
   }
 
+    Future<void> synchronize() async {
+    bool restored;
+    print('start synchronization');
+    try {
+      restored = await Purchasely.synchronize();
+    } catch (e) {
+      print('Exception $e');
+      restored = false;
+    }
+
+    print('synchronized ? $restored');
+  }
+
   Future<void> hidePresentation() async {
     Purchasely.hidePresentation();
   }
@@ -418,6 +431,15 @@ class _MyAppState extends State<MyApp> {
                 restoreAllProducts();
               },
               child: const Text('Restore purchases'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.only(left: 20.0, right: 30.0),
+              ),
+              onPressed: () {
+                synchronize();
+              },
+              child: const Text('Synchronize'),
             ),
           ],
         )),

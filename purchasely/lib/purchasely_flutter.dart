@@ -144,6 +144,12 @@ class Purchasely {
     return restored;
   }
 
+  static Future<bool> synchronize() async {
+    final bool synchronized =
+        await _channel.invokeMethod('synchronize');
+    return synchronized;
+  }
+
   static Future<String> get anonymousUserId async {
     final String id = await _channel.invokeMethod('getAnonymousUserId');
     return id;
@@ -301,10 +307,6 @@ class Purchasely {
   static Future<void> setAttribute(PLYAttribute attribute, String value) async {
     return await _channel.invokeMethod('setAttribute',
         <String, dynamic>{'attribute': attribute.index, 'value': value});
-  }
-
-  static Future<void> synchronize() async {
-    return await _channel.invokeMethod('synchronize');
   }
 
   static Future<PresentPresentationResult>
