@@ -1,3 +1,5 @@
+## 4.2.2
+Improvements and bug fixes.
 ## 4.2.1
 Improvements and bug fixes.
 ## 4.2.0

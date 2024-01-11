@@ -70,6 +70,8 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             restoreAllProducts(result)
         case "silentRestoreAllProducts":
             silentRestoreAllProducts(result)
+        case "synchronize":
+            synchronize(result)
         case "getAnonymousUserId":
             DispatchQueue.main.async { [weak self] in
                 guard let `self` = self else { return }
@@ -136,7 +138,7 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             clearUserAttribute(arguments: arguments)
         case "clearUserAttributes":
             clearUserAttributes()
-        case "synchronize", "displaySubscriptionCancellationInstruction":
+        case "displaySubscriptionCancellationInstruction":
             result(FlutterMethodNotImplemented)
         case "isAnonymous":
             isAnonymous(result: result)
@@ -208,7 +210,7 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             return
         }
 
-		Purchasely.setSdkBridgeVersion("4.2.1")
+		Purchasely.setSdkBridgeVersion("4.2.2")
         Purchasely.setAppTechnology(PLYAppTechnology.flutter)
 
         let logLevel = PLYLogger.LogLevel(rawValue: (arguments["logLevel"] as? Int) ?? PLYLogger.LogLevel.debug.rawValue) ?? PLYLogger.LogLevel.debug
@@ -509,6 +511,16 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
         }
     }
 
+    private func synchronize(_ result: @escaping FlutterResult) {
+        DispatchQueue.main.async {
+            Purchasely.synchronize {
+                //result(true)
+            } failure: { error in
+                //result(FlutterError.error(code: "-1", message: "Synchronization failed", error: error))
+            }
+        }
+    }
+
     private func getAnonymousUserId() -> String {
         return Purchasely.anonymousUserId
     }
@@ -675,7 +687,7 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             }
         }
     }
-    
+
     private func setThemeMode(arguments: [String: Any]?) {
         guard let arguments = arguments, let mode = arguments["mode"] as? Int, let themeMode = Purchasely.PLYThemeMode(rawValue: mode) else {
             return

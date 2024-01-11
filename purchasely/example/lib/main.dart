@@ -299,6 +299,11 @@ class _MyAppState extends State<MyApp> {
     print('restored ? $restored');
   }
 
+  Future<void> synchronize() async {
+    Purchasely.synchronize();
+    print('synchronization with Purchasely');
+  }
+
   Future<void> hidePresentation() async {
     Purchasely.hidePresentation();
   }
@@ -418,6 +423,15 @@ class _MyAppState extends State<MyApp> {
                 restoreAllProducts();
               },
               child: const Text('Restore purchases'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.only(left: 20.0, right: 30.0),
+              ),
+              onPressed: () {
+                synchronize();
+              },
+              child: const Text('Synchronize'),
             ),
           ],
         )),
