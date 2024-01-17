@@ -1,3 +1,8 @@
+## 4.2.3
+### Fixes for Android
+- Incorrect offer selected when purchasing a developer determined offer (eligible to all users) but also eligible to introductory offer (eligible to new users only). This impact the Winback/Retention offer feature of Purchasely where the offer chosen may be replaced by an introductory offer when the user never subscribed before
+### Fixes for iOS
+- minor bug fixes
 ## 4.2.2
 Improvements and bug fixes.
 ## 4.2.1
