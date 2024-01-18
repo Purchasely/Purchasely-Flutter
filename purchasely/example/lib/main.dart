@@ -3,7 +3,10 @@ import 'dart:async';
 import 'dart:developer';
 import 'dart:io';
 
+import 'package:purchasely_flutter/native_view_widget.dart';
 import 'package:purchasely_flutter/purchasely_flutter.dart';
+
+import 'presentation_screen.dart';
 
 void main() {
   runApp(const MyApp());
@@ -12,11 +15,14 @@ void main() {
 class MyApp extends StatefulWidget {
   const MyApp({Key? key}) : super(key: key);
 
+
   @override
   _MyAppState createState() => _MyAppState();
 }
 
 class _MyAppState extends State<MyApp> {
+  final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
   @override
   void initState() {
     super.initState();
@@ -195,6 +201,18 @@ class _MyAppState extends State<MyApp> {
     }
   }
 
+  Future<void> displayPresentationNativeView() async {
+    navigatorKey.currentState?.push(
+      MaterialPageRoute(builder: (context) => PresentationScreen(
+        onClose: () {
+          navigatorKey.currentState?.pop();
+        },
+      )),
+    );
+  }
+
+
+
   Future<void> fetchPresentation() async {
     try {
       var presentation = await Purchasely.fetchPresentation("ONBOARDING");
@@ -327,6 +345,7 @@ class _MyAppState extends State<MyApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: navigatorKey,
       home: Scaffold(
         appBar: AppBar(
           title: const Text('Plugin example app'),
@@ -344,6 +363,15 @@ class _MyAppState extends State<MyApp> {
                 displayPresentation();
               },
               child: const Text('Display presentation'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.only(left: 20.0, right: 30.0),
+              ),
+              onPressed: () {
+                displayPresentationNativeView();
+              },
+              child: const Text('Display presentation (Native View)'),
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(

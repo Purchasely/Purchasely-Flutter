@@ -98,6 +98,10 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
             }
 
         })
+
+        flutterPluginBinding
+            .platformViewRegistry
+            .registerViewFactory(NativeViewFactory.VIEW_TYPE_ID, NativeViewFactory(flutterPluginBinding.binaryMessenger))
     }
 
     override fun onMethodCall(@NonNull call: MethodCall, @NonNull result: Result) {
