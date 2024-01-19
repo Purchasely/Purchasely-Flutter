@@ -3,7 +3,6 @@ import 'dart:async';
 import 'dart:developer';
 import 'dart:io';
 
-import 'package:purchasely_flutter/native_view_widget.dart';
 import 'package:purchasely_flutter/purchasely_flutter.dart';
 
 import 'presentation_screen.dart';
@@ -202,8 +201,18 @@ class _MyAppState extends State<MyApp> {
   }
 
   Future<void> displayPresentationNativeView() async {
+    var presentation = await Purchasely.fetchPresentation("Settings");
     navigatorKey.currentState?.push(
       MaterialPageRoute(builder: (context) => PresentationScreen(
+        properties: {
+          'presentation': presentation,
+          'presentationId': 'TF1',
+          'placementId': null,
+          'contentId': null,
+        },
+        onLoaded: () {
+          print('Presentation loaded');
+        },
         onClose: () {
           navigatorKey.currentState?.pop();
         },
@@ -348,13 +357,12 @@ class _MyAppState extends State<MyApp> {
       navigatorKey: navigatorKey,
       home: Scaffold(
         appBar: AppBar(
-          title: const Text('Plugin example app'),
+          title: const Text('Purchasely Flutter Sample'),
         ),
         body: Center(
             child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
-            const Text('Purchasely sample'),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.only(left: 20.0, right: 30.0),

@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/services.dart';
 import 'package:collection/collection.dart';
 
+import 'native_view_widget.dart';
+
 class Purchasely {
   static const MethodChannel _channel = const MethodChannel('purchasely');
   static const EventChannel _stream = EventChannel('purchasely-events');
@@ -52,6 +54,23 @@ class Purchasely {
     });
     return PresentPresentationResult(PLYPurchaseResult.values[result['result']],
         transformToPLYPlan(result['plan']));
+  }
+
+  static PLYPresentationView? getPresentationView({
+    required Function onLoaded,
+    required Function onClose,
+    PLYPresentation? presentation,
+    String? presentationId,
+    String? placementId,
+    String? contentId,
+  }) {
+    return PLYPresentationView(
+        onLoaded: onLoaded,
+        onClose: onClose,
+        presentation: presentation,
+        presentationId: presentationId,
+        placementId: placementId,
+        contentId: contentId);
   }
 
   static Future<void> clientPresentationDisplayed(
@@ -835,6 +854,15 @@ class PLYPresentationPlan {
 
   PLYPresentationPlan(
       this.planVendorId, this.storeProductId, this.basePlanId, this.offerId);
+
+  Map<String, dynamic> toMap() {
+    return {
+      'planVendorId': planVendorId,
+      'storeProductId': storeProductId,
+      'basePlanId': basePlanId,
+      'offerId': offerId,
+    };
+  }
 }
 
 class PLYPresentation {
@@ -858,6 +886,20 @@ class PLYPresentation {
       this.type,
       this.plans,
       this.metadata);
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'placementId': placementId,
+      'audienceId': audienceId,
+      'abTestId': abTestId,
+      'abTestVariantId': abTestVariantId,
+      'language': language,
+      'type': type.toString(),
+      'plans': plans?.map((plan) => plan.toMap()).toList(),
+      'metadata': metadata,
+    };
+  }
 }
 
 class PLYSubscription {
