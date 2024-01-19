@@ -7,12 +7,15 @@ class PresentationScreen extends StatelessWidget {
   final Function onLoaded;
   final Map<String, dynamic> properties;
 
-  PresentationScreen({required this.properties, required this.onClose, required this.onLoaded});
+  PresentationScreen(
+      {required this.properties,
+      required this.onClose,
+      required this.onLoaded});
 
   @override
   Widget build(BuildContext context) {
-    PLYPresentationView? presentationView =
-    Purchasely.getPresentationView(
+
+    PLYPresentationView? presentationView = Purchasely.getPresentationView(
       onLoaded: onLoaded,
       onClose: onClose,
       presentation: properties['presentation'],
@@ -20,7 +23,6 @@ class PresentationScreen extends StatelessWidget {
       placementId: properties['placementId'],
       contentId: properties['contentId'],
     );
-
 
     return Scaffold(
       body: Column(

@@ -795,7 +795,7 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
     }
 
     private fun onProcessAction(processAction: Boolean) {
-        productActivity?.activity?.get()?.let {
+        activity?.let {
             it.runOnUiThread {
                 paywallActionHandler?.invoke(processAction)
             }
