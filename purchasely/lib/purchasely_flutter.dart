@@ -611,13 +611,15 @@ class Purchasely {
             element['is_default'])));
 
     List<PLYEventPropertyCarousel> carousels = new List.empty(growable: true);
-    properties['carousels']?.forEach((element) => carousels.add(
-        PLYEventPropertyCarousel(
-            element['selected_slide'],
-            element['number_of_slides'],
-            element['is_carousel_auto_playing'],
-            element['default_slide'],
-            element['previous_slide'])));
+    properties['carousels']?.forEach((element) {
+      bool isAutoPlaying = element['is_carousel_auto_playing'] ?? false;
+      carousels.add(PLYEventPropertyCarousel(
+          element['selected_slide'],
+          element['number_of_slides'],
+          isAutoPlaying,
+          element['default_slide'],
+          element['previous_slide']));
+    });
 
     List<PLYEventPropertySubscription> subscriptions =
         new List.empty(growable: true);

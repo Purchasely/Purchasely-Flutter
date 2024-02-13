@@ -24,7 +24,6 @@ import io.purchasely.billing.Store
 import io.purchasely.ext.*
 import io.purchasely.ext.EventListener
 import io.purchasely.models.PLYPlan
-import io.purchasely.models.PLYPromoOffer
 import io.purchasely.models.PLYPresentationPlan
 import io.purchasely.models.PLYProduct
 import kotlinx.coroutines.*
@@ -118,7 +117,7 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
             }
             "close" -> {
                 close()
-                result.success(true)
+                result.safeSuccess(true)
             }
             "setDefaultPresentationResultHandler" -> setDefaultPresentationResultHandler(result)
             "synchronize" -> synchronize()
@@ -149,7 +148,7 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
             }
             "presentProductWithIdentifier" -> {
                 val productId = call.argument<String>("productVendorId") ?: let {
-                    result.error("-1", "product vendor id must not be null", null)
+                    result.safeError("-1", "product vendor id must not be null", null)
                     return
                 }
                 presentProductWithIdentifier(
@@ -162,7 +161,7 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
             }
             "presentPlanWithIdentifier" -> {
                 val planId = call.argument<String>("planVendorId") ?: let {
-                    result.error("-1", "plan vendor id must not be null", null)
+                    result.safeError("-1", "plan vendor id must not be null", null)
                     return
                 }
                 presentPlanWithIdentifier(
@@ -175,22 +174,22 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
             }
             "restoreAllProducts" -> restoreAllProducts(result)
             "silentRestoreAllProducts" -> restoreAllProducts(result)
-            "getAnonymousUserId" -> result.success(getAnonymousUserId())
-            "isAnonymous" -> result.success(isAnonymous())
+            "getAnonymousUserId" -> result.safeSuccess(getAnonymousUserId())
+            "isAnonymous" -> result.safeSuccess(isAnonymous())
             "isEligibleForIntroOffer" -> {
                 launch {
                     val planVendorId = call.argument<String>("planVendorId")
                     if(planVendorId == null) {
-                        result.error("-1", "planVendorId must not be null", null)
+                        result.safeError("-1", "planVendorId must not be null", null)
                         return@launch
                     }
 
-                    result.success(isEligibleForIntroOffer(planVendorId))
+                    result.safeSuccess(isEligibleForIntroOffer(planVendorId))
                 }
             }
             "userLogin" -> {
                 val userId = call.argument<String>("userId") ?: let {
-                    result.error("-1", "user id must not be null", null)
+                    result.safeError("-1", "user id must not be null", null)
                     return
                 }
                 userLogin(userId, result)
@@ -198,19 +197,19 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
             "userLogout" -> userLogout()
             "setLogLevel" -> {
                 setLogLevel(call.argument<Int>("logLevel"))
-                result.success(true)
+                result.safeSuccess(true)
             }
             "readyToOpenDeeplink" -> {
                 readyToOpenDeeplink(call.argument<Boolean>("readyToOpenDeeplink"))
-                result.success(true)
+                result.safeSuccess(true)
             }
             "setLanguage" -> {
                 setLanguage(call.argument<String>("language"))
-                result.success(true)
+                result.safeSuccess(true)
             }
             "userDidConsumeSubscriptionContent" -> {
                 Purchasely.userDidConsumeSubscriptionContent()
-                result.success(true)
+                result.safeSuccess(true)
             }
             "clientPresentationDisplayed" -> clientPresentationDisplayed(call.argument<Map<String, Any>>("presentation"))
             "clientPresentationClosed" -> clientPresentationClosed(call.argument<Map<String, Any>>("presentation"))
@@ -223,14 +222,14 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
                             product.plans.map {
                                 plans.put(it.name, transformPlanToMap(it))
                             }
-                            result.success(product.toMap().toMutableMap().apply {
+                            result.safeSuccess(product.toMap().toMutableMap().apply {
                                 this["plans"] = plans
                             })
                         } else {
-                            result.error("-1", "product ${call.argument<String>("vendorId")} not found", null)
+                            result.safeError("-1", "product ${call.argument<String>("vendorId")} not found", null)
                         }
                     } catch (e: Exception) {
-                        result.error("-1", e.message, e)
+                        result.safeError("-1", e.message, e)
                     }
                 }
             }
@@ -239,12 +238,12 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
                     try {
                         val plan = planWithIdentifier(call.argument<String>("vendorId"))
                         if(plan != null) {
-                            result.success(transformPlanToMap(plan))
+                            result.safeSuccess(transformPlanToMap(plan))
                         } else {
-                            result.error("-1", "plan ${call.argument<String>("vendorId")} not found", null)
+                            result.safeError("-1", "plan ${call.argument<String>("vendorId")} not found", null)
                         }
                     } catch (e: Exception) {
-                        result.error("-1", e.message, e)
+                        result.safeError("-1", e.message, e)
                     }
                 }
             }
@@ -334,9 +333,9 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
 
         Purchasely.start { isConfigured, error ->
             if(isConfigured) {
-                result.success(true)
+                result.safeSuccess(true)
             } else {
-                result.error("0", error?.message ?: "Purchasely SDK not configured", error)
+                result.safeError("0", error?.message ?: "Purchasely SDK not configured", error)
             }
         }
     }
@@ -371,10 +370,10 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
                         this["metadata"] = presentation.metadata?.toMap()
                         this["plans"] = (this["plans"] as List<PLYPresentationPlan>).map { it.toMap() }
                     }
-                    result.success(mutableMap)
+                    result.safeSuccess(mutableMap)
                 }
 
-                if (error != null) result.error("467", error.message, error)
+                if (error != null) result.safeError("467", error.message, error)
             }
         }
     }
@@ -383,12 +382,12 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
                                     isFullScreen: Boolean,
                                     result: Result) {
         if (presentationMap == null) {
-            result.error("-1", "presentation cannot be null", null)
+            result.safeError("-1", "presentation cannot be null", null)
             return
         }
 
         if(presentationsLoaded.lastOrNull()?.id != presentationMap["id"]) {
-            result.error("-1", "presentation cannot be fetched", null)
+            result.safeError("-1", "presentation cannot be fetched", null)
             return
         }
 
@@ -398,7 +397,7 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
         }
 
         if(presentation == null) {
-            result.error("468", "Presentation not found", NullPointerException("presentation not fond"))
+            result.safeError("468", "Presentation not found", NullPointerException("presentation not fond"))
             return
         }
 
@@ -462,14 +461,14 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
     private fun restoreAllProducts(result: Result) {
         Purchasely.restoreAllProducts(
             onSuccess = { plan ->
-                result.success(true)
+                result.safeSuccess(true)
                 Purchasely.restoreAllProducts(null)
             },
             onError = { error ->
                 error?.let {
-                    result.error("-1", it.message, it)
+                    result.safeError("-1", it.message, it)
                 } ?: let {
-                    result.error("-1", "Unknown error", null)
+                    result.safeError("-1", "Unknown error", null)
                 }
                 Purchasely.restoreAllProducts(null)
             }
@@ -484,21 +483,21 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
                 if(plan != null && activity != null) {
                     Purchasely.purchase(activity!!, plan, offer, contentId,
                         onSuccess = {
-                            result.success(it?.toMap())
+                            result.safeSuccess(it?.toMap())
                         },
                         onError = { error ->
                             error?.let {
-                                result.error("-1", it.message, it)
+                                result.safeError("-1", it.message, it)
                             } ?: let {
-                                result.error("-1", "Unknown error", null)
+                                result.safeError("-1", "Unknown error", null)
                             }
                         }
                     )
                 } else {
-                    result.error("-1","plan $planVendorId not found", null)
+                    result.safeError("-1","plan $planVendorId not found", null)
                 }
             } catch (e: Exception) {
-                result.error("-1", e.message, e)
+                result.safeError("-1", e.message, e)
             }
         }
     }
@@ -508,7 +507,7 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
     private fun isAnonymous() : Boolean = Purchasely.isAnonymous()
 
     private fun userLogin(userId: String, result: Result) {
-        Purchasely.userLogin(userId) { refresh -> result.success(refresh) }
+        Purchasely.userLogin(userId) { refresh -> result.safeSuccess(refresh) }
     }
 
     private fun userLogout() {
@@ -555,19 +554,19 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
                     this["plans"] = plans
                 })
             }
-            result.success(list)
+            result.safeSuccess(list)
         } catch (e: Exception) {
-            result.error("-1", e.message, e)
+            result.safeError("-1", e.message, e)
         }
     }
 
     private fun isDeeplinkHandled(deeplink: String?, result: Result) {
         if (deeplink == null) {
-            result.error("-1", "Deeplink must not be null", null)
+            result.safeError("-1", "Deeplink must not be null", null)
             return
         }
         val uri = Uri.parse(deeplink)
-        result.success(Purchasely.isDeeplinkHandled(uri))
+        result.safeSuccess(Purchasely.isDeeplinkHandled(uri))
     }
 
     private fun displaySubscriptionCancellationInstruction() {
@@ -605,9 +604,9 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
                 list.add(map)
                 //list[data.data.id] = map
             }
-            result.success(list)
+            result.safeSuccess(list)
         } catch (e: Exception) {
-            result.error("-1", e.message, e)
+            result.safeError("-1", e.message, e)
         }
     }
 
@@ -666,12 +665,12 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
 
     fun userAttribute(key: String, result: Result) {
         val value = getUserAttributeValueForFlutter(Purchasely.userAttribute(key))
-        result.success(value)
+        result.safeSuccess(value)
     }
 
     fun userAttributes(result: Result) {
         val map = Purchasely.userAttributes()
-        result.success(
+        result.safeSuccess(
             map.mapValues {
                 getUserAttributeValueForFlutter(it.value)
             }
@@ -761,26 +760,30 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
             )
             parametersForFlutter["subscriptionOffer"] = parameters.subscriptionOffer?.toMap()
 
-            result.success(mapOf(
-                Pair("info", mapOf(
-                    Pair("contentId", info?.contentId),
-                    Pair("presentationId", info?.presentationId),
-                    Pair("placementId", info?.placementId),
-                    Pair("abTestId", info?.abTestId),
-                    Pair("abTestVariantId", info?.abTestVariantId)
-                )),
-                Pair("action", when(action) {
-                    PLYPresentationAction.PURCHASE -> "purchase"
-                    PLYPresentationAction.CLOSE -> "close"
-                    PLYPresentationAction.LOGIN -> "login"
-                    PLYPresentationAction.NAVIGATE -> "navigate"
-                    PLYPresentationAction.RESTORE -> "restore"
-                    PLYPresentationAction.OPEN_PRESENTATION -> "open_presentation"
-                    PLYPresentationAction.PROMO_CODE -> "promo_code"
-                    PLYPresentationAction.OPEN_PLACEMENT -> "open_placement"
-                }),
-                Pair("parameters", parametersForFlutter)
-            ))
+            try {
+                result.safeSuccess(mapOf(
+                    Pair("info", mapOf(
+                        Pair("contentId", info?.contentId),
+                        Pair("presentationId", info?.presentationId),
+                        Pair("placementId", info?.placementId),
+                        Pair("abTestId", info?.abTestId),
+                        Pair("abTestVariantId", info?.abTestVariantId)
+                    )),
+                    Pair("action", when(action) {
+                        PLYPresentationAction.PURCHASE -> "purchase"
+                        PLYPresentationAction.CLOSE -> "close"
+                        PLYPresentationAction.LOGIN -> "login"
+                        PLYPresentationAction.NAVIGATE -> "navigate"
+                        PLYPresentationAction.RESTORE -> "restore"
+                        PLYPresentationAction.OPEN_PRESENTATION -> "open_presentation"
+                        PLYPresentationAction.PROMO_CODE -> "promo_code"
+                        PLYPresentationAction.OPEN_PLACEMENT -> "open_placement"
+                    }),
+                    Pair("parameters", parametersForFlutter)
+                ))
+            } catch (e: Throwable) {
+                Log.e("Purchasely", "Callback cannot be called: " + e.message, e)
+            }
         }
     }
 
@@ -979,5 +982,37 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
         }
 
         return metadata
+    }
+
+    private fun Result.safeSuccess(map: Map<String, Any?>) {
+        try {
+            this.success(map)
+        } catch (e: Throwable) {
+            PLYLogger.e("Callback cannot be called: " + e.message, e)
+        }
+    }
+
+    private fun Result.safeSuccess(value: Any?) {
+        try {
+            this.success(value)
+        } catch (e: Throwable) {
+            PLYLogger.e("Callback cannot be called: " + e.message, e)
+        }
+    }
+
+    private fun Result.safeSuccess(list: ArrayList<MutableMap<String, Any?>>) {
+        try {
+            this.success(list)
+        } catch (e: Throwable) {
+            PLYLogger.e("Callback cannot be called: " + e.message, e)
+        }
+    }
+
+    private fun Result.safeError(errorCode: String, message: String?, e: Throwable?) {
+        try {
+            this.error(errorCode, message, e)
+        } catch (e: Throwable) {
+            PLYLogger.e("Callback cannot be called: " + e.message, e)
+        }
     }
 }
