@@ -1,3 +1,6 @@
+## 4.2.5
+### Fixes for Android
+- Fix possible crash with paywall action interceptor if user tap multiple times on same button
 ## 4.2.4
 ### Fixes for iOS
 - minor bug fixes

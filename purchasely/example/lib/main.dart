@@ -29,7 +29,9 @@ class _MyAppState extends State<MyApp> {
       Purchasely.readyToOpenDeeplink(true);
 
       bool configured = await Purchasely.start(
-          apiKey: 'fcb39be4-2ba4-4db7-bde3-2a5a1e20745d', storeKit1: true);
+          apiKey: 'fcb39be4-2ba4-4db7-bde3-2a5a1e20745d',
+          storeKit1: true,
+          logLevel: PLYLogLevel.debug);
 
       // Default values
       /*bool configured = await Purchasely.start(
