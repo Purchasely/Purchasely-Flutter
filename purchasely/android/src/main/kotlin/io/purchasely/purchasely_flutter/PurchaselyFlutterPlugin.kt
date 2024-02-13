@@ -760,30 +760,26 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
             )
             parametersForFlutter["subscriptionOffer"] = parameters.subscriptionOffer?.toMap()
 
-            try {
-                result.safeSuccess(mapOf(
-                    Pair("info", mapOf(
-                        Pair("contentId", info?.contentId),
-                        Pair("presentationId", info?.presentationId),
-                        Pair("placementId", info?.placementId),
-                        Pair("abTestId", info?.abTestId),
-                        Pair("abTestVariantId", info?.abTestVariantId)
-                    )),
-                    Pair("action", when(action) {
-                        PLYPresentationAction.PURCHASE -> "purchase"
-                        PLYPresentationAction.CLOSE -> "close"
-                        PLYPresentationAction.LOGIN -> "login"
-                        PLYPresentationAction.NAVIGATE -> "navigate"
-                        PLYPresentationAction.RESTORE -> "restore"
-                        PLYPresentationAction.OPEN_PRESENTATION -> "open_presentation"
-                        PLYPresentationAction.PROMO_CODE -> "promo_code"
-                        PLYPresentationAction.OPEN_PLACEMENT -> "open_placement"
-                    }),
-                    Pair("parameters", parametersForFlutter)
-                ))
-            } catch (e: Throwable) {
-                Log.e("Purchasely", "Callback cannot be called: " + e.message, e)
-            }
+            result.safeSuccess(mapOf(
+                Pair("info", mapOf(
+                    Pair("contentId", info?.contentId),
+                    Pair("presentationId", info?.presentationId),
+                    Pair("placementId", info?.placementId),
+                    Pair("abTestId", info?.abTestId),
+                    Pair("abTestVariantId", info?.abTestVariantId)
+                )),
+                Pair("action", when(action) {
+                    PLYPresentationAction.PURCHASE -> "purchase"
+                    PLYPresentationAction.CLOSE -> "close"
+                    PLYPresentationAction.LOGIN -> "login"
+                    PLYPresentationAction.NAVIGATE -> "navigate"
+                    PLYPresentationAction.RESTORE -> "restore"
+                    PLYPresentationAction.OPEN_PRESENTATION -> "open_presentation"
+                    PLYPresentationAction.PROMO_CODE -> "promo_code"
+                    PLYPresentationAction.OPEN_PLACEMENT -> "open_placement"
+                }),
+                Pair("parameters", parametersForFlutter)
+            ))
         }
     }
 
