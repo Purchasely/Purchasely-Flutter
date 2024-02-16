@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:purchasely_flutter/purchasely_flutter.dart';
@@ -34,26 +35,40 @@ class PLYPresentationView extends StatelessWidget {
       'contentId': this.contentId,
     };
 
-    return AndroidView(
-      viewType: viewType,
-      layoutDirection: TextDirection.ltr,
-      creationParams: creationParams,
-      creationParamsCodec: const StandardMessageCodec(),
-      onPlatformViewCreated: (int id) {
-        channel.setMethodCallHandler((MethodCall call) {
-          switch (call.method) {
-            case 'onClose':
-              onClose();
-              break;
-            case 'onLoaded':
-              onLoaded();
-              break;
-            default:
-              break;
-          }
-          return Future.value(null);
-        });
-      },
-    );
+    switch (defaultTargetPlatform) {
+      case TargetPlatform.android:
+        print('TargetPlatform = ANDROID');
+        return AndroidView(
+          viewType: viewType,
+          layoutDirection: TextDirection.ltr,
+          creationParams: creationParams,
+          creationParamsCodec: const StandardMessageCodec(),
+          onPlatformViewCreated: (int id) {
+            channel.setMethodCallHandler((MethodCall call) {
+              switch (call.method) {
+                case 'onClose':
+                  onClose();
+                  break;
+                case 'onLoaded':
+                  onLoaded();
+                  break;
+                default:
+                  break;
+              }
+              return Future.value(null);
+            });
+          },
+        );
+      case TargetPlatform.iOS:
+        print('TargetPlatform = iOS');
+        return UiKitView(
+          viewType: viewType,
+          creationParams: creationParams,
+          creationParamsCodec: const StandardMessageCodec(),
+          onPlatformViewCreated: (int id) { },
+        );
+      default:
+        return Text('$defaultTargetPlatform is not supported yet.');
+    }
   }
 }
