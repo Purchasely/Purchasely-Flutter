@@ -37,6 +37,9 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
 
         let instance = SwiftPurchaselyFlutterPlugin(with: registrar)
         registrar.addMethodCallDelegate(instance, channel: channel)
+        
+        let factory = NativeViewFactory(messenger: registrar.messenger())
+        registrar.register(factory, withId: "io.purchasely.purchasely_flutter/native_view")
     }
 
     public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
