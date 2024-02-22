@@ -30,26 +30,19 @@ internal class NativeView(
         layout = FrameLayout(context)
         val presentationId = creationParams?.get("presentationId") as? String
         val placementId = creationParams?.get("placementId") as? String
-        val presentation = creationParams?.get("presentation") as? Map<String, Any>
-
+        val presentationMap = creationParams?.get("presentation") as? Map<String, Any>
+        val presentation = PurchaselyFlutterPlugin.presentationsLoaded.lastOrNull {
+            it.id == presentationMap?.get("id") as? String
+                    && it.placementId == presentationMap?.get(
+                "placementId"
+            ) as? String
+        }
 
         if (presentation != null) {
-            Log.d("Purchasely", "PLYPresentation found.")
-            val plyPresentation = PLYPresentation(
-                id = presentation.get("id") as? String,
-                placementId = presentation.get("placementId") as? String,
-                audienceId = presentation.get("audienceId") as? String,
-                abTestId = presentation.get("abTestId") as? String,
-                abTestVariantId = presentation.get("abTestVariantId") as? String,
-                language = presentation.get("language") as? String,
-                plans = parsePLYPresentationPlans(presentation.get("plans") as? List<Map<String, Any>>), //Plan are not sent from Flutter for now
-                type = PLYPresentationType.valueOf(
-                    presentation.get("type") as? String ?: PLYPresentationType.NORMAL.name
-                ),
-            )
+            Log.d("Purchasely", "PLYPresentation found: ${presentation}")
 
             // Build the presentation view
-            val presentationView = plyPresentation.buildView(
+            val presentationView = presentation.buildView(
                 context = context,
                 viewProperties = PLYPresentationViewProperties(
                     onClose = { closeCallback() }
