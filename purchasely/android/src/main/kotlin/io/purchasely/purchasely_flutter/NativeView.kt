@@ -11,6 +11,7 @@ import io.purchasely.ext.PLYPresentationType
 import io.purchasely.ext.PLYPresentationViewProperties
 import io.purchasely.ext.Purchasely
 import io.purchasely.models.PLYPresentationPlan
+import android.view.ViewGroup
 
 internal class NativeView(
     context: Context,
@@ -51,12 +52,10 @@ internal class NativeView(
             val presentationView = plyPresentation.buildView(
                 context = context,
                 viewProperties = PLYPresentationViewProperties(
-                    onClose = { methodChannel.invokeMethod("onClose", null) },
-                    onLoaded = { methodChannel.invokeMethod("onLoaded", null) }
+                    onClose = { closeCallback() }
                 ),
             )
             Log.d("Purchasely", "Presentation built successfully.")
-
             layout.addView(presentationView)
         } else {
             Log.e("Purchasely", "PLYPresentation not found: using presentationId=$presentationId and placementId=$placementId.")
@@ -66,14 +65,17 @@ internal class NativeView(
                 properties = PLYPresentationViewProperties(
                     presentationId = presentationId,
                     placementId = placementId,
-                    onClose = { methodChannel.invokeMethod("onClose", null) },
-                    onLoaded = { methodChannel.invokeMethod("onLoaded", null)  }
+                    onClose = { closeCallback() }
                 ),
             )
             Log.e("Purchasely", "Presentation built successfully.")
 
             layout.addView(presentationView)
         }
+    }
+
+    private fun closeCallback() {
+        (layout as ViewGroup).removeAllViews()
     }
 
     companion object {

@@ -209,13 +209,7 @@ class _MyAppState extends State<MyApp> {
           'presentationId': 'TF1',
           'placementId': null,
           'contentId': null,
-        },
-        onLoaded: () {
-          print('Presentation loaded');
-        },
-        onClose: () {
-          navigatorKey.currentState?.pop();
-        },
+        }
       )),
     );
   }

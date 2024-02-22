@@ -5,14 +5,9 @@ import 'package:purchasely_flutter/native_view_widget.dart';
 import 'package:purchasely_flutter/purchasely_flutter.dart';
 
 class PresentationScreen extends StatelessWidget {
-  final Function onClose;
-  final Function onLoaded;
   final Map<String, dynamic> properties;
 
-  PresentationScreen(
-      {required this.properties,
-      required this.onClose,
-      required this.onLoaded});
+  PresentationScreen({required this.properties});
 
   @override
   Widget build(BuildContext context) {
@@ -30,7 +25,6 @@ class PresentationScreen extends StatelessWidget {
           } else if (result.action == PLYPaywallAction.login) {
             print('User wants to login');
             //Present your own screen for user to log in
-            onClose();
             Purchasely.userLogin('MY_USER_ID');
             Purchasely.onProcessAction(true);
           } else if (result.action == PLYPaywallAction.open_presentation) {
@@ -49,8 +43,6 @@ class PresentationScreen extends StatelessWidget {
         });
 
     PLYPresentationView? presentationView = Purchasely.getPresentationView(
-      onLoaded: onLoaded,
-      onClose: onClose,
       presentation: properties['presentation'],
       presentationId: properties['presentationId'],
       placementId: properties['placementId'],

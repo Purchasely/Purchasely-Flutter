@@ -57,16 +57,12 @@ class Purchasely {
   }
 
   static PLYPresentationView? getPresentationView({
-    required Function onLoaded,
-    required Function onClose,
     PLYPresentation? presentation,
     String? presentationId,
     String? placementId,
     String? contentId,
   }) {
     return PLYPresentationView(
-        onLoaded: onLoaded,
-        onClose: onClose,
         presentation: presentation,
         presentationId: presentationId,
         placementId: placementId,
