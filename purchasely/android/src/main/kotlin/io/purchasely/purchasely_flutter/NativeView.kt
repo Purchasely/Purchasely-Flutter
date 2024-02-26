@@ -10,8 +10,11 @@ import io.purchasely.ext.PLYPresentation
 import io.purchasely.ext.PLYPresentationType
 import io.purchasely.ext.PLYPresentationViewProperties
 import io.purchasely.ext.Purchasely
+import io.purchasely.ext.PLYPresentationResultHandler
+import io.purchasely.ext.PLYProductViewResult
 import io.purchasely.models.PLYPresentationPlan
 import android.view.ViewGroup
+import io.purchasely.models.PLYPlan
 
 internal class NativeView(
     context: Context,
@@ -47,6 +50,14 @@ internal class NativeView(
                 viewProperties = PLYPresentationViewProperties(
                     onClose = { closeCallback() }
                 ),
+                callback = { result, plan ->
+                    methodChannel.invokeMethod(
+                        "onPresentationResult", mapOf(
+                            "result" to result.ordinal,
+                            "plan" to plan?.toMap(),
+                        )
+                    )
+                }
             )
             Log.d("Purchasely", "Presentation built successfully.")
             layout.addView(presentationView)
@@ -54,12 +65,19 @@ internal class NativeView(
             Log.e("Purchasely", "PLYPresentation not found: using presentationId=$presentationId and placementId=$placementId.")
             val presentationView = Purchasely.presentationView(
                 context = context,
-                callback = null,
                 properties = PLYPresentationViewProperties(
                     presentationId = presentationId,
                     placementId = placementId,
                     onClose = { closeCallback() }
                 ),
+                callback = { result, plan ->
+                    methodChannel.invokeMethod(
+                        "onPresentationResult", mapOf(
+                            "result" to result.ordinal,
+                            "plan" to plan?.toMap(),
+                        )
+                    )
+                }
             )
             Log.e("Purchasely", "Presentation built successfully.")
 

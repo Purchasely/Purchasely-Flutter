@@ -47,6 +47,9 @@ class PresentationScreen extends StatelessWidget {
       presentationId: properties['presentationId'],
       placementId: properties['placementId'],
       contentId: properties['contentId'],
+      callback: (PresentPresentationResult result) {
+        print('Presentation result:${result.result} - plan:${result.plan?.vendorId}');
+      }
     );
 
     return Scaffold(

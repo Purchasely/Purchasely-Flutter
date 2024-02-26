@@ -61,12 +61,15 @@ class Purchasely {
     String? presentationId,
     String? placementId,
     String? contentId,
+    Function(PresentPresentationResult)? callback,
   }) {
     return PLYPresentationView(
         presentation: presentation,
         presentationId: presentationId,
         placementId: placementId,
-        contentId: contentId);
+        contentId: contentId,
+        callback: callback
+    );
   }
 
   static Future<void> clientPresentationDisplayed(
