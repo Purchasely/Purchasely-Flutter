@@ -58,7 +58,18 @@ class PLYPresentationView extends StatelessWidget {
           viewType: viewType,
           creationParams: creationParams,
           creationParamsCodec: const StandardMessageCodec(),
-          onPlatformViewCreated: (int id) { },
+          onPlatformViewCreated: (int id) {
+            channel.setMethodCallHandler((MethodCall call) {
+              if (call.method == 'onPresentationResult' && callback != null) {
+                var viewResult = call.arguments['result'];
+                var plan = call.arguments['plan'];
+                callback!(PresentPresentationResult(
+                    PLYPurchaseResult.values[viewResult],
+                    plan != null ? Purchasely.transformToPLYPlan(plan) : null));
+              }
+              return Future.value(null);
+            });
+          },
         );
       default:
         return Text('$defaultTargetPlatform is not supported yet.');
