@@ -3,6 +3,8 @@ import UIKit
 import Purchasely
 
 public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
+    
+    private static var presentationsLoaded = [PLYPresentation]()
 
     let eventChannel: FlutterEventChannel
     let eventHandler: SwiftEventHandler
@@ -13,7 +15,6 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
     var presentedPresentationViewController: UIViewController?
 
     var purchaseResult: FlutterResult?
-    var presentationsLoaded = [PLYPresentation]()
 
     var onProcessActionHandler: ((Bool) -> Void)?
 
@@ -159,6 +160,70 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             result(FlutterMethodNotImplemented)
         }
     }
+    
+    internal static func getPresentationController(for args: Any?, with channel: FlutterMethodChannel) -> UIViewController? {
+        
+        if let creationParams = args as? [String: Any] {
+            
+            let presentationId = creationParams["presentationId"] as? String
+            let placementId = creationParams["placementId"] as? String
+
+            print("presentationId: \(String(describing: presentationId))")
+            print("placementId: \(String(describing: placementId))")
+            
+            guard let presentationMap = creationParams["presentation"] as? [String:Any],
+                  let mapPresentationId = presentationMap["id"] as? String,
+                  let mapPlacementId = presentationMap["placementId"] as? String,
+                  let presentationLoaded = presentationsLoaded.filter({ $0.id == mapPresentationId && $0.placementId == mapPlacementId }).first,
+                  let presentationLoadedController = presentationLoaded.controller else {
+                
+                print("toto")
+                return SwiftPurchaselyFlutterPlugin.createNativeViewController(presentationId: presentationId, placementId: placementId, channel: channel)
+            }
+            
+            print("tata")
+            return presentationLoadedController
+        }
+        return nil
+    }
+    
+    private static func createNativeViewController(presentationId: String?,
+                          placementId: String?,
+                          channel: FlutterMethodChannel?) -> UIViewController? {
+        if let presentationId = presentationId {
+            let controller = Purchasely.presentationController(
+                with: presentationId,
+                loaded: nil,
+                completion: { result, plan in
+                    if let plan = plan {
+                        channel?.invokeMethod("onPresentationResult", arguments: ["result": result.rawValue,
+                                                                                  "plan": plan.toMap])
+                    } else {
+                        channel?.invokeMethod("onPresentationResult", arguments: ["result": result.rawValue,
+                                                                                  "plan": []])
+                    }
+                }
+            )
+            return controller
+        }
+        else if let placementId = placementId {
+            let controller = Purchasely.presentationController(
+                for: placementId,
+                loaded: nil,
+                completion: { result, plan in
+                    if let plan = plan {
+                        channel?.invokeMethod("onPresentationResult", arguments: ["result": result.rawValue,
+                                                                                  "plan": plan.toMap])
+                    } else {
+                        channel?.invokeMethod("onPresentationResult", arguments: ["result": result.rawValue,
+                                                                                  "plan": []])
+                    }
+                }
+            )
+            return controller
+        }
+        return nil
+    }
 
     private func isAnonymous(result: @escaping FlutterResult) {
         result(Purchasely.isAnonymous())
@@ -251,7 +316,7 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
                     if let error = error {
                         result(FlutterError.error(code: "-1", message: "Error while fetching presentation", error: error))
                     } else if let presentation = presentation {
-                        self.presentationsLoaded.append(presentation)
+                        SwiftPurchaselyFlutterPlugin.presentationsLoaded.append(presentation)
                         result(presentation.toMap)
                     }
                 }
@@ -269,7 +334,7 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
                     if let error = error {
                         result(FlutterError.error(code: "-1", message: "Error while fetching presentation", error: error))
                     } else if let presentation = presentation {
-                        self.presentationsLoaded.append(presentation)
+                        SwiftPurchaselyFlutterPlugin.presentationsLoaded.append(presentation)
                         result(presentation.toMap)
                     }
                 }
@@ -293,13 +358,13 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
 
         guard let presentationId = presentationMap["id"] as? String,
                 let placementId = presentationMap["placementId"] as? String,
-                let presentationLoaded = self.presentationsLoaded.filter({ $0.id == presentationId && $0.placementId == placementId }).first,
+                let presentationLoaded = SwiftPurchaselyFlutterPlugin.presentationsLoaded.filter({ $0.id == presentationId && $0.placementId == placementId }).first,
                 let controller = presentationLoaded.controller else {
             result(FlutterError.error(code: "-1", message: "Presentation not loaded", error: nil))
             return
         }
 
-        self.presentationsLoaded.removeAll(where: { $0.id == presentationId })
+        SwiftPurchaselyFlutterPlugin.presentationsLoaded.removeAll(where: { $0.id == presentationId })
 
         let navCtrl = UINavigationController(rootViewController: controller)
         navCtrl.navigationBar.isTranslucent = true
@@ -326,7 +391,7 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
 
         guard let presentationId = presentationMap["id"] as? String,
                 let placementId = presentationMap["placementId"] as? String,
-                let presentationLoaded = self.presentationsLoaded.filter({ $0.id == presentationId && $0.placementId == placementId }).first else { return }
+                let presentationLoaded = SwiftPurchaselyFlutterPlugin.presentationsLoaded.filter({ $0.id == presentationId && $0.placementId == placementId }).first else { return }
 
         Purchasely.clientPresentationOpened(with: presentationLoaded)
     }
@@ -339,7 +404,7 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
 
         guard let presentationId = presentationMap["id"] as? String,
               let placementId = presentationMap["placementId"] as? String,
-              let presentationLoaded = self.presentationsLoaded.filter({ $0.id == presentationId && $0.placementId == placementId }).first else { return }
+              let presentationLoaded = SwiftPurchaselyFlutterPlugin.presentationsLoaded.filter({ $0.id == presentationId && $0.placementId == placementId }).first else { return }
 
         Purchasely.clientPresentationClosed(with: presentationLoaded)
     }

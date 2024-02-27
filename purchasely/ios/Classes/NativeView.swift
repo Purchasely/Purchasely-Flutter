@@ -12,43 +12,14 @@ class NativeView: NSObject, FlutterPlatformView {
         frame: CGRect,
         viewIdentifier viewId: Int64,
         arguments args: Any?,
-        binaryMessenger messenger: FlutterBinaryMessenger?
+        channel: FlutterMethodChannel
     ) {
         super.init()
-        if let creationParams = args as? [String: Any] {
-            let presentationId = creationParams["presentationId"] as? String
-            let placementId = creationParams["placementId"] as? String
-            
-            print("presentationId: \(String(describing: presentationId))")
-            print("placementId: \(String(describing: placementId))")
-            
-            _view = createNativeView(presentationId: presentationId, placementId: placementId)
-        }
+        self.controller = SwiftPurchaselyFlutterPlugin.getPresentationController(for: args, with: channel)
+        self._view = self.controller?.view
     }
-    
     
     func view() -> UIView {
         return _view ?? UIView()
     }
-    
-    func createNativeView(presentationId: String?, placementId: String?) -> UIView? {
-        if let presentationId = presentationId {
-            controller = Purchasely.presentationController(
-                with: presentationId,
-                loaded: nil,
-                completion: nil
-            )
-        }
-        else if let placementId = placementId {
-            controller = Purchasely.presentationController(
-                for: placementId,
-                loaded: nil,
-                completion: nil
-            )
-        }
-        
-        return controller?.view
-    }
 }
-
-

@@ -5,9 +5,14 @@ import Purchasely
 
 class NativeViewFactory: NSObject, FlutterPlatformViewFactory {
     private var messenger: FlutterBinaryMessenger
+    private var channel: FlutterMethodChannel
+
+    let CHANNEL_ID = "native_view_channel"
 
     init(messenger: FlutterBinaryMessenger) {
         self.messenger = messenger
+        self.channel = FlutterMethodChannel(name: CHANNEL_ID,
+                                           binaryMessenger: messenger)
         super.init()
     }
 
@@ -21,7 +26,7 @@ class NativeViewFactory: NSObject, FlutterPlatformViewFactory {
             frame: frame,
             viewIdentifier: viewId,
             arguments: args,
-            binaryMessenger: messenger)
+            channel: channel)
     }
 
     /// Implementing this method is only necessary when the `arguments` in `createWithFrame` is not `nil`.
