@@ -203,36 +203,25 @@ class _MyAppState extends State<MyApp> {
 
   Future<void> displayPresentationNativeView(BuildContext context) async {
     var presentation = await Purchasely.fetchPresentation("Settings");
-    PLYPresentationView? presentationView = Purchasely.getPresentationView(
-      presentation: presentation,
-      presentationId: 'TF1',
-      placementId: null,
-      contentId: null,
-      callback: (PresentPresentationResult result) {
-        print('Presentation result:${result.result} - plan:${result.plan?.vendorId}');
-      }
-    );
 
-     if (presentationView != null) {
-  
-
-    //var presentation = await Purchasely.fetchPresentation("Settings");
-    navigatorKey.currentState?.push(
-      MaterialPageRoute(builder: (context) => presentationView)
-      /*
-       MaterialPageRoute(builder: (context) => PresentationScreen(
-        properties: {
-          'presentation': presentation,
-          'presentationId': 'TF1',
-          'placementId': null,
-          'contentId': null,
-        }
-      )),*/ 
-    );
+     if (presentation != null) {
+        navigatorKey.currentState?.push(
+      
+        MaterialPageRoute(builder: (context) => PresentationScreen(
+          properties: {
+            'presentation': presentation,
+            'presentationId': 'TF1',
+            'placementId': null,
+            'contentId': null,
+          },
+          callback: (PresentPresentationResult result) {
+            print('Presentation result:${result.result} - plan:${result.plan?.vendorId}');
+            navigatorKey.currentState?.pop();
+            }
+        )),
+      );
+    }
   }
-  }
-
-
 
   Future<void> fetchPresentation() async {
     try {

@@ -6,8 +6,9 @@ import 'package:purchasely_flutter/purchasely_flutter.dart';
 
 class PresentationScreen extends StatelessWidget {
   final Map<String, dynamic> properties;
+  final Function(PresentPresentationResult)? callback;
 
-  PresentationScreen({required this.properties});
+  PresentationScreen({required this.properties, this.callback});
 
   @override
   Widget build(BuildContext context) {
@@ -57,12 +58,14 @@ class PresentationScreen extends StatelessWidget {
           }
         });
 
+    
+
     PLYPresentationView? presentationView = Purchasely.getPresentationView(
       presentation: properties['presentation'],
       presentationId: properties['presentationId'],
       placementId: properties['placementId'],
       contentId: properties['contentId'],
-      callback: (PresentPresentationResult result) {
+      callback: callback != null ? callback : (PresentPresentationResult result) {
         print('Presentation result:${result.result} - plan:${result.plan?.vendorId}');
       }
     );

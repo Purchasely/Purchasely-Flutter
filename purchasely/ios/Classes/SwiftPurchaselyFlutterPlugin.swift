@@ -171,6 +171,9 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             print("presentationId: \(String(describing: presentationId))")
             print("placementId: \(String(describing: placementId))")
             
+            
+            //return SwiftPurchaselyFlutterPlugin.createNativeViewController(presentationId: presentationId, placementId: placementId, channel: channel)
+            
             guard let presentationMap = creationParams["presentation"] as? [String:Any],
                   let mapPresentationId = presentationMap["id"] as? String,
                   let mapPlacementId = presentationMap["placementId"] as? String,
@@ -200,7 +203,7 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
                                                                                   "plan": plan.toMap])
                     } else {
                         channel?.invokeMethod("onPresentationResult", arguments: ["result": result.rawValue,
-                                                                                  "plan": []])
+                                                                                  "plan": nil])
                     }
                 }
             )
@@ -216,7 +219,7 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
                                                                                   "plan": plan.toMap])
                     } else {
                         channel?.invokeMethod("onPresentationResult", arguments: ["result": result.rawValue,
-                                                                                  "plan": []])
+                                                                                  "plan": nil])
                     }
                 }
             )
