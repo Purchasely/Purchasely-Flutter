@@ -5,6 +5,7 @@ import Purchasely
 public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
     
     private static var presentationsLoaded = [PLYPresentation]()
+    private static var purchaseResult: FlutterResult?
 
     let eventChannel: FlutterEventChannel
     let eventHandler: SwiftEventHandler
@@ -13,8 +14,6 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
     let purchaseHandler: SwiftPurchaseHandler
 
     var presentedPresentationViewController: UIViewController?
-
-    var purchaseResult: FlutterResult?
 
     var onProcessActionHandler: ((Bool) -> Void)?
 
@@ -167,24 +166,21 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             
             let presentationId = creationParams["presentationId"] as? String
             let placementId = creationParams["placementId"] as? String
-
-            print("presentationId: \(String(describing: presentationId))")
-            print("placementId: \(String(describing: placementId))")
-            
-            
-            //return SwiftPurchaselyFlutterPlugin.createNativeViewController(presentationId: presentationId, placementId: placementId, channel: channel)
             
             guard let presentationMap = creationParams["presentation"] as? [String:Any],
                   let mapPresentationId = presentationMap["id"] as? String,
                   let mapPlacementId = presentationMap["placementId"] as? String,
                   let presentationLoaded = presentationsLoaded.filter({ $0.id == mapPresentationId && $0.placementId == mapPlacementId }).first,
                   let presentationLoadedController = presentationLoaded.controller else {
-                
-                print("toto")
                 return SwiftPurchaselyFlutterPlugin.createNativeViewController(presentationId: presentationId, placementId: placementId, channel: channel)
             }
             
-            print("tata")
+            SwiftPurchaselyFlutterPlugin.purchaseResult = { result in
+                if let value = result as? [String : Any] {
+                    channel.invokeMethod("onPresentationResult", arguments: ["result": value["result"],
+                                                                             "plan": value["plan"]])
+                }
+            }
             return presentationLoadedController
         }
         return nil
@@ -327,7 +323,7 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
                 guard let `self` = self else { return }
                 let value: [String: Any] = ["result": productResult.rawValue, "plan": plan?.toMap ?? [:]]
                 DispatchQueue.main.async {
-                    self.purchaseResult?(value)
+                    SwiftPurchaselyFlutterPlugin.purchaseResult?(value)
                 }
             }
         } else if let presentationId = presentationId {
@@ -345,7 +341,7 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
                 guard let `self` = self else { return }
                 let value: [String: Any] = ["result": productResult.rawValue, "plan": plan?.toMap ?? [:]]
                 DispatchQueue.main.async {
-                    self.purchaseResult?(value)
+                    SwiftPurchaselyFlutterPlugin.purchaseResult?(value)
                 }
             }
         }
@@ -357,7 +353,7 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             return
         }
 
-        self.purchaseResult = result
+        SwiftPurchaselyFlutterPlugin.purchaseResult = result
 
         guard let presentationId = presentationMap["id"] as? String,
                 let placementId = presentationMap["placementId"] as? String,

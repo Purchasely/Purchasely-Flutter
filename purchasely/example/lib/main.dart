@@ -215,8 +215,8 @@ class _MyAppState extends State<MyApp> {
             'contentId': null,
           },
           callback: (PresentPresentationResult result) {
-            print('Presentation result:${result.result} - plan:${result.plan?.vendorId}');
-            navigatorKey.currentState?.pop();
+              print('Presentation result:${result.result} - plan:${result.plan?.vendorId}');
+              navigatorKey.currentState?.pop();
             }
         )),
       );
