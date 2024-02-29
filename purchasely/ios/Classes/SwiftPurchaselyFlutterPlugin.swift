@@ -315,6 +315,7 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
                     if let error = error {
                         result(FlutterError.error(code: "-1", message: "Error while fetching presentation", error: error))
                     } else if let presentation = presentation {
+                        SwiftPurchaselyFlutterPlugin.presentationsLoaded.removeAll(where: { $0.id == presentation.id })
                         SwiftPurchaselyFlutterPlugin.presentationsLoaded.append(presentation)
                         result(presentation.toMap)
                     }
@@ -333,6 +334,7 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
                     if let error = error {
                         result(FlutterError.error(code: "-1", message: "Error while fetching presentation", error: error))
                     } else if let presentation = presentation {
+                        SwiftPurchaselyFlutterPlugin.presentationsLoaded.removeAll(where: { $0.id == presentation.id })
                         SwiftPurchaselyFlutterPlugin.presentationsLoaded.append(presentation)
                         result(presentation.toMap)
                     }
