@@ -6,15 +6,10 @@ import android.view.View
 import android.widget.FrameLayout
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.platform.PlatformView
-import io.purchasely.ext.PLYPresentation
-import io.purchasely.ext.PLYPresentationType
 import io.purchasely.ext.PLYPresentationViewProperties
 import io.purchasely.ext.Purchasely
-import io.purchasely.ext.PLYPresentationResultHandler
-import io.purchasely.ext.PLYProductViewResult
 import io.purchasely.models.PLYPresentationPlan
 import android.view.ViewGroup
-import io.purchasely.models.PLYPlan
 
 internal class NativeView(
     context: Context,

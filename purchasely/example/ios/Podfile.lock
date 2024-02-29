@@ -1,9 +1,9 @@
 PODS:
   - Flutter (1.0.0)
-  - Purchasely (4.2.4)
+  - Purchasely (4.3.0)
   - purchasely_flutter (1.2.4):
     - Flutter
-    - Purchasely (= 4.2.4)
+    - Purchasely (= 4.3.0)
 
 DEPENDENCIES:
   - Flutter (from `Flutter`)
@@ -21,9 +21,9 @@ EXTERNAL SOURCES:
 
 SPEC CHECKSUMS:
   Flutter: f04841e97a9d0b0a8025694d0796dd46242b2854
-  Purchasely: b3073d86a1e673194001666d4f963942892c02ed
-  purchasely_flutter: 701edb502e5f6448299ad10bd0baeeda6469fc94
+  Purchasely: 76ea72ab12fca06551e2e82912e5d1f29d495fcc
+  purchasely_flutter: 24a54a4646b10abe99f34523bb2b7d969cef8ee7
 
 PODFILE CHECKSUM: 0935a250c2422d4376ca2610fa9215462704fe70
 
-COCOAPODS: 1.14.3
+COCOAPODS: 1.15.2

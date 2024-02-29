@@ -15,7 +15,6 @@ void main() {
 class MyApp extends StatefulWidget {
   const MyApp({Key? key}) : super(key: key);
 
-
   @override
   _MyAppState createState() => _MyAppState();
 }
@@ -117,6 +116,13 @@ class _MyAppState extends State<MyApp> {
       Purchasely.setUserAttributeWithBoolean("booleanKey", true);
       Purchasely.setUserAttributeWithDate("dateKey", DateTime.now());
 
+      Purchasely.incrementUserAttribute("sessions");
+      Purchasely.incrementUserAttribute("sessions");
+      Purchasely.incrementUserAttribute("sessions");
+      Purchasely.decrementUserAttribute("sessions");
+
+      Purchasely.incrementUserAttribute("app_views", value: 8);
+
       Map<dynamic, dynamic> attributes = await Purchasely.userAttributes();
       attributes.forEach((key, value) {
         print("Attribute $key is $value");
@@ -204,22 +210,20 @@ class _MyAppState extends State<MyApp> {
   Future<void> displayPresentationNativeView(BuildContext context) async {
     var presentation = await Purchasely.fetchPresentation("Settings");
     PLYPresentationView? presentationView = Purchasely.getPresentationView(
-      presentation: presentation,
-      presentationId: 'TF1',
-      placementId: null,
-      contentId: null,
-      callback: (PresentPresentationResult result) {
-        print('Presentation result:${result.result} - plan:${result.plan?.vendorId}');
-      }
-    );
+        presentation: presentation,
+        presentationId: 'TF1',
+        placementId: null,
+        contentId: null,
+        callback: (PresentPresentationResult result) {
+          print(
+              'Presentation result:${result.result} - plan:${result.plan?.vendorId}');
+        });
 
-     if (presentationView != null) {
-  
-
-    //var presentation = await Purchasely.fetchPresentation("Settings");
-    navigatorKey.currentState?.push(
-      MaterialPageRoute(builder: (context) => presentationView)
-      /*
+    if (presentationView != null) {
+      //var presentation = await Purchasely.fetchPresentation("Settings");
+      navigatorKey.currentState?.push(
+          MaterialPageRoute(builder: (context) => presentationView)
+          /*
        MaterialPageRoute(builder: (context) => PresentationScreen(
         properties: {
           'presentation': presentation,
@@ -227,12 +231,10 @@ class _MyAppState extends State<MyApp> {
           'placementId': null,
           'contentId': null,
         }
-      )),*/ 
-    );
+      )),*/
+          );
+    }
   }
-  }
-
-
 
   Future<void> fetchPresentation() async {
     try {
