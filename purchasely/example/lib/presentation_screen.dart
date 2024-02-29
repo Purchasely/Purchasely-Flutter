@@ -11,6 +11,21 @@ class PresentationScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return SafeArea( // Wrap with SafeArea
+      child: Scaffold(
+        body: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Expanded(
+              child: _buildPresentationView(),
+            )
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPresentationView() {
 
     Purchasely.setPaywallActionInterceptorCallback((PaywallActionInterceptorResult result) {
           print('Received action from paywall');
@@ -52,15 +67,6 @@ class PresentationScreen extends StatelessWidget {
       }
     );
 
-    return Scaffold(
-      body: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Expanded(
-            child: presentationView ?? Container(),
-          )
-        ],
-      ),
-    );
+    return presentationView ?? Container();
   }
 }

@@ -4,6 +4,7 @@ import 'dart:developer';
 import 'dart:io';
 
 import 'package:purchasely_flutter/purchasely_flutter.dart';
+import 'package:purchasely_flutter/native_view_widget.dart';
 
 import 'presentation_screen.dart';
 
@@ -200,18 +201,35 @@ class _MyAppState extends State<MyApp> {
     }
   }
 
-  Future<void> displayPresentationNativeView() async {
+  Future<void> displayPresentationNativeView(BuildContext context) async {
     var presentation = await Purchasely.fetchPresentation("Settings");
+    PLYPresentationView? presentationView = Purchasely.getPresentationView(
+      presentation: presentation,
+      presentationId: 'TF1',
+      placementId: null,
+      contentId: null,
+      callback: (PresentPresentationResult result) {
+        print('Presentation result:${result.result} - plan:${result.plan?.vendorId}');
+      }
+    );
+
+     if (presentationView != null) {
+  
+
+    //var presentation = await Purchasely.fetchPresentation("Settings");
     navigatorKey.currentState?.push(
-      MaterialPageRoute(builder: (context) => PresentationScreen(
+      MaterialPageRoute(builder: (context) => presentationView)
+      /*
+       MaterialPageRoute(builder: (context) => PresentationScreen(
         properties: {
           'presentation': presentation,
           'presentationId': 'TF1',
           'placementId': null,
           'contentId': null,
         }
-      )),
+      )),*/ 
     );
+  }
   }
 
 
@@ -371,7 +389,7 @@ class _MyAppState extends State<MyApp> {
                 padding: const EdgeInsets.only(left: 20.0, right: 30.0),
               ),
               onPressed: () {
-                displayPresentationNativeView();
+                displayPresentationNativeView(context);
               },
               child: const Text('Display presentation (Native View)'),
             ),
