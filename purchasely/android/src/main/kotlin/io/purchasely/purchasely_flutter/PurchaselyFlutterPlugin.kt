@@ -98,6 +98,10 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
             }
 
         })
+
+        flutterPluginBinding
+            .platformViewRegistry
+            .registerViewFactory(NativeViewFactory.VIEW_TYPE_ID, NativeViewFactory(flutterPluginBinding.binaryMessenger))
     }
 
     override fun onMethodCall(@NonNull call: MethodCall, @NonNull result: Result) {
@@ -284,6 +288,16 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
                 val value = call.argument<String>("value") ?: return
                 setUserAttributeWithDate(key, value)
             }
+            "incrementUserAttribute" -> {
+                val key = call.argument<String>("key") ?: return
+                val value = call.argument<Int>("value") ?: 1
+                incrementUserAttribute(key, value)
+            }
+            "decrementUserAttribute" -> {
+                val key = call.argument<String>("key") ?: return
+                val value = call.argument<Int>("value") ?: 1
+                decrementUserAttribute(key, value)
+            }
             "userAttribute" -> {
                 val key = call.argument<String>("key") ?: return
                 userAttribute(key, result)
@@ -328,7 +342,7 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
             .userId(userId)
             .build()
 
-	  Purchasely.sdkBridgeVersion = "4.2.5"
+	  Purchasely.sdkBridgeVersion = "4.3.0"
         Purchasely.appTechnology = PLYAppTechnology.FLUTTER
 
         Purchasely.start { isConfigured, error ->
@@ -663,6 +677,14 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
         }
     }
 
+    private fun incrementUserAttribute(key: String, value: Int) {
+        Purchasely.incrementUserAttribute(key, value)
+    }
+
+    private fun decrementUserAttribute(key: String, value: Int) {
+        Purchasely.decrementUserAttribute(key, value)
+    }
+
     fun userAttribute(key: String, result: Result) {
         val value = getUserAttributeValueForFlutter(Purchasely.userAttribute(key))
         result.safeSuccess(value)
@@ -791,7 +813,7 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
     }
 
     private fun onProcessAction(processAction: Boolean) {
-        productActivity?.activity?.get()?.let {
+        activity?.let {
             it.runOnUiThread {
                 paywallActionHandler?.invoke(processAction)
             }

@@ -1,3 +1,9 @@
+## 4.3.0
+### 🕒 User Centric Countdowns
+Countdowns tailored to individual users have been implemented, enabling personalized timers based on user attributes.
+Example: users may have 24 hours to subscribe to an offer following their initial subscription.
+### Improvements and Optimizations
+Numerous enhancements and optimizations are being implemented to elevate the user experience.
 ## 4.2.5
 ### Fixes for Android
 - Fix possible crash with paywall action interceptor if user tap multiple times on same button

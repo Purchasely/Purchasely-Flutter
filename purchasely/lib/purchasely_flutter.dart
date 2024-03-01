@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/services.dart';
 import 'package:collection/collection.dart';
 
+import 'native_view_widget.dart';
+
 class Purchasely {
   static const MethodChannel _channel = const MethodChannel('purchasely');
   static const EventChannel _stream = EventChannel('purchasely-events');
@@ -52,6 +54,21 @@ class Purchasely {
     });
     return PresentPresentationResult(PLYPurchaseResult.values[result['result']],
         transformToPLYPlan(result['plan']));
+  }
+
+  static PLYPresentationView? getPresentationView({
+    PLYPresentation? presentation,
+    String? presentationId,
+    String? placementId,
+    String? contentId,
+    Function(PresentPresentationResult)? callback,
+  }) {
+    return PLYPresentationView(
+        presentation: presentation,
+        presentationId: presentationId,
+        placementId: placementId,
+        contentId: contentId,
+        callback: callback);
   }
 
   static Future<void> clientPresentationDisplayed(
@@ -405,6 +422,18 @@ class Purchasely {
         .toUtc();
     _channel.invokeMethod('setUserAttributeWithDate',
         <String, dynamic>{'key': key, 'value': date.toIso8601String()});
+  }
+
+  static Future<void> incrementUserAttribute(String key,
+      {int value = 1}) async {
+    _channel.invokeMethod('incrementUserAttribute',
+        <String, dynamic>{'key': key, 'value': value});
+  }
+
+  static Future<void> decrementUserAttribute(String key,
+      {int value = 1}) async {
+    _channel.invokeMethod('decrementUserAttribute',
+        <String, dynamic>{'key': key, 'value': value});
   }
 
   static Future<dynamic> userAttribute(String key) async {
@@ -835,6 +864,15 @@ class PLYPresentationPlan {
 
   PLYPresentationPlan(
       this.planVendorId, this.storeProductId, this.basePlanId, this.offerId);
+
+  Map<String, dynamic> toMap() {
+    return {
+      'planVendorId': planVendorId,
+      'storeProductId': storeProductId,
+      'basePlanId': basePlanId,
+      'offerId': offerId,
+    };
+  }
 }
 
 class PLYPresentation {
@@ -858,6 +896,20 @@ class PLYPresentation {
       this.type,
       this.plans,
       this.metadata);
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'placementId': placementId,
+      'audienceId': audienceId,
+      'abTestId': abTestId,
+      'abTestVariantId': abTestVariantId,
+      'language': language,
+      'type': type.toString(),
+      'plans': plans?.map((plan) => plan.toMap()).toList(),
+      'metadata': metadata,
+    };
+  }
 }
 
 class PLYSubscription {

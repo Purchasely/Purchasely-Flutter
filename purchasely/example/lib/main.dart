@@ -4,6 +4,9 @@ import 'dart:developer';
 import 'dart:io';
 
 import 'package:purchasely_flutter/purchasely_flutter.dart';
+import 'package:purchasely_flutter/native_view_widget.dart';
+
+import 'presentation_screen.dart';
 
 void main() {
   runApp(const MyApp());
@@ -17,6 +20,8 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
+  final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
   @override
   void initState() {
     super.initState();
@@ -111,6 +116,13 @@ class _MyAppState extends State<MyApp> {
       Purchasely.setUserAttributeWithBoolean("booleanKey", true);
       Purchasely.setUserAttributeWithDate("dateKey", DateTime.now());
 
+      Purchasely.incrementUserAttribute("sessions");
+      Purchasely.incrementUserAttribute("sessions");
+      Purchasely.incrementUserAttribute("sessions");
+      Purchasely.decrementUserAttribute("sessions");
+
+      Purchasely.incrementUserAttribute("app_views", value: 8);
+
       Map<dynamic, dynamic> attributes = await Purchasely.userAttributes();
       attributes.forEach((key, value) {
         print("Attribute $key is $value");
@@ -192,6 +204,48 @@ class _MyAppState extends State<MyApp> {
       }
     } catch (e) {
       print(e);
+    }
+  }
+
+  Future<void> displayPresentationNativeView(BuildContext context) async {
+    // You can fetch the presentation before displaying it when ready
+    var presentation = await Purchasely.fetchPresentation("Settings");
+
+    if (presentation != null) {
+      navigatorKey.currentState?.push(
+        MaterialPageRoute(
+            builder: (context) => PresentationScreen(
+                    properties: {
+                      'presentation': presentation,
+                      //'contentId': null, // Optional
+                    },
+                    callback: (PresentPresentationResult result) {
+                      print('Presentation was closed');
+                      print(
+                          'Presentation result:${result.result} - plan:${result.plan?.vendorId}');
+                      navigatorKey.currentState?.pop();
+                    })),
+      );
+    } else {
+      print("No presentation found");
+
+      // You can also display a presentation without fetching it before
+      // Purchasely will fetch it automatically, display a loader and display it
+      navigatorKey.currentState?.push(
+        MaterialPageRoute(
+            builder: (context) => PresentationScreen(
+                    properties: const {
+                      'placementId': 'onboarding',
+                      //'presentationId': 'TF1', // You can also set a presentationId directly but this is not recommended
+                      //'contentId': null, // Optional
+                    },
+                    callback: (PresentPresentationResult result) {
+                      print('Presentation was closed');
+                      print(
+                          'Presentation result:${result.result} - plan:${result.plan?.vendorId}');
+                      navigatorKey.currentState?.pop();
+                    })),
+      );
     }
   }
 
@@ -327,15 +381,15 @@ class _MyAppState extends State<MyApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: navigatorKey,
       home: Scaffold(
         appBar: AppBar(
-          title: const Text('Plugin example app'),
+          title: const Text('Purchasely Flutter Sample'),
         ),
         body: Center(
             child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
-            const Text('Purchasely sample'),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.only(left: 20.0, right: 30.0),
@@ -344,6 +398,15 @@ class _MyAppState extends State<MyApp> {
                 displayPresentation();
               },
               child: const Text('Display presentation'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.only(left: 20.0, right: 30.0),
+              ),
+              onPressed: () {
+                displayPresentationNativeView(context);
+              },
+              child: const Text('Display presentation (Native View)'),
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
