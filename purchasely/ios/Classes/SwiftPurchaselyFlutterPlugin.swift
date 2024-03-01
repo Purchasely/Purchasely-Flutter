@@ -3,7 +3,7 @@ import UIKit
 import Purchasely
 
 public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
-    
+
     private static var presentationsLoaded = [PLYPresentation]()
     private static var purchaseResult: FlutterResult?
 
@@ -37,7 +37,7 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
 
         let instance = SwiftPurchaselyFlutterPlugin(with: registrar)
         registrar.addMethodCallDelegate(instance, channel: channel)
-        
+
         let factory = NativeViewFactory(messenger: registrar.messenger())
         registrar.register(factory, withId: "io.purchasely.purchasely_flutter/native_view")
     }
@@ -133,6 +133,10 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             setUserAttributeWithBoolean(arguments: arguments)
         case "setUserAttributeWithDate":
             setUserAttributeWithDate(arguments: arguments)
+        case "incrementUserAttribute":
+            incrementUserAttribute(arguments: arguments)
+        case "decrementUserAttribute":
+            decrementUserAttribute(arguments: arguments)
         case "userAttribute":
             getUserAttribute(arguments: arguments, result: result)
         case "userAttributes":
@@ -159,14 +163,14 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             result(FlutterMethodNotImplemented)
         }
     }
-    
+
     internal static func getPresentationController(for args: Any?, with channel: FlutterMethodChannel) -> UIViewController? {
-        
+
         if let creationParams = args as? [String: Any] {
-            
+
             let presentationId = creationParams["presentationId"] as? String
             let placementId = creationParams["placementId"] as? String
-            
+
             guard let presentationMap = creationParams["presentation"] as? [String:Any],
                   let mapPresentationId = presentationMap["id"] as? String,
                   let mapPlacementId = presentationMap["placementId"] as? String,
@@ -185,7 +189,7 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
         }
         return nil
     }
-    
+
     private static func createNativeViewController(presentationId: String?,
                           placementId: String?,
                           channel: FlutterMethodChannel?) -> UIViewController? {
@@ -277,7 +281,7 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             return
         }
 
-		Purchasely.setSdkBridgeVersion("4.2.5")
+		Purchasely.setSdkBridgeVersion("4.3.0")
         Purchasely.setAppTechnology(PLYAppTechnology.flutter)
 
         let logLevel = PLYLogger.LogLevel(rawValue: (arguments["logLevel"] as? Int) ?? PLYLogger.LogLevel.debug.rawValue) ?? PLYLogger.LogLevel.debug
@@ -818,6 +822,22 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
         } else {
             print("Purchasely", "Cannot save date attribute for key \(key)")
         }
+    }
+
+    private func incrementUserAttribute(arguments: [String: Any]?) {
+        guard let arguments = arguments, let value = arguments["value"] as? Int, let key = arguments["key"] as? String else {
+            return
+        }
+
+        Purchasely.incrementUserAttribute(withKey: key, value: value)
+    }
+
+    private func decrementUserAttribute(arguments: [String: Any]?) {
+        guard let arguments = arguments, let value = arguments["value"] as? Int, let key = arguments["key"] as? String else {
+            return
+        }
+
+        Purchasely.decrementUserAttribute(withKey: key, value: value)
     }
 
     private func clearUserAttribute(arguments: [String: Any]?) {

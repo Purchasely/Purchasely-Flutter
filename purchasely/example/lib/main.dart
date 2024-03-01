@@ -15,7 +15,6 @@ void main() {
 class MyApp extends StatefulWidget {
   const MyApp({Key? key}) : super(key: key);
 
-
   @override
   _MyAppState createState() => _MyAppState();
 }
@@ -116,6 +115,13 @@ class _MyAppState extends State<MyApp> {
       Purchasely.setUserAttributeWithDouble("doubleKey", 1.2);
       Purchasely.setUserAttributeWithBoolean("booleanKey", true);
       Purchasely.setUserAttributeWithDate("dateKey", DateTime.now());
+
+      Purchasely.incrementUserAttribute("sessions");
+      Purchasely.incrementUserAttribute("sessions");
+      Purchasely.incrementUserAttribute("sessions");
+      Purchasely.decrementUserAttribute("sessions");
+
+      Purchasely.incrementUserAttribute("app_views", value: 8);
 
       Map<dynamic, dynamic> attributes = await Purchasely.userAttributes();
       attributes.forEach((key, value) {

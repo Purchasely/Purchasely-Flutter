@@ -68,8 +68,7 @@ class Purchasely {
         presentationId: presentationId,
         placementId: placementId,
         contentId: contentId,
-        callback: callback
-    );
+        callback: callback);
   }
 
   static Future<void> clientPresentationDisplayed(
@@ -423,6 +422,18 @@ class Purchasely {
         .toUtc();
     _channel.invokeMethod('setUserAttributeWithDate',
         <String, dynamic>{'key': key, 'value': date.toIso8601String()});
+  }
+
+  static Future<void> incrementUserAttribute(String key,
+      {int value = 1}) async {
+    _channel.invokeMethod('incrementUserAttribute',
+        <String, dynamic>{'key': key, 'value': value});
+  }
+
+  static Future<void> decrementUserAttribute(String key,
+      {int value = 1}) async {
+    _channel.invokeMethod('decrementUserAttribute',
+        <String, dynamic>{'key': key, 'value': value});
   }
 
   static Future<dynamic> userAttribute(String key) async {
