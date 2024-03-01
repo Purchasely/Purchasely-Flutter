@@ -208,23 +208,43 @@ class _MyAppState extends State<MyApp> {
   }
 
   Future<void> displayPresentationNativeView(BuildContext context) async {
+    // You can fetch the presentation before displaying it when ready
     var presentation = await Purchasely.fetchPresentation("Settings");
 
-     if (presentation != null) {
-        navigatorKey.currentState?.push(
-      
-        MaterialPageRoute(builder: (context) => PresentationScreen(
-          properties: {
-            'presentation': presentation,
-            'presentationId': 'TF1',
-            'placementId': null,
-            'contentId': null,
-          },
-          callback: (PresentPresentationResult result) {
-              print('Presentation result:${result.result} - plan:${result.plan?.vendorId}');
-              navigatorKey.currentState?.pop();
-            }
-        )),
+    if (presentation != null) {
+      navigatorKey.currentState?.push(
+        MaterialPageRoute(
+            builder: (context) => PresentationScreen(
+                    properties: {
+                      'presentation': presentation,
+                      //'contentId': null, // Optional
+                    },
+                    callback: (PresentPresentationResult result) {
+                      print('Presentation was closed');
+                      print(
+                          'Presentation result:${result.result} - plan:${result.plan?.vendorId}');
+                      navigatorKey.currentState?.pop();
+                    })),
+      );
+    } else {
+      print("No presentation found");
+
+      // You can also display a presentation without fetching it before
+      // Purchasely will fetch it automatically, display a loader and display it
+      navigatorKey.currentState?.push(
+        MaterialPageRoute(
+            builder: (context) => PresentationScreen(
+                    properties: const {
+                      'placementId': 'onboarding',
+                      //'presentationId': 'TF1', // You can also set a presentationId directly but this is not recommended
+                      //'contentId': null, // Optional
+                    },
+                    callback: (PresentPresentationResult result) {
+                      print('Presentation was closed');
+                      print(
+                          'Presentation result:${result.result} - plan:${result.plan?.vendorId}');
+                      navigatorKey.currentState?.pop();
+                    })),
       );
     }
   }
