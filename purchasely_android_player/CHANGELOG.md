@@ -1,3 +1,5 @@
+## 4.3.1
+Improvements and bug fixes.
 ## 4.3.0
 ### 🕒 User Centric Countdowns
 Countdowns tailored to individual users have been implemented, enabling personalized timers based on user attributes.
