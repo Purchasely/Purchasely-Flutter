@@ -1,5 +1,7 @@
 ## 4.3.3
-Improvements and bug fixes.
+### Fixes
+- Invalidate subscriptions cache and built-in attributes when calling Purchasely.userLogin() or Purchasely.userLogout().
+- Fix background an progress color when opening a presentation from another one with the action open_presentation or open_placement.
 ## 4.3.2
 Improvements and bug fixes.
 ## 4.3.1
