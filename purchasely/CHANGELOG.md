@@ -2,7 +2,8 @@
 ### Fixes for Android
 - Fixed presentations cache.
 ### Fixes for iOS
-- TODO
+- Resolved a bug that caused the discount percentage to display incorrectly for users using the pay as you go payment method.
+- Corrected a text color display issue occurring when switching between dark mode and light mode in the operating system while viewing the paywall.
 ## 4.3.3
 ### Fixes
 - Invalidate subscriptions cache and built-in attributes when calling Purchasely.userLogin() or Purchasely.userLogout().
