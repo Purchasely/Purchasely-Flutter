@@ -183,7 +183,7 @@ class _MyAppState extends State<MyApp> {
     try {
       var result = await Purchasely.presentPresentationForPlacement(
           "ONBOARDING",
-          isFullscreen: false);
+          isFullscreen: true);
 
       switch (result.result) {
         case PLYPurchaseResult.cancelled:
