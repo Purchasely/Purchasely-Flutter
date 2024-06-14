@@ -274,13 +274,55 @@ class Purchasely {
             element['product']['vendorId'], plans.whereNotNull().toList());
       }
 
-      subscriptions.add(PLYSubscription(
-          element['purchaseToken'],
-          PLYSubscriptionSource.values[element['subscriptionSource']],
-          element['nextRenewalDate'],
-          element['cancelledDate'],
-          transformToPLYPlan(element['plan']),
-          product));
+      subscriptions.add(
+          PLYSubscription(
+            element['purchaseToken'],
+            PLYSubscriptionSource.values[element['subscriptionSource']],
+            element['nextRenewalDate'],
+            element['cancelledDate'],
+            transformToPLYPlan(element['plan']),
+            product,
+            null,
+            null,
+            null,
+            null
+          )
+      );
+    });
+    return subscriptions;
+  }
+
+  static Future<List<PLYSubscription>> userSubscriptionsHistory() async {
+    final List<dynamic> result =
+    await _channel.invokeMethod('userSubscriptionsHistory');
+
+    final List<PLYSubscription> subscriptions = new List.empty(growable: true);
+    result.forEach((element) {
+      final List<PLYPlan?> plans = new List.empty(growable: true);
+
+      var product = null;
+      if (element['product'] != null) {
+        element['product']['plans']
+            ?.forEach((k, plan) => plans.add(transformToPLYPlan(plan)));
+
+        product = PLYProduct(element['product']['name'],
+            element['product']['vendorId'], plans.whereNotNull().toList());
+      }
+
+      subscriptions.add(
+          PLYSubscription(
+            element['purchaseToken'],
+            PLYSubscriptionSource.values[element['subscriptionSource']],
+            element['nextRenewalDate'],
+            element['cancelledDate'],
+            transformToPLYPlan(element['plan']),
+            product,
+            element['cumulatedRevenuesInUSD'],
+            element['subscriptionDurationInDays'],
+            element['subscriptionDurationInWeeks'],
+            element['subscriptionDurationInMonths'],
+          )
+      );
     });
     return subscriptions;
   }
@@ -919,9 +961,23 @@ class PLYSubscription {
   String? cancelledDate;
   PLYPlan? plan;
   PLYProduct? product;
+  double? cumulatedRevenuesInUSD= null;
+  int? subscriptionDurationInDays = null;
+  int? subscriptionDurationInWeeks = null;
+  int? subscriptionDurationInMonths = null;
 
-  PLYSubscription(this.purchaseToken, this.subscriptionSource,
-      this.nextRenewalDate, this.cancelledDate, this.plan, this.product);
+  PLYSubscription(
+      this.purchaseToken,
+      this.subscriptionSource,
+      this.nextRenewalDate,
+      this.cancelledDate,
+      this.plan,
+      this.product,
+      this.cumulatedRevenuesInUSD,
+      this.subscriptionDurationInDays,
+      this.subscriptionDurationInWeeks,
+      this.subscriptionDurationInMonths
+      );
 }
 
 class PresentPresentationResult {

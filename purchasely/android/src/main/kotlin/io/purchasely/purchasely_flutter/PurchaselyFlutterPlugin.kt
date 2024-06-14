@@ -260,6 +260,7 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
             "displaySubscriptionCancellationInstruction" -> displaySubscriptionCancellationInstruction()
             "isDeeplinkHandled" -> isDeeplinkHandled(call.argument<String>("deeplink"), result)
             "userSubscriptions" -> launch { userSubscriptions(result) }
+            "userSubscriptionsHistory" -> launch { userSubscriptionsHistory(result) }
             "presentSubscriptions" -> presentSubscriptions()
             "setThemeMode" -> setThemeMode(call.argument<Int>("mode"))
             "setAttribute" -> setAttribute(call.argument<Int>("attribute"), call.argument<String>("value"))
@@ -342,7 +343,7 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
             .userId(userId)
             .build()
 
-	  Purchasely.sdkBridgeVersion = "4.3.4"
+	  Purchasely.sdkBridgeVersion = "4.4.0"
         Purchasely.appTechnology = PLYAppTechnology.FLUTTER
 
         Purchasely.start { isConfigured, error ->
@@ -593,6 +594,40 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
     private suspend fun userSubscriptions(result: Result) {
         try {
             val subscriptions = Purchasely.userSubscriptions()
+            val list = ArrayList<MutableMap<String, Any?>>()
+            for (data in subscriptions) {
+                val map = data.data.toMap().toMutableMap().apply {
+                    this["subscriptionSource"] = when(data.data.storeType) {
+                        StoreType.GOOGLE_PLAY_STORE -> StoreType.GOOGLE_PLAY_STORE.ordinal
+                        StoreType.HUAWEI_APP_GALLERY -> StoreType.HUAWEI_APP_GALLERY.ordinal
+                        StoreType.AMAZON_APP_STORE -> StoreType.AMAZON_APP_STORE.ordinal
+                        StoreType.APPLE_APP_STORE -> StoreType.APPLE_APP_STORE.ordinal
+                        else -> null
+                    }
+
+                    this["plan"] = transformPlanToMap(data.plan)
+
+                    val plans = HashMap<String?, Any>()
+                    data.product.plans.map {
+                        plans.put(it.name, transformPlanToMap(it))
+                    }
+                    this["product"] = data.product.toMap().toMutableMap().apply {
+                        this["plans"] = plans
+                    }
+                    remove("subscription_status") //TODO add in a future version after checking with iOS
+                }
+                list.add(map)
+                //list[data.data.id] = map
+            }
+            result.safeSuccess(list)
+        } catch (e: Exception) {
+            result.safeError("-1", e.message, e)
+        }
+    }
+
+    private suspend fun userSubscriptionsHistory(result: Result) {
+        try {
+            val subscriptions = Purchasely.userSubscriptionsHistory()
             val list = ArrayList<MutableMap<String, Any?>>()
             for (data in subscriptions) {
                 val map = data.data.toMap().toMutableMap().apply {
