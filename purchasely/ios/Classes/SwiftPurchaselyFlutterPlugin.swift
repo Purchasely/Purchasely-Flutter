@@ -105,8 +105,8 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
         case "isDeeplinkHandled":
             let parameter = arguments?["deeplink"] as? String
             isDeeplinkHandled(parameter, result: result)
-        case "userSubscriptions":
-            userSubscriptions(result)
+        case "userSubscriptionsHistory":
+            userSubscriptionsHistory(result)
         case "presentSubscriptions":
             presentSubscriptions()
         case "setThemeMode":
@@ -749,6 +749,17 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             }
         }
     }
+
+        private func userSubscriptionsHistory(_ result: @escaping FlutterResult) {
+
+            DispatchQueue.main.async {
+                Purchasely.userSubscriptionsHistory { subscriptions in
+                    result((subscriptions ?? []).compactMap { $0.toMap })
+                } failure: { error in
+                    result(FlutterError.error(code:"-1", message:"failed to fetch user subscriptions history", error: error))
+                }
+            }
+        }
 
     private func presentSubscriptions() {
         if let controller = Purchasely.subscriptionsController() {
