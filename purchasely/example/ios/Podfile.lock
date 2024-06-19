@@ -1,0 +1,29 @@
+PODS:
+  - Flutter (1.0.0)
+  - Purchasely (4.4.2)
+  - purchasely_flutter (1.2.4):
+    - Flutter
+    - Purchasely (= 4.4.2)
+
+DEPENDENCIES:
+  - Flutter (from `Flutter`)
+  - purchasely_flutter (from `.symlinks/plugins/purchasely_flutter/ios`)
+
+SPEC REPOS:
+  trunk:
+    - Purchasely
+
+EXTERNAL SOURCES:
+  Flutter:
+    :path: Flutter
+  purchasely_flutter:
+    :path: ".symlinks/plugins/purchasely_flutter/ios"
+
+SPEC CHECKSUMS:
+  Flutter: e0871f40cf51350855a761d2e70bf5af5b9b5de7
+  Purchasely: 79a6f04ffd4fd237963e0e08dfad54b7a41be4c1
+  purchasely_flutter: 459c2ef73150fae608cdd7cca02cc47a749fec01
+
+PODFILE CHECKSUM: d20b79b0eed0a157c8056f71847018b651697d65
+
+COCOAPODS: 1.15.2

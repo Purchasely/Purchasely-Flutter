@@ -1,5 +1,11 @@
 ## 4.4.0
-- TODO
+- **Audience Targeting**: Added capability to segment audiences based on user's country and purchase history.
+- **UI Enhancements**:
+     - Introduced a customizable header button as an alternative to the default close button.
+- **Subscription Management**: New method `userSubscriptionsHistory` allows retrieval of expired subscriptions.
+### Android
+- **Google Play Billing**: Upgraded to version 6.
+- **Paywall Engine**: Improved paywall engine for better performance.
 ## 4.3.4
 ### Fixes for Android
 - Fixed presentations cache.
