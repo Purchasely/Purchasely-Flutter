@@ -76,12 +76,26 @@ class _MyAppState extends State<MyApp> {
       try {
         List<PLYSubscription> subscriptions =
             await Purchasely.userSubscriptions();
-        print(' ==> Subscriptions');
+        print(' ==> Active Subscriptions');
         if (subscriptions.isNotEmpty) {
           print(subscriptions.first.plan);
           print(subscriptions.first.subscriptionSource);
           print(subscriptions.first.nextRenewalDate);
           print(subscriptions.first.cancelledDate);
+        }
+      } catch (e) {
+        print(e);
+      }
+
+      try {
+        List<PLYSubscription> expiredSubscriptions =
+        await Purchasely.userSubscriptionsHistory();
+        print(' ==> Expired Subscriptions');
+        if (expiredSubscriptions.isNotEmpty) {
+          print(expiredSubscriptions.first.plan);
+          print(expiredSubscriptions.first.subscriptionSource);
+          print(expiredSubscriptions.first.nextRenewalDate);
+          print(expiredSubscriptions.first.cancelledDate);
         }
       } catch (e) {
         print(e);

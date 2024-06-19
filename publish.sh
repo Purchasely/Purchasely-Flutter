@@ -5,6 +5,7 @@ VERSION=$1
 #replace version number in yaml file
 sed -i '' "s/^.*version:.*$/version: ${VERSION}/" purchasely/pubspec.yaml
 sed -i '' "s/^.*version:.*$/version: ${VERSION}/" purchasely_google/pubspec.yaml
+sed -i '' "s/^.*purchasely_flutter:.*$/purchasely_flutter: ^${VERSION}/" purchasely_google/pubspec.yaml
 sed -i '' "s/^.*version:.*$/version: ${VERSION}/" purchasely_android_player/pubspec.yaml
 
 #replace version number in android plugin
