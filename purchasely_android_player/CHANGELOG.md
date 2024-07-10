@@ -1,3 +1,5 @@
+## 4.4.1
+- Fix method `userSubscriptions` on iOS platform.
 ## 4.4.0
 - **Audience Targeting**: Added capability to segment audiences based on user's country and purchase history.
 - **UI Enhancements**:
