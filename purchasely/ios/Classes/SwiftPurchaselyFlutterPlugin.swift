@@ -105,6 +105,8 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
         case "isDeeplinkHandled":
             let parameter = arguments?["deeplink"] as? String
             isDeeplinkHandled(parameter, result: result)
+        case "userSubscriptions":
+            userSubscriptions(result)
         case "userSubscriptionsHistory":
             userSubscriptionsHistory(result)
         case "presentSubscriptions":
@@ -178,7 +180,7 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
                   let presentationLoadedController = presentationLoaded.controller else {
                 return SwiftPurchaselyFlutterPlugin.createNativeViewController(presentationId: presentationId, placementId: placementId, channel: channel)
             }
-            
+
             SwiftPurchaselyFlutterPlugin.purchaseResult = { result in
                 if let value = result as? [String : Any] {
                     channel.invokeMethod("onPresentationResult", arguments: ["result": value["result"],
@@ -750,16 +752,16 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
         }
     }
 
-        private func userSubscriptionsHistory(_ result: @escaping FlutterResult) {
+    private func userSubscriptionsHistory(_ result: @escaping FlutterResult) {
 
-            DispatchQueue.main.async {
-                Purchasely.userSubscriptionsHistory { subscriptions in
-                    result((subscriptions ?? []).compactMap { $0.toMap })
-                } failure: { error in
-                    result(FlutterError.error(code:"-1", message:"failed to fetch user subscriptions history", error: error))
-                }
+        DispatchQueue.main.async {
+            Purchasely.userSubscriptionsHistory { subscriptions in
+                result((subscriptions ?? []).compactMap { $0.toMap })
+            } failure: { error in
+                result(FlutterError.error(code:"-1", message:"failed to fetch user subscriptions history", error: error))
             }
         }
+    }
 
     private func presentSubscriptions() {
         if let controller = Purchasely.subscriptionsController() {
