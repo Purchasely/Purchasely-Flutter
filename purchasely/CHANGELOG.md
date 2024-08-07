@@ -1,3 +1,7 @@
+## 4.5.0
+- Markdown: Enhanced text formatting capabilities by supporting markdown syntax for bold, italic, strikethrough, and links. Reach out to the Customer Success Team to activate it for your account.
+- Amount Tag Pricing: Improved price display on AMOUNT tag by hiding decimals when the price is a whole number.
+- Various enhancements and optimizations to boost stability and performance.
 ## 4.4.1
 - Fix method `userSubscriptions` on iOS platform.
 ## 4.4.0
