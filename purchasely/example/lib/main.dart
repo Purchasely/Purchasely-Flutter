@@ -104,8 +104,7 @@ class _MyAppState extends State<MyApp> {
       List<PLYProduct> products = await Purchasely.allProducts();
       inspect(products);
 
-      PLYProduct product =
-          await Purchasely.productWithIdentifier("PURCHASELY_PLUS");
+      PLYProduct product = await Purchasely.productWithIdentifier("PURCHASELY_PLUS");
       print('Product found');
       inspect(product);
 
