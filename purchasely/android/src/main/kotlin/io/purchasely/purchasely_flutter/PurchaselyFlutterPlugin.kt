@@ -343,7 +343,7 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
             .userId(userId)
             .build()
 
-	  Purchasely.sdkBridgeVersion = "4.5.1"
+	    Purchasely.sdkBridgeVersion = "5.0.0-rc01"
         Purchasely.appTechnology = PLYAppTechnology.FLUTTER
 
         Purchasely.start { isConfigured, error ->
@@ -364,7 +364,7 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
                                   contentId: String?,
                                   result: Result) {
 
-        val properties = PLYPresentationViewProperties(
+        val properties = PLYPresentationProperties(
             placementId = placementId,
             presentationId = presentationId,
             contentId = contentId)

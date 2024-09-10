@@ -9,7 +9,7 @@ import android.widget.FrameLayout
 import androidx.core.view.WindowCompat
 import androidx.fragment.app.FragmentActivity
 import io.purchasely.ext.PLYPresentation
-import io.purchasely.ext.PLYPresentationViewProperties
+import io.purchasely.ext.PLYPresentationProperties
 import io.purchasely.ext.PLYProductViewResult
 import io.purchasely.ext.Purchasely
 import io.purchasely.models.PLYPlan
@@ -60,22 +60,22 @@ class PLYProductActivity : FragmentActivity() {
         presentation = intent.extras?.getParcelable("presentation")
 
         paywallView = if(presentation != null) {
-            presentation?.buildView(this, PLYPresentationViewProperties(
+            presentation?.buildView(this, PLYPresentationProperties(
                 onClose = {
                     supportFinishAfterTransition()
                 }
             ), callback)
         } else {
             Purchasely.presentationView(
-                this@PLYProductActivity,
-                PLYPresentationViewProperties(
+                context = this@PLYProductActivity,
+                properties = PLYPresentationProperties(
                     placementId = placementId,
                     contentId = contentId,
                     presentationId = presentationId,
                     planId = planId,
                     productId = productId,
                     onLoaded = { isLoaded ->
-                        if(!isLoaded) return@PLYPresentationViewProperties
+                        if(!isLoaded) return@PLYPresentationProperties
 
                         val backgroundPaywall = paywallView?.findViewById<FrameLayout>(io.purchasely.R.id.content)?.background
                         if(backgroundPaywall != null) {
@@ -83,7 +83,7 @@ class PLYProductActivity : FragmentActivity() {
                         }
                     }
                 ),
-                callback
+                callback = callback
             )
         }
 

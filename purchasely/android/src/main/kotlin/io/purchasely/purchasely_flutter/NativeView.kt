@@ -6,9 +6,11 @@ import android.view.View
 import android.widget.FrameLayout
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.platform.PlatformView
-import io.purchasely.ext.PLYPresentationViewProperties
+import io.purchasely.ext.PLYPresentationProperties
+import io.purchasely.ext.PLYProductViewResult
 import io.purchasely.ext.Purchasely
 import io.purchasely.models.PLYPresentationPlan
+import io.purchasely.models.PLYPlan
 import android.view.ViewGroup
 
 internal class NativeView(
@@ -42,7 +44,7 @@ internal class NativeView(
             // Build the presentation view
             val presentationView = presentation.buildView(
                 context = context,
-                viewProperties = PLYPresentationViewProperties(
+                properties = PLYPresentationProperties(
                     onClose = { closeCallback() }
                 ),
                 callback = { result, plan ->
@@ -60,7 +62,7 @@ internal class NativeView(
             Log.e("Purchasely", "PLYPresentation not found: using presentationId=$presentationId and placementId=$placementId.")
             val presentationView = Purchasely.presentationView(
                 context = context,
-                properties = PLYPresentationViewProperties(
+                properties = PLYPresentationProperties(
                     presentationId = presentationId,
                     placementId = placementId,
                     onClose = { closeCallback() }
