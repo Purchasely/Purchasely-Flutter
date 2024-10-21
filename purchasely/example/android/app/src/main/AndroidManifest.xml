@@ -1,6 +1,5 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
-    package="io.purchasely.sample">
+    xmlns:tools="http://schemas.android.com/tools">
    <application
         android:label="purchasely_flutter_example"
         android:icon="@mipmap/ic_launcher">

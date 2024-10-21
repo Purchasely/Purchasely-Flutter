@@ -9,7 +9,7 @@ buildscript {
     }
 
     dependencies {
-        classpath 'com.android.tools.build:gradle:7.3.1'
+        classpath 'com.android.tools.build:gradle:8.7.0'
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
     }
 }
@@ -25,6 +25,7 @@ apply plugin: 'com.android.library'
 apply plugin: 'kotlin-android'
 
 android {
+    namespace 'io.purchasely.purchasely_flutter'
     compileSdkVersion 31
 
     compileOptions {
@@ -50,5 +51,5 @@ dependencies {
 
     api 'androidx.lifecycle:lifecycle-runtime-ktx:2.4.0'
 
-    api 'io.purchasely:core:4.5.1'
+    api 'io.purchasely:core:4.5.5'
 }

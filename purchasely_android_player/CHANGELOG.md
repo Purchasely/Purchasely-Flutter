@@ -1,3 +1,5 @@
+## 4.5.1
+- Improvements and bug fixes.
 ## 4.5.0
 - Markdown: Enhanced text formatting capabilities by supporting markdown syntax for bold, italic, strikethrough, and links. Reach out to the Customer Success Team to activate it for your account.
 - Amount Tag Pricing: Improved price display on AMOUNT tag by hiding decimals when the price is a whole number.
