@@ -11,7 +11,7 @@ dependencies:
   flutter:
     sdk: flutter
   plugin_platform_interface: ^2.0.2
-purchasely_flutter: ^4.5.1
+purchasely_flutter: ^5.0.0-rc01
 
 dev_dependencies:
   flutter_test:
