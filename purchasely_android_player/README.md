@@ -1,15 +1,52 @@
-# purchasely_android_player
+![Purchasely](images/icon.png)
 
-A new Flutter plugin project.
+# Purchasely
 
-## Getting Started
+Purchasely is a solution to ease the integration and boost your In-App Purchase & Subscriptions on the App Store, Google Play Store and Huawei App Gallery.
 
-This project is a starting point for a Flutter
-[plug-in package](https://flutter.dev/developing-packages/),
-a specialized package that includes platform-specific implementation code for
-Android and/or iOS.
+## Installation
 
-For help getting started with Flutter development, view the
-[online documentation](https://flutter.dev/docs), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+```
+dependencies:
+  purchasely_flutter: ^5.0.0-rc01
+```
 
+## Usage
+
+```dart
+import 'package:purchasely_flutter/purchasely_flutter.dart';
+
+// ...
+
+bool configured = await Purchasely.start(
+    apiKey: '<YOUR_API_KEY>',
+    androidStores: ['Google, Huawei, Amazon'],
+    storeKit1: false,
+    logLevel: PLYLogLevel.error,
+    runningMode: PLYRunningMode.full,
+    userId: null,
+);
+
+var result = await Purchasely.presentPresentationForPlacement("<YOUR_PLACEMENT_ID>", isFullscreen: true);
+
+switch (result.result) {
+  case PLYPurchaseResult.cancelled:
+  {
+    print("User cancelled purchased");
+  }
+  break;
+  case PLYPurchaseResult.purchased:
+  {
+    print("User purchased ${result.plan?.name}");
+  }
+  break;
+  case PLYPurchaseResult.restored:
+  {
+    print("User restored ${result.plan?.name}");
+  }
+  break;
+}
+```
+
+## 🏁 Documentation
+A complete documentation is available on our website [https://docs.purchasely.com](https://docs.purchasely.com)

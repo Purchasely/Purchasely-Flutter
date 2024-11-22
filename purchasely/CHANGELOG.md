@@ -1,5 +1,7 @@
+## 5.0.0-rc01
+Explore the full details of this release in our [changelog](https://docs.purchasely.com/changelog/500-rc01).
 ## 4.5.1
-- Improvements and bug fixes.
+- Various improvements and bug fixes to enhance performance and stability.
 ## 4.5.0
 - Markdown: Enhanced text formatting capabilities by supporting markdown syntax for bold, italic, strikethrough, and links. Reach out to the Customer Success Team to activate it for your account.
 - Amount Tag Pricing: Improved price display on AMOUNT tag by hiding decimals when the price is a whole number.
