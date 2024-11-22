@@ -1,4 +1,4 @@
-## 5.0.0-alpha01
+## 5.0.0-rc01
 // TODO
 ## 4.5.1
 - Improvements and bug fixes.

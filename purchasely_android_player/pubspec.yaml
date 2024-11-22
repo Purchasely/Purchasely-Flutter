@@ -1,6 +1,6 @@
 name: purchasely_android_player
 description: Purchasely Player dependency for Android
-version: 5.0.0-alpha01
+version: 5.0.0-rc01
 homepage: https://www.purchasely.com/
 
 environment:

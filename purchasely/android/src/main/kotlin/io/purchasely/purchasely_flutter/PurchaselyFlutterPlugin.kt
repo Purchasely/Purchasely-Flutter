@@ -1018,7 +1018,7 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
             Pair("planVendorId", planVendorId),
             Pair("storeProductId", storeProductId),
             Pair("basePlanId", basePlanId),
-            Pair("offerId", offerId)
+            //Pair("offerId", offerId)
         )
     }
 

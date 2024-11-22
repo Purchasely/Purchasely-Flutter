@@ -100,7 +100,9 @@ internal class NativeView(
                     planVendorId = planVendorId,
                     storeProductId = storeProductId,
                     basePlanId = basePlanId,
-                    offerId = offerId
+                    storeOfferId = offerId,
+                    offerVendorId = null,
+                    default = false
                 )
 
                 parsedPlans.add(presentationPlan)

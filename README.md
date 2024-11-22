@@ -8,7 +8,7 @@ Purchasely is a solution to ease the integration and boost your In-App Purchase 
 
 ```
 dependencies:
-  purchasely_flutter: ^1.7.0
+  purchasely_flutter: ^5.0.0-rc01
 ```
 
 ## Usage
@@ -18,20 +18,33 @@ import 'package:purchasely_flutter/purchasely_flutter.dart';
 
 // ...
 
-bool configured = await Purchasely.startWithApiKey(
-    'YOUR_API_KEY',
-    ['Google'],
-    null, // your user id
-    PLYLogLevel.debug,
-    PLYRunningMode.full
-  );
+bool configured = await Purchasely.start(
+    apiKey: '<YOUR_API_KEY>',
+    androidStores: ['Google, Huawei, Amazon'],
+    storeKit1: false,
+    logLevel: PLYLogLevel.error,
+    runningMode: PLYRunningMode.full,
+    userId: null,
+);
 
-var result = await Purchasely.presentProductWithIdentifier('YOU_PRODUCT_ID');
-print('Result : $result');
-if (result.result == PLYPurchaseResult.cancelled) {
-  print("User cancelled purchased");
-} else {
-  print('User purchased: ${result.plan.name}');
+var result = await Purchasely.presentPresentationForPlacement("<YOUR_PLACEMENT_ID>", isFullscreen: true);
+
+switch (result.result) {
+  case PLYPurchaseResult.cancelled:
+  {
+    print("User cancelled purchased");
+  }
+  break;
+  case PLYPurchaseResult.purchased:
+  {
+    print("User purchased ${result.plan?.name}");
+  }
+  break;
+  case PLYPurchaseResult.restored:
+  {
+    print("User restored ${result.plan?.name}");
+  }
+  break;
 }
 ```
 
