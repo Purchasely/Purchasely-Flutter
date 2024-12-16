@@ -286,22 +286,22 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
             }
             "setUserAttributeWithStringArray" -> {
                 val key = call.argument<String>("key") ?: return
-                val value = call.argument<String>("value") ?: return
+                val value = call.argument<List<String>>("value") ?: return
                 setUserAttributeWithStringArray(key, value)
             }
             "setUserAttributeWithIntArray" -> {
                 val key = call.argument<String>("key") ?: return
-                val value = call.argument<Int>("value") ?: return
+                val value = call.argument<List<Int>>("value") ?: return
                 setUserAttributeWithIntArray(key, value)
             }
             "setUserAttributeWithDoubleArray" -> {
                 val key = call.argument<String>("key") ?: return
-                val value = call.argument<Double>("value") ?: return
+                val value = call.argument<List<Double>>("value") ?: return
                 setUserAttributeWithDoubleArray(key, value)
             }
             "setUserAttributeWithBooleanArray" -> {
                 val key = call.argument<String>("key") ?: return
-                val value = call.argument<Boolean>("value") ?: return
+                val value = call.argument<List<Boolean>>("value") ?: return
                 setUserAttributeWithBooleanArray(key, value)
             }
             "setUserAttributeWithDate" -> {
@@ -712,20 +712,20 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
         Purchasely.setUserAttribute(key, value)
     }
 
-    fun setUserAttributeWithStringArray(key: String, value: String) {
-        Purchasely.setUserAttribute(key, value)
+    fun setUserAttributeWithStringArray(key: String, value: List<String>) {
+        Purchasely.setUserAttribute(key, value.toTypedArray())
     }
 
-    fun setUserAttributeWithIntArray(key: String, value: Int) {
-        Purchasely.setUserAttribute(key, value)
+    fun setUserAttributeWithIntArray(key: String, value: List<Int>) {
+        Purchasely.setUserAttribute(key, value.toTypedArray())
     }
 
-    fun setUserAttributeWithDoubleArray(key: String, value: Double) {
-        Purchasely.setUserAttribute(key, value)
+    fun setUserAttributeWithDoubleArray(key: String, value: List<Double>) {
+        Purchasely.setUserAttribute(key, value.map { it.toFloat() }.toTypedArray())
     }
 
-    fun setUserAttributeWithBooleanArray(key: String, value: Boolean) {
-        Purchasely.setUserAttribute(key, value)
+    fun setUserAttributeWithBooleanArray(key: String, value: List<Boolean>) {
+        Purchasely.setUserAttribute(key, value.toTypedArray())
     }
 
     fun setUserAttributeWithDate(key: String, value: String) {
@@ -787,6 +787,15 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
             }
             //awful but to keep same precision so 1.2f = 1.2 double and not 1.20000056
             is Float -> value.toString().toDouble()
+            is Array<*> -> {
+                when {
+                    value.isArrayOf<String>() -> value.toList()
+                    value.isArrayOf<Int>() -> value.toList()
+                    value.isArrayOf<Float>() -> value.map { it.toString().toDouble() }.toList()
+                    value.isArrayOf<Boolean>() -> value.toList()
+                    else -> value
+                }
+            }
             else -> value
         }
     }
