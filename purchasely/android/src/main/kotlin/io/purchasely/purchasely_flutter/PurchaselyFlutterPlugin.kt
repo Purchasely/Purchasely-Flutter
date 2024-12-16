@@ -284,6 +284,26 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
                 val value = call.argument<Boolean>("value") ?: return
                 setUserAttributeWithBoolean(key, value)
             }
+            "setUserAttributeWithStringArray" -> {
+                val key = call.argument<String>("key") ?: return
+                val value = call.argument<String>("value") ?: return
+                setUserAttributeWithStringArray(key, value)
+            }
+            "setUserAttributeWithIntArray" -> {
+                val key = call.argument<String>("key") ?: return
+                val value = call.argument<Int>("value") ?: return
+                setUserAttributeWithIntArray(key, value)
+            }
+            "setUserAttributeWithDoubleArray" -> {
+                val key = call.argument<String>("key") ?: return
+                val value = call.argument<Double>("value") ?: return
+                setUserAttributeWithDoubleArray(key, value)
+            }
+            "setUserAttributeWithBooleanArray" -> {
+                val key = call.argument<String>("key") ?: return
+                val value = call.argument<Boolean>("value") ?: return
+                setUserAttributeWithBooleanArray(key, value)
+            }
             "setUserAttributeWithDate" -> {
                 val key = call.argument<String>("key") ?: return
                 val value = call.argument<String>("value") ?: return
@@ -343,7 +363,7 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
             .userId(userId)
             .build()
 
-	  Purchasely.sdkBridgeVersion = "5.0.0-rc01"
+	  Purchasely.sdkBridgeVersion = "5.0.0"
         Purchasely.appTechnology = PLYAppTechnology.FLUTTER
 
         Purchasely.start { isConfigured, error ->
@@ -689,6 +709,22 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
     }
 
     fun setUserAttributeWithBoolean(key: String, value: Boolean) {
+        Purchasely.setUserAttribute(key, value)
+    }
+
+    fun setUserAttributeWithStringArray(key: String, value: String) {
+        Purchasely.setUserAttribute(key, value)
+    }
+
+    fun setUserAttributeWithIntArray(key: String, value: Int) {
+        Purchasely.setUserAttribute(key, value)
+    }
+
+    fun setUserAttributeWithDoubleArray(key: String, value: Double) {
+        Purchasely.setUserAttribute(key, value)
+    }
+
+    fun setUserAttributeWithBooleanArray(key: String, value: Boolean) {
         Purchasely.setUserAttribute(key, value)
     }
 

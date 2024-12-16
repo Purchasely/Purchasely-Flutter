@@ -130,6 +130,11 @@ class _MyAppState extends State<MyApp> {
       Purchasely.setUserAttributeWithBoolean("booleanKey", true);
       Purchasely.setUserAttributeWithDate("dateKey", DateTime.now());
 
+      Purchasely.setUserAttributeWithStringArray("stringKey", ["StringValue", "test"]);
+      Purchasely.setUserAttributeWithIntArray("intKey", [3, 8, 42]);
+      Purchasely.setUserAttributeWithDoubleArray("doubleKey", [1.2, 19.9, 2323.213]);
+      Purchasely.setUserAttributeWithBooleanArray("booleanKey", [true, true, false, false]);
+
       Purchasely.incrementUserAttribute("sessions");
       Purchasely.incrementUserAttribute("sessions");
       Purchasely.incrementUserAttribute("sessions");

@@ -135,6 +135,14 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             setUserAttributeWithBoolean(arguments: arguments)
         case "setUserAttributeWithDate":
             setUserAttributeWithDate(arguments: arguments)
+        case "setUserAttributeWithStringArray":
+            setUserAttributeWithStringArray(arguments: arguments)
+        case "setUserAttributeWithIntArray":
+            setUserAttributeWithIntArray(arguments: arguments)
+        case "setUserAttributeWithDoubleArray":
+            setUserAttributeWithDoubleArray(arguments: arguments)
+        case "setUserAttributeWithBooleanArray":
+            setUserAttributeWithBooleanArray(arguments: arguments)
         case "incrementUserAttribute":
             incrementUserAttribute(arguments: arguments)
         case "decrementUserAttribute":
@@ -283,7 +291,7 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             return
         }
 
-		Purchasely.setSdkBridgeVersion("5.0.0-rc01")
+		Purchasely.setSdkBridgeVersion("5.0.0")
         Purchasely.setAppTechnology(PLYAppTechnology.flutter)
 
         let logLevel = PLYLogger.LogLevel(rawValue: (arguments["logLevel"] as? Int) ?? PLYLogger.LogLevel.debug.rawValue) ?? PLYLogger.LogLevel.debug
@@ -797,6 +805,14 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
 
         Purchasely.setUserAttribute(withStringValue: value, forKey: key)
     }
+    
+    private func setUserAttributeWithStringArray(arguments: [String: Any]?) {
+        guard let arguments = arguments, let value = arguments["value"] as? [String], let key = arguments["key"] as? String else {
+            return
+        }
+
+        Purchasely.setUserAttribute(withStringArray: value, forKey: key)
+    }
 
     private func setUserAttributeWithInt(arguments: [String: Any]?) {
         guard let arguments = arguments, let value = arguments["value"] as? Int, let key = arguments["key"] as? String else {
@@ -804,6 +820,14 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
         }
 
         Purchasely.setUserAttribute(withIntValue: value, forKey: key)
+    }
+    
+    private func setUserAttributeWithIntArray(arguments: [String: Any]?) {
+        guard let arguments = arguments, let value = arguments["value"] as? [Int], let key = arguments["key"] as? String else {
+            return
+        }
+
+        Purchasely.setUserAttribute(withIntArray: value, forKey: key)
     }
 
     private func setUserAttributeWithDouble(arguments: [String: Any]?) {
@@ -813,6 +837,14 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
 
         Purchasely.setUserAttribute(withDoubleValue: value, forKey: key)
     }
+    
+    private func setUserAttributeWithDoubleArray(arguments: [String: Any]?) {
+        guard let arguments = arguments, let value = arguments["value"] as? [Double], let key = arguments["key"] as? String else {
+            return
+        }
+
+        Purchasely.setUserAttribute(withDoubleArray: value, forKey: key)
+    }
 
     private func setUserAttributeWithBoolean(arguments: [String: Any]?) {
         guard let arguments = arguments, let value = arguments["value"] as? Bool, let key = arguments["key"] as? String else {
@@ -820,6 +852,14 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
         }
 
         Purchasely.setUserAttribute(withBoolValue: value, forKey: key)
+    }
+    
+    private func setUserAttributeWithBooleanArray(arguments: [String: Any]?) {
+        guard let arguments = arguments, let value = arguments["value"] as? [Bool], let key = arguments["key"] as? String else {
+            return
+        }
+
+        Purchasely.setUserAttribute(withBoolArray: value, forKey: key)
     }
 
     private func setUserAttributeWithDate(arguments: [String: Any]?) {
