@@ -457,6 +457,30 @@ class Purchasely {
         <String, dynamic>{'key': key, 'value': value});
   }
 
+  static Future<void> setUserAttributeWithStringArray(
+      String key, List<String> value) async {
+    _channel.invokeMethod('setUserAttributeWithStringArray',
+        <String, dynamic>{'key': key, 'value': value});
+  }
+
+  static Future<void> setUserAttributeWithIntArray(String key,
+   List<int> value) async {
+    _channel.invokeMethod('setUserAttributeWithIntArray',
+        <String, dynamic>{'key': key, 'value': value});
+  }
+
+  static Future<void> setUserAttributeWithDoubleArray(
+      String key, List<double> value) async {
+    _channel.invokeMethod('setUserAttributeWithDoubleArray',
+        <String, dynamic>{'key': key, 'value': value});
+  }
+
+  static Future<void> setUserAttributeWithBooleanArray(
+      String key, List<bool> value) async {
+    _channel.invokeMethod('setUserAttributeWithBooleanArray',
+        <String, dynamic>{'key': key, 'value': value});
+  }
+
   static Future<void> setUserAttributeWithDate(
       String key, DateTime value) async {
     DateTime date = DateTime(value.year, value.month, value.day, value.hour,

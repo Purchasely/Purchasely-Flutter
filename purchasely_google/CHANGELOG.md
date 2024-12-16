@@ -1,3 +1,5 @@
+## 5.0.0
+Explore the full details of this release in our [changelog](https://docs.purchasely.com/changelog/500).
 ## 5.0.0-rc01
 Explore the full details of this release in our [changelog](https://docs.purchasely.com/changelog/500-rc01).
 ## 4.5.1

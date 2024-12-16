@@ -89,7 +89,7 @@ class _MyAppState extends State<MyApp> {
 
       try {
         List<PLYSubscription> expiredSubscriptions =
-        await Purchasely.userSubscriptionsHistory();
+            await Purchasely.userSubscriptionsHistory();
         print(' ==> Expired Subscriptions');
         if (expiredSubscriptions.isNotEmpty) {
           print(expiredSubscriptions.first.plan);
@@ -129,6 +129,14 @@ class _MyAppState extends State<MyApp> {
       Purchasely.setUserAttributeWithDouble("doubleKey", 1.2);
       Purchasely.setUserAttributeWithBoolean("booleanKey", true);
       Purchasely.setUserAttributeWithDate("dateKey", DateTime.now());
+
+      Purchasely.setUserAttributeWithStringArray(
+          "stringArrayKey", ["StringValue", "test"]);
+      Purchasely.setUserAttributeWithIntArray("intArrayKey", [3, 8, 42]);
+      Purchasely.setUserAttributeWithDoubleArray(
+          "doubleArrayKey", [1.2, 19.9, 2323.213]);
+      Purchasely.setUserAttributeWithBooleanArray(
+          "booleanArrayKey", [true, true, false, false]);
 
       Purchasely.incrementUserAttribute("sessions");
       Purchasely.incrementUserAttribute("sessions");
