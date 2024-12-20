@@ -203,8 +203,7 @@ class _MyAppState extends State<MyApp> {
 
   Future<void> displayPresentation() async {
     try {
-      var result = await Purchasely.presentPresentationForPlacement(
-          "ONBOARDING",
+      var result = await Purchasely.presentPresentationForPlacement("abtest",
           isFullscreen: true);
 
       switch (result.result) {

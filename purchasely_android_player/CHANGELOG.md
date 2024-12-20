@@ -1,3 +1,10 @@
+## 5.0.1
+### Fixes
+- Placement ID issue that could return the wrong screen in some cases.
+- Event count issue for "presentation viewed."
+### Improvements
+- Optimization for non-subscription and in-app purchase apps.
+- General performance enhancements
 ## 5.0.0
 Explore the full details of this release in our [changelog](https://docs.purchasely.com/changelog/500).
 ## 5.0.0-rc01
