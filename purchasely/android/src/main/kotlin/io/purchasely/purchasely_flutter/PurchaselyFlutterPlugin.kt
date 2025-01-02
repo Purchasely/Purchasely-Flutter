@@ -110,7 +110,7 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
                 call.argument<String>("apiKey")?.let { apiKey ->
                     start(
                         apiKey = apiKey,
-                        stores = call.argument<List<String>>("stores") ?: listOf("Google"),
+                        stores = call.argument<List<String>>("stores") ?: emptyList(),
                         storeKit1 = call.argument<Boolean>("storeKit1") ?: false,
                         userId = call.argument<String?>("userId"),
                         logLevel = call.argument<Int>("logLevel") ?: 1,
