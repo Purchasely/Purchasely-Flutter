@@ -1,3 +1,5 @@
+## 5.0.2 
+Improvements and bug fixes.
 ## 5.0.1
 ### Fixes
 - Placement ID issue that could return the wrong screen in some cases.
