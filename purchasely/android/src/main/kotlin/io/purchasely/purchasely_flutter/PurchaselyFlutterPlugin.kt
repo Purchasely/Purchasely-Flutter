@@ -35,6 +35,10 @@ import java.text.SimpleDateFormat
 import java.util.*
 import kotlin.collections.ArrayList
 import kotlin.collections.HashMap
+import io.purchasely.ext.UserAttributeListener
+import io.purchasely.storage.userData.PLYUserAttributeSource
+import io.purchasely.storage.userData.PLYUserAttributeType
+
 
 /** PurchaselyFlutterPlugin */
 class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, CoroutineScope {
@@ -44,6 +48,7 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
     /// when the Flutter Engine is detached from the Activity
     private lateinit var eventChannel: EventChannel
     private lateinit var purchaseChannel: EventChannel
+    private lateinit var userAttributeChannel: EventChannel
 
     private lateinit var context: Context
     private var activity: Activity? = null
@@ -60,6 +65,7 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
 
         eventChannel = EventChannel(flutterPluginBinding.binaryMessenger, "purchasely-events")
         purchaseChannel = EventChannel(flutterPluginBinding.binaryMessenger, "purchasely-purchases")
+        userAttributeChannel = EventChannel(flutterPluginBinding.binaryMessenger, "purchasely-user-attributes")
 
         eventChannel.setStreamHandler(object: EventChannel.StreamHandler {
             override fun onListen(arguments: Any?, events: EventChannel.EventSink?) {
@@ -97,6 +103,49 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
                 Purchasely.purchaseListener = null
             }
 
+        })
+
+        userAttributeChannel.setStreamHandler(object : EventChannel.StreamHandler {
+            override fun onListen(arguments: Any?, events: EventChannel.EventSink?) {
+                Purchasely.userAttributeListener = object : UserAttributeListener {
+                    override fun onUserAttributeSet(key: String, type: PLYUserAttributeType, value: Any, source: PLYUserAttributeSource) {
+                        Handler(Looper.getMainLooper()).post {
+                            val formattedValue = if (value is Date) {
+                                SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.getDefault()).apply {
+                                    timeZone = TimeZone.getTimeZone("GMT")
+                                }.format(value)
+                            } else {
+                                value
+                            }
+                            events?.success(
+                                mapOf(
+                                    "event" to "set",
+                                    "key" to key,
+                                    "type" to type.name,
+                                    "value" to formattedValue,
+                                    "source" to source.name
+                                )
+                            )
+                        }
+                    }
+
+                    override fun onUserAttributeRemoved(key: String, source: PLYUserAttributeSource) {
+                        Handler(Looper.getMainLooper()).post {
+                            events?.success(
+                                mapOf(
+                                    "event" to "removed",
+                                    "key" to key,
+                                    "source" to source.name
+                                )
+                            )
+                        }
+                    }
+                }
+            }
+
+            override fun onCancel(arguments: Any?) {
+                Purchasely.userAttributeListener = null
+            }
         })
 
         flutterPluginBinding
@@ -363,7 +412,7 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
             .userId(userId)
             .build()
 
-	  Purchasely.sdkBridgeVersion = "5.0.2"
+	  Purchasely.sdkBridgeVersion = "5.0.3"
         Purchasely.appTechnology = PLYAppTechnology.FLUTTER
 
         Purchasely.start { isConfigured, error ->

@@ -9,11 +9,55 @@ class Purchasely {
   static const MethodChannel _channel = const MethodChannel('purchasely');
   static const EventChannel _stream = EventChannel('purchasely-events');
   static const EventChannel _purchases = EventChannel('purchasely-purchases');
+  static const EventChannel _userAttributesChannel = EventChannel('purchasely-user-attributes');
+
+  static UserAttributeListener? _userAttributeListener;
 
   static var events;
   static var purchases;
 
   // --- Public Methods ---
+
+  /// Removes the user attribute listener
+  static void clearUserAttributeListener() {
+    _userAttributeListener = null;
+  }
+
+  /// Sets the user attribute listener
+  static void setUserAttributeListener(UserAttributeListener listener) {
+    _userAttributeListener = listener;
+
+    _userAttributesChannel.receiveBroadcastStream().listen((event) {
+      final Map<dynamic, dynamic> map = event;
+      final String eventType = map['event'];
+
+      if (eventType == 'set') {
+        _userAttributeListener?.onUserAttributeSet(
+          map['key'],
+          map['type'],
+          map['value'],
+          _mapSource(map['source']),
+        );
+      } else if (eventType == 'removed') {
+        _userAttributeListener?.onUserAttributeRemoved(
+          map['key'],
+          _mapSource(map['source']),
+        );
+      }
+    });
+  }
+
+  /// Maps the source string to the enum
+  static PLYUserAttributeSource _mapSource(String source) {
+    switch (source) {
+      case 'PURCHASELY':
+        return PLYUserAttributeSource.purchasely;
+      case 'CLIENT':
+        return PLYUserAttributeSource.client;
+      default:
+        throw ArgumentError('Unknown source: $source');
+    }
+  }
 
   static Future<bool> start(
       {required final String apiKey,
@@ -858,6 +902,11 @@ enum PLYEventName {
   USER_LOGGED_OUT
 }
 
+enum PLYUserAttributeSource {
+  purchasely,
+  client,
+}
+
 // -- CLASSES --
 
 class PLYPlan {
@@ -1164,4 +1213,11 @@ class PLYEventPropertySubscription {
   String? product;
 
   PLYEventPropertySubscription(this.plan, this.product);
+}
+
+
+abstract class UserAttributeListener {
+  void onUserAttributeSet(String key, String type, dynamic value, PLYUserAttributeSource source);
+
+  void onUserAttributeRemoved(String key, PLYUserAttributeSource source);
 }
