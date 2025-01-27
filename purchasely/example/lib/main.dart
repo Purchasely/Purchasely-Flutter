@@ -527,7 +527,7 @@ class _MyAppState extends State<MyApp> {
 
 class MyUserAttributeListener implements UserAttributeListener {
   @override
-  void onUserAttributeSet(String key, String type, dynamic value, PLYUserAttributeSource source){
+  void onUserAttributeSet(String key, PLYUserAttributeType type, dynamic value, PLYUserAttributeSource source){
     print("Attribute set: $key, Type: $type, Value: $value, Source: $source");
   }
 

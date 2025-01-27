@@ -34,7 +34,7 @@ class Purchasely {
       if (eventType == 'set') {
         _userAttributeListener?.onUserAttributeSet(
           map['key'],
-          map['type'],
+          mapType(map['type']),
           map['value'],
           _mapSource(map['source']),
         );
@@ -48,14 +48,39 @@ class Purchasely {
   }
 
   /// Maps the source string to the enum
-  static PLYUserAttributeSource _mapSource(String source) {
+  static PLYUserAttributeSource _mapSource(int source) {
     switch (source) {
-      case 'PURCHASELY':
+      case 0:
         return PLYUserAttributeSource.purchasely;
-      case 'CLIENT':
+      case 1:
         return PLYUserAttributeSource.client;
       default:
         throw ArgumentError('Unknown source: $source');
+    }
+  }
+
+  /// Maps the type string to the enum
+  static PLYUserAttributeType mapType(String type) {
+    if(type == "STRING") {
+      return PLYUserAttributeType.string;
+    } else if(type == "INT") {
+      return PLYUserAttributeType.int;
+    } else if(type == "FLOAT") {
+      return PLYUserAttributeType.float;
+    } else if(type == "BOOLEAN") {
+      return PLYUserAttributeType.bool;
+    } else if(type == "DATE") {
+      return PLYUserAttributeType.date;
+    } else if(type == "STRING_ARRAY") {
+      return PLYUserAttributeType.stringArray;
+    } else if(type == "INT_ARRAY") {
+      return PLYUserAttributeType.intArray;
+    } else if(type == "FLOAT_ARRAY") {
+      return PLYUserAttributeType.floatArray;
+    } else if(type == "BOOLEAN_ARRAY") {
+      return PLYUserAttributeType.boolArray;
+    } else {
+      throw ArgumentError('Unknown type: $type');
     }
   }
 
@@ -907,6 +932,18 @@ enum PLYUserAttributeSource {
   client,
 }
 
+enum PLYUserAttributeType {
+  string,
+  int,
+  float,
+  bool,
+  date,
+  stringArray,
+  intArray,
+  floatArray,
+  boolArray,
+}
+
 // -- CLASSES --
 
 class PLYPlan {
@@ -1217,7 +1254,7 @@ class PLYEventPropertySubscription {
 
 
 abstract class UserAttributeListener {
-  void onUserAttributeSet(String key, String type, dynamic value, PLYUserAttributeSource source);
+  void onUserAttributeSet(String key, PLYUserAttributeType type, dynamic value, PLYUserAttributeSource source);
 
   void onUserAttributeRemoved(String key, PLYUserAttributeSource source);
 }

@@ -123,7 +123,7 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
                                     "key" to key,
                                     "type" to type.name,
                                     "value" to formattedValue,
-                                    "source" to source.name
+                                    "source" to source.ordinal
                                 )
                             )
                         }
@@ -135,7 +135,7 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
                                 mapOf(
                                     "event" to "removed",
                                     "key" to key,
-                                    "source" to source.name
+                                    "source" to source.ordinal
                                 )
                             )
                         }

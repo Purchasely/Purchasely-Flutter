@@ -932,16 +932,6 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
         }
     }
 
-    private func getUserAttributeForFlutter(with value: Any?) -> Any? {
-
-        if let dateValue = value as? Date {
-            let dateFormatter = getDateFormatter()
-            return dateFormatter.string(from: dateValue)
-        }
-
-        return value
-    }
-
     private func setPaywallActionInterceptor(result: @escaping FlutterResult) {
         DispatchQueue.main.async {
             Purchasely.setPaywallActionsInterceptor { [weak self] action, parameters, info, onProcessAction in
@@ -1079,38 +1069,44 @@ class UserAttributesHandler: NSObject, FlutterStreamHandler, PLYUserAttributeDel
     
     func onUserAttributeSet(key: String, type: PLYUserAttributeType, value: Any?, source: PLYUserAttributeSource) {
         guard let eventSink = self.eventSink else { return }
-        print("onUserAttributeSet \(key) \(type) \(value ?? "nil")")
         
-        if case type = .date,
-           let dateValue = value as? Date {
-            let dateFormatter = getDateFormatter()
-            print("dateString: \(dateFormatter.string(from: dateValue))")
-            
-            DispatchQueue.main.async {
-                eventSink([
-                    "event": "set",
-                    "key": key,
-                    "type": type.rawValue,
-                    "value": dateFormatter.string(from: dateValue),
-                    "source": source.rawValue
-                ])
-            }
-        } else {
-            DispatchQueue.main.async {
-                eventSink([
-                    "event": "set",
-                    "key": key,
-                    "type": type.rawValue,
-                    "value": value,
-                    "source": source.rawValue
-                ])
-            }
+        var formattedType = ""
+        switch type {
+        case .string:
+            formattedType = "STRING"
+        case .bool:
+            formattedType = "BOOLEAN"
+        case .int:
+            formattedType = "INT"
+        case .double:
+            formattedType = "FLOAT"
+        case .date:
+            formattedType = "DATE"
+        case .stringArray:
+            formattedType = "STRING_ARRAY"
+        case .intArray:
+            formattedType = "INT_ARRAY"
+        case .doubleArray:
+            formattedType = "FLOAT_ARRAY"
+        case .boolArray:
+            formattedType = "BOOLEAN_ARRAY"
+        case .unknown:
+            formattedType = ""
+        }
+
+        DispatchQueue.main.async {
+            eventSink([
+                "event": "set",
+                "key": key,
+                "type": formattedType,
+                "value": getUserAttributeForFlutter(with: value),
+                "source": source.rawValue
+            ])
         }
     }
 
     func onUserAttributeRemoved(key: String, source: PLYUserAttributeSource) {
         guard let eventSink = self.eventSink else { return }
-        print("onUserAttributeRemoved \(key)")
         DispatchQueue.main.async {
             eventSink([
                 "event": "removed",
@@ -1126,6 +1122,16 @@ fileprivate func getDateFormatter() -> DateFormatter {
     dateFormatter.timeZone = TimeZone(identifier: "GMT")
     dateFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"
     return dateFormatter
+}
+
+fileprivate func getUserAttributeForFlutter(with value: Any?) -> Any? {
+
+    if let dateValue = value as? Date {
+        let dateFormatter = getDateFormatter()
+        return dateFormatter.string(from: dateValue)
+    }
+
+    return value
 }
 
 extension UIViewController {

@@ -33,7 +33,6 @@ target 'Runner' do
   use_modular_headers!
 
   flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
-  pod 'Purchasely', :path => '../', :testspecs => ['Tests']
 
 end
 
