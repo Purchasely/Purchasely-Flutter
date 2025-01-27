@@ -935,9 +935,7 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
     private func getUserAttributeForFlutter(with value: Any?) -> Any? {
 
         if let dateValue = value as? Date {
-            let dateFormatter = DateFormatter()
-            dateFormatter.timeZone = TimeZone(identifier: "GMT")
-            dateFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"
+            let dateFormatter = getDateFormatter()
             return dateFormatter.string(from: dateValue)
         }
 
@@ -1081,20 +1079,38 @@ class UserAttributesHandler: NSObject, FlutterStreamHandler, PLYUserAttributeDel
     
     func onUserAttributeSet(key: String, type: PLYUserAttributeType, value: Any?, source: PLYUserAttributeSource) {
         guard let eventSink = self.eventSink else { return }
-        DispatchQueue.main.async {
-            eventSink([
-                "event": "set",
-                "key": key,
-                "type": type.rawValue,
-                "value": value,
-                "source": source.rawValue
-            ])
+        print("onUserAttributeSet \(key) \(type) \(value ?? "nil")")
+        
+        if case type = .date,
+           let dateValue = value as? Date {
+            let dateFormatter = getDateFormatter()
+            print("dateString: \(dateFormatter.string(from: dateValue))")
+            
+            DispatchQueue.main.async {
+                eventSink([
+                    "event": "set",
+                    "key": key,
+                    "type": type.rawValue,
+                    "value": dateFormatter.string(from: dateValue),
+                    "source": source.rawValue
+                ])
+            }
+        } else {
+            DispatchQueue.main.async {
+                eventSink([
+                    "event": "set",
+                    "key": key,
+                    "type": type.rawValue,
+                    "value": value,
+                    "source": source.rawValue
+                ])
+            }
         }
     }
 
     func onUserAttributeRemoved(key: String, source: PLYUserAttributeSource) {
         guard let eventSink = self.eventSink else { return }
-
+        print("onUserAttributeRemoved \(key)")
         DispatchQueue.main.async {
             eventSink([
                 "event": "removed",
@@ -1103,6 +1119,13 @@ class UserAttributesHandler: NSObject, FlutterStreamHandler, PLYUserAttributeDel
             ])
         }
     }
+}
+
+fileprivate func getDateFormatter() -> DateFormatter {
+    let dateFormatter = DateFormatter()
+    dateFormatter.timeZone = TimeZone(identifier: "GMT")
+    dateFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"
+    return dateFormatter
 }
 
 extension UIViewController {
