@@ -13,6 +13,9 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
     let purchaseChannel: FlutterEventChannel
     let purchaseHandler: SwiftPurchaseHandler
 
+    let userAttributesChannel: FlutterEventChannel
+    let userAttributesHandler: UserAttributesHandler
+
     var presentedPresentationViewController: UIViewController?
 
     var onProcessActionHandler: ((Bool) -> Void)?
@@ -27,6 +30,11 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
                                                    binaryMessenger: registrar.messenger())
         self.purchaseHandler = SwiftPurchaseHandler()
         self.purchaseChannel.setStreamHandler(self.purchaseHandler)
+
+        self.userAttributesChannel = FlutterEventChannel(name: "purchasely-user-attributes",
+                                                      binaryMessenger: registrar.messenger())
+        self.userAttributesHandler = UserAttributesHandler()
+        self.userAttributesChannel.setStreamHandler(self.userAttributesHandler)
 
         super.init()
     }
@@ -291,7 +299,7 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             return
         }
 
-		Purchasely.setSdkBridgeVersion("5.0.2")
+		Purchasely.setSdkBridgeVersion("5.0.3")
         Purchasely.setAppTechnology(PLYAppTechnology.flutter)
 
         let logLevel = PLYLogger.LogLevel(rawValue: (arguments["logLevel"] as? Int) ?? PLYLogger.LogLevel.debug.rawValue) ?? PLYLogger.LogLevel.debug
@@ -1053,6 +1061,49 @@ class SwiftPurchaseHandler: NSObject, FlutterStreamHandler {
         self.eventSink?(nil)
     }
 
+}
+
+class UserAttributesHandler: NSObject, FlutterStreamHandler, PLYUserAttributeDelegate {
+
+    var eventSink: FlutterEventSink?
+
+    func onListen(withArguments arguments: Any?, eventSink events: @escaping FlutterEventSink) -> FlutterError? {
+        print("TOTO ----> on onListen")
+        self.eventSink = events
+        Purchasely.setUserAttributeDelegate()
+        return nil
+    }
+
+    func onCancel(withArguments arguments: Any?) -> FlutterError? {
+        self.eventSink = nil
+        //Purchasely.setUserAttributeDelegate(nil)
+        return nil
+    }
+
+    func userAttributeSet(key: String, type: PLYUserAttributeType, value: Any, source: PLYUserAttributeSource) {
+        guard let eventSink = self.eventSink else { return }
+        DispatchQueue.main.async {
+            eventSink([
+                "event": "set",
+                "key": key,
+                "type": type.rawValue,
+                "value": value,
+                "source": source.rawValue
+            ])
+        }
+    }
+
+    func userAttributeRemoved(key: String, source: PLYUserAttributeSource) {
+        guard let eventSink = self.eventSink else { return }
+
+        DispatchQueue.main.async {
+            eventSink([
+                "event": "removed",
+                "key": key,
+                "source": source.rawValue
+            ])
+        }
+    }
 }
 
 extension UIViewController {
