@@ -1068,9 +1068,8 @@ class UserAttributesHandler: NSObject, FlutterStreamHandler, PLYUserAttributeDel
     var eventSink: FlutterEventSink?
 
     func onListen(withArguments arguments: Any?, eventSink events: @escaping FlutterEventSink) -> FlutterError? {
-        print("TOTO ----> on onListen")
         self.eventSink = events
-        Purchasely.setUserAttributeDelegate()
+        Purchasely.setUserAttributeDelegate(self)
         return nil
     }
 
@@ -1079,8 +1078,8 @@ class UserAttributesHandler: NSObject, FlutterStreamHandler, PLYUserAttributeDel
         //Purchasely.setUserAttributeDelegate(nil)
         return nil
     }
-
-    func userAttributeSet(key: String, type: PLYUserAttributeType, value: Any, source: PLYUserAttributeSource) {
+    
+    func onUserAttributeSet(key: String, type: PLYUserAttributeType, value: Any?, source: PLYUserAttributeSource) {
         guard let eventSink = self.eventSink else { return }
         DispatchQueue.main.async {
             eventSink([
@@ -1093,7 +1092,7 @@ class UserAttributesHandler: NSObject, FlutterStreamHandler, PLYUserAttributeDel
         }
     }
 
-    func userAttributeRemoved(key: String, source: PLYUserAttributeSource) {
+    func onUserAttributeRemoved(key: String, source: PLYUserAttributeSource) {
         guard let eventSink = self.eventSink else { return }
 
         DispatchQueue.main.async {
