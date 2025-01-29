@@ -1,3 +1,6 @@
+## 5.0.3
+- User Attributes Listener: Introduced a callback to notify when a user attribute is added or removed.
+- General performance enhancements and bug fixes.
 ## 5.0.2 
 Improvements and bug fixes.
 ## 5.0.1

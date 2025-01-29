@@ -55,11 +55,12 @@ class _MyAppState extends State<MyApp> {
 
       //Purchasely.setLogLevel(LogLevel.debug);
 
-      Purchasely.setAttribute(
-          PLYAttribute.amplitudeUserId, "amplitude_user_id");
+
+      Purchasely.setUserAttributeListener(MyUserAttributeListener());
+
+      Purchasely.setAttribute(PLYAttribute.amplitudeUserId, "amplitude_user_id");
       Purchasely.setAttribute(PLYAttribute.adjust_id, "adjust_user_id");
-      Purchasely.setAttribute(
-          PLYAttribute.moengageUniqueId, "momengage_unique_id");
+      Purchasely.setAttribute(PLYAttribute.moengageUniqueId, "momengage_unique_id");
 
       Purchasely.setLanguage("en");
 
@@ -69,13 +70,11 @@ class _MyAppState extends State<MyApp> {
       bool isAnonymous = await Purchasely.isAnonymous();
       print('is Anonymous ? : $isAnonymous');
 
-      bool isEligible =
-          await Purchasely.isEligibleForIntroOffer('PURCHASELY_PLUS_YEARLY');
+      bool isEligible = await Purchasely.isEligibleForIntroOffer('PURCHASELY_PLUS_YEARLY');
       print('is eligible ? : $isEligible');
 
       try {
-        List<PLYSubscription> subscriptions =
-            await Purchasely.userSubscriptions();
+        List<PLYSubscription> subscriptions = await Purchasely.userSubscriptions();
         print(' ==> Active Subscriptions');
         if (subscriptions.isNotEmpty) {
           print(subscriptions.first.plan);
@@ -88,8 +87,7 @@ class _MyAppState extends State<MyApp> {
       }
 
       try {
-        List<PLYSubscription> expiredSubscriptions =
-            await Purchasely.userSubscriptionsHistory();
+        List<PLYSubscription> expiredSubscriptions = await Purchasely.userSubscriptionsHistory();
         print(' ==> Expired Subscriptions');
         if (expiredSubscriptions.isNotEmpty) {
           print(expiredSubscriptions.first.plan);
@@ -523,5 +521,18 @@ class _MyAppState extends State<MyApp> {
         )),
       ),
     );
+  }
+}
+
+
+class MyUserAttributeListener implements UserAttributeListener {
+  @override
+  void onUserAttributeSet(String key, PLYUserAttributeType type, dynamic value, PLYUserAttributeSource source){
+    print("Attribute set: $key, Type: $type, Value: $value, Source: $source");
+  }
+
+  @override
+  void onUserAttributeRemoved(String key, PLYUserAttributeSource source) {
+    print("Attribute removed: $key, Source: $source");
   }
 }

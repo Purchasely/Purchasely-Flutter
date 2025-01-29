@@ -9,11 +9,80 @@ class Purchasely {
   static const MethodChannel _channel = const MethodChannel('purchasely');
   static const EventChannel _stream = EventChannel('purchasely-events');
   static const EventChannel _purchases = EventChannel('purchasely-purchases');
+  static const EventChannel _userAttributesChannel = EventChannel('purchasely-user-attributes');
+
+  static UserAttributeListener? _userAttributeListener;
 
   static var events;
   static var purchases;
 
   // --- Public Methods ---
+
+  /// Removes the user attribute listener
+  static void clearUserAttributeListener() {
+    _userAttributeListener = null;
+  }
+
+  /// Sets the user attribute listener
+  static void setUserAttributeListener(UserAttributeListener listener) {
+    _userAttributeListener = listener;
+
+    _userAttributesChannel.receiveBroadcastStream().listen((event) {
+      final Map<dynamic, dynamic> map = event;
+      final String eventType = map['event'];
+
+      if (eventType == 'set') {
+        _userAttributeListener?.onUserAttributeSet(
+          map['key'],
+          mapType(map['type']),
+          map['value'],
+          _mapSource(map['source']),
+        );
+      } else if (eventType == 'removed') {
+        _userAttributeListener?.onUserAttributeRemoved(
+          map['key'],
+          _mapSource(map['source']),
+        );
+      }
+    });
+  }
+
+  /// Maps the source string to the enum
+  static PLYUserAttributeSource _mapSource(int source) {
+    switch (source) {
+      case 0:
+        return PLYUserAttributeSource.purchasely;
+      case 1:
+        return PLYUserAttributeSource.client;
+      default:
+        throw ArgumentError('Unknown source: $source');
+    }
+  }
+
+  /// Maps the type string to the enum
+  static PLYUserAttributeType mapType(String type) {
+    if(type == "STRING") {
+      return PLYUserAttributeType.string;
+    } else if(type == "INT") {
+      return PLYUserAttributeType.int;
+    } else if(type == "FLOAT") {
+      return PLYUserAttributeType.float;
+    } else if(type == "BOOLEAN") {
+      return PLYUserAttributeType.bool;
+    } else if(type == "DATE") {
+      return PLYUserAttributeType.date;
+    } else if(type == "STRING_ARRAY") {
+      return PLYUserAttributeType.stringArray;
+    } else if(type == "INT_ARRAY") {
+      return PLYUserAttributeType.intArray;
+    } else if(type == "FLOAT_ARRAY") {
+      return PLYUserAttributeType.floatArray;
+    } else if(type == "BOOLEAN_ARRAY") {
+      return PLYUserAttributeType.boolArray;
+    } else {
+      throw ArgumentError('Unknown type: $type');
+    }
+  }
 
   static Future<bool> start(
       {required final String apiKey,
@@ -832,6 +901,8 @@ enum PLYEventName {
   LINK_OPENED,
   LOGIN_TAPPED,
   PLAN_SELECTED,
+  OPTIONS_SELECTED,
+  OPTIONS_VALIDATED,
   PRESENTATION_VIEWED,
   PRESENTATION_OPENED,
   PRESENTATION_SELECTED,
@@ -856,6 +927,23 @@ enum PLYEventName {
   SUBSCRIPTIONS_TRANSFERRED,
   USER_LOGGED_IN,
   USER_LOGGED_OUT
+}
+
+enum PLYUserAttributeSource {
+  purchasely,
+  client,
+}
+
+enum PLYUserAttributeType {
+  string,
+  int,
+  float,
+  bool,
+  date,
+  stringArray,
+  intArray,
+  floatArray,
+  boolArray,
 }
 
 // -- CLASSES --
@@ -1164,4 +1252,11 @@ class PLYEventPropertySubscription {
   String? product;
 
   PLYEventPropertySubscription(this.plan, this.product);
+}
+
+
+abstract class UserAttributeListener {
+  void onUserAttributeSet(String key, PLYUserAttributeType type, dynamic value, PLYUserAttributeSource source);
+
+  void onUserAttributeRemoved(String key, PLYUserAttributeSource source);
 }
