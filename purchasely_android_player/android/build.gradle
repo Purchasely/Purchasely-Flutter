@@ -25,6 +25,7 @@ apply plugin: 'com.android.library'
 apply plugin: 'kotlin-android'
 
 android {
+    namespace 'io.purchasely.purchasely_flutter_player'
     compileSdkVersion 33
 
     compileOptions {

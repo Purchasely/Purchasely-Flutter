@@ -35,6 +35,7 @@ class _MyAppState extends State<MyApp> {
 
       bool configured = await Purchasely.start(
           apiKey: 'fcb39be4-2ba4-4db7-bde3-2a5a1e20745d',
+          androidStores: ['Google'],
           storeKit1: true,
           logLevel: PLYLogLevel.debug);
 
