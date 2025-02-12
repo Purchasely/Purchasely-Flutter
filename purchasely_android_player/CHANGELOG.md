@@ -7,7 +7,6 @@
 ### iOS
 - Improved GIF handling – Fixed an issue where GIFs sometimes played at incorrect speeds and ensured proper display even when missing the expected file extension.
 - Optimized receipt processing
-- Fixed setUserAttributes issue – Resolved a bug that prevented adding arrays to user attributes when using the dictionary-based setUserAttributes method.
 - Default option selection – Fixed an issue where the default option selection for multiple option component wasn't properly set.
 ## 5.0.3
 - User Attributes Listener: Introduced a callback to notify when a user attribute is added or removed.
