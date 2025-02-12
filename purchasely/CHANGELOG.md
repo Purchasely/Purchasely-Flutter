@@ -1,3 +1,14 @@
+## 5.0.4
+### Android
+- Specified explicit namespace declarations for all SDK modules in Gradle.
+- App Started Event: Delayed the triggering of AppStartedEvent until the SDK is fully configured.
+- Open Placement Action: Resolved an issue where the open placement action was triggered with an incorrect ID.
+- Various enhancements and optimizations to boost stability and performance.
+### iOS
+- Improved GIF handling – Fixed an issue where GIFs sometimes played at incorrect speeds and ensured proper display even when missing the expected file extension.
+- Optimized receipt processing
+- Fixed setUserAttributes issue – Resolved a bug that prevented adding arrays to user attributes when using the dictionary-based setUserAttributes method.
+- Default option selection – Fixed an issue where the default option selection for multiple option component wasn't properly set.
 ## 5.0.3
 - User Attributes Listener: Introduced a callback to notify when a user attribute is added or removed.
 - General performance enhancements and bug fixes.

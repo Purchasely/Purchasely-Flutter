@@ -110,12 +110,12 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
                 Purchasely.userAttributeListener = object : UserAttributeListener {
                     override fun onUserAttributeSet(key: String, type: PLYUserAttributeType, value: Any, source: PLYUserAttributeSource) {
                         Handler(Looper.getMainLooper()).post {
-                            val formattedValue = if (value is Date) {
-                                SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.getDefault()).apply {
+                            val formattedValue = when (value) {
+                                is Date -> SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.getDefault()).apply {
                                     timeZone = TimeZone.getTimeZone("GMT")
                                 }.format(value)
-                            } else {
-                                value
+                                is Array<*> -> value.toList()
+                                else -> value
                             }
                             events?.success(
                                 mapOf(
@@ -412,7 +412,7 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
             .userId(userId)
             .build()
 
-	  Purchasely.sdkBridgeVersion = "5.0.3"
+	  Purchasely.sdkBridgeVersion = "5.0.4"
         Purchasely.appTechnology = PLYAppTechnology.FLUTTER
 
         Purchasely.start { isConfigured, error ->
