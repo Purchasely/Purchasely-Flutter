@@ -1,3 +1,8 @@
+## 5.0.5
+### Android
+- Restore Google Store by default if no android store are specified in `Purchasely.start()`
+### iOS
+- Add InAppRenewed event
 ## 5.0.4
 ### Android
 - Specified explicit namespace declarations for all SDK modules in Gradle.
@@ -11,7 +16,7 @@
 ## 5.0.3
 - User Attributes Listener: Introduced a callback to notify when a user attribute is added or removed.
 - General performance enhancements and bug fixes.
-## 5.0.2 
+## 5.0.2
 Improvements and bug fixes.
 ## 5.0.1
 ### Fixes

@@ -1,3 +1,8 @@
+## 5.0.5
+### Android
+- Restore Google Store by default if no android store are specified in `Purchasely.start()`
+### iOS
+- Add InAppRenewed event
 ## 5.0.4
 ### Android
 - Specified explicit namespace declarations for all SDK modules in Gradle.

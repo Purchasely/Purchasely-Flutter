@@ -87,7 +87,7 @@ class Purchasely {
 
   static Future<bool> start(
       {required final String apiKey,
-      final List<String>? androidStores = const [],
+      final List<String>? androidStores = const ['Google'],
       required bool storeKit1,
       final String? userId,
       final PLYLogLevel logLevel = PLYLogLevel.error,
