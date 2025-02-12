@@ -33,6 +33,11 @@ class _MyAppState extends State<MyApp> {
     try {
       Purchasely.readyToOpenDeeplink(true);
 
+      Purchasely.listenToEvents((event) {
+        print('Flutter Event : ${event.name}');
+        inspect(event);
+      });
+
       bool configured = await Purchasely.start(
           apiKey: 'fcb39be4-2ba4-4db7-bde3-2a5a1e20745d',
           androidStores: ['Google'],
@@ -56,12 +61,13 @@ class _MyAppState extends State<MyApp> {
 
       //Purchasely.setLogLevel(LogLevel.debug);
 
-
       Purchasely.setUserAttributeListener(MyUserAttributeListener());
 
-      Purchasely.setAttribute(PLYAttribute.amplitudeUserId, "amplitude_user_id");
+      Purchasely.setAttribute(
+          PLYAttribute.amplitudeUserId, "amplitude_user_id");
       Purchasely.setAttribute(PLYAttribute.adjust_id, "adjust_user_id");
-      Purchasely.setAttribute(PLYAttribute.moengageUniqueId, "momengage_unique_id");
+      Purchasely.setAttribute(
+          PLYAttribute.moengageUniqueId, "momengage_unique_id");
 
       Purchasely.setLanguage("en");
 
@@ -71,11 +77,13 @@ class _MyAppState extends State<MyApp> {
       bool isAnonymous = await Purchasely.isAnonymous();
       print('is Anonymous ? : $isAnonymous');
 
-      bool isEligible = await Purchasely.isEligibleForIntroOffer('PURCHASELY_PLUS_YEARLY');
+      bool isEligible =
+          await Purchasely.isEligibleForIntroOffer('PURCHASELY_PLUS_YEARLY');
       print('is eligible ? : $isEligible');
 
       try {
-        List<PLYSubscription> subscriptions = await Purchasely.userSubscriptions();
+        List<PLYSubscription> subscriptions =
+            await Purchasely.userSubscriptions();
         print(' ==> Active Subscriptions');
         if (subscriptions.isNotEmpty) {
           print(subscriptions.first.plan);
@@ -88,7 +96,8 @@ class _MyAppState extends State<MyApp> {
       }
 
       try {
-        List<PLYSubscription> expiredSubscriptions = await Purchasely.userSubscriptionsHistory();
+        List<PLYSubscription> expiredSubscriptions =
+            await Purchasely.userSubscriptionsHistory();
         print(' ==> Expired Subscriptions');
         if (expiredSubscriptions.isNotEmpty) {
           print(expiredSubscriptions.first.plan);
@@ -107,11 +116,6 @@ class _MyAppState extends State<MyApp> {
           await Purchasely.productWithIdentifier("PURCHASELY_PLUS");
       print('Product found');
       inspect(product);
-
-      Purchasely.listenToEvents((event) {
-        print('Event : ${event.name}');
-        inspect(event);
-      });
 
       Purchasely.setDefaultPresentationResultCallback(
           (PresentPresentationResult value) {
@@ -525,10 +529,10 @@ class _MyAppState extends State<MyApp> {
   }
 }
 
-
 class MyUserAttributeListener implements UserAttributeListener {
   @override
-  void onUserAttributeSet(String key, PLYUserAttributeType type, dynamic value, PLYUserAttributeSource source){
+  void onUserAttributeSet(String key, PLYUserAttributeType type, dynamic value,
+      PLYUserAttributeSource source) {
     print("Attribute set: $key, Type: $type, Value: $value, Source: $source");
   }
 

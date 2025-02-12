@@ -9,7 +9,8 @@ class Purchasely {
   static const MethodChannel _channel = const MethodChannel('purchasely');
   static const EventChannel _stream = EventChannel('purchasely-events');
   static const EventChannel _purchases = EventChannel('purchasely-purchases');
-  static const EventChannel _userAttributesChannel = EventChannel('purchasely-user-attributes');
+  static const EventChannel _userAttributesChannel =
+      EventChannel('purchasely-user-attributes');
 
   static UserAttributeListener? _userAttributeListener;
 
@@ -61,23 +62,23 @@ class Purchasely {
 
   /// Maps the type string to the enum
   static PLYUserAttributeType mapType(String type) {
-    if(type == "STRING") {
+    if (type == "STRING") {
       return PLYUserAttributeType.string;
-    } else if(type == "INT") {
+    } else if (type == "INT") {
       return PLYUserAttributeType.int;
-    } else if(type == "FLOAT") {
+    } else if (type == "FLOAT") {
       return PLYUserAttributeType.float;
-    } else if(type == "BOOLEAN") {
+    } else if (type == "BOOLEAN") {
       return PLYUserAttributeType.bool;
-    } else if(type == "DATE") {
+    } else if (type == "DATE") {
       return PLYUserAttributeType.date;
-    } else if(type == "STRING_ARRAY") {
+    } else if (type == "STRING_ARRAY") {
       return PLYUserAttributeType.stringArray;
-    } else if(type == "INT_ARRAY") {
+    } else if (type == "INT_ARRAY") {
       return PLYUserAttributeType.intArray;
-    } else if(type == "FLOAT_ARRAY") {
+    } else if (type == "FLOAT_ARRAY") {
       return PLYUserAttributeType.floatArray;
-    } else if(type == "BOOLEAN_ARRAY") {
+    } else if (type == "BOOLEAN_ARRAY") {
       return PLYUserAttributeType.boolArray;
     } else {
       throw ArgumentError('Unknown type: $type');
@@ -343,27 +344,24 @@ class Purchasely {
             element['product']['vendorId'], plans.whereNotNull().toList());
       }
 
-      subscriptions.add(
-          PLYSubscription(
-            element['purchaseToken'],
-            PLYSubscriptionSource.values[element['subscriptionSource']],
-            element['nextRenewalDate'],
-            element['cancelledDate'],
-            transformToPLYPlan(element['plan']),
-            product,
-            null,
-            null,
-            null,
-            null
-          )
-      );
+      subscriptions.add(PLYSubscription(
+          element['purchaseToken'],
+          PLYSubscriptionSource.values[element['subscriptionSource']],
+          element['nextRenewalDate'],
+          element['cancelledDate'],
+          transformToPLYPlan(element['plan']),
+          product,
+          null,
+          null,
+          null,
+          null));
     });
     return subscriptions;
   }
 
   static Future<List<PLYSubscription>> userSubscriptionsHistory() async {
     final List<dynamic> result =
-    await _channel.invokeMethod('userSubscriptionsHistory');
+        await _channel.invokeMethod('userSubscriptionsHistory');
 
     final List<PLYSubscription> subscriptions = new List.empty(growable: true);
     result.forEach((element) {
@@ -378,20 +376,18 @@ class Purchasely {
             element['product']['vendorId'], plans.whereNotNull().toList());
       }
 
-      subscriptions.add(
-          PLYSubscription(
-            element['purchaseToken'],
-            PLYSubscriptionSource.values[element['subscriptionSource']],
-            element['nextRenewalDate'],
-            element['cancelledDate'],
-            transformToPLYPlan(element['plan']),
-            product,
-            element['cumulatedRevenuesInUSD'],
-            element['subscriptionDurationInDays'],
-            element['subscriptionDurationInWeeks'],
-            element['subscriptionDurationInMonths'],
-          )
-      );
+      subscriptions.add(PLYSubscription(
+        element['purchaseToken'],
+        PLYSubscriptionSource.values[element['subscriptionSource']],
+        element['nextRenewalDate'],
+        element['cancelledDate'],
+        transformToPLYPlan(element['plan']),
+        product,
+        element['cumulatedRevenuesInUSD'],
+        element['subscriptionDurationInDays'],
+        element['subscriptionDurationInWeeks'],
+        element['subscriptionDurationInMonths'],
+      ));
     });
     return subscriptions;
   }
@@ -532,8 +528,8 @@ class Purchasely {
         <String, dynamic>{'key': key, 'value': value});
   }
 
-  static Future<void> setUserAttributeWithIntArray(String key,
-   List<int> value) async {
+  static Future<void> setUserAttributeWithIntArray(
+      String key, List<int> value) async {
     _channel.invokeMethod('setUserAttributeWithIntArray',
         <String, dynamic>{'key': key, 'value': value});
   }
@@ -895,6 +891,7 @@ enum PLYEventName {
   IN_APP_DEFERRED,
   IN_APP_PURCHASE_FAILED,
   IN_APP_NOT_AVAILABLE,
+  IN_APP_RENEWED,
   PURCHASE_CANCELLED_BY_APP,
   CAROUSEL_SLIDE_SWIPED,
   DEEPLINK_OPENED,
@@ -1073,7 +1070,7 @@ class PLYSubscription {
   String? cancelledDate;
   PLYPlan? plan;
   PLYProduct? product;
-  double? cumulatedRevenuesInUSD= null;
+  double? cumulatedRevenuesInUSD = null;
   int? subscriptionDurationInDays = null;
   int? subscriptionDurationInWeeks = null;
   int? subscriptionDurationInMonths = null;
@@ -1088,8 +1085,7 @@ class PLYSubscription {
       this.cumulatedRevenuesInUSD,
       this.subscriptionDurationInDays,
       this.subscriptionDurationInWeeks,
-      this.subscriptionDurationInMonths
-      );
+      this.subscriptionDurationInMonths);
 }
 
 class PresentPresentationResult {
@@ -1254,9 +1250,9 @@ class PLYEventPropertySubscription {
   PLYEventPropertySubscription(this.plan, this.product);
 }
 
-
 abstract class UserAttributeListener {
-  void onUserAttributeSet(String key, PLYUserAttributeType type, dynamic value, PLYUserAttributeSource source);
+  void onUserAttributeSet(String key, PLYUserAttributeType type, dynamic value,
+      PLYUserAttributeSource source);
 
   void onUserAttributeRemoved(String key, PLYUserAttributeSource source);
 }
