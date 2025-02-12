@@ -1,6 +1,6 @@
 name: purchasely_google
 description: Purchasely Google Play Billing dependency for Android
-version: 5.0.3
+version: 5.0.4
 homepage: https://www.purchasely.com/
 
 environment:
@@ -11,7 +11,7 @@ dependencies:
   flutter:
     sdk: flutter
   plugin_platform_interface: ^2.0.2
-purchasely_flutter: ^5.0.3
+purchasely_flutter: ^5.0.4
 
 dev_dependencies:
   flutter_test:
