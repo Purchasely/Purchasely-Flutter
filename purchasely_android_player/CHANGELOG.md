@@ -1,3 +1,6 @@
+## 5.0.6
+### Android
+- Removed module's package name from their manifest to avoid conflicts with namespace declarations.
 ## 5.0.5
 ### Android
 - Restore Google Store by default if no android store are specified in `Purchasely.start()`
