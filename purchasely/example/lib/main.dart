@@ -64,11 +64,17 @@ class _MyAppState extends State<MyApp> {
 
       Purchasely.setUserAttributeListener(MyUserAttributeListener());
 
-      Purchasely.setAttribute(
-          PLYAttribute.amplitudeUserId, "amplitude_user_id");
+      Purchasely.setAttribute(PLYAttribute.firebase_app_instance_id, "firebase_app_instance_id");
+      Purchasely.setAttribute(PLYAttribute.airship_channel_id, "airship_channel_id");
+      Purchasely.setAttribute(PLYAttribute.airship_user_id, "airship_user_id");
+      Purchasely.setAttribute(PLYAttribute.batch_installation_id, "batch_installation_id");
       Purchasely.setAttribute(PLYAttribute.adjust_id, "adjust_user_id");
-      Purchasely.setAttribute(
-          PLYAttribute.moengageUniqueId, "momengage_unique_id");
+      Purchasely.setAttribute(PLYAttribute.appsflyer_id, "appsflyer_id");
+      Purchasely.setAttribute(PLYAttribute.mixpanel_distinct_id, "mixpanel_distinct_id");
+      Purchasely.setAttribute(PLYAttribute.clever_tap_id, "clever_tap_id");
+      Purchasely.setAttribute(PLYAttribute.sendinblueUserEmail, "sendinblueUserEmail");
+      Purchasely.setAttribute(PLYAttribute.amplitudeUserId, "amplitude_user_id");
+      Purchasely.setAttribute(PLYAttribute.moengageUniqueId, "momengage_unique_id");
 
       Purchasely.setLanguage("en");
 
