@@ -59,7 +59,8 @@ class _MyAppState extends State<MyApp> {
         return;
       }
 
-      //Purchasely.setLogLevel(LogLevel.debug);
+      Purchasely.readyToOpenDeeplink(true);
+      Purchasely.setLogLevel(PLYLogLevel.debug);
 
       Purchasely.setUserAttributeListener(MyUserAttributeListener());
 
@@ -160,6 +161,8 @@ class _MyAppState extends State<MyApp> {
 
       Purchasely.clearUserAttributes();
       print(await Purchasely.userAttributes());
+
+      Purchasely.clearBuiltInAttributes();
 
       Purchasely.setPaywallActionInterceptorCallback(
           (PaywallActionInterceptorResult result) {

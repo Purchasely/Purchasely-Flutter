@@ -378,6 +378,7 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
                 clearUserAttribute(key)
             }
             "clearUserAttributes" -> clearUserAttributes()
+            "clearBuiltInAttributes" -> clearBuiltInAttributes()
             "setPaywallActionInterceptor" -> setPaywallActionInterceptor(result)
             "onProcessAction" -> onProcessAction(call.argument<Boolean>("processAction") ?: false)
             "closePresentation" -> closePresentation()
@@ -412,7 +413,7 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
             .userId(userId)
             .build()
 
-	  Purchasely.sdkBridgeVersion = "5.0.6"
+	  Purchasely.sdkBridgeVersion = "5.1.0"
         Purchasely.appTechnology = PLYAppTechnology.FLUTTER
 
         Purchasely.start { isConfigured, error ->
@@ -855,6 +856,10 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
 
     fun clearUserAttributes() {
         Purchasely.clearUserAttributes()
+    }
+
+    fun clearBuiltInAttributes() {
+        Purchasely.clearBuiltInAttributes()
     }
 
     fun setLanguage(language: String?) {

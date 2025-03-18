@@ -163,6 +163,8 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             clearUserAttribute(arguments: arguments)
         case "clearUserAttributes":
             clearUserAttributes()
+        case "clearBuiltInAttributes":
+            clearBuiltInAttributes()
         case "displaySubscriptionCancellationInstruction":
             result(FlutterMethodNotImplemented)
         case "isAnonymous":
@@ -299,7 +301,7 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             return
         }
 
-		Purchasely.setSdkBridgeVersion("5.0.6")
+		Purchasely.setSdkBridgeVersion("5.1.0")
         Purchasely.setAppTechnology(PLYAppTechnology.flutter)
 
         let logLevel = PLYLogger.LogLevel(rawValue: (arguments["logLevel"] as? Int) ?? PLYLogger.LogLevel.debug.rawValue) ?? PLYLogger.LogLevel.debug
@@ -911,6 +913,10 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
     private func clearUserAttributes() {
         Purchasely.clearUserAttributes()
     }
+    
+    private func clearBuiltInAttributes() {
+        Purchasely.clearBuiltInAttributes()
+    }
 
     private func getUserAttribute(arguments: [String: Any]?, result: @escaping FlutterResult) {
         guard let arguments = arguments, let key = arguments["key"] as? String else {
@@ -1090,6 +1096,8 @@ class UserAttributesHandler: NSObject, FlutterStreamHandler, PLYUserAttributeDel
             formattedType = "FLOAT_ARRAY"
         case .boolArray:
             formattedType = "BOOLEAN_ARRAY"
+        case .dictionary:
+            formattedType = "DICTIONARY"
         case .unknown:
             formattedType = ""
         }

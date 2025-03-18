@@ -1,3 +1,23 @@
+## 5.1.0
+## 🚀 Campaigns Support
+Introducing our powerful new Campaigns feature, enabling you to launch targeted in-app campaigns for specific audiences or all users right at app launch.
+- Works just like deep links:
+  - Simply set `Purchasely.readyToOpenDeeplink = true` to enable campaigns.
+- Gain more control over campaign displays:
+  - Use `Purchasely.uiHandler` for custom UI management.
+## 📊 Enhanced Built-in Attributes
+Get deeper insights into user interactions with new built-in attributes for analytics and event tracking:
+- **Display & Dismissal Tracking:**
+  - Number of displays and dismissals per screen
+  - Number of displays and dismissals per placement
+- **Last Display Date Tracking:**
+  - Last display timestamp per screen
+  - Last display timestamp per placement
+- **A/B Testing Insights:**
+  - A/B tests viewed with their variant ID
+  - Latest A/B test and variant viewed
+## 🆕 New Public API Method: `clearBuiltInAttributes`
+Now you can reset built-in attributes easily when needed. Purchasely automatically calls this method when `Purchasely.userLogout()` is triggered.
 ## 5.0.6
 ### Android
 - Removed module's package name from their manifest to avoid conflicts with namespace declarations.

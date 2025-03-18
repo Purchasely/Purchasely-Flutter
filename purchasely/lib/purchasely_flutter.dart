@@ -603,6 +603,10 @@ class Purchasely {
     _channel.invokeMethod('clearUserAttributes');
   }
 
+  static void clearBuiltInAttributes() async {
+    _channel.invokeMethod('clearBuiltInAttributes');
+  }
+
   static void setDefaultPresentationResultCallback(Function callback) {
     setDefaultPresentationResultHandler().then((value) {
       setDefaultPresentationResultCallback(callback);
