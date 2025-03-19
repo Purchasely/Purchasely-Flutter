@@ -800,13 +800,64 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
         Purchasely.setThemeMode(themeMode)
     }
 
-    private func setAttribute(arguments: [String: Any]?) {
-        guard let arguments = arguments, let value = arguments["value"] as? String, let attribute = arguments["attribute"] as? Int, let attr = Purchasely.PLYAttribute(rawValue: attribute) else {
-            return
-        }
-
-        Purchasely.setAttribute(attr, value: value)
+private func setAttribute(arguments: [String: Any]?) {
+    guard let arguments = arguments,
+          let value = arguments["value"] as? String,
+          let attribute = arguments["attribute"] as? Int,
+          let flutterAttribute = FlutterPLYAttribute(rawValue: attribute) else {
+        return
     }
+
+    let attr: Purchasely.PLYAttribute? = {
+        switch flutterAttribute {
+        case .firebaseAppInstanceId:
+            return .firebaseAppInstanceId
+        case .airshipChannelId:
+            return .airshipChannelId
+        case .airshipUserId:
+            return .airshipUserId
+        case .batchInstallationId:
+            return .batchInstallationId
+        case .adjustId:
+            return .adjustId
+        case .appsflyerId:
+            return .appsflyerId
+        case .mixpanelDistinctId:
+            return .mixpanelDistinctId
+        case .cleverTapId:
+            return .clevertapId
+        case .sendinblueUserEmail:
+            return .sendinblueUserEmail
+        case .iterableUserEmail:
+            return .iterableUserEmail
+        case .iterableUserId:
+            return .iterableUserId
+        case .atInternetIdClient:
+            return .atInternetIdClient
+        case .mParticleUserId:
+            return .mParticleUserId
+        case .customerioUserId:
+            return .customerioUserId
+        case .customerioUserEmail:
+            return .customerioUserEmail
+        case .branchUserDeveloperIdentity:
+            return .branchUserDeveloperIdentity
+        case .amplitudeUserId:
+            return .amplitudeUserId
+        case .amplitudeDeviceId:
+            return .amplitudeDeviceId
+        case .moengageUniqueId:
+            return .moengageUniqueId
+        case .oneSignalExternalId:
+            return .oneSignalExternalId
+        case .batchCustomUserId:
+            return .batchCustomUserId
+        }
+    }()
+
+    guard let attributeKey = attr else { return }
+    Purchasely.setAttribute(attributeKey, value: value)
+}
 
     private func setUserAttributeWithString(arguments: [String: Any]?) {
         guard let arguments = arguments, let value = arguments["value"] as? String, let key = arguments["key"] as? String else {
@@ -1148,4 +1199,29 @@ extension UIViewController {
         self.dismiss(animated: true, completion: nil)
     }
 
+}
+
+// WARNING: This enum must be strictly identical to the one in the Flutter side (purchasely_flutter.PLYAttribute).
+enum FlutterPLYAttribute: Int {
+    case firebaseAppInstanceId
+    case airshipChannelId
+    case airshipUserId
+    case batchInstallationId
+    case adjustId
+    case appsflyerId
+    case mixpanelDistinctId
+    case cleverTapId
+    case sendinblueUserEmail
+    case iterableUserEmail
+    case iterableUserId
+    case atInternetIdClient
+    case mParticleUserId
+    case customerioUserId
+    case customerioUserEmail
+    case branchUserDeveloperIdentity
+    case amplitudeUserId
+    case amplitudeDeviceId
+    case moengageUniqueId
+    case oneSignalExternalId
+    case batchCustomUserId
 }
