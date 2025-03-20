@@ -173,7 +173,10 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
                 result.safeSuccess(true)
             }
             "setDefaultPresentationResultHandler" -> setDefaultPresentationResultHandler(result)
-            "synchronize" -> synchronize()
+            "synchronize" -> {
+                synchronize()
+                result.safeSuccess(true)
+            }
             "fetchPresentation" -> fetchPresentation(
                 call.argument<String>("placementVendorId"),
                 call.argument<String>("presentationVendorId"),
@@ -247,7 +250,10 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
                 }
                 userLogin(userId, result)
             }
-            "userLogout" -> userLogout()
+            "userLogout" -> {
+                userLogout()
+                result.safeSuccess(true)
+            }
             "setLogLevel" -> {
                 setLogLevel(call.argument<Int>("logLevel"))
                 result.safeSuccess(true)
@@ -264,8 +270,14 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
                 Purchasely.userDidConsumeSubscriptionContent()
                 result.safeSuccess(true)
             }
-            "clientPresentationDisplayed" -> clientPresentationDisplayed(call.argument<Map<String, Any>>("presentation"))
-            "clientPresentationClosed" -> clientPresentationClosed(call.argument<Map<String, Any>>("presentation"))
+            "clientPresentationDisplayed" -> {
+                clientPresentationDisplayed(call.argument<Map<String, Any>>("presentation"))
+                result.safeSuccess(true)
+            }
+            "clientPresentationClosed" -> {
+                clientPresentationClosed(call.argument<Map<String, Any>>("presentation"))
+                result.safeSuccess(true)
+            }
             "productWithIdentifier" -> {
                 launch {
                     try {
@@ -306,67 +318,90 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
                 call.argument<String>("offerId"),
                 call.argument<String>("contentId"),
                 result)
-            "displaySubscriptionCancellationInstruction" -> displaySubscriptionCancellationInstruction()
+            "displaySubscriptionCancellationInstruction" -> {
+                displaySubscriptionCancellationInstruction()
+                result.safeSuccess(true)
+            }
             "isDeeplinkHandled" -> isDeeplinkHandled(call.argument<String>("deeplink"), result)
             "userSubscriptions" -> launch { userSubscriptions(result) }
             "userSubscriptionsHistory" -> launch { userSubscriptionsHistory(result) }
-            "presentSubscriptions" -> presentSubscriptions()
-            "setThemeMode" -> setThemeMode(call.argument<Int>("mode"))
-            "setAttribute" -> setAttribute(call.argument<Int>("attribute"), call.argument<String>("value"))
+            "presentSubscriptions" -> {
+                presentSubscriptions()
+                result.safeSuccess(true)
+            }
+            "setThemeMode" -> {
+                setThemeMode(call.argument<Int>("mode"))
+                result.safeSuccess(true)
+            }
+            "setAttribute" -> {
+                setAttribute(call.argument<Int>("attribute"), call.argument<String>("value"))
+                result.safeSuccess(true)
+            }
             "setUserAttributeWithString" -> {
                 val key = call.argument<String>("key") ?: return
                 val value = call.argument<String>("value") ?: return
                 setUserAttributeWithString(key, value)
+                result.safeSuccess(true)
             }
             "setUserAttributeWithInt" -> {
                 val key = call.argument<String>("key") ?: return
                 val value = call.argument<Int>("value") ?: return
                 setUserAttributeWithInt(key, value)
+                result.safeSuccess(true)
             }
             "setUserAttributeWithDouble" -> {
                 val key = call.argument<String>("key") ?: return
                 val value = call.argument<Double>("value") ?: return
                 setUserAttributeWithDouble(key, value)
+                result.safeSuccess(true)
             }
             "setUserAttributeWithBoolean" -> {
                 val key = call.argument<String>("key") ?: return
                 val value = call.argument<Boolean>("value") ?: return
                 setUserAttributeWithBoolean(key, value)
+                result.safeSuccess(true)
             }
             "setUserAttributeWithStringArray" -> {
                 val key = call.argument<String>("key") ?: return
                 val value = call.argument<List<String>>("value") ?: return
                 setUserAttributeWithStringArray(key, value)
+                result.safeSuccess(true)
             }
             "setUserAttributeWithIntArray" -> {
                 val key = call.argument<String>("key") ?: return
                 val value = call.argument<List<Int>>("value") ?: return
                 setUserAttributeWithIntArray(key, value)
+                result.safeSuccess(true)
             }
             "setUserAttributeWithDoubleArray" -> {
                 val key = call.argument<String>("key") ?: return
                 val value = call.argument<List<Double>>("value") ?: return
                 setUserAttributeWithDoubleArray(key, value)
+                result.safeSuccess(true)
             }
             "setUserAttributeWithBooleanArray" -> {
                 val key = call.argument<String>("key") ?: return
                 val value = call.argument<List<Boolean>>("value") ?: return
                 setUserAttributeWithBooleanArray(key, value)
+                result.safeSuccess(true)
             }
             "setUserAttributeWithDate" -> {
                 val key = call.argument<String>("key") ?: return
                 val value = call.argument<String>("value") ?: return
                 setUserAttributeWithDate(key, value)
+                result.safeSuccess(true)
             }
             "incrementUserAttribute" -> {
                 val key = call.argument<String>("key") ?: return
                 val value = call.argument<Int>("value") ?: 1
                 incrementUserAttribute(key, value)
+                result.safeSuccess(true)
             }
             "decrementUserAttribute" -> {
                 val key = call.argument<String>("key") ?: return
                 val value = call.argument<Int>("value") ?: 1
                 decrementUserAttribute(key, value)
+                result.safeSuccess(true)
             }
             "userAttribute" -> {
                 val key = call.argument<String>("key") ?: return
@@ -376,14 +411,33 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
             "clearUserAttribute" -> {
                 val key = call.argument<String>("key") ?: return
                 clearUserAttribute(key)
+                result.safeSuccess(true)
             }
-            "clearUserAttributes" -> clearUserAttributes()
-            "clearBuiltInAttributes" -> clearBuiltInAttributes()
+            "clearUserAttributes" -> {
+                clearUserAttributes()
+                result.safeSuccess(true)
+            }
+            "clearBuiltInAttributes" -> {
+                clearBuiltInAttributes()
+                result.safeSuccess(true)
+            }
             "setPaywallActionInterceptor" -> setPaywallActionInterceptor(result)
-            "onProcessAction" -> onProcessAction(call.argument<Boolean>("processAction") ?: false)
-            "closePresentation" -> closePresentation()
-            "hidePresentation" -> hidePresentation()
-            "showPresentation" -> showPresentation()
+            "onProcessAction" -> {
+                onProcessAction(call.argument<Boolean>("processAction") ?: false)
+                result.safeSuccess(true)
+            }
+            "closePresentation" -> {
+                closePresentation()
+                result.safeSuccess(true)
+            }
+            "hidePresentation" -> {
+                hidePresentation()
+                result.safeSuccess(true)
+            }
+            "showPresentation" -> {
+                showPresentation()
+                result.safeSuccess(true)
+            }
             else -> {
                 result.notImplemented()
             }
