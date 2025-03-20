@@ -59,15 +59,34 @@ class _MyAppState extends State<MyApp> {
         return;
       }
 
-      //Purchasely.setLogLevel(LogLevel.debug);
+      Purchasely.readyToOpenDeeplink(true);
+      Purchasely.setLogLevel(PLYLogLevel.debug);
 
       Purchasely.setUserAttributeListener(MyUserAttributeListener());
 
-      Purchasely.setAttribute(
-          PLYAttribute.amplitudeUserId, "amplitude_user_id");
-      Purchasely.setAttribute(PLYAttribute.adjust_id, "adjust_user_id");
-      Purchasely.setAttribute(
-          PLYAttribute.moengageUniqueId, "momengage_unique_id");
+      Purchasely.userLogin("MY_USER_ID");
+
+      Purchasely.setAttribute(PLYAttribute.firebase_app_instance_id, "firebaseAppInstanceId");
+      Purchasely.setAttribute(PLYAttribute.airship_channel_id, "airshipChannelId");
+      Purchasely.setAttribute(PLYAttribute.airship_user_id, "airshipUserId");
+      Purchasely.setAttribute(PLYAttribute.batch_installation_id, "batchInstallationId");
+      Purchasely.setAttribute(PLYAttribute.adjust_id, "adjustUserId");
+      Purchasely.setAttribute(PLYAttribute.appsflyer_id, "appsflyerId");
+      Purchasely.setAttribute(PLYAttribute.mixpanel_distinct_id, "mixpanelDistinctId");
+      Purchasely.setAttribute(PLYAttribute.clever_tap_id, "cleverTapId");
+      Purchasely.setAttribute(PLYAttribute.sendinblueUserEmail, "sendinblueUserEmail");
+      Purchasely.setAttribute(PLYAttribute.iterableUserEmail, "iterableUserEmail");
+      Purchasely.setAttribute(PLYAttribute.iterableUserId, "iterableUserId");
+      Purchasely.setAttribute(PLYAttribute.atInternetIdClient, "atInternetIdClient");
+      Purchasely.setAttribute(PLYAttribute.mParticleUserId, "mParticleUserId");
+      Purchasely.setAttribute(PLYAttribute.customerioUserId, "customerioUserId");
+      Purchasely.setAttribute(PLYAttribute.customerioUserEmail, "customerioUserEmail");
+      Purchasely.setAttribute(PLYAttribute.branchUserDeveloperIdentity, "branchUserDeveloperIdentity");
+      Purchasely.setAttribute(PLYAttribute.amplitudeUserId, "amplitudeUserId");
+      Purchasely.setAttribute(PLYAttribute.amplitudeDeviceId, "amplitudeDeviceId");
+      Purchasely.setAttribute(PLYAttribute.moengageUniqueId, "moengageUniqueId");
+      Purchasely.setAttribute(PLYAttribute.oneSignalExternalId, "oneSignalExternalId");
+      Purchasely.setAttribute(PLYAttribute.batchCustomUserId, "batchCustomUserId");
 
       Purchasely.setLanguage("en");
 
@@ -160,6 +179,8 @@ class _MyAppState extends State<MyApp> {
 
       Purchasely.clearUserAttributes();
       print(await Purchasely.userAttributes());
+
+      Purchasely.clearBuiltInAttributes();
 
       Purchasely.setPaywallActionInterceptorCallback(
           (PaywallActionInterceptorResult result) {

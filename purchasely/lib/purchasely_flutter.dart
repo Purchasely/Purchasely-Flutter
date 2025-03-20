@@ -603,6 +603,10 @@ class Purchasely {
     _channel.invokeMethod('clearUserAttributes');
   }
 
+  static void clearBuiltInAttributes() async {
+    _channel.invokeMethod('clearBuiltInAttributes');
+  }
+
   static void setDefaultPresentationResultCallback(Function callback) {
     setDefaultPresentationResultHandler().then((value) {
       setDefaultPresentationResultCallback(callback);
@@ -829,7 +833,6 @@ enum PLYAttribute {
   batch_installation_id,
   adjust_id,
   appsflyer_id,
-  onesignal_player_id,
   mixpanel_distinct_id,
   clever_tap_id,
   sendinblueUserEmail,

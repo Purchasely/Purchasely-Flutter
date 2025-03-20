@@ -173,7 +173,10 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
                 result.safeSuccess(true)
             }
             "setDefaultPresentationResultHandler" -> setDefaultPresentationResultHandler(result)
-            "synchronize" -> synchronize()
+            "synchronize" -> {
+                synchronize()
+                result.safeSuccess(true)
+            }
             "fetchPresentation" -> fetchPresentation(
                 call.argument<String>("placementVendorId"),
                 call.argument<String>("presentationVendorId"),
@@ -247,7 +250,10 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
                 }
                 userLogin(userId, result)
             }
-            "userLogout" -> userLogout()
+            "userLogout" -> {
+                userLogout()
+                result.safeSuccess(true)
+            }
             "setLogLevel" -> {
                 setLogLevel(call.argument<Int>("logLevel"))
                 result.safeSuccess(true)
@@ -264,8 +270,14 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
                 Purchasely.userDidConsumeSubscriptionContent()
                 result.safeSuccess(true)
             }
-            "clientPresentationDisplayed" -> clientPresentationDisplayed(call.argument<Map<String, Any>>("presentation"))
-            "clientPresentationClosed" -> clientPresentationClosed(call.argument<Map<String, Any>>("presentation"))
+            "clientPresentationDisplayed" -> {
+                clientPresentationDisplayed(call.argument<Map<String, Any>>("presentation"))
+                result.safeSuccess(true)
+            }
+            "clientPresentationClosed" -> {
+                clientPresentationClosed(call.argument<Map<String, Any>>("presentation"))
+                result.safeSuccess(true)
+            }
             "productWithIdentifier" -> {
                 launch {
                     try {
@@ -306,67 +318,90 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
                 call.argument<String>("offerId"),
                 call.argument<String>("contentId"),
                 result)
-            "displaySubscriptionCancellationInstruction" -> displaySubscriptionCancellationInstruction()
+            "displaySubscriptionCancellationInstruction" -> {
+                displaySubscriptionCancellationInstruction()
+                result.safeSuccess(true)
+            }
             "isDeeplinkHandled" -> isDeeplinkHandled(call.argument<String>("deeplink"), result)
             "userSubscriptions" -> launch { userSubscriptions(result) }
             "userSubscriptionsHistory" -> launch { userSubscriptionsHistory(result) }
-            "presentSubscriptions" -> presentSubscriptions()
-            "setThemeMode" -> setThemeMode(call.argument<Int>("mode"))
-            "setAttribute" -> setAttribute(call.argument<Int>("attribute"), call.argument<String>("value"))
+            "presentSubscriptions" -> {
+                presentSubscriptions()
+                result.safeSuccess(true)
+            }
+            "setThemeMode" -> {
+                setThemeMode(call.argument<Int>("mode"))
+                result.safeSuccess(true)
+            }
+            "setAttribute" -> {
+                setAttribute(call.argument<Int>("attribute"), call.argument<String>("value"))
+                result.safeSuccess(true)
+            }
             "setUserAttributeWithString" -> {
                 val key = call.argument<String>("key") ?: return
                 val value = call.argument<String>("value") ?: return
                 setUserAttributeWithString(key, value)
+                result.safeSuccess(true)
             }
             "setUserAttributeWithInt" -> {
                 val key = call.argument<String>("key") ?: return
                 val value = call.argument<Int>("value") ?: return
                 setUserAttributeWithInt(key, value)
+                result.safeSuccess(true)
             }
             "setUserAttributeWithDouble" -> {
                 val key = call.argument<String>("key") ?: return
                 val value = call.argument<Double>("value") ?: return
                 setUserAttributeWithDouble(key, value)
+                result.safeSuccess(true)
             }
             "setUserAttributeWithBoolean" -> {
                 val key = call.argument<String>("key") ?: return
                 val value = call.argument<Boolean>("value") ?: return
                 setUserAttributeWithBoolean(key, value)
+                result.safeSuccess(true)
             }
             "setUserAttributeWithStringArray" -> {
                 val key = call.argument<String>("key") ?: return
                 val value = call.argument<List<String>>("value") ?: return
                 setUserAttributeWithStringArray(key, value)
+                result.safeSuccess(true)
             }
             "setUserAttributeWithIntArray" -> {
                 val key = call.argument<String>("key") ?: return
                 val value = call.argument<List<Int>>("value") ?: return
                 setUserAttributeWithIntArray(key, value)
+                result.safeSuccess(true)
             }
             "setUserAttributeWithDoubleArray" -> {
                 val key = call.argument<String>("key") ?: return
                 val value = call.argument<List<Double>>("value") ?: return
                 setUserAttributeWithDoubleArray(key, value)
+                result.safeSuccess(true)
             }
             "setUserAttributeWithBooleanArray" -> {
                 val key = call.argument<String>("key") ?: return
                 val value = call.argument<List<Boolean>>("value") ?: return
                 setUserAttributeWithBooleanArray(key, value)
+                result.safeSuccess(true)
             }
             "setUserAttributeWithDate" -> {
                 val key = call.argument<String>("key") ?: return
                 val value = call.argument<String>("value") ?: return
                 setUserAttributeWithDate(key, value)
+                result.safeSuccess(true)
             }
             "incrementUserAttribute" -> {
                 val key = call.argument<String>("key") ?: return
                 val value = call.argument<Int>("value") ?: 1
                 incrementUserAttribute(key, value)
+                result.safeSuccess(true)
             }
             "decrementUserAttribute" -> {
                 val key = call.argument<String>("key") ?: return
                 val value = call.argument<Int>("value") ?: 1
                 decrementUserAttribute(key, value)
+                result.safeSuccess(true)
             }
             "userAttribute" -> {
                 val key = call.argument<String>("key") ?: return
@@ -376,13 +411,33 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
             "clearUserAttribute" -> {
                 val key = call.argument<String>("key") ?: return
                 clearUserAttribute(key)
+                result.safeSuccess(true)
             }
-            "clearUserAttributes" -> clearUserAttributes()
+            "clearUserAttributes" -> {
+                clearUserAttributes()
+                result.safeSuccess(true)
+            }
+            "clearBuiltInAttributes" -> {
+                clearBuiltInAttributes()
+                result.safeSuccess(true)
+            }
             "setPaywallActionInterceptor" -> setPaywallActionInterceptor(result)
-            "onProcessAction" -> onProcessAction(call.argument<Boolean>("processAction") ?: false)
-            "closePresentation" -> closePresentation()
-            "hidePresentation" -> hidePresentation()
-            "showPresentation" -> showPresentation()
+            "onProcessAction" -> {
+                onProcessAction(call.argument<Boolean>("processAction") ?: false)
+                result.safeSuccess(true)
+            }
+            "closePresentation" -> {
+                closePresentation()
+                result.safeSuccess(true)
+            }
+            "hidePresentation" -> {
+                hidePresentation()
+                result.safeSuccess(true)
+            }
+            "showPresentation" -> {
+                showPresentation()
+                result.safeSuccess(true)
+            }
             else -> {
                 result.notImplemented()
             }
@@ -412,7 +467,7 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
             .userId(userId)
             .build()
 
-	  Purchasely.sdkBridgeVersion = "5.0.6"
+	  Purchasely.sdkBridgeVersion = "5.1.0"
         Purchasely.appTechnology = PLYAppTechnology.FLUTTER
 
         Purchasely.start { isConfigured, error ->
@@ -742,7 +797,34 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
     private fun setAttribute(attribute: Int?, value: String?) {
         if(attribute == null || value == null) return
 
-        Purchasely.setAttribute(attribute = Attribute.values()[attribute], value = value)
+        val attributeKey = when (attribute) {
+            FlutterPLYAttribute.firebase_app_instance_id.ordinal -> Attribute.FIREBASE_APP_INSTANCE_ID
+            FlutterPLYAttribute.airship_channel_id.ordinal -> Attribute.AIRSHIP_CHANNEL_ID
+            FlutterPLYAttribute.airship_user_id.ordinal -> Attribute.AIRSHIP_USER_ID
+            FlutterPLYAttribute.batch_installation_id.ordinal -> Attribute.BATCH_INSTALLATION_ID
+            FlutterPLYAttribute.adjust_id.ordinal -> Attribute.ADJUST_ID
+            FlutterPLYAttribute.appsflyer_id.ordinal -> Attribute.APPSFLYER_ID
+            FlutterPLYAttribute.mixpanel_distinct_id.ordinal -> Attribute.MIXPANEL_DISTINCT_ID
+            FlutterPLYAttribute.clever_tap_id.ordinal -> Attribute.CLEVER_TAP_ID
+            FlutterPLYAttribute.sendinblueUserEmail.ordinal -> Attribute.SENDINBLUE_USER_EMAIL
+            FlutterPLYAttribute.iterableUserEmail.ordinal -> Attribute.ITERABLE_USER_EMAIL
+            FlutterPLYAttribute.iterableUserId.ordinal -> Attribute.ITERABLE_USER_ID
+            FlutterPLYAttribute.atInternetIdClient.ordinal -> Attribute.AT_INTERNET_ID_CLIENT
+            FlutterPLYAttribute.mParticleUserId.ordinal -> Attribute.MPARTICLE_USER_ID
+            FlutterPLYAttribute.customerioUserId.ordinal -> Attribute.CUSTOMERIO_USER_ID
+            FlutterPLYAttribute.customerioUserEmail.ordinal -> Attribute.CUSTOMERIO_USER_EMAIL
+            FlutterPLYAttribute.branchUserDeveloperIdentity.ordinal -> Attribute.BRANCH_USER_DEVELOPER_IDENTITY
+            FlutterPLYAttribute.amplitudeUserId.ordinal -> Attribute.AMPLITUDE_USER_ID
+            FlutterPLYAttribute.amplitudeDeviceId.ordinal -> Attribute.AMPLITUDE_DEVICE_ID
+            FlutterPLYAttribute.moengageUniqueId.ordinal -> Attribute.MOENGAGE_UNIQUE_ID
+            FlutterPLYAttribute.oneSignalExternalId.ordinal -> Attribute.ONESIGNAL_EXTERNAL_ID
+            FlutterPLYAttribute.batchCustomUserId.ordinal -> Attribute.BATCH_CUSTOM_USER_ID
+            else -> null
+        }
+
+        attributeKey?.let {
+            Purchasely.setAttribute(attribute = it, value = value)
+        }
     }
 
     fun setUserAttributeWithString(key: String, value: String) {
@@ -855,6 +937,10 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
 
     fun clearUserAttributes() {
         Purchasely.clearUserAttributes()
+    }
+
+    fun clearBuiltInAttributes() {
+        Purchasely.clearBuiltInAttributes()
     }
 
     fun setLanguage(language: String?) {
@@ -981,51 +1067,6 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
     }
 
     //endregion
-
-    companion object {
-        var productActivity: ProductActivity? = null
-        var presentationResult: Result? = null
-        var defaultPresentationResult: Result? = null
-        var paywallActionHandler: PLYCompletionHandler? = null
-        var paywallAction: PLYPresentationAction? = null
-        private lateinit var channel : MethodChannel
-
-        val presentationsLoaded = mutableListOf<PLYPresentation>()
-
-        fun sendPresentationResult(result: PLYProductViewResult, plan: PLYPlan?) {
-            val productViewResult = when(result) {
-                PLYProductViewResult.PURCHASED -> PLYProductViewResult.PURCHASED.ordinal
-                PLYProductViewResult.CANCELLED -> PLYProductViewResult.CANCELLED.ordinal
-                PLYProductViewResult.RESTORED -> PLYProductViewResult.RESTORED.ordinal
-            }
-
-            if(presentationResult != null) {
-                presentationResult?.success(
-                    mapOf(Pair("result", productViewResult), Pair("plan", transformPlanToMap(plan)))
-                )
-                presentationResult = null
-            } else if(defaultPresentationResult != null) {
-                defaultPresentationResult?.success(
-                    mapOf(Pair("result", productViewResult), Pair("plan", transformPlanToMap(plan)))
-                )
-            }
-        }
-
-        private fun transformPlanToMap(plan: PLYPlan?): Map<String, Any?> {
-            if(plan == null) return emptyMap()
-
-            return plan.toMap().toMutableMap().apply {
-                this["type"] = when(plan.type) {
-                    DistributionType.RENEWING_SUBSCRIPTION -> DistributionType.RENEWING_SUBSCRIPTION.ordinal
-                    DistributionType.NON_RENEWING_SUBSCRIPTION -> DistributionType.NON_RENEWING_SUBSCRIPTION.ordinal
-                    DistributionType.CONSUMABLE -> DistributionType.CONSUMABLE.ordinal
-                    DistributionType.NON_CONSUMABLE -> DistributionType.NON_CONSUMABLE.ordinal
-                    DistributionType.UNKNOWN -> DistributionType.UNKNOWN.ordinal
-                    else -> null
-                }
-            }
-        }
-    }
 
     private fun getStoresInstances(stores: List<String>?): ArrayList<Store> {
         val result = ArrayList<Store>()
@@ -1160,6 +1201,76 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
             this.error(errorCode, message, e)
         } catch (e: Throwable) {
             PLYLogger.e("Callback cannot be called: " + e.message, e)
+        }
+    }
+
+    companion object {
+        var productActivity: ProductActivity? = null
+        var presentationResult: Result? = null
+        var defaultPresentationResult: Result? = null
+        var paywallActionHandler: PLYCompletionHandler? = null
+        var paywallAction: PLYPresentationAction? = null
+        private lateinit var channel : MethodChannel
+
+        val presentationsLoaded = mutableListOf<PLYPresentation>()
+
+        fun sendPresentationResult(result: PLYProductViewResult, plan: PLYPlan?) {
+            val productViewResult = when(result) {
+                PLYProductViewResult.PURCHASED -> PLYProductViewResult.PURCHASED.ordinal
+                PLYProductViewResult.CANCELLED -> PLYProductViewResult.CANCELLED.ordinal
+                PLYProductViewResult.RESTORED -> PLYProductViewResult.RESTORED.ordinal
+            }
+
+            if(presentationResult != null) {
+                presentationResult?.success(
+                    mapOf(Pair("result", productViewResult), Pair("plan", transformPlanToMap(plan)))
+                )
+                presentationResult = null
+            } else if(defaultPresentationResult != null) {
+                defaultPresentationResult?.success(
+                    mapOf(Pair("result", productViewResult), Pair("plan", transformPlanToMap(plan)))
+                )
+            }
+        }
+
+        private fun transformPlanToMap(plan: PLYPlan?): Map<String, Any?> {
+            if(plan == null) return emptyMap()
+
+            return plan.toMap().toMutableMap().apply {
+                this["type"] = when(plan.type) {
+                    DistributionType.RENEWING_SUBSCRIPTION -> DistributionType.RENEWING_SUBSCRIPTION.ordinal
+                    DistributionType.NON_RENEWING_SUBSCRIPTION -> DistributionType.NON_RENEWING_SUBSCRIPTION.ordinal
+                    DistributionType.CONSUMABLE -> DistributionType.CONSUMABLE.ordinal
+                    DistributionType.NON_CONSUMABLE -> DistributionType.NON_CONSUMABLE.ordinal
+                    DistributionType.UNKNOWN -> DistributionType.UNKNOWN.ordinal
+                    else -> null
+                }
+            }
+        }
+
+        // WARNING: This enum must be strictly identical to the one in the Flutter side (purchasely_flutter.PLYAttribute).
+        enum class FlutterPLYAttribute {
+            firebase_app_instance_id,
+            airship_channel_id,
+            airship_user_id,
+            batch_installation_id,
+            adjust_id,
+            appsflyer_id,
+            mixpanel_distinct_id,
+            clever_tap_id,
+            sendinblueUserEmail,
+            iterableUserEmail,
+            iterableUserId,
+            atInternetIdClient,
+            mParticleUserId,
+            customerioUserId,
+            customerioUserEmail,
+            branchUserDeveloperIdentity,
+            amplitudeUserId,
+            amplitudeDeviceId,
+            moengageUniqueId,
+            oneSignalExternalId,
+            batchCustomUserId,
         }
     }
 }
