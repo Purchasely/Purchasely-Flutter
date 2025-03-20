@@ -74,6 +74,9 @@ class PLYProductActivity : FragmentActivity() {
                     presentationId = presentationId,
                     planId = planId,
                     productId = productId,
+                    onClose = {
+                        findViewById<FrameLayout>(R.id.container).removeAllViews()
+                    },
                     onLoaded = { isLoaded ->
                         if(!isLoaded) return@PLYPresentationProperties
 
