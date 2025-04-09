@@ -438,6 +438,10 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
                 showPresentation()
                 result.safeSuccess(true)
             }
+            "closeAllScreens" -> {
+                closeAllScreens()
+                result.safeSuccess(true)
+            }
             else -> {
                 result.notImplemented()
             }
@@ -467,7 +471,7 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
             .userId(userId)
             .build()
 
-	  Purchasely.sdkBridgeVersion = "5.1.0"
+	  Purchasely.sdkBridgeVersion = "5.1.1"
         Purchasely.appTechnology = PLYAppTechnology.FLUTTER
 
         Purchasely.start { isConfigured, error ->
@@ -1008,6 +1012,7 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
                 Pair("action", when(action) {
                     PLYPresentationAction.PURCHASE -> "purchase"
                     PLYPresentationAction.CLOSE -> "close"
+                    PLYPresentationAction.CLOSE_ALL -> "close_all"
                     PLYPresentationAction.LOGIN -> "login"
                     PLYPresentationAction.NAVIGATE -> "navigate"
                     PLYPresentationAction.RESTORE -> "restore"
@@ -1049,6 +1054,10 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
                 flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
             })
         }
+    }
+
+    private fun closeAllScreens() {
+        Purchasely.closeAllScreens()
     }
 
     private suspend fun isEligibleForIntroOffer(planVendorId: String) : Boolean {

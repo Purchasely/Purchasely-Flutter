@@ -475,6 +475,10 @@ class Purchasely {
     return await _channel.invokeMethod('closePresentation');
   }
 
+  static Future<void> closeAllScreens() async {
+    return await _channel.invokeMethod('closeAllScreens');
+  }
+
   static Future<void> hidePresentation() async {
     return await _channel.invokeMethod('hidePresentation');
   }
@@ -874,6 +878,7 @@ enum PLYPlanType {
 
 enum PLYPaywallAction {
   close,
+  close_all,
   login,
   navigate,
   purchase,

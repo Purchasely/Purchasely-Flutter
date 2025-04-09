@@ -193,6 +193,9 @@ class _MyAppState extends State<MyApp> {
         } else if (result.action == PLYPaywallAction.close) {
           print('User wants to close paywall');
           Purchasely.onProcessAction(true);
+        } else if (result.action == PLYPaywallAction.close_all) {
+          print('User wants to close all screens');
+          Purchasely.onProcessAction(true);
         } else if (result.action == PLYPaywallAction.login) {
           print('User wants to login');
           //Present your own screen for user to log in
@@ -296,7 +299,7 @@ class _MyAppState extends State<MyApp> {
 
   Future<void> fetchPresentation() async {
     try {
-      var presentation = await Purchasely.fetchPresentation("ONBOARDING");
+      var presentation = await Purchasely.fetchPresentation(null, presentationId: 'JAN_ST');
 
       if (presentation == null) {
         print("No presentation found");
