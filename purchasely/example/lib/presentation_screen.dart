@@ -41,9 +41,6 @@ class PresentationScreen extends StatelessWidget {
       } else if (result.action == PLYPaywallAction.close) {
         print('User wants to close paywall');
         Purchasely.onProcessAction(true);
-      } else if (result.action == PLYPaywallAction.close_all) {
-        print('User wants to close all screens');
-        Purchasely.onProcessAction(true);
       } else if (result.action == PLYPaywallAction.login) {
         print('User wants to login');
         //Present your own screen for user to log in

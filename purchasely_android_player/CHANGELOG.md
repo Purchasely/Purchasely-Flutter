@@ -2,7 +2,8 @@
 ### Android
 - Fix image display issue between default and selected state
 ## iOS
-- TODO
+- Improved Event System
+- Enhanced Stability & Reliability
 ## 5.1.0
 ## 🚀 Campaigns Support
 Introducing our powerful new Campaigns feature, enabling you to launch targeted in-app campaigns for specific audiences or all users right at app launch.

@@ -874,7 +874,6 @@ enum PLYPlanType {
 
 enum PLYPaywallAction {
   close,
-  close_all,
   login,
   navigate,
   purchase,
