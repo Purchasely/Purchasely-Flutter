@@ -467,7 +467,7 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
             .userId(userId)
             .build()
 
-	  Purchasely.sdkBridgeVersion = "5.1.0"
+	  Purchasely.sdkBridgeVersion = "5.1.1"
         Purchasely.appTechnology = PLYAppTechnology.FLUTTER
 
         Purchasely.start { isConfigured, error ->
@@ -1008,6 +1008,7 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
                 Pair("action", when(action) {
                     PLYPresentationAction.PURCHASE -> "purchase"
                     PLYPresentationAction.CLOSE -> "close"
+                    PLYPresentationAction.CLOSE_ALL -> "close_all"
                     PLYPresentationAction.LOGIN -> "login"
                     PLYPresentationAction.NAVIGATE -> "navigate"
                     PLYPresentationAction.RESTORE -> "restore"
@@ -1036,8 +1037,7 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
     }
 
     private fun closePresentation() {
-        val openedPaywall = productActivity?.activity?.get()
-        openedPaywall?.finish()
+        Purchasely.closeAllScreens()
         productActivity = null
     }
 

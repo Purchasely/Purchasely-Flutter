@@ -296,7 +296,7 @@ class _MyAppState extends State<MyApp> {
 
   Future<void> fetchPresentation() async {
     try {
-      var presentation = await Purchasely.fetchPresentation("ONBOARDING");
+      var presentation = await Purchasely.fetchPresentation(null, presentationId: 'JAN_ST');
 
       if (presentation == null) {
         print("No presentation found");
