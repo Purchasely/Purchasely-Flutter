@@ -7,6 +7,8 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
     private static var presentationsLoaded = [PLYPresentation]()
     private static var purchaseResult: FlutterResult?
 
+    private static var isStarted: Bool = false
+
     let eventChannel: FlutterEventChannel
     let eventHandler: SwiftEventHandler
 
@@ -91,7 +93,7 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
         case "userLogin":
             userLogin(arguments: arguments, result: result)
         case "userLogout":
-            userLogout()
+            userLogout(result: result)
         case "readyToOpenDeeplink":
             let parameter = arguments?["readyToOpenDeeplink"] as? Bool
             readyToOpenDeeplink(readyToOpenDeeplink: parameter)
@@ -301,6 +303,10 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             return
         }
 
+        guard !SwiftPurchaselyFlutterPlugin.isStarted else {
+            result(true)
+        }
+
 		Purchasely.setSdkBridgeVersion("5.1.1")
         Purchasely.setAppTechnology(PLYAppTechnology.flutter)
 
@@ -318,6 +324,7 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
                              storekitSettings: storeKitSetting,
                              logLevel: logLevel) { success, error in
                 if success {
+                    SwiftPurchaselyFlutterPlugin.isStarted = true
                     result(success)
                 } else {
                     result(FlutterError.error(code: "0", message: "Purchasely SDK not configured", error: error))
@@ -636,8 +643,9 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
         }
     }
 
-    private func userLogout() {
+    private func userLogout(result: @escaping FlutterResult) {
         Purchasely.userLogout()
+        result(true)
     }
 
     private func readyToOpenDeeplink(readyToOpenDeeplink: Bool?) {
