@@ -790,6 +790,9 @@ class Purchasely {
     properties['running_subscriptions']?.forEach((element) => subscriptions.add(
         PLYEventPropertySubscription(element['plan'], element['product'])));
 
+    final displayedOptions = (properties['displayed_options'] as List?)?.map((e) => e.toString()).toList();
+    final selectedOptions = (properties['selected_options'] as List?)?.map((e) => e.toString()).toList();
+
     return PLYEventProperties(
         properties['sdk_version'],
         eventName,
@@ -816,7 +819,11 @@ class Purchasely {
         properties['plan'],
         properties['selected_product'],
         properties['plan_change_type'],
-        subscriptions);
+        subscriptions,
+        properties['selected_option_id'],
+        selectedOptions,
+        displayedOptions,
+    );
   }
 }
 
@@ -1205,6 +1212,9 @@ class PLYEventProperties {
   String? selected_product;
   String? plan_change_type;
   List<PLYEventPropertySubscription> running_subscriptions;
+  String? selected_option_id;
+  List<String>? selected_options;
+  List<String>? displayed_options;
 
   PLYEventProperties(
       this.sdk_version,
@@ -1232,7 +1242,11 @@ class PLYEventProperties {
       this.plan,
       this.selected_product,
       this.plan_change_type,
-      this.running_subscriptions);
+      this.running_subscriptions,
+      this.selected_option_id,
+      this.selected_options,
+      this.displayed_options
+      );
 }
 
 class PLYEventPropertyCarousel {
