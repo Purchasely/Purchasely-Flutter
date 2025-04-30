@@ -35,6 +35,10 @@ class _MyAppState extends State<MyApp> {
 
       Purchasely.listenToEvents((event) {
         print('Flutter Event : ${event.name}');
+        print('Event properties : ${event.properties.event_name}');
+        print('Event property displayed_options: ${event.properties.displayed_options}');
+        print('Event property selected_option_id: ${event.properties.selected_option_id}');
+        print('Event property selected_options: ${event.properties.selected_options}');
         inspect(event);
       });
 
@@ -296,7 +300,7 @@ class _MyAppState extends State<MyApp> {
 
   Future<void> fetchPresentation() async {
     try {
-      var presentation = await Purchasely.fetchPresentation(null, presentationId: 'JAN_ST');
+      var presentation = await Purchasely.fetchPresentation(null, presentationId: 'headspace_survey');
 
       if (presentation == null) {
         print("No presentation found");
