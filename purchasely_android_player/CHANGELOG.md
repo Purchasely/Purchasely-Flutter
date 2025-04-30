@@ -1,3 +1,10 @@
+## 5.1.2
+### Android
+- Fix surveys events properties
+## iOS
+- Fix surveys events properties
+- Added check to prevent multi start call
+- Added result callback to userLogout method
 ## 5.1.1
 ### Android
 - Fix image display issue between default and selected state
