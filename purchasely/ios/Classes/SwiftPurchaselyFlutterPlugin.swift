@@ -305,6 +305,7 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
 
         guard !SwiftPurchaselyFlutterPlugin.isStarted else {
             result(true)
+            return
         }
 
 		Purchasely.setSdkBridgeVersion("5.1.1")
