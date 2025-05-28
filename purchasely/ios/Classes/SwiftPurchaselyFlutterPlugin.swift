@@ -181,6 +181,14 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             signPromotionalOffer(arguments: arguments, result: result)
         case "isEligibleForIntroOffer":
             isEligibleForIntroOffer(arguments: arguments, result: result)
+        case "setDynamicOffering":
+            setDynamicOffering(arguments: arguments, result: result)
+        case "getDynamicOfferings":
+            getDynamicOfferings(result: result)
+        case "removeDynamicOffering":
+            removeDynamicOffering(arguments: arguments)
+        case "clearDynamicOfferings":
+            clearDynamicOfferings()
         default:
             result(FlutterMethodNotImplemented)
         }
@@ -1044,6 +1052,59 @@ private func setAttribute(arguments: [String: Any]?) {
 
     private func userDidConsumeSubscriptionContent() {
         Purchasely.userDidConsumeSubscriptionContent()
+    }
+    
+    private func setDynamicOffering(arguments: [String: Any]?, result: @escaping FlutterResult) {
+        guard let arguments = arguments,
+              let reference = arguments["reference"] as? String,
+              let planVendorId = arguments["planVendorId"] as? String else {
+            result(FlutterError.error(code: "-1", message: "reference and planVendorId must not be nil", error: nil))
+            return
+        }
+        
+        let offerVendorId = arguments["offerVendorId"] as? String
+
+        DispatchQueue.main.async {
+            Purchasely.setDynamicOffering(reference: reference, planVendorId: planVendorId, offerVendorId: offerVendorId, completion: { success in
+                result(success)
+            })
+        }
+    }
+    
+    private func getDynamicOfferings(result: @escaping FlutterResult) {
+        DispatchQueue.main.async {
+            Purchasely.getDynamicOfferings { offerings in
+                // create new empty list
+                var list: [[String: String]] = []
+                offerings.forEach(  { offering in
+                    // create new dictionary for each offering
+                    var map = [String: String]()
+                    
+                    map["reference"] = offering.reference
+                    map["planVendorId"] = offering.planId
+                    
+                    if let offerId = offering.offerId {
+                        map["offerVendorId"] = offerId
+                    }
+                    
+                    list.append(map)
+                })
+                result(list)
+            }
+        }
+    }
+    
+    private func removeDynamicOffering(arguments: [String: Any]?) {
+        guard let arguments = arguments,
+              let reference = arguments["reference"] as? String else {
+            return
+        }
+        
+        Purchasely.removeDynamicOffering(reference: reference)
+    }
+    
+    private func clearDynamicOfferings() {
+        Purchasely.clearDynamicOfferings()
     }
 }
 

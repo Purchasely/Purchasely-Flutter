@@ -438,6 +438,21 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
                 showPresentation()
                 result.safeSuccess(true)
             }
+            "setDynamicOffering" -> {
+                setDynamicOffering(
+                    call.argument<String>("reference") ?: "",
+                    call.argument<String>("planVendorId") ?: "",
+                    call.argument<String>("offerVendorId"),
+                    result
+                )
+            }
+            "getDynamicOfferings" -> getDynamicOfferings(result)
+            "removeDynamicOffering" -> {
+                removeDynamicOffering(
+                    call.argument<String>("reference") ?: ""
+                )
+            }
+            "clearDynamicOfferings" -> clearDynamicOfferings()
             else -> {
                 result.notImplemented()
             }
@@ -506,6 +521,7 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
                         else value
                     }
                     val mutableMap = map.toMutableMap().apply {
+                        this["height"] = presentation.height
                         this["metadata"] = presentation.metadata?.toMap()
                         this["plans"] = (this["plans"] as List<PLYPresentationPlan>).map { it.toMap() }
                     }
@@ -1064,6 +1080,34 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
             Log.e("Purchasely", e.message, e)
             false
         }
+    }
+
+    fun setDynamicOffering(reference: String, planVendorId: String, offerId: String?, result: Result) {
+        Purchasely.setDynamicOffering(reference, planVendorId, offerId) {
+            result.safeSuccess(it)
+        }
+    }
+
+    fun getDynamicOfferings(result: Result) {
+        Purchasely.getDynamicOfferings { offerings ->
+            val list = ArrayList<Map<String,String>>()
+            for (offering in offerings) {
+                val map = mutableMapOf<String, String>()
+                map["reference"] = offering.reference
+                map["planVendorId"] = offering.planId
+                if (offering.offerId != null) map["offerVendorId"] = offering.offerId!!
+                list.add(map.toMap())
+            }
+            result.safeSuccess(list)
+        }
+    }
+
+    fun removeDynamicOffering(reference: String) {
+        Purchasely.removeDynamicOffering(reference)
+    }
+
+    fun clearDynamicOfferings() {
+        Purchasely.clearDynamicOfferings()
     }
 
     //endregion

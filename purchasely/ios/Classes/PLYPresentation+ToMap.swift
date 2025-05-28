@@ -35,6 +35,8 @@ extension PLYPresentation {
         
         result["language"] = language
         
+        result["height"] = height
+        
         result["plans"] = self.plans.map({
             var newPresentationPlan: [String : Any?] = [:]
             newPresentationPlan["offerId"] = $0.offerId
