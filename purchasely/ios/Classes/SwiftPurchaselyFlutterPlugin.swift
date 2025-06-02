@@ -1029,6 +1029,8 @@ private func setAttribute(arguments: [String: Any]?) {
                     actionString = "promo_code"
                 case .openPresentation:
                     actionString = "open_presentation"
+                case .openPlacement:
+                    actionString = nil
                 @unknown default:
                     actionString = nil
                 }
@@ -1143,7 +1145,7 @@ class SwiftEventHandler: NSObject, FlutterStreamHandler, PLYEventDelegate {
 
     func onCancel(withArguments arguments: Any?) -> FlutterError? {
         eventSink = nil
-        Purchasely.setEventDelegate(nil)
+        Purchasely.removeEventDelegate()
         return nil
     }
 
@@ -1220,6 +1222,8 @@ class UserAttributesHandler: NSObject, FlutterStreamHandler, PLYUserAttributeDel
         case .dictionary:
             formattedType = "DICTIONARY"
         case .unknown:
+            formattedType = ""
+        @unknown default:
             formattedType = ""
         }
 
