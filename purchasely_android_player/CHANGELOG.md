@@ -1,3 +1,36 @@
+## 5.2.0
+### 🎯 Introductory, Promotional, and Regular Offers — All on One Paywall
+
+Present the right pricing to the right user, all through a single paywall.
+The SDK now automatically selects and displays Introductory, Promotional, or Regular offers based on user eligibility — simplifying configuration and maximizing relevance.
+
+### 🔁 Dynamic Offerings
+
+With [Dynamic Offering](dynamic-offering), you can now define in real-time which Offering a user should see.
+This drastically reduces the number of paywalls you need and enables a cleaner, more scalable monetization setup.
+
+### 📱 Support for Google Billing v7
+
+Upgraded to Google Play Billing Library v7, ensuring compatibility with the latest billing features and improvements.
+
+### 🛠 Fixes & Improvements
+
+- Add the ability to compare the offer of plan A to the price of plan B with tags `OFFER_DISCOUNT_PERCENTAGE` and `OFFER_PRICE_COMPARISON`, like `{{OFFER_DISCOUNT_PERCENTAGE(plan_a, plan_b, offer_from_a)}}`
+
+#### iOS
+
+- Enhanced eligibility system for more accurate offer selection
+- Improved image loading performance
+- Fixed an issue where the subscription view could throw an error in certain cases
+- Corrected misleading error logs related to image loading
+- Resolved a price rounding inconsistency
+- We've also added a fix for a rare issue caused by a bug in iOS 18.4.1, where StoreKit could fail to respond when fetching products. This could prevent the SDK from starting correctly. The SDK now includes a safeguard to handle this situation gracefully.
+
+#### Android
+
+- Smarter and more consistent background color management ensures a polished look across all devices.
+- Enhanced handling of deep links to prevent them from being triggered multiple times in certain edge cases, improving navigation reliability and user experience.
+- Fix a potential display issue when using a carousel inside a tab layout
 ## 5.1.2
 ### Android
 - Fix surveys events properties

@@ -33,7 +33,7 @@ class _MyAppState extends State<MyApp> {
     try {
       Purchasely.readyToOpenDeeplink(true);
 
-      /*Purchasely.listenToEvents((event) {
+      Purchasely.listenToEvents((event) {
         print('Flutter Event : ${event.name}');
         print('Event properties : ${event.properties.event_name}');
         print(
@@ -43,7 +43,7 @@ class _MyAppState extends State<MyApp> {
         print(
             'Event property selected_options: ${event.properties.selected_options}');
         inspect(event);
-      });*/
+      });
 
       bool configured = await Purchasely.start(
           apiKey: 'fcb39be4-2ba4-4db7-bde3-2a5a1e20745d',
@@ -111,7 +111,7 @@ class _MyAppState extends State<MyApp> {
 
       Purchasely.setLanguage("en");
 
-      /*String anonymousId = await Purchasely.anonymousUserId;
+      String anonymousId = await Purchasely.anonymousUserId;
       print('Anonymous Id : $anonymousId');
 
       bool isAnonymous = await Purchasely.isAnonymous();
@@ -201,7 +201,7 @@ class _MyAppState extends State<MyApp> {
       Purchasely.clearUserAttributes();
       print(await Purchasely.userAttributes());
 
-      Purchasely.clearBuiltInAttributes();*/
+      Purchasely.clearBuiltInAttributes();
 
       manageDynamicOfferings();
 
