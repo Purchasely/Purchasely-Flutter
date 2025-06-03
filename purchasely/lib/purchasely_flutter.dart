@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:developer';
 
 import 'package:flutter/services.dart';
 import 'package:collection/collection.dart';
@@ -636,6 +637,28 @@ class Purchasely {
         .invokeMethod('setThemeMode', <String, dynamic>{'mode': mode.index});
   }
 
+  static Future<bool> setDynamicOffering(PLYDynamicOffering offering) async {
+    return await _channel.invokeMethod('setDynamicOffering', <String, dynamic>{
+      'reference': offering.reference,
+      'planVendorId': offering.planVendorId,
+      'offerVendorId': offering.offerVendorId
+    });
+  }
+
+  static Future<List<PLYDynamicOffering>> getDynamicOfferings() async {
+    return transformToDynamicOfferings(await _channel
+        .invokeListMethod<Map<dynamic, dynamic>>('getDynamicOfferings'));
+  }
+
+  static void removeDynamicOffering(String reference) async {
+    _channel.invokeMethod(
+        'removeDynamicOffering', <String, dynamic>{'reference': reference});
+  }
+
+  static void clearDynamicOfferings() async {
+    _channel.invokeMethod('clearDynamicOfferings');
+  }
+
   // -- Private Methods --
 
   static PLYPlan? transformToPLYPlan(Map<dynamic, dynamic> plan) {
@@ -715,6 +738,7 @@ class Purchasely {
         presentation['abTestId'],
         presentation['abTestVariantId'],
         presentation['language'],
+        presentation['height'] ?? 0,
         type,
         plans,
         metadata);
@@ -739,6 +763,30 @@ class Purchasely {
     //presentationMap['metadata'] = presentation?.metadata;
 
     return presentationMap;
+  }
+
+  static List<PLYDynamicOffering> transformToDynamicOfferings(
+      List<Map<dynamic, dynamic>>? offerings) {
+    if (offerings == null || offerings.isEmpty) return List.empty();
+
+    inspect(offerings);
+
+    print('Transforming dynamic offerings: $offerings');
+
+    List<PLYDynamicOffering> dynamicOfferings = [];
+    offerings.forEach((offering) {
+      String? reference = offering['reference'];
+      String? planVendorId = offering['planVendorId'];
+
+      if (reference == null || planVendorId == null) {
+        print('Invalid dynamic offering: $offering');
+        return;
+      }
+
+      dynamicOfferings.add(PLYDynamicOffering(
+          reference, planVendorId, offering['offerVendorId']));
+    });
+    return dynamicOfferings;
   }
 
   static PLYEventProperties transformToPLYEventProperties(
@@ -790,39 +838,43 @@ class Purchasely {
     properties['running_subscriptions']?.forEach((element) => subscriptions.add(
         PLYEventPropertySubscription(element['plan'], element['product'])));
 
-    final displayedOptions = (properties['displayed_options'] as List?)?.map((e) => e.toString()).toList();
-    final selectedOptions = (properties['selected_options'] as List?)?.map((e) => e.toString()).toList();
+    final displayedOptions = (properties['displayed_options'] as List?)
+        ?.map((e) => e.toString())
+        .toList();
+    final selectedOptions = (properties['selected_options'] as List?)
+        ?.map((e) => e.toString())
+        .toList();
 
     return PLYEventProperties(
-        properties['sdk_version'],
-        eventName,
-        properties['event_created_at'],
-        properties['displayed_presentation'],
-        properties['user_id'],
-        properties['anonymous_user_id'],
-        plans,
-        properties['deeplink_identifier'],
-        properties['source_identifier'],
-        properties['selected_plan'],
-        properties['previous_selected_plan'],
-        properties['selected_presentation'],
-        properties['previous_selected_presentation'],
-        properties['link_identifier'],
-        carousels,
-        properties['language'],
-        properties['device'],
-        properties['os_version'],
-        properties['device_type'],
-        properties['error_message'],
-        properties['cancellation_reason_id'],
-        properties['cancellation_reason'],
-        properties['plan'],
-        properties['selected_product'],
-        properties['plan_change_type'],
-        subscriptions,
-        properties['selected_option_id'],
-        selectedOptions,
-        displayedOptions,
+      properties['sdk_version'],
+      eventName,
+      properties['event_created_at'],
+      properties['displayed_presentation'],
+      properties['user_id'],
+      properties['anonymous_user_id'],
+      plans,
+      properties['deeplink_identifier'],
+      properties['source_identifier'],
+      properties['selected_plan'],
+      properties['previous_selected_plan'],
+      properties['selected_presentation'],
+      properties['previous_selected_presentation'],
+      properties['link_identifier'],
+      carousels,
+      properties['language'],
+      properties['device'],
+      properties['os_version'],
+      properties['device_type'],
+      properties['error_message'],
+      properties['cancellation_reason_id'],
+      properties['cancellation_reason'],
+      properties['plan'],
+      properties['selected_product'],
+      properties['plan_change_type'],
+      subscriptions,
+      properties['selected_option_id'],
+      selectedOptions,
+      displayedOptions,
     );
   }
 }
@@ -1043,6 +1095,7 @@ class PLYPresentation {
   String? abTestId;
   String? abTestVariantId;
   String language;
+  int height = 0;
   PLYPresentationType type;
   List<PLYPresentationPlan>? plans;
   Map<String, dynamic> metadata;
@@ -1054,6 +1107,7 @@ class PLYPresentation {
       this.abTestId,
       this.abTestVariantId,
       this.language,
+      this.height,
       this.type,
       this.plans,
       this.metadata);
@@ -1066,6 +1120,7 @@ class PLYPresentation {
       'abTestId': abTestId,
       'abTestVariantId': abTestVariantId,
       'language': language,
+      'height': height,
       'type': type.toString(),
       'plans': plans?.map((plan) => plan.toMap()).toList(),
       'metadata': metadata,
@@ -1245,8 +1300,7 @@ class PLYEventProperties {
       this.running_subscriptions,
       this.selected_option_id,
       this.selected_options,
-      this.displayed_options
-      );
+      this.displayed_options);
 }
 
 class PLYEventPropertyCarousel {
@@ -1272,4 +1326,23 @@ abstract class UserAttributeListener {
       PLYUserAttributeSource source);
 
   void onUserAttributeRemoved(String key, PLYUserAttributeSource source);
+}
+
+class PLYDynamicOffering {
+  String reference;
+  String planVendorId;
+  String? offerVendorId;
+
+  PLYDynamicOffering(this.reference, this.planVendorId, this.offerVendorId);
+
+  Map<String, dynamic> toJson() => {
+        'reference': reference,
+        'planVendorId': planVendorId,
+        'offerVendorId': offerVendorId,
+      };
+
+  @override
+  String toString() {
+    return 'PLYDynamicOffering(reference: $reference, planVendorId: $planVendorId, offerVendorId: $offerVendorId)';
+  }
 }

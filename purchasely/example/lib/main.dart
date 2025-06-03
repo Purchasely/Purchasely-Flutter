@@ -36,9 +36,12 @@ class _MyAppState extends State<MyApp> {
       Purchasely.listenToEvents((event) {
         print('Flutter Event : ${event.name}');
         print('Event properties : ${event.properties.event_name}');
-        print('Event property displayed_options: ${event.properties.displayed_options}');
-        print('Event property selected_option_id: ${event.properties.selected_option_id}');
-        print('Event property selected_options: ${event.properties.selected_options}');
+        print(
+            'Event property displayed_options: ${event.properties.displayed_options}');
+        print(
+            'Event property selected_option_id: ${event.properties.selected_option_id}');
+        print(
+            'Event property selected_options: ${event.properties.selected_options}');
         inspect(event);
       });
 
@@ -70,27 +73,41 @@ class _MyAppState extends State<MyApp> {
 
       Purchasely.userLogin("MY_USER_ID");
 
-      Purchasely.setAttribute(PLYAttribute.firebase_app_instance_id, "firebaseAppInstanceId");
-      Purchasely.setAttribute(PLYAttribute.airship_channel_id, "airshipChannelId");
+      Purchasely.setAttribute(
+          PLYAttribute.firebase_app_instance_id, "firebaseAppInstanceId");
+      Purchasely.setAttribute(
+          PLYAttribute.airship_channel_id, "airshipChannelId");
       Purchasely.setAttribute(PLYAttribute.airship_user_id, "airshipUserId");
-      Purchasely.setAttribute(PLYAttribute.batch_installation_id, "batchInstallationId");
+      Purchasely.setAttribute(
+          PLYAttribute.batch_installation_id, "batchInstallationId");
       Purchasely.setAttribute(PLYAttribute.adjust_id, "adjustUserId");
       Purchasely.setAttribute(PLYAttribute.appsflyer_id, "appsflyerId");
-      Purchasely.setAttribute(PLYAttribute.mixpanel_distinct_id, "mixpanelDistinctId");
+      Purchasely.setAttribute(
+          PLYAttribute.mixpanel_distinct_id, "mixpanelDistinctId");
       Purchasely.setAttribute(PLYAttribute.clever_tap_id, "cleverTapId");
-      Purchasely.setAttribute(PLYAttribute.sendinblueUserEmail, "sendinblueUserEmail");
-      Purchasely.setAttribute(PLYAttribute.iterableUserEmail, "iterableUserEmail");
+      Purchasely.setAttribute(
+          PLYAttribute.sendinblueUserEmail, "sendinblueUserEmail");
+      Purchasely.setAttribute(
+          PLYAttribute.iterableUserEmail, "iterableUserEmail");
       Purchasely.setAttribute(PLYAttribute.iterableUserId, "iterableUserId");
-      Purchasely.setAttribute(PLYAttribute.atInternetIdClient, "atInternetIdClient");
+      Purchasely.setAttribute(
+          PLYAttribute.atInternetIdClient, "atInternetIdClient");
       Purchasely.setAttribute(PLYAttribute.mParticleUserId, "mParticleUserId");
-      Purchasely.setAttribute(PLYAttribute.customerioUserId, "customerioUserId");
-      Purchasely.setAttribute(PLYAttribute.customerioUserEmail, "customerioUserEmail");
-      Purchasely.setAttribute(PLYAttribute.branchUserDeveloperIdentity, "branchUserDeveloperIdentity");
+      Purchasely.setAttribute(
+          PLYAttribute.customerioUserId, "customerioUserId");
+      Purchasely.setAttribute(
+          PLYAttribute.customerioUserEmail, "customerioUserEmail");
+      Purchasely.setAttribute(PLYAttribute.branchUserDeveloperIdentity,
+          "branchUserDeveloperIdentity");
       Purchasely.setAttribute(PLYAttribute.amplitudeUserId, "amplitudeUserId");
-      Purchasely.setAttribute(PLYAttribute.amplitudeDeviceId, "amplitudeDeviceId");
-      Purchasely.setAttribute(PLYAttribute.moengageUniqueId, "moengageUniqueId");
-      Purchasely.setAttribute(PLYAttribute.oneSignalExternalId, "oneSignalExternalId");
-      Purchasely.setAttribute(PLYAttribute.batchCustomUserId, "batchCustomUserId");
+      Purchasely.setAttribute(
+          PLYAttribute.amplitudeDeviceId, "amplitudeDeviceId");
+      Purchasely.setAttribute(
+          PLYAttribute.moengageUniqueId, "moengageUniqueId");
+      Purchasely.setAttribute(
+          PLYAttribute.oneSignalExternalId, "oneSignalExternalId");
+      Purchasely.setAttribute(
+          PLYAttribute.batchCustomUserId, "batchCustomUserId");
 
       Purchasely.setLanguage("en");
 
@@ -186,6 +203,8 @@ class _MyAppState extends State<MyApp> {
 
       Purchasely.clearBuiltInAttributes();
 
+      manageDynamicOfferings();
+
       Purchasely.setPaywallActionInterceptorCallback(
           (PaywallActionInterceptorResult result) {
         print('Received action from paywall');
@@ -227,6 +246,52 @@ class _MyAppState extends State<MyApp> {
     // message was in flight, we want to discard the reply rather than calling
     // setState to update our non-existent appearance.
     if (!mounted) return;
+  }
+
+  Future<void> manageDynamicOfferings() async {
+    // Set a dynamic offering
+    final PLYDynamicOffering p1yOfferData = PLYDynamicOffering(
+      'p1yOffer',
+      'PURCHASELY_PLUS_YEARLY',
+      'Winback',
+    );
+    final bool p1yOfferSuccess =
+        await Purchasely.setDynamicOffering(p1yOfferData);
+    print('Dynamic offering p1yOffer set success: $p1yOfferSuccess');
+
+    final PLYDynamicOffering p1mData = PLYDynamicOffering(
+      'p1m',
+      'PURCHASELY_PLUS_MONTHLY',
+      'NON_EXISTING_OFFER', // This might result in 'false' or an error depending on native handling
+    );
+    final bool p1mSuccess = await Purchasely.setDynamicOffering(p1mData);
+    print('Dynamic offering p1mError set success: $p1mSuccess');
+
+    final PLYDynamicOffering p1yData = PLYDynamicOffering(
+      'p1y',
+      'PURCHASELY_PLUS_YEARLY',
+      null, // offerVendorId is nullable
+    );
+    final bool p1ySuccess = await Purchasely.setDynamicOffering(p1yData);
+    print('Dynamic offering p1y set success: $p1ySuccess');
+
+    // Get dynamic offerings
+    final List<PLYDynamicOffering> offerings =
+        await Purchasely.getDynamicOfferings();
+    print('Dynamic offerings: ${offerings.map((o) => o.toString()).toList()}');
+
+    // Remove a dynamic offering
+    Purchasely.removeDynamicOffering('p1yOffer');
+    print('Removed dynamic offering: p1yOffer');
+
+    // Clear all dynamic offerings
+    Purchasely.clearDynamicOfferings();
+    print('Cleared all dynamic offerings');
+
+    final List<PLYDynamicOffering> offeringsEmpty =
+        await Purchasely.getDynamicOfferings();
+    print(
+        'Dynamic offerings after clear: ${offeringsEmpty.map((o) => o.toString()).toList()}');
   }
 
   Future<void> displayPresentation() async {
@@ -300,7 +365,8 @@ class _MyAppState extends State<MyApp> {
 
   Future<void> fetchPresentation() async {
     try {
-      var presentation = await Purchasely.fetchPresentation(null, presentationId: 'headspace_survey');
+      var presentation = await Purchasely.fetchPresentation(null,
+          presentationId: 'headspace_survey');
 
       if (presentation == null) {
         print("No presentation found");

@@ -67,6 +67,6 @@ flutter {
 dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
 
-    implementation 'io.purchasely:google-play:5.1.1'
-    implementation 'io.purchasely:player:5.1.1'
+    implementation 'io.purchasely:google-play:5.2.2'
+    implementation 'io.purchasely:player:5.2.2'
 }
