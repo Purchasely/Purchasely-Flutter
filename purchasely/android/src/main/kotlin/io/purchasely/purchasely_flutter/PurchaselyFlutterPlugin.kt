@@ -30,6 +30,7 @@ import kotlinx.coroutines.*
 import io.purchasely.ext.Purchasely
 import io.purchasely.models.PLYError
 import io.purchasely.views.presentation.PLYThemeMode
+import io.purchasely.views.presentation.models.PLYTransitionType
 import java.lang.ref.WeakReference
 import java.text.SimpleDateFormat
 import java.util.*
@@ -182,6 +183,7 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
                 call.argument<String>("presentationVendorId"),
                 call.argument<String>("contentId"),
                 result)
+            "display" -> display(call.argument<Map<String, Any>>("presentation"), result)
             "presentPresentation" -> presentPresentation(
                 call.argument<Map<String, Any>>("presentation"),
                 call.argument<Boolean>("isFullscreen") ?: false,
@@ -482,7 +484,7 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
             .userId(userId)
             .build()
 
-	  Purchasely.sdkBridgeVersion = "5.2.0"
+	  Purchasely.sdkBridgeVersion = "5.3.0"
         Purchasely.appTechnology = PLYAppTechnology.FLUTTER
 
         Purchasely.start { isConfigured, error ->
@@ -517,8 +519,11 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
                     presentationsLoaded.add(presentation)
                     val map = presentation.toMap().mapValues {
                         val value = it.value
-                        if (value is PLYPresentationType) value.ordinal
-                        else value
+                        when(value) {
+                            is PLYPresentationType -> value.ordinal
+                            is PLYTransitionType -> value.ordinal
+                            else -> value
+                        }
                     }
                     val mutableMap = map.toMutableMap().apply {
                         this["height"] = presentation.height
@@ -567,6 +572,34 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
         }
 
 
+    }
+
+    private fun display(presentationMap: Map<String, Any>?, result: Result) {
+        if (presentationMap == null) {
+            result.safeError("-1", "presentation cannot be null", null)
+            return
+        }
+
+        if(presentationsLoaded.lastOrNull()?.id != presentationMap["id"]) {
+            result.safeError("-1", "presentation cannot be fetched", null)
+            return
+        }
+
+        val presentation = presentationsLoaded.lastOrNull {
+            it.id == presentationMap["id"]
+                    && it.placementId == presentationMap["placementId"]
+        }
+
+        if(presentation == null) {
+            result.safeError("468", "Presentation not found", NullPointerException("presentation not fond"))
+            return
+        }
+
+        presentationResult = result
+
+        context?.let {
+            presentation.display(it)
+        }
     }
 
     private fun presentPresentationWithIdentifier(presentationVendorId: String?,
@@ -1031,6 +1064,7 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
                     PLYPresentationAction.OPEN_PRESENTATION -> "open_presentation"
                     PLYPresentationAction.PROMO_CODE -> "promo_code"
                     PLYPresentationAction.OPEN_PLACEMENT -> "open_placement"
+                    PLYPresentationAction.OPEN_FLOW_STEP -> "open_flow_step"
                 }),
                 Pair("parameters", parametersForFlutter)
             ))

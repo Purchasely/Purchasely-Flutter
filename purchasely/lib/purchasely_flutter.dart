@@ -115,6 +115,12 @@ class Purchasely {
     return transformToPLYPresentation(result);
   }
 
+  static Future<void> display(PLYPresentation? presentation) async {
+    return await _channel.invokeMethod('display', <String, dynamic>{
+      'presentation': transformPLYPresentationToMap(presentation)
+    });
+  }
+
   static Future<PresentPresentationResult> presentPresentation(
       PLYPresentation? presentation,
       {bool isFullscreen = false}) async {

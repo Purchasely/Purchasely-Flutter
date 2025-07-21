@@ -65,6 +65,8 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             setDefaultPresentationResultHandler(result: result)
         case "fetchPresentation":
             fetchPresentation(arguments: arguments, result: result)
+        case "display":
+            display(arguments: arguments, result: result)
         case "presentPresentation":
             presentPresentation(arguments: arguments, result: result)
         case "clientPresentationDisplayed":
@@ -316,7 +318,7 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             return
         }
 
-		Purchasely.setSdkBridgeVersion("5.2.0")
+		Purchasely.setSdkBridgeVersion("5.3.0")
         Purchasely.setAppTechnology(PLYAppTechnology.flutter)
 
         let logLevel = PLYLogger.LogLevel(rawValue: (arguments["logLevel"] as? Int) ?? PLYLogger.LogLevel.debug.rawValue) ?? PLYLogger.LogLevel.debug
@@ -421,6 +423,37 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
 
         DispatchQueue.main.async {
             Purchasely.showController(navCtrl, type: .productPage)
+        }
+    }
+
+    private func display(arguments: [String: Any]?, result: @escaping FlutterResult) {
+        guard let presentationMap = arguments?["presentation"] as? [String: Any] else {
+            result(FlutterError.error(code: "-1", message: "Presentation cannot be nil", error: nil))
+            return
+        }
+
+        SwiftPurchaselyFlutterPlugin.purchaseResult = result
+
+        guard let presentationId = presentationMap["id"] as? String,
+              let placementId = presentationMap["placementId"] as? String,
+              let presentationLoaded = SwiftPurchaselyFlutterPlugin.presentationsLoaded.filter({ $0.id == presentationId && $0.placementId == placementId }).first,
+              let controller = presentationLoaded.controller else {
+            result(FlutterError.error(code: "-1", message: "Presentation not loaded", error: nil))
+            return
+        }
+
+        SwiftPurchaselyFlutterPlugin.presentationsLoaded.removeAll(where: { $0.id == presentationId })
+
+        let navCtrl = UINavigationController(rootViewController: controller)
+        navCtrl.navigationBar.isTranslucent = true
+        navCtrl.navigationBar.setBackgroundImage(UIImage(), for: .default)
+        navCtrl.navigationBar.shadowImage = UIImage()
+        navCtrl.navigationBar.tintColor = UIColor.white
+
+        self.presentedPresentationViewController = navCtrl
+
+        DispatchQueue.main.async {
+            presentationLoaded.display()
         }
     }
 
