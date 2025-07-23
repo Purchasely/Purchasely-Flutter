@@ -1064,6 +1064,8 @@ private func setAttribute(arguments: [String: Any]?) {
                     actionString = "open_presentation"
                 case .openPlacement:
                     actionString = nil
+                case .webCheckout:
+                    actionString = "web_checkout"
                 @unknown default:
                     actionString = nil
                 }

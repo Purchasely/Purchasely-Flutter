@@ -448,31 +448,37 @@ class Purchasely {
         transformToPLYPlan(result['plan']));
   }
 
-  static Future<PaywallActionInterceptorResult>
-      setPaywallActionInterceptor() async {
+  static Future<PaywallActionInterceptorResult> setPaywallActionInterceptor() async {
+
     final result = await _channel.invokeMethod('setPaywallActionInterceptor');
     final Map<dynamic, dynamic>? plan = result['parameters']['plan'];
     final Map<dynamic, dynamic>? offer = result['parameters']['offer'];
-    final Map<dynamic, dynamic>? subscriptionOffer =
-        result['parameters']['subscriptionOffer'];
-    return PaywallActionInterceptorResult(
-        PLYPaywallInfo(
-            result['info']['contentId'],
-            result['info']['presentationId'],
-            result['info']['placementId'],
-            result['info']['abTestId'],
-            result['info']['abTestVariantId']),
-        PLYPaywallAction.values.firstWhere(
-            (e) => e.toString() == 'PLYPaywallAction.' + result['action']),
-        PLYPaywallActionParameters(
-            result['parameters']['url'],
-            result['parameters']['title'],
-            plan != null ? transformToPLYPlan(plan) : null,
-            offer != null ? transformToPLYPromoOffer(offer) : null,
-            subscriptionOffer != null
-                ? transformToPLYSubscription(subscriptionOffer)
-                : null,
-            result['parameters']['presentation']));
+    final Map<dynamic, dynamic>? subscriptionOffer = result['parameters']['subscriptionOffer'];
+
+    final info = PLYPaywallInfo(
+        result['info']['contentId'],
+        result['info']['presentationId'],
+        result['info']['placementId'],
+        result['info']['abTestId'],
+        result['info']['abTestVariantId']
+    );
+
+    final action = PLYPaywallAction.values.firstWhere(
+            (e) => e.toString() == 'PLYPaywallAction.' + result['action']
+    );
+
+    final parameters = PLYPaywallActionParameters(
+        url: result['parameters']['url'],
+        title: result['parameters']['title'],
+        plan: plan != null ? transformToPLYPlan(plan) : null,
+        offer: offer != null ? transformToPLYPromoOffer(offer) : null,
+        subscriptionOffer: subscriptionOffer != null ? transformToPLYSubscription(subscriptionOffer) : null,
+        presentation: result['parameters']['presentation'],
+        clientReferenceId: result['parameters']['clientReferenceId'],
+        webCheckoutProvider: result['parameters']['webCheckoutProvider'],
+    );
+
+    return PaywallActionInterceptorResult(info, action, parameters);
   }
 
   static Future<void> onProcessAction(bool processAction) async {
@@ -883,6 +889,7 @@ class Purchasely {
       properties['selected_option_id'],
       selectedOptions,
       displayedOptions,
+      properties['web_checkout_provider'],
     );
   }
 }
@@ -947,6 +954,7 @@ enum PLYPaywallAction {
   restore,
   open_presentation,
   promo_code,
+  web_checkout,
 }
 
 enum PLYEventName {
@@ -993,7 +1001,11 @@ enum PLYEventName {
   SUBSCRIPTION_PLAN_TAPPED,
   SUBSCRIPTIONS_TRANSFERRED,
   USER_LOGGED_IN,
-  USER_LOGGED_OUT
+  USER_LOGGED_OUT,
+  WEB_CHECKOUT_OPENED_IN_WEB_BROWSER,
+  WEB_CHECKOUT_ERROR,
+  WEB_CHECKOUT_TAPPED,
+  WEB_CHECKOUT_TIMED_OUT
 }
 
 enum PLYUserAttributeSource {
@@ -1183,9 +1195,13 @@ class PLYPaywallActionParameters {
   PLYPromoOffer? offer;
   PLYSubscriptionOffer? subscriptionOffer;
   String? presentation;
+  String? clientReferenceId;
+  String? queryParameterKey;
+  String? webCheckoutProvider;
 
-  PLYPaywallActionParameters(this.url, this.title, this.plan, this.offer,
-      this.subscriptionOffer, this.presentation);
+
+  PLYPaywallActionParameters({this.url, this.title, this.plan, this.offer,
+      this.subscriptionOffer, this.presentation, this.clientReferenceId, this.queryParameterKey, this.webCheckoutProvider});
 }
 
 class PLYPaywallInfo {
@@ -1278,6 +1294,7 @@ class PLYEventProperties {
   String? selected_option_id;
   List<String>? selected_options;
   List<String>? displayed_options;
+  String? webCheckoutProvider;
 
   PLYEventProperties(
       this.sdk_version,
@@ -1308,7 +1325,8 @@ class PLYEventProperties {
       this.running_subscriptions,
       this.selected_option_id,
       this.selected_options,
-      this.displayed_options);
+      this.displayed_options,
+      this.webCheckoutProvider);
 }
 
 class PLYEventPropertyCarousel {

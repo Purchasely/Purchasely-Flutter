@@ -35,6 +35,8 @@ extension PLYPresentationActionParameters {
             offerMap["storeOfferId"] = promoOffer.storeOfferId
             result["offer"] = offerMap
         }
+
+        //TODO handle web checkout parameters
         
         return result
     }
