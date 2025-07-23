@@ -115,10 +115,12 @@ class Purchasely {
     return transformToPLYPresentation(result);
   }
 
-  static Future<void> display(PLYPresentation? presentation) async {
-    return await _channel.invokeMethod('display', <String, dynamic>{
+  static Future<PresentPresentationResult> display(PLYPresentation? presentation) async {
+    final result = await _channel.invokeMethod('display', <String, dynamic>{
       'presentation': transformPLYPresentationToMap(presentation)
     });
+    return PresentPresentationResult(PLYPurchaseResult.values[result['result']],
+        transformToPLYPlan(result['plan']));
   }
 
   static Future<PresentPresentationResult> presentPresentation(

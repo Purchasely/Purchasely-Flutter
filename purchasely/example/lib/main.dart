@@ -386,28 +386,28 @@ class _MyAppState extends State<MyApp> {
 
       //Display Purchasely paywall
 
-      Purchasely.display(presentation);
+      var presentResult = await Purchasely.display(presentation);
 
       // var presentResult = await Purchasely.presentPresentation(presentation,
       //     isFullscreen: true);
 
-      // switch (presentResult.result) {
-      //   case PLYPurchaseResult.cancelled:
-      //     {
-      //       print("User cancelled purchased");
-      //     }
-      //     break;
-      //   case PLYPurchaseResult.purchased:
-      //     {
-      //       print("User purchased ${presentResult.plan?.name}");
-      //     }
-      //     break;
-      //   case PLYPurchaseResult.restored:
-      //     {
-      //       print("User restored ${presentResult.plan?.name}");
-      //     }
-      //     break;
-      // }
+      switch (presentResult.result) {
+        case PLYPurchaseResult.cancelled:
+          {
+            print("User cancelled purchased");
+          }
+          break;
+        case PLYPurchaseResult.purchased:
+          {
+            print("User purchased ${presentResult.plan?.name}");
+          }
+          break;
+        case PLYPurchaseResult.restored:
+          {
+            print("User restored ${presentResult.plan?.name}");
+          }
+          break;
+      }
 
     } catch (e) {
       print(e);

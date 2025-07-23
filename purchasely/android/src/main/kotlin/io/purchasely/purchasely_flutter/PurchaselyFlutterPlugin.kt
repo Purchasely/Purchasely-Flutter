@@ -598,7 +598,10 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
         presentationResult = result
 
         context?.let {
-            presentation.display(it)
+            presentation.display(it) { result, plan ->
+                PurchaselyFlutterPlugin.sendPresentationResult(result, plan)
+            }
+
         }
     }
 
