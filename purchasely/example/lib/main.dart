@@ -296,7 +296,7 @@ class _MyAppState extends State<MyApp> {
 
   Future<void> displayPresentation() async {
     try {
-      var result = await Purchasely.presentPresentationForPlacement("abtest",
+      var result = await Purchasely.presentPresentationForPlacement("STRIPE",
           isFullscreen: true);
 
       switch (result.result) {
@@ -365,8 +365,7 @@ class _MyAppState extends State<MyApp> {
 
   Future<void> fetchPresentation() async {
     try {
-      var presentation = await Purchasely.fetchPresentation(null,
-          presentationId: 'headspace_survey');
+      var presentation = await Purchasely.fetchPresentation("FLOW");
 
       if (presentation == null) {
         print("No presentation found");
@@ -387,8 +386,10 @@ class _MyAppState extends State<MyApp> {
 
       //Display Purchasely paywall
 
-      var presentResult = await Purchasely.presentPresentation(presentation,
-          isFullscreen: true);
+      var presentResult = await Purchasely.display(presentation);
+
+      // var presentResult = await Purchasely.presentPresentation(presentation,
+      //     isFullscreen: true);
 
       switch (presentResult.result) {
         case PLYPurchaseResult.cancelled:
@@ -407,6 +408,7 @@ class _MyAppState extends State<MyApp> {
           }
           break;
       }
+
     } catch (e) {
       print(e);
     }

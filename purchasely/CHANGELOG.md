@@ -1,3 +1,34 @@
+## 5.3.0
+### 🚀 Introducing Flows
+We’re introducing Flows, a powerful new feature that lets you orchestrate personalized, multi-screen journeys directly from the Purchasely Console. 
+Whether you're onboarding users, promoting offers, or guiding upgrades, Flows are tailored to user behavior and lifecycle stages.
+>  ⚠️ **Important**
+>  Flows is currently available in beta and accessible only to selected customers.
+> If you're interested in early access, please reach out to the Purchasely team.
+
+### 🖥️ Enhanced Presentation Display API
+A new display method has been added to PLYPresentation objects, enabling immediate rendering of pre-fetched presentations.
+>  ⚠️ **Important**
+> This API is required when using the Flows feature. 
+> It ensures presentations are displayed according to their designated mode (e.g. push, modal, fullscreen, etc.) and handles the Flow's lifecycle and navigation state seamlessly
+
+### 💳 Web Checkout Action
+The Screen Composer’s new Web Checkout Action makes it effortless to turn any button into a purchase flow that suits your business. With a few clicks you can choose between:
+a Stripe integration complete with native Purchasely support and built-in A/B-test and conversion tracking
+any other web-billing provider you already use without conversion tracking
+For customers in the U.S., this update is fully compliant with Apple’s latest policy: they can now subscribe outside the App Store via a web checkout flow.
+Simply drag the Web Checkout Action onto your screen, map it to the button of your choice, and configure the SDK to open your chosen URL.
+Whether you select “Stripe” for consolidated analytics in your Purchasely dashboard or “Other” to keep using an existing billing solution, setup is literally as simple as pasting in a link.
+
+Behind the scenes, Purchasely’s Stripe Web Checkout integration ensures your web-based transactions feed directly into our A/B-testing dashboard alongside in-app data. Ensuring that you see end-to-end funnel performance without any extra wiring. 
+If you prefer a different provider, the SDK will hand off users to whatever URL you specify, leaving conversion logging to your own systems.
+
+### 🎨 Asset Prefetching for Seamless UX
+To deliver smoother transitions, the SDK now automatically preloads image assets prior to presenting a screen with Purchasely.fetchPresentation(), minimizing perceived latency and visual flickering.
+
+### 🔧 Stability & Performance Improvements
+This release includes various stability improvements, internal refinements, and minor bug fixes to enhance overall reliability and developer experience.
+
 ## 5.2.0
 ### 🎯 Introductory, Promotional, and Regular Offers — All on One Paywall
 
