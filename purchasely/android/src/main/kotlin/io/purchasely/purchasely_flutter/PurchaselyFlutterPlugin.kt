@@ -546,7 +546,7 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
             return
         }
 
-        if(presentationsLoaded.lastOrNull()?.id != presentationMap["id"]) {
+        if(presentationsLoaded.none { it.id == presentationMap["id"] }) {
             result.safeError("-1", "presentation cannot be fetched", null)
             return
         }
