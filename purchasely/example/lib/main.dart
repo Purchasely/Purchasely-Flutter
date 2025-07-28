@@ -385,11 +385,7 @@ class _MyAppState extends State<MyApp> {
       }
 
       //Display Purchasely paywall
-
-      var presentResult = await Purchasely.display(presentation);
-
-      // var presentResult = await Purchasely.presentPresentation(presentation,
-      //     isFullscreen: true);
+       var presentResult = await Purchasely.presentPresentation(presentation, isFullscreen: true);
 
       switch (presentResult.result) {
         case PLYPurchaseResult.cancelled:

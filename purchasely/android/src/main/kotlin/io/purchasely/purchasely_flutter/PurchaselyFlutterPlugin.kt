@@ -183,7 +183,6 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
                 call.argument<String>("presentationVendorId"),
                 call.argument<String>("contentId"),
                 result)
-            "display" -> display(call.argument<Map<String, Any>>("presentation"), result)
             "presentPresentation" -> presentPresentation(
                 call.argument<Map<String, Any>>("presentation"),
                 call.argument<Boolean>("isFullscreen") ?: false,
@@ -563,45 +562,10 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
 
         presentationResult = result
 
-        activity?.let {
-            val intent = PLYProductActivity.newIntent(it).apply {
-                putExtra("presentation", presentation)
-                putExtra("isFullScreen", isFullScreen)
-            }
-            it.startActivity(intent)
-        }
-
-
-    }
-
-    private fun display(presentationMap: Map<String, Any>?, result: Result) {
-        if (presentationMap == null) {
-            result.safeError("-1", "presentation cannot be null", null)
-            return
-        }
-
-        if(presentationsLoaded.lastOrNull()?.id != presentationMap["id"]) {
-            result.safeError("-1", "presentation cannot be fetched", null)
-            return
-        }
-
-        val presentation = presentationsLoaded.lastOrNull {
-            it.id == presentationMap["id"]
-                    && it.placementId == presentationMap["placementId"]
-        }
-
-        if(presentation == null) {
-            result.safeError("468", "Presentation not found", NullPointerException("presentation not fond"))
-            return
-        }
-
-        presentationResult = result
-
         context?.let {
             presentation.display(it) { result, plan ->
                 PurchaselyFlutterPlugin.sendPresentationResult(result, plan)
             }
-
         }
     }
 
