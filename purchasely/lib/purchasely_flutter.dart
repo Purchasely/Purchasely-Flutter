@@ -440,34 +440,35 @@ class Purchasely {
         transformToPLYPlan(result['plan']));
   }
 
-  static Future<PaywallActionInterceptorResult> setPaywallActionInterceptor() async {
-
+  static Future<PaywallActionInterceptorResult>
+      setPaywallActionInterceptor() async {
     final result = await _channel.invokeMethod('setPaywallActionInterceptor');
     final Map<dynamic, dynamic>? plan = result['parameters']['plan'];
     final Map<dynamic, dynamic>? offer = result['parameters']['offer'];
-    final Map<dynamic, dynamic>? subscriptionOffer = result['parameters']['subscriptionOffer'];
+    final Map<dynamic, dynamic>? subscriptionOffer =
+        result['parameters']['subscriptionOffer'];
 
     final info = PLYPaywallInfo(
         result['info']['contentId'],
         result['info']['presentationId'],
         result['info']['placementId'],
         result['info']['abTestId'],
-        result['info']['abTestVariantId']
-    );
+        result['info']['abTestVariantId']);
 
     final action = PLYPaywallAction.values.firstWhere(
-            (e) => e.toString() == 'PLYPaywallAction.' + result['action']
-    );
+        (e) => e.toString() == 'PLYPaywallAction.' + result['action']);
 
     final parameters = PLYPaywallActionParameters(
-        url: result['parameters']['url'],
-        title: result['parameters']['title'],
-        plan: plan != null ? transformToPLYPlan(plan) : null,
-        offer: offer != null ? transformToPLYPromoOffer(offer) : null,
-        subscriptionOffer: subscriptionOffer != null ? transformToPLYSubscription(subscriptionOffer) : null,
-        presentation: result['parameters']['presentation'],
-        clientReferenceId: result['parameters']['clientReferenceId'],
-        webCheckoutProvider: result['parameters']['webCheckoutProvider'],
+      url: result['parameters']['url'],
+      title: result['parameters']['title'],
+      plan: plan != null ? transformToPLYPlan(plan) : null,
+      offer: offer != null ? transformToPLYPromoOffer(offer) : null,
+      subscriptionOffer: subscriptionOffer != null
+          ? transformToPLYSubscription(subscriptionOffer)
+          : null,
+      presentation: result['parameters']['presentation'],
+      clientReferenceId: result['parameters']['clientReferenceId'],
+      webCheckoutProvider: result['parameters']['webCheckoutProvider'],
     );
 
     return PaywallActionInterceptorResult(info, action, parameters);
@@ -940,12 +941,15 @@ enum PLYPlanType {
 
 enum PLYPaywallAction {
   close,
+  close_all,
   login,
   navigate,
   purchase,
   restore,
   open_presentation,
+  open_placement,
   promo_code,
+  open_flow_step,
   web_checkout,
 }
 
@@ -1191,9 +1195,16 @@ class PLYPaywallActionParameters {
   String? queryParameterKey;
   String? webCheckoutProvider;
 
-
-  PLYPaywallActionParameters({this.url, this.title, this.plan, this.offer,
-      this.subscriptionOffer, this.presentation, this.clientReferenceId, this.queryParameterKey, this.webCheckoutProvider});
+  PLYPaywallActionParameters(
+      {this.url,
+      this.title,
+      this.plan,
+      this.offer,
+      this.subscriptionOffer,
+      this.presentation,
+      this.clientReferenceId,
+      this.queryParameterKey,
+      this.webCheckoutProvider});
 }
 
 class PLYPaywallInfo {

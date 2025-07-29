@@ -546,7 +546,7 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
         }
 
         if(presentationsLoaded.none { it.id == presentationMap["id"] }) {
-            result.safeError("-1", "presentation cannot be fetched", null)
+            result.safeError("-1", "presentation was not fetched", null)
             return
         }
 
@@ -562,9 +562,18 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
 
         presentationResult = result
 
-        context?.let {
-            presentation.display(it) { result, plan ->
-                PurchaselyFlutterPlugin.sendPresentationResult(result, plan)
+        activity?.let {
+            if (presentation.flowId != null || presentation.displayMode != null) {
+                presentation.display(it) { result, plan ->
+                    sendPresentationResult(result, plan)
+                }
+            } else {
+                // Open legacy Activity for now if not a flow
+                val intent = PLYProductActivity.newIntent(it).apply {
+                    putExtra("presentation", presentation)
+                    putExtra("isFullScreen", isFullScreen)
+                }
+                it.startActivity(intent)
             }
         }
     }
