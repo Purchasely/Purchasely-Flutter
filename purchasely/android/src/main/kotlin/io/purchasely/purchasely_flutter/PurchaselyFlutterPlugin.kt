@@ -563,7 +563,7 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
         presentationResult = result
 
         activity?.let {
-            if (presentation.flowId != null || presentation.displayMode != null) {
+            if (presentation.flowId != null) {
                 presentation.display(it) { result, plan ->
                     sendPresentationResult(result, plan)
                 }

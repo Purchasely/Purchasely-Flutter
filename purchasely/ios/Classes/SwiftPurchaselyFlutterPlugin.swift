@@ -420,7 +420,12 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
         }
 
         DispatchQueue.main.async {
-            presentationLoaded.display()
+            if presentationLoaded.isFlow {
+                presentationLoaded.display()
+            } else {
+                Purchasely.showController(navCtrl, type: .productPage)
+            }
+            
         }
     }
 

@@ -396,7 +396,7 @@ class _MyAppState extends State<MyApp> {
           isFullscreen: true);
 
       print("-------");
-      print("Flow closed: $presentResult");
+      print("Presentation closed with result: ${presentResult.result}");
 
       switch (presentResult.result) {
         case PLYPurchaseResult.cancelled:
