@@ -436,6 +436,8 @@ class Purchasely {
       setDefaultPresentationResultHandler() async {
     final result =
         await _channel.invokeMethod('setDefaultPresentationResultHandler');
+    print('Default Presentation Result Handler: $result');
+    print(inspect(result));
     return PresentPresentationResult(PLYPurchaseResult.values[result['result']],
         transformToPLYPlan(result['plan']));
   }
@@ -619,7 +621,7 @@ class Purchasely {
     setDefaultPresentationResultHandler().then((value) {
       setDefaultPresentationResultCallback(callback);
       try {
-        callback();
+        callback(value);
       } catch (e) {
         print(
             '[Purchasely] Error with callback for default presentation result handler: $e');
