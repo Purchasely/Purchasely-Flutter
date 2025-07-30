@@ -48,8 +48,6 @@ extension PLYPresentationActionParameters {
         switch webCheckoutProvider {
         case .stripe:
             webCheckoutProviderString = "stripe"
-        case .none:
-            webCheckoutProviderString = "none"
         case .other:
             webCheckoutProviderString = "other"
         }
