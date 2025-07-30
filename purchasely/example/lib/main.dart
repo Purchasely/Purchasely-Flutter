@@ -33,7 +33,7 @@ class _MyAppState extends State<MyApp> {
     try {
       Purchasely.readyToOpenDeeplink(true);
 
-      Purchasely.listenToEvents((event) {
+      /*Purchasely.listenToEvents((event) {
         print('Flutter Event : ${event.name}');
         print('Event properties : ${event.properties.event_name}');
         print(
@@ -43,7 +43,7 @@ class _MyAppState extends State<MyApp> {
         print(
             'Event property selected_options: ${event.properties.selected_options}');
         inspect(event);
-      });
+      });*/
 
       bool configured = await Purchasely.start(
           apiKey: 'fcb39be4-2ba4-4db7-bde3-2a5a1e20745d',
@@ -157,13 +157,20 @@ class _MyAppState extends State<MyApp> {
       print('Product found');
       inspect(product);
 
-      Purchasely.setDefaultPresentationResultCallback(
+      /*Purchasely.setDefaultPresentationResultCallback(
           (PresentPresentationResult value) {
-        print('Presentation Result : ' + value.result.toString());
+        print('Default Presentation Result Callback');
+        //print('Presentation Result : ' + value.result.toString());
 
         if (value.plan != null) {
           //User bought a plan
         }
+      });*/
+
+      Purchasely.setDefaultPresentationResultCallback(
+          (PresentPresentationResult result) {
+        print('Received result from screen');
+        inspect(result);
       });
 
       //Attributes
@@ -233,6 +240,12 @@ class _MyAppState extends State<MyApp> {
         } else if (result.action == PLYPaywallAction.restore) {
           print('User wants to restore his purchases');
           Purchasely.onProcessAction(true);
+        } else if (result.action == PLYPaywallAction.web_checkout) {
+          print('User wants to open web checkout');
+          print('webCheckoutProvider: ${result.parameters.webCheckoutProvider}');
+          print('queryParameterKey: ${result.parameters.queryParameterKey}');
+          print('clientReferenceId: ${result.parameters.clientReferenceId}');
+          Purchasely.onProcessAction(true);
         } else {
           print('Action unknown ' + result.action.toString());
           Purchasely.onProcessAction(true);
@@ -296,7 +309,7 @@ class _MyAppState extends State<MyApp> {
 
   Future<void> displayPresentation() async {
     try {
-      var result = await Purchasely.presentPresentationForPlacement("abtest",
+      var result = await Purchasely.presentPresentationForPlacement("STRIPE",
           isFullscreen: true);
 
       switch (result.result) {
@@ -365,8 +378,7 @@ class _MyAppState extends State<MyApp> {
 
   Future<void> fetchPresentation() async {
     try {
-      var presentation = await Purchasely.fetchPresentation(null,
-          presentationId: 'headspace_survey');
+      var presentation = await Purchasely.fetchPresentation("FLOW");
 
       if (presentation == null) {
         print("No presentation found");
@@ -386,9 +398,11 @@ class _MyAppState extends State<MyApp> {
       }
 
       //Display Purchasely paywall
-
       var presentResult = await Purchasely.presentPresentation(presentation,
           isFullscreen: true);
+
+      print("-------");
+      print("Presentation closed with result: ${presentResult.result}");
 
       switch (presentResult.result) {
         case PLYPurchaseResult.cancelled:

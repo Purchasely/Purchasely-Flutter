@@ -316,7 +316,7 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             return
         }
 
-		Purchasely.setSdkBridgeVersion("5.2.0")
+		Purchasely.setSdkBridgeVersion("5.3.0")
         Purchasely.setAppTechnology(PLYAppTechnology.flutter)
 
         let logLevel = PLYLogger.LogLevel(rawValue: (arguments["logLevel"] as? Int) ?? PLYLogger.LogLevel.debug.rawValue) ?? PLYLogger.LogLevel.debug
@@ -420,7 +420,12 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
         }
 
         DispatchQueue.main.async {
-            Purchasely.showController(navCtrl, type: .productPage)
+            if presentationLoaded.isFlow {
+                presentationLoaded.display()
+            } else {
+                Purchasely.showController(navCtrl, type: .productPage)
+            }
+            
         }
     }
 
@@ -1031,6 +1036,8 @@ private func setAttribute(arguments: [String: Any]?) {
                     actionString = "open_presentation"
                 case .openPlacement:
                     actionString = nil
+                case .webCheckout:
+                    actionString = "web_checkout"
                 @unknown default:
                     actionString = nil
                 }

@@ -35,6 +35,23 @@ extension PLYPresentationActionParameters {
             offerMap["storeOfferId"] = promoOffer.storeOfferId
             result["offer"] = offerMap
         }
+
+        if let queryParameterKey = queryParameterKey {
+            result["queryParameterKey"] = queryParameterKey
+        }
+
+        if let clientReferenceId = clientReferenceId {
+            result["clientReferenceId"] = clientReferenceId
+        }
+
+        let webCheckoutProviderString: String
+        switch webCheckoutProvider {
+        case .stripe:
+            webCheckoutProviderString = "stripe"
+        case .other:
+            webCheckoutProviderString = "other"
+        }
+        result["webCheckoutProvider"] = webCheckoutProviderString
         
         return result
     }

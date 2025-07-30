@@ -30,6 +30,7 @@ import kotlinx.coroutines.*
 import io.purchasely.ext.Purchasely
 import io.purchasely.models.PLYError
 import io.purchasely.views.presentation.PLYThemeMode
+import io.purchasely.views.presentation.models.PLYTransitionType
 import java.lang.ref.WeakReference
 import java.text.SimpleDateFormat
 import java.util.*
@@ -482,7 +483,7 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
             .userId(userId)
             .build()
 
-	  Purchasely.sdkBridgeVersion = "5.2.0"
+	  Purchasely.sdkBridgeVersion = "5.3.0"
         Purchasely.appTechnology = PLYAppTechnology.FLUTTER
 
         Purchasely.start { isConfigured, error ->
@@ -517,8 +518,11 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
                     presentationsLoaded.add(presentation)
                     val map = presentation.toMap().mapValues {
                         val value = it.value
-                        if (value is PLYPresentationType) value.ordinal
-                        else value
+                        when(value) {
+                            is PLYPresentationType -> value.ordinal
+                            is PLYTransitionType -> value.ordinal
+                            else -> value
+                        }
                     }
                     val mutableMap = map.toMutableMap().apply {
                         this["height"] = presentation.height
@@ -541,8 +545,8 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
             return
         }
 
-        if(presentationsLoaded.lastOrNull()?.id != presentationMap["id"]) {
-            result.safeError("-1", "presentation cannot be fetched", null)
+        if(presentationsLoaded.none { it.id == presentationMap["id"] }) {
+            result.safeError("-1", "presentation was not fetched", null)
             return
         }
 
@@ -559,14 +563,19 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
         presentationResult = result
 
         activity?.let {
-            val intent = PLYProductActivity.newIntent(it).apply {
-                putExtra("presentation", presentation)
-                putExtra("isFullScreen", isFullScreen)
+            if (presentation.flowId != null) {
+                presentation.display(it) { result, plan ->
+                    sendPresentationResult(result, plan)
+                }
+            } else {
+                // Open legacy Activity for now if not a flow
+                val intent = PLYProductActivity.newIntent(it).apply {
+                    putExtra("presentation", presentation)
+                    putExtra("isFullScreen", isFullScreen)
+                }
+                it.startActivity(intent)
             }
-            it.startActivity(intent)
         }
-
-
     }
 
     private fun presentPresentationWithIdentifier(presentationVendorId: String?,
@@ -1031,6 +1040,7 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
                     PLYPresentationAction.OPEN_PRESENTATION -> "open_presentation"
                     PLYPresentationAction.PROMO_CODE -> "promo_code"
                     PLYPresentationAction.OPEN_PLACEMENT -> "open_placement"
+                    PLYPresentationAction.OPEN_FLOW_STEP -> "open_flow_step"
                 }),
                 Pair("parameters", parametersForFlutter)
             ))
