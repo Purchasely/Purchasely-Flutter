@@ -36,7 +36,24 @@ extension PLYPresentationActionParameters {
             result["offer"] = offerMap
         }
 
-        //TODO handle web checkout parameters
+        if let queryParameterKey = queryParameterKey {
+            result["queryParameterKey"] = queryParameterKey
+        }
+
+        if let clientReferenceId = clientReferenceId {
+            result["clientReferenceId"] = clientReferenceId
+        }
+
+        let webCheckoutProviderString: String
+        switch webCheckoutProvider {
+        case .stripe:
+            webCheckoutProviderString = "stripe"
+        case .none:
+            webCheckoutProviderString = "none"
+        case .other:
+            webCheckoutProviderString = "other"
+        }
+        result["webCheckoutProvider"] = webCheckoutProviderString
         
         return result
     }

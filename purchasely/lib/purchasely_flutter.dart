@@ -471,6 +471,7 @@ class Purchasely {
       presentation: result['parameters']['presentation'],
       clientReferenceId: result['parameters']['clientReferenceId'],
       webCheckoutProvider: result['parameters']['webCheckoutProvider'],
+      queryParameterKey: result['parameters']['queryParameterKey'],
     );
 
     return PaywallActionInterceptorResult(info, action, parameters);

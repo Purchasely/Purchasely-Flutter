@@ -240,6 +240,12 @@ class _MyAppState extends State<MyApp> {
         } else if (result.action == PLYPaywallAction.restore) {
           print('User wants to restore his purchases');
           Purchasely.onProcessAction(true);
+        } else if (result.action == PLYPaywallAction.web_checkout) {
+          print('User wants to open web checkout');
+          print('webCheckoutProvider: ${result.parameters.webCheckoutProvider}');
+          print('queryParameterKey: ${result.parameters.queryParameterKey}');
+          print('clientReferenceId: ${result.parameters.clientReferenceId}');
+          Purchasely.onProcessAction(true);
         } else {
           print('Action unknown ' + result.action.toString());
           Purchasely.onProcessAction(true);
