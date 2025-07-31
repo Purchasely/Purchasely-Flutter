@@ -1,3 +1,6 @@
+## 5.3.1
+### Fixes
+- Fixed a switch missing case error related to PLYPresentationActionParameters on iOS.
 ## 5.3.0
 ### 🚀 Introducing Flows
 We’re introducing Flows, a powerful new feature that lets you orchestrate personalized, multi-screen journeys directly from the Purchasely Console.
