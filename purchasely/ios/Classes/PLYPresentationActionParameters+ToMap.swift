@@ -50,6 +50,8 @@ extension PLYPresentationActionParameters {
             webCheckoutProviderString = "stripe"
         case .other:
             webCheckoutProviderString = "other"
+        case .none:
+            webCheckoutProviderString = "none"
         }
         result["webCheckoutProvider"] = webCheckoutProviderString
         
