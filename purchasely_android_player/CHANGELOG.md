@@ -1,3 +1,8 @@
+## 5.3.2
+### Android
+- Open Placement action may not return the correct screen associated
+### iOS
+- TODO
 ## 5.3.1
 ### Fixes
 - Fixed a switch missing case error related to PLYPresentationActionParameters on iOS.
