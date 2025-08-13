@@ -1,8 +1,12 @@
 ## 5.3.2
 ### Android
-- Open Placement action may not return the correct screen associated
+- Resolved an issue where the open placement action might return an incorrect associated screen
+- Improved invalidating presentations cache
 ### iOS
-- TODO
+- PLYPresentationAction integrates now the closeAll action
+- Tap handling is debounced to prevent accidental double-taps
+- Guards against duplicate campaign launches in edge cases
+- The openPlacement action now carries the placementVendorId
 ## 5.3.1
 ### Fixes
 - Fixed a switch missing case error related to PLYPresentationActionParameters on iOS. 
