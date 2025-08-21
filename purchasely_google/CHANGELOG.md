@@ -1,3 +1,6 @@
+## 5.3.3
+### iOS
+- Resolved an issue where the close action did not behave as expected in a Flow.
 ## 5.3.2
 ### Android
 - Resolved an issue where the open placement action might return an incorrect associated screen
