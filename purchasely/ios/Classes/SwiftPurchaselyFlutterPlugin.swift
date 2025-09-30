@@ -1122,7 +1122,6 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
         guard let arguments, let purposesArg = arguments["purposes"] as? [String] else {
             return
         }
-        let purposesArgSet = Set(purposesArg)
         let purposes: Set<PLYDataProcessingPurpose> = if purposesArg.contains("ALL_NON_ESSENTIALS") {
             Set([PLYDataProcessingPurpose.allNonEssentials])
         } else {

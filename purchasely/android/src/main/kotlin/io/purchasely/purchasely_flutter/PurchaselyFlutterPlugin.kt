@@ -341,77 +341,77 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
             "setUserAttributeWithString" -> {
                 val key = call.argument<String>("key") ?: return
                 val value = call.argument<String>("value") ?: return
-                val processingLegalBasis = processingLegalBasisFrom(string: call.argument<String>("processingLegalBasis"))
+                val processingLegalBasis = processingLegalBasisFrom(call.argument<String>("processingLegalBasis"))
                 setUserAttributeWithString(key, value, processingLegalBasis)
                 result.safeSuccess(true)
             }
             "setUserAttributeWithInt" -> {
                 val key = call.argument<String>("key") ?: return
                 val value = call.argument<Int>("value") ?: return
-                val processingLegalBasis = processingLegalBasisFrom(string: call.argument<String>("processingLegalBasis"))
+                val processingLegalBasis = processingLegalBasisFrom(call.argument<String>("processingLegalBasis"))
                 setUserAttributeWithInt(key, value, processingLegalBasis)
                 result.safeSuccess(true)
             }
             "setUserAttributeWithDouble" -> {
                 val key = call.argument<String>("key") ?: return
                 val value = call.argument<Double>("value") ?: return
-                val processingLegalBasis = processingLegalBasisFrom(string: call.argument<String>("processingLegalBasis"))
+                val processingLegalBasis = processingLegalBasisFrom(call.argument<String>("processingLegalBasis"))
                 setUserAttributeWithDouble(key, value, processingLegalBasis)
                 result.safeSuccess(true)
             }
             "setUserAttributeWithBoolean" -> {
                 val key = call.argument<String>("key") ?: return
                 val value = call.argument<Boolean>("value") ?: return
-                val processingLegalBasis = processingLegalBasisFrom(string: call.argument<String>("processingLegalBasis"))
+                val processingLegalBasis = processingLegalBasisFrom(call.argument<String>("processingLegalBasis"))
                 setUserAttributeWithBoolean(key, value, processingLegalBasis)
                 result.safeSuccess(true)
             }
             "setUserAttributeWithStringArray" -> {
                 val key = call.argument<String>("key") ?: return
                 val value = call.argument<List<String>>("value") ?: return
-                val processingLegalBasis = processingLegalBasisFrom(string: call.argument<String>("processingLegalBasis"))
+                val processingLegalBasis = processingLegalBasisFrom(call.argument<String>("processingLegalBasis"))
                 setUserAttributeWithStringArray(key, value, processingLegalBasis)
                 result.safeSuccess(true)
             }
             "setUserAttributeWithIntArray" -> {
                 val key = call.argument<String>("key") ?: return
                 val value = call.argument<List<Int>>("value") ?: return
-                val processingLegalBasis = processingLegalBasisFrom(string: call.argument<String>("processingLegalBasis"))
+                val processingLegalBasis = processingLegalBasisFrom(call.argument<String>("processingLegalBasis"))
                 setUserAttributeWithIntArray(key, value, processingLegalBasis)
                 result.safeSuccess(true)
             }
             "setUserAttributeWithDoubleArray" -> {
                 val key = call.argument<String>("key") ?: return
                 val value = call.argument<List<Double>>("value") ?: return
-                val processingLegalBasis = processingLegalBasisFrom(string: call.argument<String>("processingLegalBasis"))
+                val processingLegalBasis = processingLegalBasisFrom(call.argument<String>("processingLegalBasis"))
                 setUserAttributeWithDoubleArray(key, value, processingLegalBasis)
                 result.safeSuccess(true)
             }
             "setUserAttributeWithBooleanArray" -> {
                 val key = call.argument<String>("key") ?: return
                 val value = call.argument<List<Boolean>>("value") ?: return
-                val processingLegalBasis = processingLegalBasisFrom(string: call.argument<String>("processingLegalBasis"))
+                val processingLegalBasis = processingLegalBasisFrom(call.argument<String>("processingLegalBasis"))
                 setUserAttributeWithBooleanArray(key, value, processingLegalBasis)
                 result.safeSuccess(true)
             }
             "setUserAttributeWithDate" -> {
                 val key = call.argument<String>("key") ?: return
                 val value = call.argument<String>("value") ?: return
-                val processingLegalBasis = processingLegalBasisFrom(string: call.argument<String>("processingLegalBasis"))
+                val processingLegalBasis = processingLegalBasisFrom(call.argument<String>("processingLegalBasis"))
                 setUserAttributeWithDate(key, value, processingLegalBasis)
                 result.safeSuccess(true)
             }
             "incrementUserAttribute" -> {
                 val key = call.argument<String>("key") ?: return
                 val value = call.argument<Int>("value") ?: 1
-                val processingLegalBasis = processingLegalBasisFrom(string: call.argument<String>("processingLegalBasis"))
+                val processingLegalBasis = processingLegalBasisFrom(call.argument<String>("processingLegalBasis"))
                 incrementUserAttribute(key, value, processingLegalBasis)
                 result.safeSuccess(true)
             }
             "decrementUserAttribute" -> {
                 val key = call.argument<String>("key") ?: return
                 val value = call.argument<Int>("value") ?: 1
-                val processingLegalBasis = processingLegalBasisFrom(string: call.argument<String>("processingLegalBasis"))
+                val processingLegalBasis = processingLegalBasisFrom(call.argument<String>("processingLegalBasis"))
                 decrementUserAttribute(key, value, processingLegalBasis)
                 result.safeSuccess(true)
             }
@@ -927,8 +927,8 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
         Purchasely.decrementUserAttribute(key, value, processingLegalBasis)
     }
 
-    private fun processingLegalBasisFrom(string: String?) {
-        when (args["processingLegalBasis"] as? String) {
+    private fun processingLegalBasisFrom(string: String?): PLYDataProcessingLegalBasis {
+        return when (string) {
             "ESSENTIAL" -> PLYDataProcessingLegalBasis.ESSENTIAL
             else -> PLYDataProcessingLegalBasis.OPTIONAL
         }
