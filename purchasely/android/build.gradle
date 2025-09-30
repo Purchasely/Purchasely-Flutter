@@ -2,7 +2,7 @@ group 'io.purchasely.purchasely_flutter'
 version '1.0-SNAPSHOT'
 
 buildscript {
-    ext.kotlin_version = '2.0.21'
+    ext.kotlin_version = '2.1.21'
     repositories {
         google()
         mavenCentral()
