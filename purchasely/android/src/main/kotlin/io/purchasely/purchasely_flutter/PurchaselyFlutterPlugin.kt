@@ -341,88 +341,77 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
             "setUserAttributeWithString" -> {
                 val key = call.argument<String>("key") ?: return
                 val value = call.argument<String>("value") ?: return
-                val processingLegalBasis = if (call.argument<String>("processingLegalBasis") == "ESSENTIAL") PLYDataProcessingLegalBasis.ESSENTIAL
-                else PLYDataProcessingLegalBasis.OPTIONAL
+                val processingLegalBasis = processingLegalBasisFrom(string: call.argument<String>("processingLegalBasis"))
                 setUserAttributeWithString(key, value, processingLegalBasis)
                 result.safeSuccess(true)
             }
             "setUserAttributeWithInt" -> {
                 val key = call.argument<String>("key") ?: return
                 val value = call.argument<Int>("value") ?: return
-                val processingLegalBasis = if (call.argument<String>("processingLegalBasis") == "ESSENTIAL") PLYDataProcessingLegalBasis.ESSENTIAL
-                else PLYDataProcessingLegalBasis.OPTIONAL
+                val processingLegalBasis = processingLegalBasisFrom(string: call.argument<String>("processingLegalBasis"))
                 setUserAttributeWithInt(key, value, processingLegalBasis)
                 result.safeSuccess(true)
             }
             "setUserAttributeWithDouble" -> {
                 val key = call.argument<String>("key") ?: return
                 val value = call.argument<Double>("value") ?: return
-                val processingLegalBasis = if (call.argument<String>("processingLegalBasis") == "ESSENTIAL") PLYDataProcessingLegalBasis.ESSENTIAL
-                else PLYDataProcessingLegalBasis.OPTIONAL
+                val processingLegalBasis = processingLegalBasisFrom(string: call.argument<String>("processingLegalBasis"))
                 setUserAttributeWithDouble(key, value, processingLegalBasis)
                 result.safeSuccess(true)
             }
             "setUserAttributeWithBoolean" -> {
                 val key = call.argument<String>("key") ?: return
                 val value = call.argument<Boolean>("value") ?: return
-                val processingLegalBasis = if (call.argument<String>("processingLegalBasis") == "ESSENTIAL") PLYDataProcessingLegalBasis.ESSENTIAL
-                else PLYDataProcessingLegalBasis.OPTIONAL
+                val processingLegalBasis = processingLegalBasisFrom(string: call.argument<String>("processingLegalBasis"))
                 setUserAttributeWithBoolean(key, value, processingLegalBasis)
                 result.safeSuccess(true)
             }
             "setUserAttributeWithStringArray" -> {
                 val key = call.argument<String>("key") ?: return
                 val value = call.argument<List<String>>("value") ?: return
-                val processingLegalBasis = if (call.argument<String>("processingLegalBasis") == "ESSENTIAL") PLYDataProcessingLegalBasis.ESSENTIAL
-                else PLYDataProcessingLegalBasis.OPTIONAL
+                val processingLegalBasis = processingLegalBasisFrom(string: call.argument<String>("processingLegalBasis"))
                 setUserAttributeWithStringArray(key, value, processingLegalBasis)
                 result.safeSuccess(true)
             }
             "setUserAttributeWithIntArray" -> {
                 val key = call.argument<String>("key") ?: return
                 val value = call.argument<List<Int>>("value") ?: return
-                val processingLegalBasis = if (call.argument<String>("processingLegalBasis") == "ESSENTIAL") PLYDataProcessingLegalBasis.ESSENTIAL
-                else PLYDataProcessingLegalBasis.OPTIONAL
+                val processingLegalBasis = processingLegalBasisFrom(string: call.argument<String>("processingLegalBasis"))
                 setUserAttributeWithIntArray(key, value, processingLegalBasis)
                 result.safeSuccess(true)
             }
             "setUserAttributeWithDoubleArray" -> {
                 val key = call.argument<String>("key") ?: return
                 val value = call.argument<List<Double>>("value") ?: return
-                val processingLegalBasis = if (call.argument<String>("processingLegalBasis") == "ESSENTIAL") PLYDataProcessingLegalBasis.ESSENTIAL
-                else PLYDataProcessingLegalBasis.OPTIONAL
+                val processingLegalBasis = processingLegalBasisFrom(string: call.argument<String>("processingLegalBasis"))
                 setUserAttributeWithDoubleArray(key, value, processingLegalBasis)
                 result.safeSuccess(true)
             }
             "setUserAttributeWithBooleanArray" -> {
                 val key = call.argument<String>("key") ?: return
                 val value = call.argument<List<Boolean>>("value") ?: return
-                val processingLegalBasis = if (call.argument<String>("processingLegalBasis") == "ESSENTIAL") PLYDataProcessingLegalBasis.ESSENTIAL
-                else PLYDataProcessingLegalBasis.OPTIONAL
+                val processingLegalBasis = processingLegalBasisFrom(string: call.argument<String>("processingLegalBasis"))
                 setUserAttributeWithBooleanArray(key, value, processingLegalBasis)
                 result.safeSuccess(true)
             }
             "setUserAttributeWithDate" -> {
                 val key = call.argument<String>("key") ?: return
                 val value = call.argument<String>("value") ?: return
-                val processingLegalBasis = if (call.argument<String>("processingLegalBasis") == "ESSENTIAL") PLYDataProcessingLegalBasis.ESSENTIAL
-                else PLYDataProcessingLegalBasis.OPTIONAL
+                val processingLegalBasis = processingLegalBasisFrom(string: call.argument<String>("processingLegalBasis"))
                 setUserAttributeWithDate(key, value, processingLegalBasis)
                 result.safeSuccess(true)
             }
             "incrementUserAttribute" -> {
                 val key = call.argument<String>("key") ?: return
                 val value = call.argument<Int>("value") ?: 1
-                val processingLegalBasis = if (call.argument<String>("processingLegalBasis") == "ESSENTIAL") PLYDataProcessingLegalBasis.ESSENTIAL
-                else PLYDataProcessingLegalBasis.OPTIONAL
+                val processingLegalBasis = processingLegalBasisFrom(string: call.argument<String>("processingLegalBasis"))
                 incrementUserAttribute(key, value, processingLegalBasis)
                 result.safeSuccess(true)
             }
             "decrementUserAttribute" -> {
                 val key = call.argument<String>("key") ?: return
                 val value = call.argument<Int>("value") ?: 1
-                val processingLegalBasis = if (call.argument<String>("processingLegalBasis") == "ESSENTIAL") PLYDataProcessingLegalBasis.ESSENTIAL
-                else PLYDataProcessingLegalBasis.OPTIONAL
+                val processingLegalBasis = processingLegalBasisFrom(string: call.argument<String>("processingLegalBasis"))
                 decrementUserAttribute(key, value, processingLegalBasis)
                 result.safeSuccess(true)
             }
@@ -938,6 +927,13 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
         Purchasely.decrementUserAttribute(key, value, processingLegalBasis)
     }
 
+    private fun processingLegalBasisFrom(string: String?) {
+        when (args["processingLegalBasis"] as? String) {
+            "ESSENTIAL" -> PLYDataProcessingLegalBasis.ESSENTIAL
+            else -> PLYDataProcessingLegalBasis.OPTIONAL
+        }
+    }
+
     fun userAttribute(key: String, result: Result) {
         val value = getUserAttributeValueForFlutter(Purchasely.userAttribute(key))
         result.safeSuccess(value)
@@ -1147,16 +1143,9 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
     }
 
     private fun revokeDataProcessingConsent(purposes: List<String>) {
-        val purposeStrings = (0 until purposes.length()).mapNotNull { i ->
-            try {
-                purposes.getString(i)
-            } catch (e: JSONException) {
-                Log.e("Purchasely", "Error parsing JSONArray element: ${e.message}", e)
-                null // mapNotNull will filter this out
-            }
-        }.toSet()
+        val purposeStrings = purposes.toSet()
 
-        val mappedPurposes = if ("ALL_NON_ESSENTIAL" in purposeStrings) {
+        val mappedPurposes = if ("ALL_NON_ESSENTIALS" in purposeStrings) {
             // If the special case exists, the result is a set with only that one item.
             setOf(PLYDataProcessingPurpose.AllNonEssentials)
         } else {
