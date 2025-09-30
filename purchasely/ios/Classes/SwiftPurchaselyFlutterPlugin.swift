@@ -972,8 +972,8 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
         guard let arguments = arguments, let value = arguments["value"] as? T, let key = arguments["key"] as? String else {
             return nil
         }
-        let processingLegaLBasisArg = arguments["processingLegalBasis"] as? String
-        let processingLegalBasis: PLYDataProcessingLegalBasis = processingLegaLBasisArg == "ESSENTIAL" ? .essential : .optional
+        let processingLegalBasisArg = arguments["processingLegalBasis"] as? String
+        let processingLegalBasis: PLYDataProcessingLegalBasis = processingLegalBasisArg == "ESSENTIAL" ? .essential : .optional
 
         return (key, value, processingLegalBasis)
     }
@@ -1020,33 +1020,30 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
                 self.onProcessActionHandler = onProcessAction
                 var value = [String: Any]()
 
-                var actionString: String?
-                switch action {
+                let actionString: String = switch action {
                 case .login:
-                    actionString = "login"
+                    "login"
                 case .purchase:
-                    actionString = "purchase"
+                    "purchase"
                 case .close:
-                    actionString = "close"
+                    "close"
+                case .closeAll:
+                    "close_all"
                 case .restore:
-                    actionString = "restore"
+                    "restore"
                 case .navigate:
-                    actionString = "navigate"
+                    "navigate"
                 case .promoCode:
-                    actionString = "promo_code"
+                    "promo_code"
                 case .openPresentation:
-                    actionString = "open_presentation"
+                    "open_presentation"
                 case .openPlacement:
-                    actionString = nil
+                    "open_placement"
                 case .webCheckout:
-                    actionString = "web_checkout"
-                @unknown default:
-                    actionString = nil
-                }
-                if let actionString = actionString {
-                    value["action"] = actionString
+                    "web_checkout"
                 }
 
+                value["action"] = actionString
                 value["info"] = info?.toMap ?? [:]
                 value["parameters"] = parameters?.toMap ?? [:]
 
@@ -1131,7 +1128,7 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
                     case "IDENTIFIED_ANALYTICS": .identifiedAnalytics
                     case "CAMPAIGNS": .campaigns
                     case "PERSONALIZATION": .personalization
-                    case "THIRD_PARTY_ANALYTICS": .thirdPartyIntegrations
+                    case "THIRD_PARTY_INTEGRATIONS": .thirdPartyIntegrations
                     default: nil
                 }
             })

@@ -919,7 +919,7 @@ class Purchasely {
       case PLYDataProcessingPurpose.personalization:
         return "PERSONALIZATION";
       case PLYDataProcessingPurpose.thirdPartyIntegrations:
-        return "THIRD_PARTY_ANALYTICS";
+        return "THIRD_PARTY_INTEGRATIONS";
     }
   }
 }
