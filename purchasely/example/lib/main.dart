@@ -223,7 +223,7 @@ class _MyAppState extends State<MyApp> {
           print('User wants to navigate');
           Purchasely.onProcessAction(true);
         } else if (result.action == PLYPaywallAction.close) {
-          print('User wants to close paywall');
+          print('User wants to close paywall - reason: ${result.parameters.closeReason}"');
           Purchasely.onProcessAction(true);
         } else if (result.action == PLYPaywallAction.login) {
           print('User wants to login');

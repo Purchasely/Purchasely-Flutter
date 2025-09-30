@@ -472,6 +472,7 @@ class Purchasely {
       clientReferenceId: result['parameters']['clientReferenceId'],
       webCheckoutProvider: result['parameters']['webCheckoutProvider'],
       queryParameterKey: result['parameters']['queryParameterKey'],
+      closeReason: result['parameters']['closeReason'],
     );
 
     return PaywallActionInterceptorResult(info, action, parameters);
@@ -1242,6 +1243,7 @@ class PLYPaywallActionParameters {
   String? clientReferenceId;
   String? queryParameterKey;
   String? webCheckoutProvider;
+  String? closeReason;
 
   PLYPaywallActionParameters(
       {this.url,
@@ -1252,7 +1254,9 @@ class PLYPaywallActionParameters {
       this.presentation,
       this.clientReferenceId,
       this.queryParameterKey,
-      this.webCheckoutProvider});
+      this.webCheckoutProvider,
+      this.closeReason
+  });
 }
 
 class PLYPaywallInfo {

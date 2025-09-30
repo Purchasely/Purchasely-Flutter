@@ -1043,6 +1043,7 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
                 "storeOfferId" to parameters.offer?.storeOfferId
             )
             parametersForFlutter["subscriptionOffer"] = parameters.subscriptionOffer?.toMap()
+            parametersForFlutter["closeReason"] = parameters?.closeReason?.name
 
             result.safeSuccess(mapOf(
                 Pair("info", mapOf(
