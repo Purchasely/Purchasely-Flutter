@@ -98,8 +98,8 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             let parameter = arguments?["readyToOpenDeeplink"] as? Bool
             readyToOpenDeeplink(readyToOpenDeeplink: parameter)
         case "setLogLevel":
-            let parameter = (arguments?["logLevel"] as? Int) ?? PLYLogger.LogLevel.debug.rawValue
-            let logLevel = PLYLogger.LogLevel(rawValue: parameter) ?? PLYLogger.LogLevel.debug
+            let parameter = (arguments?["logLevel"] as? Int) ?? PLYLogger.PLYLogLevel.debug.rawValue
+            let logLevel = PLYLogger.PLYLogLevel(rawValue: parameter) ?? PLYLogger.PLYLogLevel.debug
             Purchasely.setLogLevel(logLevel)
             DispatchQueue.main.async {
                 result(true)
@@ -189,6 +189,8 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             removeDynamicOffering(arguments: arguments)
         case "clearDynamicOfferings":
             clearDynamicOfferings()
+        case "revokeDataProcessingConsent":
+            revokeDataProcessingConsent(arguments: arguments)
         default:
             result(FlutterMethodNotImplemented)
         }
@@ -319,7 +321,7 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
 		Purchasely.setSdkBridgeVersion("5.3.3")
         Purchasely.setAppTechnology(PLYAppTechnology.flutter)
 
-        let logLevel = PLYLogger.LogLevel(rawValue: (arguments["logLevel"] as? Int) ?? PLYLogger.LogLevel.debug.rawValue) ?? PLYLogger.LogLevel.debug
+        let logLevel = PLYLogger.PLYLogLevel(rawValue: (arguments["logLevel"] as? Int) ?? PLYLogger.PLYLogLevel.debug.rawValue) ?? .debug
         let userId = arguments["userId"] as? String
         let runningMode = PLYRunningMode(rawValue: (arguments["runningMode"] as? Int) ?? PLYRunningMode.full.rawValue) ?? PLYRunningMode.full
         let storeKitSettingRawValue = arguments["storeKit1"] as? Bool ?? false
@@ -822,131 +824,123 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
         Purchasely.setThemeMode(themeMode)
     }
 
-private func setAttribute(arguments: [String: Any]?) {
-    guard let arguments = arguments,
-          let value = arguments["value"] as? String,
-          let attribute = arguments["attribute"] as? Int,
-          let flutterAttribute = FlutterPLYAttribute(rawValue: attribute) else {
-        return
-    }
-
-    let attr: Purchasely.PLYAttribute? = {
-        switch flutterAttribute {
-        case .firebaseAppInstanceId:
-            return .firebaseAppInstanceId
-        case .airshipChannelId:
-            return .airshipChannelId
-        case .airshipUserId:
-            return .airshipUserId
-        case .batchInstallationId:
-            return .batchInstallationId
-        case .adjustId:
-            return .adjustId
-        case .appsflyerId:
-            return .appsflyerId
-        case .mixpanelDistinctId:
-            return .mixpanelDistinctId
-        case .cleverTapId:
-            return .clevertapId
-        case .sendinblueUserEmail:
-            return .sendinblueUserEmail
-        case .iterableUserEmail:
-            return .iterableUserEmail
-        case .iterableUserId:
-            return .iterableUserId
-        case .atInternetIdClient:
-            return .atInternetIdClient
-        case .mParticleUserId:
-            return .mParticleUserId
-        case .customerioUserId:
-            return .customerioUserId
-        case .customerioUserEmail:
-            return .customerioUserEmail
-        case .branchUserDeveloperIdentity:
-            return .branchUserDeveloperIdentity
-        case .amplitudeUserId:
-            return .amplitudeUserId
-        case .amplitudeDeviceId:
-            return .amplitudeDeviceId
-        case .moengageUniqueId:
-            return .moengageUniqueId
-        case .oneSignalExternalId:
-            return .oneSignalExternalId
-        case .batchCustomUserId:
-            return .batchCustomUserId
-        }
-    }()
-
-    guard let attributeKey = attr else { return }
-    Purchasely.setAttribute(attributeKey, value: value)
-}
-
-    private func setUserAttributeWithString(arguments: [String: Any]?) {
-        guard let arguments = arguments, let value = arguments["value"] as? String, let key = arguments["key"] as? String else {
+    private func setAttribute(arguments: [String: Any]?) {
+        guard let arguments = arguments,
+            let value = arguments["value"] as? String,
+            let attribute = arguments["attribute"] as? Int,
+            let flutterAttribute = FlutterPLYAttribute(rawValue: attribute) else {
             return
         }
 
-        Purchasely.setUserAttribute(withStringValue: value, forKey: key)
+        let attr: Purchasely.PLYAttribute? = {
+            switch flutterAttribute {
+            case .firebaseAppInstanceId:
+                return .firebaseAppInstanceId
+            case .airshipChannelId:
+                return .airshipChannelId
+            case .airshipUserId:
+                return .airshipUserId
+            case .batchInstallationId:
+                return .batchInstallationId
+            case .adjustId:
+                return .adjustId
+            case .appsflyerId:
+                return .appsflyerId
+            case .mixpanelDistinctId:
+                return .mixpanelDistinctId
+            case .cleverTapId:
+                return .clevertapId
+            case .sendinblueUserEmail:
+                return .sendinblueUserEmail
+            case .iterableUserEmail:
+                return .iterableUserEmail
+            case .iterableUserId:
+                return .iterableUserId
+            case .atInternetIdClient:
+                return .atInternetIdClient
+            case .mParticleUserId:
+                return .mParticleUserId
+            case .customerioUserId:
+                return .customerioUserId
+            case .customerioUserEmail:
+                return .customerioUserEmail
+            case .branchUserDeveloperIdentity:
+                return .branchUserDeveloperIdentity
+            case .amplitudeUserId:
+                return .amplitudeUserId
+            case .amplitudeDeviceId:
+                return .amplitudeDeviceId
+            case .moengageUniqueId:
+                return .moengageUniqueId
+            case .oneSignalExternalId:
+                return .oneSignalExternalId
+            case .batchCustomUserId:
+                return .batchCustomUserId
+            }
+        }()
+
+        guard let attributeKey = attr else { return }
+        Purchasely.setAttribute(attributeKey, value: value)
+    }
+
+    private func setUserAttributeWithString(arguments: [String: Any]?) {
+        guard let (key, value, processingLegalBasis) = mapUserAttributesCallArguments(arguments: arguments, type: String.self) else {
+            return
+        }
+        Purchasely.setUserAttribute(withStringValue: value, forKey: key, processingLegalBasis: processingLegalBasis)
     }
     
     private func setUserAttributeWithStringArray(arguments: [String: Any]?) {
-        guard let arguments = arguments, let value = arguments["value"] as? [String], let key = arguments["key"] as? String else {
+        guard let (key, value, processingLegalBasis) = mapUserAttributesCallArguments(arguments: arguments, type: [String].self) else {
             return
         }
-
-        Purchasely.setUserAttribute(withStringArray: value, forKey: key)
+        Purchasely.setUserAttribute(withStringArray: value, forKey: key, processingLegalBasis: processingLegalBasis)
     }
 
     private func setUserAttributeWithInt(arguments: [String: Any]?) {
-        guard let arguments = arguments, let value = arguments["value"] as? Int, let key = arguments["key"] as? String else {
+        guard let (key, value, processingLegalBasis) = mapUserAttributesCallArguments(arguments: arguments, type: Int.self) else {
             return
         }
-
-        Purchasely.setUserAttribute(withIntValue: value, forKey: key)
+        Purchasely.setUserAttribute(withIntValue: value, forKey: key, processingLegalBasis: processingLegalBasis)
     }
     
     private func setUserAttributeWithIntArray(arguments: [String: Any]?) {
-        guard let arguments = arguments, let value = arguments["value"] as? [Int], let key = arguments["key"] as? String else {
+        guard let (key, value, processingLegalBasis) = mapUserAttributesCallArguments(arguments: arguments, type: [Int].self) else {
             return
         }
-
-        Purchasely.setUserAttribute(withIntArray: value, forKey: key)
+        Purchasely.setUserAttribute(withIntArray: value, forKey: key, processingLegalBasis: processingLegalBasis)
     }
 
     private func setUserAttributeWithDouble(arguments: [String: Any]?) {
-        guard let arguments = arguments, let value = arguments["value"] as? Double, let key = arguments["key"] as? String else {
+        guard let (key, value, processingLegalBasis) = mapUserAttributesCallArguments(arguments: arguments, type: Double.self) else {
             return
         }
-
-        Purchasely.setUserAttribute(withDoubleValue: value, forKey: key)
+        Purchasely.setUserAttribute(withDoubleValue: value, forKey: key, processingLegalBasis: processingLegalBasis)
     }
     
     private func setUserAttributeWithDoubleArray(arguments: [String: Any]?) {
-        guard let arguments = arguments, let value = arguments["value"] as? [Double], let key = arguments["key"] as? String else {
+        guard let (key, value, processingLegalBasis) = mapUserAttributesCallArguments(arguments: arguments, type: [Double].self) else {
             return
         }
-
-        Purchasely.setUserAttribute(withDoubleArray: value, forKey: key)
+        Purchasely.setUserAttribute(withDoubleArray: value, forKey: key, processingLegalBasis: processingLegalBasis)
     }
 
     private func setUserAttributeWithBoolean(arguments: [String: Any]?) {
-        guard let arguments = arguments, let value = arguments["value"] as? Bool, let key = arguments["key"] as? String else {
+        guard let (key, value, processingLegalBasis) = mapUserAttributesCallArguments(arguments: arguments, type: Bool.self) else {
             return
         }
-
-        Purchasely.setUserAttribute(withBoolValue: value, forKey: key)
+        Purchasely.setUserAttribute(withBoolValue: value, forKey: key, processingLegalBasis: processingLegalBasis)
     }
     
     private func setUserAttributeWithBooleanArray(arguments: [String: Any]?) {
-        guard let arguments = arguments, let value = arguments["value"] as? [Bool], let key = arguments["key"] as? String else {
+        guard let (key, value, processingLegalBasis) = mapUserAttributesCallArguments(arguments: arguments, type: [Bool].self) else {
             return
         }
-
-        Purchasely.setUserAttribute(withBoolArray: value, forKey: key)
+        Purchasely.setUserAttribute(withBoolArray: value, forKey: key, processingLegalBasis: processingLegalBasis)
     }
 
     private func setUserAttributeWithDate(arguments: [String: Any]?) {
-        guard let arguments = arguments, let value = arguments["value"] as? String, let key = arguments["key"] as? String else {
+        guard let (key, value, processingLegalBasis) = mapUserAttributesCallArguments(arguments: arguments, type: String.self) else {
             return
         }
 
@@ -954,26 +948,34 @@ private func setAttribute(arguments: [String: Any]?) {
         dateFormatter.timeZone = TimeZone(identifier: "GMT")
         dateFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"
         if let date = dateFormatter.date(from: value) {
-            Purchasely.setUserAttribute(withDateValue: date, forKey: key)
+            Purchasely.setUserAttribute(withDateValue: date, forKey: key, processingLegalBasis: processingLegalBasis)
         } else {
             print("Purchasely", "Cannot save date attribute for key \(key)")
         }
     }
 
     private func incrementUserAttribute(arguments: [String: Any]?) {
-        guard let arguments = arguments, let value = arguments["value"] as? Int, let key = arguments["key"] as? String else {
+        guard let (key, value, processingLegalBasis) = mapUserAttributesCallArguments(arguments: arguments, type: Int.self) else {
             return
         }
-
-        Purchasely.incrementUserAttribute(withKey: key, value: value)
+        Purchasely.incrementUserAttribute(withKey: key, value: value, processingLegalBasis: processingLegalBasis)
     }
 
     private func decrementUserAttribute(arguments: [String: Any]?) {
-        guard let arguments = arguments, let value = arguments["value"] as? Int, let key = arguments["key"] as? String else {
+        guard let (key, value, processingLegalBasis) = mapUserAttributesCallArguments(arguments: arguments, type: Int.self) else {
             return
         }
+        Purchasely.decrementUserAttribute(withKey: key, value: value, processingLegalBasis: processingLegalBasis)
+    }
 
-        Purchasely.decrementUserAttribute(withKey: key, value: value)
+    private func mapUserAttributesCallArguments<T>(arguments: [String: Any]?, type: T.Type) -> (key: String, value: T, processingLegalBasis: PLYDataProcessingLegalBasis)? {
+        guard let arguments = arguments, let value = arguments["value"] as? T, let key = arguments["key"] as? String else {
+            return nil
+        }
+        let processingLegaLBasisArg = arguments["processingLegalBasis"] as? String
+        let processingLegalBasis: PLYDataProcessingLegalBasis = processingLegaLBasisArg == "ESSENTIAL" ? .essential : .optional
+
+        return (key, value, processingLegalBasis)
     }
 
     private func clearUserAttribute(arguments: [String: Any]?) {
@@ -1114,6 +1116,28 @@ private func setAttribute(arguments: [String: Any]?) {
     
     private func clearDynamicOfferings() {
         Purchasely.clearDynamicOfferings()
+    }
+
+    private func revokeDataProcessingConsent(arguments: [String: Any]?) {
+        guard let arguments, let purposesArg = arguments["purposes"] as? [String] else {
+            return
+        }
+        let purposesArgSet = Set(purposesArg)
+        let purposes: Set<PLYDataProcessingPurpose> = if purposesArg.contains("ALL_NON_ESSENTIALS") {
+            Set([PLYDataProcessingPurpose.allNonEssentials])
+        } else {
+            Set(purposesArg.compactMap { (value: String) -> PLYDataProcessingPurpose? in
+                switch value {
+                    case "ANALYTICS": .analytics
+                    case "IDENTIFIED_ANALYTICS": .identifiedAnalytics
+                    case "CAMPAIGNS": .campaigns
+                    case "PERSONALIZATION": .personalization
+                    case "THIRD_PARTY_ANALYTICS": .thirdPartyIntegrations
+                    default: nil
+                }
+            })
+        }
+        Purchasely.revokeDataProcessingConsent(for: purposes)
     }
 }
 
