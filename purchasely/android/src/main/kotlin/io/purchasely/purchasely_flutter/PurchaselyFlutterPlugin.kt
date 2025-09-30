@@ -1147,24 +1147,30 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
     }
 
     private fun revokeDataProcessingConsent(purposes: List<String>) {
-        if(purposes.isEmpty()) return
-        var mappedPurposes = mutableSetOf<PLYDataProcessingPurpose>()
-        for (i in 0 until purposes.length()) {
+        val purposeStrings = (0 until purposes.length()).mapNotNull { i ->
             try {
-                when (purposes.getString(i)) {
-                    "ALL_NON_ESSENTIAL" -> {
-                        mappedPurposes = mutableSetOf(PLYDataProcessingPurpose.AllNonEssentials)
-                        break
-                    }
-                    "ANALYTICS" -> mappedPurposes.add(PLYDataProcessingPurpose.Analytics)
-                    "IDENTIFIED_ANALYTICS" -> mappedPurposes.add(PLYDataProcessingPurpose.IdentifiedAnalytics)
-                    "CAMPAIGNS" -> mappedPurposes.add(PLYDataProcessingPurpose.Campaigns)
-                    "PERSONALIZATION" -> mappedPurposes.add(PLYDataProcessingPurpose.Personalization)
-                    "THIRD_PARTY_INTEGRATIONS" -> mappedPurposes.add(PLYDataProcessingPurpose.ThirdPartyIntegrations)
-                }
+                purposes.getString(i)
             } catch (e: JSONException) {
-                Log.e("Purchasely", "Error in string array" + e.message, e)
+                Log.e("Purchasely", "Error parsing JSONArray element: ${e.message}", e)
+                null // mapNotNull will filter this out
             }
+        }.toSet()
+
+        val mappedPurposes = if ("ALL_NON_ESSENTIAL" in purposeStrings) {
+            // If the special case exists, the result is a set with only that one item.
+            setOf(PLYDataProcessingPurpose.AllNonEssentials)
+        } else {
+            // Otherwise, map all strings to their corresponding enum values.
+            purposeStrings.mapNotNull {
+                when (it) {
+                    "ANALYTICS" -> PLYDataProcessingPurpose.Analytics
+                    "IDENTIFIED_ANALYTICS" -> PLYDataProcessingPurpose.IdentifiedAnalytics
+                    "CAMPAIGNS" -> PLYDataProcessingPurpose.Campaigns
+                    "PERSONALIZATION" -> PLYDataProcessingPurpose.Personalization
+                    "THIRD_PARTY_INTEGRATIONS" -> PLYDataProcessingPurpose.ThirdPartyIntegrations
+                    else -> null // Ignore any unrecognized strings
+                }
+            }.toSet()
         }
         Purchasely.revokeDataProcessingConsent(mappedPurposes)
     }
