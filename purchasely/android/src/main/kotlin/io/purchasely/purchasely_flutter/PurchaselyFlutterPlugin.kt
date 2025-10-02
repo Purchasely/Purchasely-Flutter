@@ -1144,24 +1144,17 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
     }
 
     private fun revokeDataProcessingConsent(purposes: List<String>) {
-        val purposeStrings = purposes.toSet()
-
-        val mappedPurposes = if ("ALL_NON_ESSENTIALS" in purposeStrings) {
-            // If the special case exists, the result is a set with only that one item.
-            setOf(PLYDataProcessingPurpose.AllNonEssentials)
-        } else {
-            // Otherwise, map all strings to their corresponding enum values.
-            purposeStrings.mapNotNull {
-                when (it) {
-                    "ANALYTICS" -> PLYDataProcessingPurpose.Analytics
-                    "IDENTIFIED_ANALYTICS" -> PLYDataProcessingPurpose.IdentifiedAnalytics
-                    "CAMPAIGNS" -> PLYDataProcessingPurpose.Campaigns
-                    "PERSONALIZATION" -> PLYDataProcessingPurpose.Personalization
-                    "THIRD_PARTY_INTEGRATIONS" -> PLYDataProcessingPurpose.ThirdPartyIntegrations
-                    else -> null // Ignore any unrecognized strings
-                }
-            }.toSet()
-        }
+        val mappedPurposes = purposes.mapNotNull {
+            when (it) {
+                "ANALYTICS" -> PLYDataProcessingPurpose.Analytics
+                "IDENTIFIED_ANALYTICS" -> PLYDataProcessingPurpose.IdentifiedAnalytics
+                "CAMPAIGNS" -> PLYDataProcessingPurpose.Campaigns
+                "PERSONALIZATION" -> PLYDataProcessingPurpose.Personalization
+                "THIRD_PARTY_INTEGRATIONS" -> PLYDataProcessingPurpose.ThirdPartyIntegrations
+                "ALL_NON_ESSENTIALS" -> PLYDataProcessingPurpose.AllNonEssentials
+                else -> null // Ignore any unrecognized strings
+            }
+        }.toSet()
         Purchasely.revokeDataProcessingConsent(mappedPurposes)
     }
 
