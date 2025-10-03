@@ -21,8 +21,8 @@ EXTERNAL SOURCES:
 
 SPEC CHECKSUMS:
   Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
-  Purchasely: 4c80145f4e238c88d86676cdc82dcb90af202fc3
-  purchasely_flutter: 5398315d85b207cff0e5f32f492e23e1b28e6b55
+  Purchasely: af0693a0b1122a8e1f5b2165627f5a42e26f41ab
+  purchasely_flutter: d51ae460f0dc7104c1cbd92c2e0a94cd9c653e48
 
 PODFILE CHECKSUM: f11bd17add7b877f385860e4e1e2b2f0027be6eb
 
