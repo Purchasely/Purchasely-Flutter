@@ -1,3 +1,11 @@
+## 5.4.0
+### GDPR & Privacy Levels
+The SDK now offers built-in support for handling privacy levels.
+This enables developers to adapt their user experience to different GDPR requirements and to better manage user consent directly within Purchasely.
+Documentation and integration details are available in our updated privacy guide.
+### Safe Areas Handling
+You can now choose whether Purchasely screens should respect the system’s safe areas (e.g. notch, home indicator, or system bars).
+This provides greater flexibility for developers who want tighter control over screen layout and presentation.
 ## 5.3.3
 ### iOS
 - Resolved an issue where the close action did not behave as expected in a Flow.

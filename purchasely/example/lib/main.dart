@@ -173,12 +173,14 @@ class _MyAppState extends State<MyApp> {
         inspect(result);
       });
 
+      Purchasely.revokeDataProcessingConsent([PLYDataProcessingPurpose.campaigns]);
+
       //Attributes
-      Purchasely.setUserAttributeWithString("stringKey", "StringValue");
-      Purchasely.setUserAttributeWithInt("intKey", 3);
-      Purchasely.setUserAttributeWithDouble("doubleKey", 1.2);
-      Purchasely.setUserAttributeWithBoolean("booleanKey", true);
-      Purchasely.setUserAttributeWithDate("dateKey", DateTime.now());
+      Purchasely.setUserAttributeWithString("stringKey", "StringValue", processingLegalBasis: PLYDataProcessingLegalBasis.essential);
+      Purchasely.setUserAttributeWithInt("intKey", 3, processingLegalBasis: PLYDataProcessingLegalBasis.essential);
+      Purchasely.setUserAttributeWithDouble("doubleKey", 1.2, processingLegalBasis: PLYDataProcessingLegalBasis.essential);
+      Purchasely.setUserAttributeWithBoolean("booleanKey", true, processingLegalBasis: PLYDataProcessingLegalBasis.essential);
+      Purchasely.setUserAttributeWithDate("dateKey", DateTime.now(), processingLegalBasis: PLYDataProcessingLegalBasis.essential);
 
       Purchasely.setUserAttributeWithStringArray(
           "stringArrayKey", ["StringValue", "test"]);
@@ -221,7 +223,7 @@ class _MyAppState extends State<MyApp> {
           print('User wants to navigate');
           Purchasely.onProcessAction(true);
         } else if (result.action == PLYPaywallAction.close) {
-          print('User wants to close paywall');
+          print('User wants to close paywall - reason: ${result.parameters.closeReason}"');
           Purchasely.onProcessAction(true);
         } else if (result.action == PLYPaywallAction.login) {
           print('User wants to login');

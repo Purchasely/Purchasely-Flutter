@@ -341,67 +341,78 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
             "setUserAttributeWithString" -> {
                 val key = call.argument<String>("key") ?: return
                 val value = call.argument<String>("value") ?: return
-                setUserAttributeWithString(key, value)
+                val processingLegalBasis = processingLegalBasisFrom(call.argument<String>("processingLegalBasis"))
+                setUserAttributeWithString(key, value, processingLegalBasis)
                 result.safeSuccess(true)
             }
             "setUserAttributeWithInt" -> {
                 val key = call.argument<String>("key") ?: return
                 val value = call.argument<Int>("value") ?: return
-                setUserAttributeWithInt(key, value)
+                val processingLegalBasis = processingLegalBasisFrom(call.argument<String>("processingLegalBasis"))
+                setUserAttributeWithInt(key, value, processingLegalBasis)
                 result.safeSuccess(true)
             }
             "setUserAttributeWithDouble" -> {
                 val key = call.argument<String>("key") ?: return
                 val value = call.argument<Double>("value") ?: return
-                setUserAttributeWithDouble(key, value)
+                val processingLegalBasis = processingLegalBasisFrom(call.argument<String>("processingLegalBasis"))
+                setUserAttributeWithDouble(key, value, processingLegalBasis)
                 result.safeSuccess(true)
             }
             "setUserAttributeWithBoolean" -> {
                 val key = call.argument<String>("key") ?: return
                 val value = call.argument<Boolean>("value") ?: return
-                setUserAttributeWithBoolean(key, value)
+                val processingLegalBasis = processingLegalBasisFrom(call.argument<String>("processingLegalBasis"))
+                setUserAttributeWithBoolean(key, value, processingLegalBasis)
                 result.safeSuccess(true)
             }
             "setUserAttributeWithStringArray" -> {
                 val key = call.argument<String>("key") ?: return
                 val value = call.argument<List<String>>("value") ?: return
-                setUserAttributeWithStringArray(key, value)
+                val processingLegalBasis = processingLegalBasisFrom(call.argument<String>("processingLegalBasis"))
+                setUserAttributeWithStringArray(key, value, processingLegalBasis)
                 result.safeSuccess(true)
             }
             "setUserAttributeWithIntArray" -> {
                 val key = call.argument<String>("key") ?: return
                 val value = call.argument<List<Int>>("value") ?: return
-                setUserAttributeWithIntArray(key, value)
+                val processingLegalBasis = processingLegalBasisFrom(call.argument<String>("processingLegalBasis"))
+                setUserAttributeWithIntArray(key, value, processingLegalBasis)
                 result.safeSuccess(true)
             }
             "setUserAttributeWithDoubleArray" -> {
                 val key = call.argument<String>("key") ?: return
                 val value = call.argument<List<Double>>("value") ?: return
-                setUserAttributeWithDoubleArray(key, value)
+                val processingLegalBasis = processingLegalBasisFrom(call.argument<String>("processingLegalBasis"))
+                setUserAttributeWithDoubleArray(key, value, processingLegalBasis)
                 result.safeSuccess(true)
             }
             "setUserAttributeWithBooleanArray" -> {
                 val key = call.argument<String>("key") ?: return
                 val value = call.argument<List<Boolean>>("value") ?: return
-                setUserAttributeWithBooleanArray(key, value)
+                val processingLegalBasis = processingLegalBasisFrom(call.argument<String>("processingLegalBasis"))
+                setUserAttributeWithBooleanArray(key, value, processingLegalBasis)
                 result.safeSuccess(true)
             }
             "setUserAttributeWithDate" -> {
                 val key = call.argument<String>("key") ?: return
                 val value = call.argument<String>("value") ?: return
-                setUserAttributeWithDate(key, value)
+                val processingLegalBasis = processingLegalBasisFrom(call.argument<String>("processingLegalBasis"))
+                setUserAttributeWithDate(key, value, processingLegalBasis)
                 result.safeSuccess(true)
             }
             "incrementUserAttribute" -> {
                 val key = call.argument<String>("key") ?: return
                 val value = call.argument<Int>("value") ?: 1
-                incrementUserAttribute(key, value)
+                val processingLegalBasis = processingLegalBasisFrom(call.argument<String>("processingLegalBasis"))
+                incrementUserAttribute(key, value, processingLegalBasis)
                 result.safeSuccess(true)
             }
             "decrementUserAttribute" -> {
                 val key = call.argument<String>("key") ?: return
                 val value = call.argument<Int>("value") ?: 1
-                decrementUserAttribute(key, value)
+                val processingLegalBasis = processingLegalBasisFrom(call.argument<String>("processingLegalBasis"))
+                decrementUserAttribute(key, value, processingLegalBasis)
                 result.safeSuccess(true)
             }
             "userAttribute" -> {
@@ -454,6 +465,10 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
                 )
             }
             "clearDynamicOfferings" -> clearDynamicOfferings()
+            "revokeDataProcessingConsent" -> {
+                val purposes = call.argument<List<String>>("purposes") ?: return
+                revokeDataProcessingConsent(purposes)
+            }
             else -> {
                 result.notImplemented()
             }
@@ -483,7 +498,7 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
             .userId(userId)
             .build()
 
-	  Purchasely.sdkBridgeVersion = "5.3.3"
+	  Purchasely.sdkBridgeVersion = "5.4.0"
         Purchasely.appTechnology = PLYAppTechnology.FLUTTER
 
         Purchasely.start { isConfigured, error ->
@@ -852,39 +867,39 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
         }
     }
 
-    fun setUserAttributeWithString(key: String, value: String) {
-        Purchasely.setUserAttribute(key, value)
+    fun setUserAttributeWithString(key: String, value: String, processingLegalBasis: PLYDataProcessingLegalBasis) {
+        Purchasely.setUserAttribute(key, value, processingLegalBasis)
     }
 
-    fun setUserAttributeWithInt(key: String, value: Int) {
-        Purchasely.setUserAttribute(key, value)
+    fun setUserAttributeWithInt(key: String, value: Int, processingLegalBasis: PLYDataProcessingLegalBasis) {
+        Purchasely.setUserAttribute(key, value, processingLegalBasis)
     }
 
-    fun setUserAttributeWithDouble(key: String, value: Double) {
-        Purchasely.setUserAttribute(key, value.toFloat())
+    fun setUserAttributeWithDouble(key: String, value: Double, processingLegalBasis: PLYDataProcessingLegalBasis) {
+        Purchasely.setUserAttribute(key, value.toFloat(), processingLegalBasis)
     }
 
-    fun setUserAttributeWithBoolean(key: String, value: Boolean) {
-        Purchasely.setUserAttribute(key, value)
+    fun setUserAttributeWithBoolean(key: String, value: Boolean, processingLegalBasis: PLYDataProcessingLegalBasis) {
+        Purchasely.setUserAttribute(key, value, processingLegalBasis)
     }
 
-    fun setUserAttributeWithStringArray(key: String, value: List<String>) {
-        Purchasely.setUserAttribute(key, value.toTypedArray())
+    fun setUserAttributeWithStringArray(key: String, value: List<String>, processingLegalBasis: PLYDataProcessingLegalBasis) {
+        Purchasely.setUserAttribute(key, value.toTypedArray(), processingLegalBasis)
     }
 
-    fun setUserAttributeWithIntArray(key: String, value: List<Int>) {
-        Purchasely.setUserAttribute(key, value.toTypedArray())
+    fun setUserAttributeWithIntArray(key: String, value: List<Int>, processingLegalBasis: PLYDataProcessingLegalBasis) {
+        Purchasely.setUserAttribute(key, value.toTypedArray(), processingLegalBasis)
     }
 
-    fun setUserAttributeWithDoubleArray(key: String, value: List<Double>) {
-        Purchasely.setUserAttribute(key, value.map { it.toFloat() }.toTypedArray())
+    fun setUserAttributeWithDoubleArray(key: String, value: List<Double>, processingLegalBasis: PLYDataProcessingLegalBasis) {
+        Purchasely.setUserAttribute(key, value.map { it.toFloat() }.toTypedArray(), processingLegalBasis)
     }
 
-    fun setUserAttributeWithBooleanArray(key: String, value: List<Boolean>) {
-        Purchasely.setUserAttribute(key, value.toTypedArray())
+    fun setUserAttributeWithBooleanArray(key: String, value: List<Boolean>, processingLegalBasis: PLYDataProcessingLegalBasis) {
+        Purchasely.setUserAttribute(key, value.toTypedArray(), processingLegalBasis)
     }
 
-    fun setUserAttributeWithDate(key: String, value: String) {
+    fun setUserAttributeWithDate(key: String, value: String, processingLegalBasis: PLYDataProcessingLegalBasis) {
         Log.d("Attribute", value)
         val format = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSX", Locale.getDefault())
@@ -898,18 +913,25 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
                 calendar.time = it
             }
             Log.d("Attribute", calendar.time.toString())
-            Purchasely.setUserAttribute(key, calendar.time)
+            Purchasely.setUserAttribute(key, calendar.time, processingLegalBasis)
         } catch (e: Exception) {
             Log.e("Purchasely", "Cannot save date attribute $key", e)
         }
     }
 
-    private fun incrementUserAttribute(key: String, value: Int) {
-        Purchasely.incrementUserAttribute(key, value)
+    private fun incrementUserAttribute(key: String, value: Int, processingLegalBasis: PLYDataProcessingLegalBasis) {
+        Purchasely.incrementUserAttribute(key, value, processingLegalBasis)
     }
 
-    private fun decrementUserAttribute(key: String, value: Int) {
-        Purchasely.decrementUserAttribute(key, value)
+    private fun decrementUserAttribute(key: String, value: Int, processingLegalBasis: PLYDataProcessingLegalBasis) {
+        Purchasely.decrementUserAttribute(key, value, processingLegalBasis)
+    }
+
+    private fun processingLegalBasisFrom(string: String?): PLYDataProcessingLegalBasis {
+        return when (string) {
+            "ESSENTIAL" -> PLYDataProcessingLegalBasis.ESSENTIAL
+            else -> PLYDataProcessingLegalBasis.OPTIONAL
+        }
     }
 
     fun userAttribute(key: String, result: Result) {
@@ -1021,6 +1043,7 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
                 "storeOfferId" to parameters.offer?.storeOfferId
             )
             parametersForFlutter["subscriptionOffer"] = parameters.subscriptionOffer?.toMap()
+            parametersForFlutter["closeReason"] = parameters?.closeReason?.name
 
             result.safeSuccess(mapOf(
                 Pair("info", mapOf(
@@ -1118,6 +1141,21 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
 
     fun clearDynamicOfferings() {
         Purchasely.clearDynamicOfferings()
+    }
+
+    private fun revokeDataProcessingConsent(purposes: List<String>) {
+        val mappedPurposes = purposes.mapNotNull {
+            when (it) {
+                "ANALYTICS" -> PLYDataProcessingPurpose.Analytics
+                "IDENTIFIED_ANALYTICS" -> PLYDataProcessingPurpose.IdentifiedAnalytics
+                "CAMPAIGNS" -> PLYDataProcessingPurpose.Campaigns
+                "PERSONALIZATION" -> PLYDataProcessingPurpose.Personalization
+                "THIRD_PARTY_INTEGRATIONS" -> PLYDataProcessingPurpose.ThirdPartyIntegrations
+                "ALL_NON_ESSENTIALS" -> PLYDataProcessingPurpose.AllNonEssentials
+                else -> null // Ignore any unrecognized strings
+            }
+        }.toSet()
+        Purchasely.revokeDataProcessingConsent(mappedPurposes)
     }
 
     //endregion

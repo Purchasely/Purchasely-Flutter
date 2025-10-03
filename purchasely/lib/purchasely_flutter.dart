@@ -472,6 +472,7 @@ class Purchasely {
       clientReferenceId: result['parameters']['clientReferenceId'],
       webCheckoutProvider: result['parameters']['webCheckoutProvider'],
       queryParameterKey: result['parameters']['queryParameterKey'],
+      closeReason: result['parameters']['closeReason'],
     );
 
     return PaywallActionInterceptorResult(info, action, parameters);
@@ -511,71 +512,71 @@ class Purchasely {
   }
 
   static Future<void> setUserAttributeWithString(
-      String key, String value) async {
+      String key, String value, { PLYDataProcessingLegalBasis processingLegalBasis = PLYDataProcessingLegalBasis.optional }) async {
     _channel.invokeMethod('setUserAttributeWithString',
-        <String, dynamic>{'key': key, 'value': value});
+        <String, dynamic>{'key': key, 'value': value, 'processingLegalBasis': mapDataProcessingLegalBasisToString(processingLegalBasis)});
   }
 
-  static Future<void> setUserAttributeWithInt(String key, int value) async {
+  static Future<void> setUserAttributeWithInt(String key, int value, { PLYDataProcessingLegalBasis processingLegalBasis = PLYDataProcessingLegalBasis.optional }) async {
     _channel.invokeMethod('setUserAttributeWithInt',
-        <String, dynamic>{'key': key, 'value': value});
+        <String, dynamic>{'key': key, 'value': value, 'processingLegalBasis': mapDataProcessingLegalBasisToString(processingLegalBasis)});
   }
 
   static Future<void> setUserAttributeWithDouble(
-      String key, double value) async {
+      String key, double value, { PLYDataProcessingLegalBasis processingLegalBasis = PLYDataProcessingLegalBasis.optional }) async {
     _channel.invokeMethod('setUserAttributeWithDouble',
-        <String, dynamic>{'key': key, 'value': value});
+        <String, dynamic>{'key': key, 'value': value, 'processingLegalBasis': mapDataProcessingLegalBasisToString(processingLegalBasis)});
   }
 
   static Future<void> setUserAttributeWithBoolean(
-      String key, bool value) async {
+      String key, bool value, { PLYDataProcessingLegalBasis processingLegalBasis = PLYDataProcessingLegalBasis.optional }) async {
     _channel.invokeMethod('setUserAttributeWithBoolean',
-        <String, dynamic>{'key': key, 'value': value});
+        <String, dynamic>{'key': key, 'value': value, 'processingLegalBasis': mapDataProcessingLegalBasisToString(processingLegalBasis)});
   }
 
   static Future<void> setUserAttributeWithStringArray(
-      String key, List<String> value) async {
+      String key, List<String> value, { PLYDataProcessingLegalBasis processingLegalBasis = PLYDataProcessingLegalBasis.optional }) async {
     _channel.invokeMethod('setUserAttributeWithStringArray',
-        <String, dynamic>{'key': key, 'value': value});
+        <String, dynamic>{'key': key, 'value': value, 'processingLegalBasis': mapDataProcessingLegalBasisToString(processingLegalBasis)});
   }
 
   static Future<void> setUserAttributeWithIntArray(
-      String key, List<int> value) async {
+      String key, List<int> value, { PLYDataProcessingLegalBasis processingLegalBasis = PLYDataProcessingLegalBasis.optional }) async {
     _channel.invokeMethod('setUserAttributeWithIntArray',
-        <String, dynamic>{'key': key, 'value': value});
+        <String, dynamic>{'key': key, 'value': value, 'processingLegalBasis': mapDataProcessingLegalBasisToString(processingLegalBasis)});
   }
 
   static Future<void> setUserAttributeWithDoubleArray(
-      String key, List<double> value) async {
+      String key, List<double> value, { PLYDataProcessingLegalBasis processingLegalBasis = PLYDataProcessingLegalBasis.optional }) async {
     _channel.invokeMethod('setUserAttributeWithDoubleArray',
-        <String, dynamic>{'key': key, 'value': value});
+        <String, dynamic>{'key': key, 'value': value, 'processingLegalBasis': mapDataProcessingLegalBasisToString(processingLegalBasis)});
   }
 
   static Future<void> setUserAttributeWithBooleanArray(
-      String key, List<bool> value) async {
+      String key, List<bool> value, { PLYDataProcessingLegalBasis processingLegalBasis = PLYDataProcessingLegalBasis.optional }) async {
     _channel.invokeMethod('setUserAttributeWithBooleanArray',
-        <String, dynamic>{'key': key, 'value': value});
+        <String, dynamic>{'key': key, 'value': value, 'processingLegalBasis': mapDataProcessingLegalBasisToString(processingLegalBasis)});
   }
 
   static Future<void> setUserAttributeWithDate(
-      String key, DateTime value) async {
+      String key, DateTime value, { PLYDataProcessingLegalBasis processingLegalBasis = PLYDataProcessingLegalBasis.optional }) async {
     DateTime date = DateTime(value.year, value.month, value.day, value.hour,
             value.minute, value.second, value.millisecond)
         .toUtc();
     _channel.invokeMethod('setUserAttributeWithDate',
-        <String, dynamic>{'key': key, 'value': date.toIso8601String()});
+        <String, dynamic>{'key': key, 'value': date.toIso8601String(), 'processingLegalBasis': mapDataProcessingLegalBasisToString(processingLegalBasis)});
   }
 
   static Future<void> incrementUserAttribute(String key,
-      {int value = 1}) async {
+      {int value = 1, PLYDataProcessingLegalBasis processingLegalBasis = PLYDataProcessingLegalBasis.optional }) async {
     _channel.invokeMethod('incrementUserAttribute',
-        <String, dynamic>{'key': key, 'value': value});
+        <String, dynamic>{'key': key, 'value': value, 'processingLegalBasis': mapDataProcessingLegalBasisToString(processingLegalBasis)});
   }
 
   static Future<void> decrementUserAttribute(String key,
-      {int value = 1}) async {
+      {int value = 1, PLYDataProcessingLegalBasis processingLegalBasis = PLYDataProcessingLegalBasis.optional }) async {
     _channel.invokeMethod('decrementUserAttribute',
-        <String, dynamic>{'key': key, 'value': value});
+        <String, dynamic>{'key': key, 'value': value, 'processingLegalBasis': mapDataProcessingLegalBasisToString(processingLegalBasis)});
   }
 
   static Future<dynamic> userAttribute(String key) async {
@@ -667,6 +668,12 @@ class Purchasely {
 
   static void clearDynamicOfferings() async {
     _channel.invokeMethod('clearDynamicOfferings');
+  }
+
+  static void revokeDataProcessingConsent(List<PLYDataProcessingPurpose> purposes) {
+    List<String> mappedPurposes = purposes.map((purpose) => mapDataProcessingPurposeToString(purpose)).toList();
+    _channel
+        .invokeMethod('revokeDataProcessingConsent', <String, dynamic>{'purposes': mappedPurposes});
   }
 
   // -- Private Methods --
@@ -888,6 +895,34 @@ class Purchasely {
       properties['web_checkout_provider'],
     );
   }
+
+  static String mapDataProcessingLegalBasisToString(
+    PLYDataProcessingLegalBasis processingLegalBasis) {
+      switch (processingLegalBasis) {
+      case PLYDataProcessingLegalBasis.essential:
+        return "ESSENTIAL";
+      case PLYDataProcessingLegalBasis.optional:
+        return "OPTIONAL";
+    }
+  }
+
+  static String mapDataProcessingPurposeToString(
+    PLYDataProcessingPurpose purpose) {
+      switch (purpose) {
+      case PLYDataProcessingPurpose.allNonEssentials:
+        return "ALL_NON_ESSENTIALS";
+      case PLYDataProcessingPurpose.analytics:
+        return "ANALYTICS";
+      case PLYDataProcessingPurpose.identifiedAnalytics:
+        return "IDENTIFIED_ANALYTICS";
+      case PLYDataProcessingPurpose.campaigns:
+        return "CAMPAIGNS";
+      case PLYDataProcessingPurpose.personalization:
+        return "PERSONALIZATION";
+      case PLYDataProcessingPurpose.thirdPartyIntegrations:
+        return "THIRD_PARTY_INTEGRATIONS";
+    }
+  }
 }
 
 // -- ENUMS --
@@ -918,6 +953,17 @@ enum PLYAttribute {
   moengageUniqueId,
   oneSignalExternalId,
   batchCustomUserId,
+}
+
+enum PLYDataProcessingLegalBasis { essential, optional }
+
+enum PLYDataProcessingPurpose {
+  allNonEssentials,
+  analytics,
+  identifiedAnalytics,
+  campaigns,
+  personalization,
+  thirdPartyIntegrations
 }
 
 enum PLYThemeMode { light, dark, system }
@@ -1197,6 +1243,7 @@ class PLYPaywallActionParameters {
   String? clientReferenceId;
   String? queryParameterKey;
   String? webCheckoutProvider;
+  String? closeReason;
 
   PLYPaywallActionParameters(
       {this.url,
@@ -1207,7 +1254,9 @@ class PLYPaywallActionParameters {
       this.presentation,
       this.clientReferenceId,
       this.queryParameterKey,
-      this.webCheckoutProvider});
+      this.webCheckoutProvider,
+      this.closeReason
+  });
 }
 
 class PLYPaywallInfo {
