@@ -1,9 +1,9 @@
 PODS:
   - Flutter (1.0.0)
-  - Purchasely (5.4.1)
+  - Purchasely (5.4.2)
   - purchasely_flutter (1.2.4):
     - Flutter
-    - Purchasely (= 5.4.1)
+    - Purchasely (= 5.4.2)
 
 DEPENDENCIES:
   - Flutter (from `Flutter`)

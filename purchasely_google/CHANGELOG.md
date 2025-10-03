@@ -1,3 +1,15 @@
+## 5.4.1
+**Important Notice regarding iOS SDK Version 5.4.0**
+We have identified an important issue in **version 5.4.0 on iOS devices**, affecting all Screens that use **vertical pickers or buttons** with `texts per row = 2`. 
+As a result, this version has been **removed** and must not be used.
+If you are currently using 5.4.0, please **update immediately to version 5.4.1**, which resolves the issue.
+### GDPR & Privacy Levels
+The SDK now offers built-in support for handling privacy levels.
+This enables developers to adapt their user experience to different GDPR requirements and to better manage user consent directly within Purchasely.
+Documentation and integration details are available in our updated privacy guide.
+### Safe Areas Handling
+You can now choose whether Purchasely screens should respect the system’s safe areas (e.g. notch, home indicator, or system bars).
+This provides greater flexibility for developers who want tighter control over screen layout and presentation.
 ## 5.4.0
 ### GDPR & Privacy Levels
 The SDK now offers built-in support for handling privacy levels.
