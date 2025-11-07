@@ -1,5 +1,25 @@
 ## 5.5.0
-- TODO
+### Event Tracking Enhancements
+Improved reliability and consistency across all event tracking, especially for PRESENTATION_VIEWED.
+Enhanced purchase event tracking with better context preservation.
+Optimized event batching and retry logic to ensure all events are sent, even in cases of network loss or server unavailability.
+### iOS
+This release introduces significant improvements in paywall rendering, data reliability, and thread safety.
+#### Minimum iOS Version
+The minimum supported iOS version is now 13.4 (and tvOS 13.4).
+This change enhances performance, stability, and testing capabilities.
+Our analysis shows that this update affects almost no existing integrations — we have already contacted the only affected client directly.
+#### Improvements
+- Improved thread safety when updating UI components to prevent background-thread crashes.
+- Fixed missing presentation data in receipts and event payloads, improving data accuracy.
+### Android
+This release delivers major improvements in paywall rendering, network reliability, and build consistency.
+#### Kotlin 2.0 Minimum
+To compile Purchasely SDK you must use Kotlin 2.0 or higher.
+The SDK now uses Kotlin 2.1, and we plan to upgrade to 2.2 in Q1 2026 to stay aligned with Kotlin’s frequent releases and dependency updates.
+#### Web Checkout with Stripe Support
+Introduced a complete web checkout flow powered by Stripe, including receipt validation and flow tracking.
+[Get started with Web Payments for U.S. customers](https://docs.purchasely.com/docs/web-checkout)
 ## 5.4.1
 **Important Notice regarding iOS SDK Version 5.4.0**
 We have identified an important issue in **version 5.4.0 on iOS devices**, affecting all Screens that use **vertical pickers or buttons** with `texts per row = 2`. 
