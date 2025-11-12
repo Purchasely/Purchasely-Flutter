@@ -1,3 +1,6 @@
+## 5.5.1
+### Android
+- Fixed visibility issue of web checkout related parameters in PLYPaywallActionParameters
 ## 5.5.0
 ### Event Tracking Enhancements
 Improved reliability and consistency across all event tracking, especially for PRESENTATION_VIEWED.

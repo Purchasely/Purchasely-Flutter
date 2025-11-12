@@ -498,7 +498,7 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
             .userId(userId)
             .build()
 
-	  Purchasely.sdkBridgeVersion = "5.5.0"
+	  Purchasely.sdkBridgeVersion = "5.5.1"
         Purchasely.appTechnology = PLYAppTechnology.FLUTTER
 
         Purchasely.start { isConfigured, error ->
@@ -1044,9 +1044,9 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
             )
             parametersForFlutter["subscriptionOffer"] = parameters.subscriptionOffer?.toMap()
             parametersForFlutter["closeReason"] = parameters?.closeReason?.name
-//            parametersForFlutter["clientReferenceId"] = parameters?.clientReferenceId
-//            parametersForFlutter["queryParameterKey"] = parameters?.queryParameterKey
-//            parametersForFlutter["webCheckoutProvider"] = parameters?.webCheckoutProvider?.name
+            parametersForFlutter["clientReferenceId"] = parameters?.clientReferenceId
+            parametersForFlutter["queryParameterKey"] = parameters?.queryParameterKey
+            parametersForFlutter["webCheckoutProvider"] = parameters?.webCheckoutProvider?.name
 
             result.safeSuccess(mapOf(
                 Pair("info", mapOf(
