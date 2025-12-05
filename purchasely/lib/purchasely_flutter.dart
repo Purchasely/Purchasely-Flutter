@@ -745,10 +745,6 @@ class Purchasely {
         'setDebugMode', <String, dynamic>{'debugMode': debugMode});
   }
 
-  static Future<bool> isDebugModeEnabled() async {
-    return await _channel.invokeMethod('isDebugModeEnabled');
-  }
-
   // -- Private Methods --
 
   static PLYPlan? transformToPLYPlan(Map<dynamic, dynamic> plan) {

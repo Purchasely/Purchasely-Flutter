@@ -478,9 +478,6 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
                 Purchasely.debugMode = debugMode
                 result.safeSuccess(true)
             }
-            "isDebugModeEnabled" -> {
-                result.safeSuccess(Purchasely.debugMode)
-            }
             else -> {
                 result.notImplemented()
             }
