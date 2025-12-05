@@ -1,3 +1,7 @@
+## 5.6.0
+- Added conditional visibility for paywall components based on user attributes and built-in attributes.
+- Debug mode: New methods `setDebugMode` and `isDebugMode` to enable debug screen view.
+Full changelog avaiable at https://docs.purchasely.com/changelog/56#/
 ## 5.5.1
 ### Android
 - Fixed visibility issue of web checkout related parameters in PLYPaywallActionParameters
@@ -48,7 +52,7 @@ This provides greater flexibility for developers who want tighter control over s
 - Fixed a switch missing case error related to PLYPresentationActionParameters on iOS.
 ## 5.3.0
 ### 🚀 Introducing Flows
-We’re introducing Flows, a powerful new feature that lets you orchestrate personalized, multi-screen journeys directly from the Purchasely Console. 
+We’re introducing Flows, a powerful new feature that lets you orchestrate personalized, multi-screen journeys directly from the Purchasely Console.
 Whether you're onboarding users, promoting offers, or guiding upgrades, Flows are tailored to user behavior and lifecycle stages.
 >  ⚠️ **Important**
 >  Flows is currently available in beta and accessible only to selected customers.
@@ -57,7 +61,7 @@ Whether you're onboarding users, promoting offers, or guiding upgrades, Flows ar
 ### 🖥️ Enhanced Presentation Display API
 A new display method has been added to PLYPresentation objects, enabling immediate rendering of pre-fetched presentations.
 >  ⚠️ **Important**
-> This API is required when using the Flows feature. 
+> This API is required when using the Flows feature.
 > It ensures presentations are displayed according to their designated mode (e.g. push, modal, fullscreen, etc.) and handles the Flow's lifecycle and navigation state seamlessly
 
 ### 💳 Web Checkout Action
@@ -68,7 +72,7 @@ For customers in the U.S., this update is fully compliant with Apple’s latest 
 Simply drag the Web Checkout Action onto your screen, map it to the button of your choice, and configure the SDK to open your chosen URL.
 Whether you select “Stripe” for consolidated analytics in your Purchasely dashboard or “Other” to keep using an existing billing solution, setup is literally as simple as pasting in a link.
 
-Behind the scenes, Purchasely’s Stripe Web Checkout integration ensures your web-based transactions feed directly into our A/B-testing dashboard alongside in-app data. Ensuring that you see end-to-end funnel performance without any extra wiring. 
+Behind the scenes, Purchasely’s Stripe Web Checkout integration ensures your web-based transactions feed directly into our A/B-testing dashboard alongside in-app data. Ensuring that you see end-to-end funnel performance without any extra wiring.
 If you prefer a different provider, the SDK will hand off users to whatever URL you specify, leaving conversion logging to your own systems.
 
 ### 🎨 Asset Prefetching for Seamless UX

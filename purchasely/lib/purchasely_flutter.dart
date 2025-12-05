@@ -511,72 +511,133 @@ class Purchasely {
     return await _channel.invokeMethod('userDidConsumeSubscriptionContent');
   }
 
-  static Future<void> setUserAttributeWithString(
-      String key, String value, { PLYDataProcessingLegalBasis processingLegalBasis = PLYDataProcessingLegalBasis.optional }) async {
-    _channel.invokeMethod('setUserAttributeWithString',
-        <String, dynamic>{'key': key, 'value': value, 'processingLegalBasis': mapDataProcessingLegalBasisToString(processingLegalBasis)});
+  static Future<void> setUserAttributeWithString(String key, String value,
+      {PLYDataProcessingLegalBasis processingLegalBasis =
+          PLYDataProcessingLegalBasis.optional}) async {
+    _channel.invokeMethod('setUserAttributeWithString', <String, dynamic>{
+      'key': key,
+      'value': value,
+      'processingLegalBasis':
+          mapDataProcessingLegalBasisToString(processingLegalBasis)
+    });
   }
 
-  static Future<void> setUserAttributeWithInt(String key, int value, { PLYDataProcessingLegalBasis processingLegalBasis = PLYDataProcessingLegalBasis.optional }) async {
-    _channel.invokeMethod('setUserAttributeWithInt',
-        <String, dynamic>{'key': key, 'value': value, 'processingLegalBasis': mapDataProcessingLegalBasisToString(processingLegalBasis)});
+  static Future<void> setUserAttributeWithInt(String key, int value,
+      {PLYDataProcessingLegalBasis processingLegalBasis =
+          PLYDataProcessingLegalBasis.optional}) async {
+    _channel.invokeMethod('setUserAttributeWithInt', <String, dynamic>{
+      'key': key,
+      'value': value,
+      'processingLegalBasis':
+          mapDataProcessingLegalBasisToString(processingLegalBasis)
+    });
   }
 
-  static Future<void> setUserAttributeWithDouble(
-      String key, double value, { PLYDataProcessingLegalBasis processingLegalBasis = PLYDataProcessingLegalBasis.optional }) async {
-    _channel.invokeMethod('setUserAttributeWithDouble',
-        <String, dynamic>{'key': key, 'value': value, 'processingLegalBasis': mapDataProcessingLegalBasisToString(processingLegalBasis)});
+  static Future<void> setUserAttributeWithDouble(String key, double value,
+      {PLYDataProcessingLegalBasis processingLegalBasis =
+          PLYDataProcessingLegalBasis.optional}) async {
+    _channel.invokeMethod('setUserAttributeWithDouble', <String, dynamic>{
+      'key': key,
+      'value': value,
+      'processingLegalBasis':
+          mapDataProcessingLegalBasisToString(processingLegalBasis)
+    });
   }
 
-  static Future<void> setUserAttributeWithBoolean(
-      String key, bool value, { PLYDataProcessingLegalBasis processingLegalBasis = PLYDataProcessingLegalBasis.optional }) async {
-    _channel.invokeMethod('setUserAttributeWithBoolean',
-        <String, dynamic>{'key': key, 'value': value, 'processingLegalBasis': mapDataProcessingLegalBasisToString(processingLegalBasis)});
+  static Future<void> setUserAttributeWithBoolean(String key, bool value,
+      {PLYDataProcessingLegalBasis processingLegalBasis =
+          PLYDataProcessingLegalBasis.optional}) async {
+    _channel.invokeMethod('setUserAttributeWithBoolean', <String, dynamic>{
+      'key': key,
+      'value': value,
+      'processingLegalBasis':
+          mapDataProcessingLegalBasisToString(processingLegalBasis)
+    });
   }
 
   static Future<void> setUserAttributeWithStringArray(
-      String key, List<String> value, { PLYDataProcessingLegalBasis processingLegalBasis = PLYDataProcessingLegalBasis.optional }) async {
-    _channel.invokeMethod('setUserAttributeWithStringArray',
-        <String, dynamic>{'key': key, 'value': value, 'processingLegalBasis': mapDataProcessingLegalBasisToString(processingLegalBasis)});
+      String key, List<String> value,
+      {PLYDataProcessingLegalBasis processingLegalBasis =
+          PLYDataProcessingLegalBasis.optional}) async {
+    _channel.invokeMethod('setUserAttributeWithStringArray', <String, dynamic>{
+      'key': key,
+      'value': value,
+      'processingLegalBasis':
+          mapDataProcessingLegalBasisToString(processingLegalBasis)
+    });
   }
 
-  static Future<void> setUserAttributeWithIntArray(
-      String key, List<int> value, { PLYDataProcessingLegalBasis processingLegalBasis = PLYDataProcessingLegalBasis.optional }) async {
-    _channel.invokeMethod('setUserAttributeWithIntArray',
-        <String, dynamic>{'key': key, 'value': value, 'processingLegalBasis': mapDataProcessingLegalBasisToString(processingLegalBasis)});
+  static Future<void> setUserAttributeWithIntArray(String key, List<int> value,
+      {PLYDataProcessingLegalBasis processingLegalBasis =
+          PLYDataProcessingLegalBasis.optional}) async {
+    _channel.invokeMethod('setUserAttributeWithIntArray', <String, dynamic>{
+      'key': key,
+      'value': value,
+      'processingLegalBasis':
+          mapDataProcessingLegalBasisToString(processingLegalBasis)
+    });
   }
 
   static Future<void> setUserAttributeWithDoubleArray(
-      String key, List<double> value, { PLYDataProcessingLegalBasis processingLegalBasis = PLYDataProcessingLegalBasis.optional }) async {
-    _channel.invokeMethod('setUserAttributeWithDoubleArray',
-        <String, dynamic>{'key': key, 'value': value, 'processingLegalBasis': mapDataProcessingLegalBasisToString(processingLegalBasis)});
+      String key, List<double> value,
+      {PLYDataProcessingLegalBasis processingLegalBasis =
+          PLYDataProcessingLegalBasis.optional}) async {
+    _channel.invokeMethod('setUserAttributeWithDoubleArray', <String, dynamic>{
+      'key': key,
+      'value': value,
+      'processingLegalBasis':
+          mapDataProcessingLegalBasisToString(processingLegalBasis)
+    });
   }
 
   static Future<void> setUserAttributeWithBooleanArray(
-      String key, List<bool> value, { PLYDataProcessingLegalBasis processingLegalBasis = PLYDataProcessingLegalBasis.optional }) async {
-    _channel.invokeMethod('setUserAttributeWithBooleanArray',
-        <String, dynamic>{'key': key, 'value': value, 'processingLegalBasis': mapDataProcessingLegalBasisToString(processingLegalBasis)});
+      String key, List<bool> value,
+      {PLYDataProcessingLegalBasis processingLegalBasis =
+          PLYDataProcessingLegalBasis.optional}) async {
+    _channel.invokeMethod('setUserAttributeWithBooleanArray', <String, dynamic>{
+      'key': key,
+      'value': value,
+      'processingLegalBasis':
+          mapDataProcessingLegalBasisToString(processingLegalBasis)
+    });
   }
 
-  static Future<void> setUserAttributeWithDate(
-      String key, DateTime value, { PLYDataProcessingLegalBasis processingLegalBasis = PLYDataProcessingLegalBasis.optional }) async {
+  static Future<void> setUserAttributeWithDate(String key, DateTime value,
+      {PLYDataProcessingLegalBasis processingLegalBasis =
+          PLYDataProcessingLegalBasis.optional}) async {
     DateTime date = DateTime(value.year, value.month, value.day, value.hour,
             value.minute, value.second, value.millisecond)
         .toUtc();
-    _channel.invokeMethod('setUserAttributeWithDate',
-        <String, dynamic>{'key': key, 'value': date.toIso8601String(), 'processingLegalBasis': mapDataProcessingLegalBasisToString(processingLegalBasis)});
+    _channel.invokeMethod('setUserAttributeWithDate', <String, dynamic>{
+      'key': key,
+      'value': date.toIso8601String(),
+      'processingLegalBasis':
+          mapDataProcessingLegalBasisToString(processingLegalBasis)
+    });
   }
 
   static Future<void> incrementUserAttribute(String key,
-      {int value = 1, PLYDataProcessingLegalBasis processingLegalBasis = PLYDataProcessingLegalBasis.optional }) async {
-    _channel.invokeMethod('incrementUserAttribute',
-        <String, dynamic>{'key': key, 'value': value, 'processingLegalBasis': mapDataProcessingLegalBasisToString(processingLegalBasis)});
+      {int value = 1,
+      PLYDataProcessingLegalBasis processingLegalBasis =
+          PLYDataProcessingLegalBasis.optional}) async {
+    _channel.invokeMethod('incrementUserAttribute', <String, dynamic>{
+      'key': key,
+      'value': value,
+      'processingLegalBasis':
+          mapDataProcessingLegalBasisToString(processingLegalBasis)
+    });
   }
 
   static Future<void> decrementUserAttribute(String key,
-      {int value = 1, PLYDataProcessingLegalBasis processingLegalBasis = PLYDataProcessingLegalBasis.optional }) async {
-    _channel.invokeMethod('decrementUserAttribute',
-        <String, dynamic>{'key': key, 'value': value, 'processingLegalBasis': mapDataProcessingLegalBasisToString(processingLegalBasis)});
+      {int value = 1,
+      PLYDataProcessingLegalBasis processingLegalBasis =
+          PLYDataProcessingLegalBasis.optional}) async {
+    _channel.invokeMethod('decrementUserAttribute', <String, dynamic>{
+      'key': key,
+      'value': value,
+      'processingLegalBasis':
+          mapDataProcessingLegalBasisToString(processingLegalBasis)
+    });
   }
 
   static Future<dynamic> userAttribute(String key) async {
@@ -670,10 +731,22 @@ class Purchasely {
     _channel.invokeMethod('clearDynamicOfferings');
   }
 
-  static void revokeDataProcessingConsent(List<PLYDataProcessingPurpose> purposes) {
-    List<String> mappedPurposes = purposes.map((purpose) => mapDataProcessingPurposeToString(purpose)).toList();
-    _channel
-        .invokeMethod('revokeDataProcessingConsent', <String, dynamic>{'purposes': mappedPurposes});
+  static void revokeDataProcessingConsent(
+      List<PLYDataProcessingPurpose> purposes) {
+    List<String> mappedPurposes = purposes
+        .map((purpose) => mapDataProcessingPurposeToString(purpose))
+        .toList();
+    _channel.invokeMethod('revokeDataProcessingConsent',
+        <String, dynamic>{'purposes': mappedPurposes});
+  }
+
+  static Future<void> setDebugMode(bool debugMode) async {
+    return await _channel
+        .invokeMethod('setDebugMode', <String, dynamic>{'debugMode': debugMode});
+  }
+
+  static Future<bool> isDebugMode() async {
+    return await _channel.invokeMethod('isDebugMode');
   }
 
   // -- Private Methods --
@@ -897,8 +970,8 @@ class Purchasely {
   }
 
   static String mapDataProcessingLegalBasisToString(
-    PLYDataProcessingLegalBasis processingLegalBasis) {
-      switch (processingLegalBasis) {
+      PLYDataProcessingLegalBasis processingLegalBasis) {
+    switch (processingLegalBasis) {
       case PLYDataProcessingLegalBasis.essential:
         return "ESSENTIAL";
       case PLYDataProcessingLegalBasis.optional:
@@ -907,8 +980,8 @@ class Purchasely {
   }
 
   static String mapDataProcessingPurposeToString(
-    PLYDataProcessingPurpose purpose) {
-      switch (purpose) {
+      PLYDataProcessingPurpose purpose) {
+    switch (purpose) {
       case PLYDataProcessingPurpose.allNonEssentials:
         return "ALL_NON_ESSENTIALS";
       case PLYDataProcessingPurpose.analytics:
@@ -1255,8 +1328,7 @@ class PLYPaywallActionParameters {
       this.clientReferenceId,
       this.queryParameterKey,
       this.webCheckoutProvider,
-      this.closeReason
-  });
+      this.closeReason});
 }
 
 class PLYPaywallInfo {

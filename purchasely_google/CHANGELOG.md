@@ -1,3 +1,7 @@
+## 5.6.0
+- Added conditional visibility for paywall components based on user attributes and built-in attributes.
+- Debug mode: New methods `setDebugMode` and `isDebugMode` to enable debug screen view.
+Full changelog avaiable at https://docs.purchasely.com/changelog/56#/
 ## 5.5.1
 ### Android
 - Fixed visibility issue of web checkout related parameters in PLYPaywallActionParameters
@@ -25,7 +29,7 @@ Introduced a complete web checkout flow powered by Stripe, including receipt val
 [Get started with Web Payments for U.S. customers](https://docs.purchasely.com/docs/web-checkout)
 ## 5.4.1
 **Important Notice regarding iOS SDK Version 5.4.0**
-We have identified an important issue in **version 5.4.0 on iOS devices**, affecting all Screens that use **vertical pickers or buttons** with `texts per row = 2`. 
+We have identified an important issue in **version 5.4.0 on iOS devices**, affecting all Screens that use **vertical pickers or buttons** with `texts per row = 2`.
 As a result, this version has been **removed** and must not be used.
 If you are currently using 5.4.0, please **update immediately to version 5.4.1**, which resolves the issue.
 ### GDPR & Privacy Levels
@@ -57,7 +61,7 @@ This provides greater flexibility for developers who want tighter control over s
 - The openPlacement action now carries the placementVendorId
 ## 5.3.1
 ### Fixes
-- Fixed a switch missing case error related to PLYPresentationActionParameters on iOS. 
+- Fixed a switch missing case error related to PLYPresentationActionParameters on iOS.
 ## 5.3.0
 ### 🚀 Introducing Flows
 We’re introducing Flows, a powerful new feature that lets you orchestrate personalized, multi-screen journeys directly from the Purchasely Console.

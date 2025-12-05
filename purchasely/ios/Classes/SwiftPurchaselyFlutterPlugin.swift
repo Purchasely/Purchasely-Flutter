@@ -318,7 +318,7 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             return
         }
 
-		Purchasely.setSdkBridgeVersion("5.5.1")
+		Purchasely.setSdkBridgeVersion("5.6.0")
         Purchasely.setAppTechnology(PLYAppTechnology.flutter)
 
         let logLevel = PLYLogger.PLYLogLevel(rawValue: (arguments["logLevel"] as? Int) ?? PLYLogger.PLYLogLevel.debug.rawValue) ?? .debug
