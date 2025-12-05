@@ -1,7 +1,7 @@
 ## 5.6.0
 - Added conditional visibility for paywall components based on user attributes and built-in attributes.
 - Debug mode: New methods `setDebugMode` and `isDebugMode` to enable debug screen view.
-Full changelog available at https://docs.purchasely.com/changelog/56#/
+Full changelog available at https://docs.purchasely.com/changelog/56
 ## 5.5.1
 ### Android
 - Fixed visibility issue of web checkout related parameters in PLYPaywallActionParameters
