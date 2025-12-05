@@ -741,12 +741,12 @@ class Purchasely {
   }
 
   static Future<void> setDebugMode(bool debugMode) async {
-    return await _channel
-        .invokeMethod('setDebugMode', <String, dynamic>{'debugMode': debugMode});
+    return await _channel.invokeMethod(
+        'setDebugMode', <String, dynamic>{'debugMode': debugMode});
   }
 
-  static Future<bool> isDebugMode() async {
-    return await _channel.invokeMethod('isDebugMode');
+  static Future<bool> isDebugModeEnabled() async {
+    return await _channel.invokeMethod('isDebugModeEnabled');
   }
 
   // -- Private Methods --
