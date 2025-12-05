@@ -469,6 +469,15 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
                 val purposes = call.argument<List<String>>("purposes") ?: return
                 revokeDataProcessingConsent(purposes)
             }
+            "setDebugMode" -> {
+                val debugMode = call.argument<Boolean>("debugMode")
+                if (debugMode == null) {
+                    result.error("MISSING_PARAMETER", "The 'debugMode' parameter is required.", null)
+                    return
+                }
+                Purchasely.debugMode = debugMode
+                result.safeSuccess(true)
+            }
             else -> {
                 result.notImplemented()
             }
@@ -498,7 +507,7 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
             .userId(userId)
             .build()
 
-	  Purchasely.sdkBridgeVersion = "5.5.1"
+	  Purchasely.sdkBridgeVersion = "5.6.0"
         Purchasely.appTechnology = PLYAppTechnology.FLUTTER
 
         Purchasely.start { isConfigured, error ->

@@ -191,6 +191,8 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             clearDynamicOfferings()
         case "revokeDataProcessingConsent":
             revokeDataProcessingConsent(arguments: arguments)
+        case "setDebugMode":
+            setDebugMode(arguments: arguments)
         default:
             result(FlutterMethodNotImplemented)
         }
@@ -318,7 +320,7 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             return
         }
 
-		Purchasely.setSdkBridgeVersion("5.5.1")
+        Purchasely.setSdkBridgeVersion("5.6.0")
         Purchasely.setAppTechnology(PLYAppTechnology.flutter)
 
         let logLevel = PLYLogger.PLYLogLevel(rawValue: (arguments["logLevel"] as? Int) ?? PLYLogger.PLYLogLevel.debug.rawValue) ?? .debug
@@ -1134,6 +1136,14 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             })
         }
         Purchasely.revokeDataProcessingConsent(for: purposes)
+    }
+    
+    private func setDebugMode(arguments: [String: Any]?) {
+        guard let arguments, let enabled = arguments["debugMode"] as? Bool else {
+            return
+        }
+        
+        Purchasely.setDebugMode(enabled: enabled)
     }
 }
 
