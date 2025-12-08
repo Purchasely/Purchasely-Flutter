@@ -214,6 +214,8 @@ class _MyAppState extends State<MyApp> {
 
       manageDynamicOfferings();
 
+      Purchasely.setDebugMode(true);
+
       Purchasely.setPaywallActionInterceptorCallback(
           (PaywallActionInterceptorResult result) {
         print('Received action from paywall');
