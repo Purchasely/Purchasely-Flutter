@@ -6,12 +6,9 @@ This document describes the complete process for releasing a new version of the 
 
 1. [Overview](#overview)
 2. [Prerequisites](#prerequisites)
-3. [Release Checklist](#release-checklist)
-4. [Detailed Steps](#detailed-steps)
-5. [Files to Update](#files-to-update)
-6. [Testing](#testing)
-7. [Publishing](#publishing)
-8. [Post-Release](#post-release)
+3. [Release Process](#release-process)
+4. [Files Reference](#files-reference)
+5. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -36,58 +33,57 @@ Before starting a release, ensure you have:
 - [ ] Xcode installed (for iOS builds and CocoaPods)
 - [ ] Android Studio installed (for Android builds)
 - [ ] CocoaPods installed (`gem install cocoapods`)
-- [ ] GitHub CLI installed (`brew install gh`)
 
 ---
 
-## Release Checklist
+## Release Process
 
-### Quick Reference
+### Step 1: Prepare the Release
 
-```
-□ Determine new version numbers (Flutter SDK, iOS SDK, Android SDK)
-□ Update VERSIONS.md
-□ Update purchasely/pubspec.yaml
-□ Update purchasely_android_player/pubspec.yaml (if applicable)
-□ Update purchasely_google/pubspec.yaml (if applicable)
-□ Update purchasely/ios/purchasely_flutter.podspec (iOS SDK version)
-□ Update purchasely/android/build.gradle (Android SDK version, if applicable)
-□ Update native bridge versions in Swift and Kotlin plugins
-□ Update all CHANGELOG.md files
-□ Run flutter pub get
-□ Run pod update in example/ios/
-□ Run flutter test
-□ Run flutter analyze
-□ Build iOS example
-□ Build Android example
-□ Commit, push, and create PR
-□ Merge PR after review
-□ Tag release
-□ Publish to pub.dev (if applicable)
+Run the publish script in dry-run mode to update all version numbers and changelogs:
+
+```bash
+sh publish.sh {VERSION}
 ```
 
----
+For example:
+```bash
+sh publish.sh 5.6.2
+```
 
-## Detailed Steps
+This script will automatically:
+- Update `version` in all `pubspec.yaml` files
+- Update the SDK bridge version in iOS and Android native plugins
+- Add a changelog entry for the new version in all `CHANGELOG.md` files (if not already present)
+- Run `flutter pub publish --dry-run` to validate
 
-### Step 1: Determine Version Numbers
 
-Check the latest native SDK releases:
+### Step 2: Update iOS SDK Version (if needed)
 
-- **iOS SDK**: Check [Purchasely iOS releases](https://github.com/Purchasely/Purchasely-iOS)
-- **Android SDK**: Check [Purchasely Android releases](https://github.com/Purchasely/Purchasely-Android)
+If the iOS Purchasely SDK version needs to be updated, edit the podspec file:
 
-Determine the new Flutter SDK version following [semantic versioning](https://semver.org/):
+**File:** `purchasely/ios/purchasely_flutter.podspec`
 
-- **Major**: Breaking API changes
-- **Minor**: New features, backward compatible
-- **Patch**: Bug fixes, SDK updates
+```ruby
+s.dependency 'Purchasely', '5.6.4'
+```
 
-### Step 2: Update Version Files
+### Step 3: Update Android SDK Version (if needed)
 
-#### 2.1 VERSIONS.md
+If the Android Purchasely SDK version needs to be updated, edit the `build.gradle` file in **each package folder**:
 
-Add a new row to the version table at the root of the repository:
+**Files to update:**
+- `purchasely/android/build.gradle`
+- `purchasely_google/android/build.gradle`
+- `purchasely_android_player/android/build.gradle`
+
+```gradle
+implementation 'io.purchasely:purchasely:5.6.0'
+```
+
+### Step 4: Update VERSIONS.md
+
+Add a new row to `VERSIONS.md` at the root of the repository:
 
 ```markdown
 | 5.6.2   | 5.6.4       | 5.6.0           |
@@ -95,94 +91,7 @@ Add a new row to the version table at the root of the repository:
 
 Format: `| Flutter Version | iOS Version | Android Version |`
 
-#### 2.2 purchasely/pubspec.yaml
-
-Update the `version` field:
-
-```yaml
-version: 5.6.2
-```
-
-#### 2.3 purchasely_android_player/pubspec.yaml
-
-Update the `version` field to match:
-
-```yaml
-version: 5.6.2
-```
-
-#### 2.4 purchasely_google/pubspec.yaml
-
-Update the `version` field to match:
-
-```yaml
-version: 5.6.2
-```
-
-### Step 3: Update Native SDK Dependencies
-
-#### 3.1 iOS SDK Version
-
-Edit `purchasely/ios/purchasely_flutter.podspec`:
-
-```ruby
-s.dependency 'Purchasely', '5.6.4'
-```
-
-#### 3.2 Android SDK Version (if updating)
-
-Edit `purchasely/android/build.gradle`:
-
-```gradle
-implementation 'io.purchasely:purchasely:5.6.0'
-```
-
-### Step 4: Update Native Bridge Versions
-
-#### 4.1 iOS Bridge Version
-
-Edit `purchasely/ios/Classes/SwiftPurchaselyFlutterPlugin.swift`:
-
-```swift
-Purchasely.setSdkBridgeVersion("5.6.2")
-```
-
-#### 4.2 Android Bridge Version
-
-Edit `purchasely/android/src/main/kotlin/io/purchasely/purchasely_flutter/PurchaselyFlutterPlugin.kt`:
-
-```kotlin
-Purchasely.sdkBridgeVersion = "5.6.2"
-```
-
-### Step 5: Update Changelogs
-
-Update all three CHANGELOG.md files with the same entry:
-
-- `purchasely/CHANGELOG.md`
-- `purchasely_android_player/CHANGELOG.md`
-- `purchasely_google/CHANGELOG.md`
-
-Standard format:
-
-```markdown
-## 5.6.2
-- Updated iOS Purchasely SDK to 5.6.4
-
-Full changelog available at https://docs.purchasely.com/changelog/56
-```
-
-If updating Android SDK as well:
-
-```markdown
-## 5.6.2
-- Updated iOS Purchasely SDK to 5.6.4
-- Updated Android Purchasely SDK to 5.6.1
-
-Full changelog available at https://docs.purchasely.com/changelog/56
-```
-
-### Step 6: Refresh Dependencies
+### Step 5: Refresh Dependencies
 
 ```bash
 # Main package
@@ -194,137 +103,50 @@ cd example/ios
 pod update
 cd ../..
 
-# Android player package
-cd ../purchasely_android_player
-flutter pub get
-
-# Google package
-cd ../purchasely_google
-flutter pub get
+# Return to root
+cd ..
 ```
 
----
-
-## Files to Update
-
-### Summary Table
-
-| File | What to Update |
-|------|----------------|
-| `VERSIONS.md` | Add new version row with Flutter, iOS, Android versions |
-| `purchasely/pubspec.yaml` | Update `version` field |
-| `purchasely/CHANGELOG.md` | Add release notes |
-| `purchasely/ios/purchasely_flutter.podspec` | Update iOS SDK dependency version |
-| `purchasely/android/build.gradle` | Update Android SDK dependency version (if applicable) |
-| `purchasely/ios/Classes/SwiftPurchaselyFlutterPlugin.swift` | Update bridge version |
-| `purchasely/android/.../PurchaselyFlutterPlugin.kt` | Update bridge version |
-| `purchasely_android_player/pubspec.yaml` | Update `version` field |
-| `purchasely_android_player/CHANGELOG.md` | Add release notes |
-| `purchasely_google/pubspec.yaml` | Update `version` field |
-| `purchasely_google/CHANGELOG.md` | Add release notes |
-| `purchasely/example/ios/Podfile.lock` | Updated automatically by `pod update` |
-| `purchasely/example/pubspec.lock` | Updated automatically by `flutter pub get` |
-
----
-
-## Testing
-
-### Run Unit Tests
+### Step 6: Run Tests
 
 ```bash
 cd purchasely
-flutter test --coverage
-```
-
-All tests should pass. Current test suite includes 165+ tests.
-
-### Run Static Analysis
-
-```bash
-# Main package
-cd purchasely
+flutter test
 flutter analyze lib/
-
-# Android player
-cd ../purchasely_android_player
-flutter analyze lib/
-
-# Google package
-cd ../purchasely_google
-flutter analyze lib/
+cd ..
 ```
 
-Ensure no errors. Warnings and info messages are acceptable.
-
-### Build Example Apps
-
-#### iOS Simulator Build
+### Step 7: Commit and Push
 
 ```bash
-cd purchasely/example
-flutter build ios --simulator
-```
-
-#### Android APK Build
-
-```bash
-cd purchasely/example
-flutter build apk --debug
-```
-
-### Manual Testing (Recommended)
-
-1. Run the example app on iOS simulator
-2. Run the example app on Android emulator
-3. Verify SDK initialization works
-4. Test presenting a paywall
-5. Verify event callbacks are received
-
----
-
-## Publishing
-
-### Create Pull Request
-
-```bash
-# Stage all changes
 git add -A
-
-# Commit with descriptive message
-git commit -m "Release 5.6.2: Update iOS SDK to 5.6.4
+git commit -m "Release {VERSION}: Update iOS SDK to X.X.X
 
 ## SDK Updates
-- Bump Flutter SDK version from 5.6.1 to 5.6.2
-- Update iOS Purchasely SDK from 5.6.2 to 5.6.4
+- Bump Flutter SDK version to {VERSION}
+- Update iOS Purchasely SDK to X.X.X
+- Update Android Purchasely SDK to X.X.X (if applicable)"
 
-## Changes
-- Updated VERSIONS.md
-- Updated all CHANGELOG.md files
-- Updated native bridge versions"
-
-# Push to remote
-git push -u origin version/5.6.2
-
-# Create PR
-gh pr create --title "Release 5.6.2: Update iOS SDK to 5.6.4" \
-  --body "## Summary
-This PR updates the Purchasely Flutter SDK to version 5.6.2.
-
-## SDK Updates
-- Bump Flutter SDK version from 5.6.1 to 5.6.2
-- Update iOS Purchasely SDK from 5.6.2 to 5.6.4
-
-## Testing
-- ✅ All unit tests pass
-- ✅ Static analysis passes for all packages
-- ✅ iOS build successful
-- ✅ Android build successful" \
-  --base main
+git push -u origin version/{VERSION}
 ```
 
-### Merge and Tag
+### Step 8: Create Pull Request
 
-After PR review and approval:
+Create a PR against `main` and wait for CI to pass.
+
+### Step 9: Publish
+
+Once CI passes and the PR is approved, publish by running:
+
+```bash
+sh publish.sh {VERSION} true
+```
+
+This will publish all three packages to pub.dev.
+
+### Step 10: Merge and Tag
+
+After publishing:
 
 1. Merge the PR to `main`
 2. Create a release tag:
@@ -332,52 +154,42 @@ After PR review and approval:
 ```bash
 git checkout main
 git pull origin main
-git tag -a v5.6.2 -m "Release 5.6.2"
-git push origin v5.6.2
-```
-
-### Publish to pub.dev (Optional)
-
-```bash
-cd purchasely
-flutter pub publish --dry-run  # Verify first
-flutter pub publish
-
-cd ../purchasely_android_player
-flutter pub publish
-
-cd ../purchasely_google
-flutter pub publish
+git tag -a v{VERSION} -m "Release {VERSION}"
+git push origin v{VERSION}
 ```
 
 ---
 
-## Post-Release
+## Files Reference
 
-### Verify Release
+### Files Updated by publish.sh
 
-1. Check the [GitHub releases page](https://github.com/Purchasely/Purchasely-Flutter/releases)
-2. Verify the tag is created
-3. Check [pub.dev](https://pub.dev/packages/purchasely_flutter) for the new version (if published)
+| File | What is Updated |
+|------|-----------------|
+| `purchasely/pubspec.yaml` | `version` field |
+| `purchasely_google/pubspec.yaml` | `version` field, `purchasely_flutter` dependency |
+| `purchasely_android_player/pubspec.yaml` | `version` field, `purchasely_flutter` dependency |
+| `purchasely/ios/Classes/SwiftPurchaselyFlutterPlugin.swift` | Bridge version |
+| `purchasely/android/.../PurchaselyFlutterPlugin.kt` | Bridge version |
+| `purchasely/CHANGELOG.md` | New version entry |
+| `purchasely_google/CHANGELOG.md` | New version entry |
+| `purchasely_android_player/CHANGELOG.md` | New version entry |
 
-### Announce Release
+### Files to Update Manually
 
-1. Update documentation at [docs.purchasely.com](https://docs.purchasely.com)
-2. Notify relevant teams/channels about the new release
-
-### Monitor for Issues
-
-- Watch for bug reports related to the new release
-- Monitor GitHub issues
-- Be prepared to release a hotfix if critical issues are found
+| File | When to Update |
+|------|----------------|
+| `VERSIONS.md` | Always - add new version row |
+| `purchasely/ios/purchasely_flutter.podspec` | When iOS SDK version changes |
+| `purchasely/android/build.gradle` | When Android SDK version changes |
+| `purchasely_google/android/build.gradle` | When Android SDK version changes |
+| `purchasely_android_player/android/build.gradle` | When Android SDK version changes |
 
 ---
 
 ## Troubleshooting
 
-### Common Issues
-
-#### Pod install fails
+### Pod install fails
 
 ```bash
 cd purchasely/example/ios
@@ -386,7 +198,7 @@ pod cache clean --all
 pod install
 ```
 
-#### Flutter pub get fails
+### Flutter pub get fails
 
 ```bash
 flutter clean
@@ -394,22 +206,35 @@ flutter pub cache repair
 flutter pub get
 ```
 
-#### Build fails after SDK update
+### Build fails after SDK update
 
 1. Clean all builds: `flutter clean`
 2. Remove iOS build folder: `rm -rf purchasely/example/ios/build`
 3. Remove Android build folder: `rm -rf purchasely/example/android/build`
 4. Re-run `flutter pub get` and `pod update`
 
+### Publish fails
+
+- Ensure you're logged in: `flutter pub login`
+- Check package score: `flutter pub publish --dry-run`
+- Verify all dependencies are published first
+
 ---
 
-## Version History
+## Quick Reference Checklist
 
-| Date | Version | Notes |
-|------|---------|-------|
-| 2025-01-XX | 5.6.2 | Updated iOS SDK to 5.6.4 |
-| 2025-01-XX | 5.6.1 | Updated iOS SDK to 5.6.2 |
-| 2025-01-XX | 5.6.0 | Initial 5.6.x release |
+```
+□ Run: sh publish.sh {VERSION}
+□ Update purchasely/ios/purchasely_flutter.podspec (iOS SDK version, if needed)
+□ Update all build.gradle files (Android SDK version, if needed)
+□ Update VERSIONS.md with new version row
+□ Run: flutter pub get && pod update (in example/ios)
+□ Run: flutter test && flutter analyze lib/
+□ Commit, push, create PR
+□ Wait for CI to pass
+□ Run: sh publish.sh {VERSION} true
+□ Merge PR and create git tag
+```
 
 ---
 
