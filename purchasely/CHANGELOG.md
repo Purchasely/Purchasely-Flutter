@@ -1,6 +1,10 @@
-## 5.6.1
+## 5.6.2
 ### iOS
 - Updated iOS Purchasely SDK to 5.6.4
+
+## 5.6.1
+### iOS
+- Updated iOS Purchasely SDK to 5.6.2
 - Fixed an issue where the presentationViewed event was not triggered multiple times when displaying prefetched screens repeatedly.
 
 ## 5.6.0
