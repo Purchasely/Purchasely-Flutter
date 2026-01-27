@@ -107,6 +107,56 @@ jobs:
         run: flutter test --coverage || echo "No tests found, skipping..."
 
   # ============================================
+  # Android Unit Tests (Kotlin/Java)
+  # ============================================
+  android-unit-tests:
+    name: Android Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "17"
+          cache: "gradle"
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.24.x"
+          channel: "stable"
+          cache: true
+
+      - name: Setup Gradle cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Install Flutter dependencies (purchasely)
+        working-directory: purchasely
+        run: flutter pub get
+
+      - name: Run Android unit tests (purchasely)
+        working-directory: purchasely/example/android
+        run: ./gradlew :purchasely:testDebugUnitTest
+
+      - name: Upload test results (purchasely)
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: android-test-results-purchasely
+          path: purchasely/example/build/purchasely_flutter/reports/tests/
+          retention-days: 7
+
+  # ============================================
   # iOS Build
   # ============================================
   build-ios:
@@ -292,7 +342,16 @@ jobs:
   ci-success:
     name: CI Success
     runs-on: ubuntu-latest
-    needs: [analyze, test, build-ios, build-android, version-check, pub-dry-run]
+    needs:
+      [
+        analyze,
+        test,
+        android-unit-tests,
+        build-ios,
+        build-android,
+        version-check,
+        pub-dry-run,
+      ]
     if: always()
     steps:
       - name: Check all jobs status
@@ -303,6 +362,10 @@ jobs:
           fi
           if [[ "${{ needs.test.result }}" != "success" ]]; then
             echo "Test job failed"
+            exit 1
+          fi
+          if [[ "${{ needs.android-unit-tests.result }}" != "success" ]]; then
+            echo "Android unit tests job failed"
             exit 1
           fi
           if [[ "${{ needs.build-ios.result }}" != "success" ]]; then
