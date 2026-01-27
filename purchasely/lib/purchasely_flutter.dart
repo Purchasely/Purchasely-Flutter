@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:developer';
 
 import 'package:flutter/services.dart';
-import 'package:collection/collection.dart';
 
 import 'native_view_widget.dart';
 
@@ -277,7 +276,7 @@ class Purchasely {
     final List<PLYPlan?> plans = new List.empty(growable: true);
     result['plans'].forEach((k, plan) => {plans.add(transformToPLYPlan(plan))});
     return PLYProduct(
-        result['name'], result['vendorId'], plans.whereNotNull().toList());
+        result['name'], result['vendorId'], plans.nonNulls.toList());
   }
 
   static Future<PLYPlan?> planWithIdentifier(String vendorId) async {
@@ -315,7 +314,7 @@ class Purchasely {
       element['plans']
           .forEach((k, plan) => {plans.add(transformToPLYPlan(plan))});
       products.add(PLYProduct(
-          element['name'], element['vendorId'], plans.whereNotNull().toList()));
+          element['name'], element['vendorId'], plans.nonNulls.toList()));
     });
     return products;
   }
@@ -342,7 +341,7 @@ class Purchasely {
             ?.forEach((k, plan) => plans.add(transformToPLYPlan(plan)));
 
         product = PLYProduct(element['product']['name'],
-            element['product']['vendorId'], plans.whereNotNull().toList());
+            element['product']['vendorId'], plans.nonNulls.toList());
       }
 
       subscriptions.add(PLYSubscription(
@@ -374,7 +373,7 @@ class Purchasely {
             ?.forEach((k, plan) => plans.add(transformToPLYPlan(plan)));
 
         product = PLYProduct(element['product']['name'],
-            element['product']['vendorId'], plans.whereNotNull().toList());
+            element['product']['vendorId'], plans.nonNulls.toList());
       }
 
       subscriptions.add(PLYSubscription(
