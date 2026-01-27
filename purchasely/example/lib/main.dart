@@ -5,7 +5,6 @@ import 'dart:developer';
 import 'dart:io';
 
 import 'package:purchasely_flutter/purchasely_flutter.dart';
-import 'package:purchasely_flutter/native_view_widget.dart';
 
 import 'presentation_screen.dart';
 

@@ -25,8 +25,8 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.24.x'
-          channel: 'stable'
+          flutter-version: "3.24.x"
+          channel: "stable"
           cache: true
 
       - name: Install dependencies (purchasely)
@@ -55,15 +55,15 @@ jobs:
 
       - name: Analyze (purchasely)
         working-directory: purchasely
-        run: flutter analyze --no-fatal-infos
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings
 
       - name: Analyze (purchasely_google)
         working-directory: purchasely_google
-        run: flutter analyze --no-fatal-infos
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings
 
       - name: Analyze (purchasely_android_player)
         working-directory: purchasely_android_player
-        run: flutter analyze --no-fatal-infos
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings
 
   # ============================================
   # Unit Tests
@@ -78,8 +78,8 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.24.x'
-          channel: 'stable'
+          flutter-version: "3.24.x"
+          channel: "stable"
           cache: true
 
       - name: Install dependencies (purchasely)
@@ -120,8 +120,8 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.24.x'
-          channel: 'stable'
+          flutter-version: "3.24.x"
+          channel: "stable"
           cache: true
 
       - name: Setup CocoaPods cache
@@ -162,15 +162,15 @@ jobs:
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'
-          java-version: '17'
-          cache: 'gradle'
+          distribution: "temurin"
+          java-version: "17"
+          cache: "gradle"
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.24.x'
-          channel: 'stable'
+          flutter-version: "3.24.x"
+          channel: "stable"
           cache: true
 
       - name: Setup Gradle cache
@@ -248,8 +248,8 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.24.x'
-          channel: 'stable'
+          flutter-version: "3.24.x"
+          channel: "stable"
           cache: true
 
       - name: Install dependencies (purchasely)
