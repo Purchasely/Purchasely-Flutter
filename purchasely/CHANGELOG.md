@@ -1,6 +1,8 @@
 ## 5.6.1
 ### iOS
+- Updated iOS Purchasely SDK to 5.6.4
 - Fixed an issue where the presentationViewed event was not triggered multiple times when displaying prefetched screens repeatedly.
+
 ## 5.6.0
 - Added conditional visibility for paywall components based on user attributes and built-in attributes.
 - Debug mode: New method `setDebugMode` to enable debug screen view.

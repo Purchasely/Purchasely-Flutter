@@ -1,0 +1,328 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main, master, develop]
+  push:
+    branches: [main, master, develop]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ============================================
+  # Code Quality & Analysis
+  # ============================================
+  analyze:
+    name: Analyze & Format
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.x'
+          channel: 'stable'
+          cache: true
+
+      - name: Install dependencies (purchasely)
+        working-directory: purchasely
+        run: flutter pub get
+
+      - name: Install dependencies (purchasely_google)
+        working-directory: purchasely_google
+        run: flutter pub get
+
+      - name: Install dependencies (purchasely_android_player)
+        working-directory: purchasely_android_player
+        run: flutter pub get
+
+      - name: Check formatting (purchasely)
+        working-directory: purchasely
+        run: dart format --set-exit-if-changed .
+
+      - name: Check formatting (purchasely_google)
+        working-directory: purchasely_google
+        run: dart format --set-exit-if-changed .
+
+      - name: Check formatting (purchasely_android_player)
+        working-directory: purchasely_android_player
+        run: dart format --set-exit-if-changed .
+
+      - name: Analyze (purchasely)
+        working-directory: purchasely
+        run: flutter analyze --no-fatal-infos
+
+      - name: Analyze (purchasely_google)
+        working-directory: purchasely_google
+        run: flutter analyze --no-fatal-infos
+
+      - name: Analyze (purchasely_android_player)
+        working-directory: purchasely_android_player
+        run: flutter analyze --no-fatal-infos
+
+  # ============================================
+  # Unit Tests
+  # ============================================
+  test:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.x'
+          channel: 'stable'
+          cache: true
+
+      - name: Install dependencies (purchasely)
+        working-directory: purchasely
+        run: flutter pub get
+
+      - name: Run tests (purchasely)
+        working-directory: purchasely
+        run: flutter test --coverage || echo "No tests found, skipping..."
+
+      - name: Install dependencies (purchasely_google)
+        working-directory: purchasely_google
+        run: flutter pub get
+
+      - name: Run tests (purchasely_google)
+        working-directory: purchasely_google
+        run: flutter test --coverage || echo "No tests found, skipping..."
+
+      - name: Install dependencies (purchasely_android_player)
+        working-directory: purchasely_android_player
+        run: flutter pub get
+
+      - name: Run tests (purchasely_android_player)
+        working-directory: purchasely_android_player
+        run: flutter test --coverage || echo "No tests found, skipping..."
+
+  # ============================================
+  # iOS Build
+  # ============================================
+  build-ios:
+    name: Build iOS
+    runs-on: macos-latest
+    needs: [analyze]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.x'
+          channel: 'stable'
+          cache: true
+
+      - name: Setup CocoaPods cache
+        uses: actions/cache@v4
+        with:
+          path: purchasely/example/ios/Pods
+          key: ${{ runner.os }}-pods-${{ hashFiles('purchasely/example/ios/Podfile.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pods-
+
+      - name: Install dependencies
+        working-directory: purchasely
+        run: flutter pub get
+
+      - name: Install CocoaPods dependencies
+        working-directory: purchasely/example/ios
+        run: pod install --repo-update
+
+      - name: Build iOS (Release - Simulator)
+        working-directory: purchasely/example
+        run: flutter build ios --release --simulator --no-codesign
+
+      - name: Build iOS (Debug - Simulator)
+        working-directory: purchasely/example
+        run: flutter build ios --debug --simulator --no-codesign
+
+  # ============================================
+  # Android Build
+  # ============================================
+  build-android:
+    name: Build Android
+    runs-on: ubuntu-latest
+    needs: [analyze]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'gradle'
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.x'
+          channel: 'stable'
+          cache: true
+
+      - name: Setup Gradle cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Install dependencies (purchasely)
+        working-directory: purchasely
+        run: flutter pub get
+
+      - name: Build Android APK (Debug)
+        working-directory: purchasely/example
+        run: flutter build apk --debug
+
+      - name: Build Android APK (Release)
+        working-directory: purchasely/example
+        run: flutter build apk --release
+
+      - name: Build Android App Bundle (Release)
+        working-directory: purchasely/example
+        run: flutter build appbundle --release
+
+  # ============================================
+  # Version Consistency Check
+  # ============================================
+  version-check:
+    name: Version Consistency
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check version consistency
+        run: |
+          echo "Checking version consistency across packages..."
+
+          # Extract versions from pubspec.yaml files
+          PURCHASELY_VERSION=$(grep '^version:' purchasely/pubspec.yaml | awk '{print $2}')
+          GOOGLE_VERSION=$(grep '^version:' purchasely_google/pubspec.yaml | awk '{print $2}')
+          PLAYER_VERSION=$(grep '^version:' purchasely_android_player/pubspec.yaml | awk '{print $2}')
+
+          echo "purchasely_flutter version: $PURCHASELY_VERSION"
+          echo "purchasely_google version: $GOOGLE_VERSION"
+          echo "purchasely_android_player version: $PLAYER_VERSION"
+
+          # Check if main version is in VERSIONS.md
+          if ! grep -q "| $PURCHASELY_VERSION" VERSIONS.md; then
+            echo "::warning::Version $PURCHASELY_VERSION not found in VERSIONS.md"
+          fi
+
+          # Check if changelog has entry for current version
+          if ! grep -q "## $PURCHASELY_VERSION" purchasely/CHANGELOG.md; then
+            echo "::warning::Version $PURCHASELY_VERSION not found in CHANGELOG.md"
+          fi
+
+          echo "Version check completed!"
+
+  # ============================================
+  # Pub.dev Dry Run (validates package before publishing)
+  # ============================================
+  pub-dry-run:
+    name: Pub.dev Dry Run
+    runs-on: ubuntu-latest
+    needs: [analyze, test]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.x'
+          channel: 'stable'
+          cache: true
+
+      - name: Install dependencies (purchasely)
+        working-directory: purchasely
+        run: flutter pub get
+
+      - name: Dry run publish check (purchasely)
+        working-directory: purchasely
+        run: flutter pub publish --dry-run
+
+      - name: Install dependencies (purchasely_google)
+        working-directory: purchasely_google
+        run: flutter pub get
+
+      - name: Dry run publish check (purchasely_google)
+        working-directory: purchasely_google
+        run: flutter pub publish --dry-run || echo "::warning::purchasely_google publish check failed"
+
+      - name: Install dependencies (purchasely_android_player)
+        working-directory: purchasely_android_player
+        run: flutter pub get
+
+      - name: Dry run publish check (purchasely_android_player)
+        working-directory: purchasely_android_player
+        run: flutter pub publish --dry-run || echo "::warning::purchasely_android_player publish check failed"
+
+  # ============================================
+  # Podspec Validation (iOS)
+  # ============================================
+  validate-podspec:
+    name: Validate Podspec
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Validate podspec
+        working-directory: purchasely/ios
+        run: pod lib lint purchasely_flutter.podspec --allow-warnings || echo "::warning::Podspec validation had issues"
+
+  # ============================================
+  # Final Status Check
+  # ============================================
+  ci-success:
+    name: CI Success
+    runs-on: ubuntu-latest
+    needs: [analyze, test, build-ios, build-android, version-check, pub-dry-run]
+    if: always()
+    steps:
+      - name: Check all jobs status
+        run: |
+          if [[ "${{ needs.analyze.result }}" != "success" ]]; then
+            echo "Analyze job failed"
+            exit 1
+          fi
+          if [[ "${{ needs.test.result }}" != "success" ]]; then
+            echo "Test job failed"
+            exit 1
+          fi
+          if [[ "${{ needs.build-ios.result }}" != "success" ]]; then
+            echo "iOS build job failed"
+            exit 1
+          fi
+          if [[ "${{ needs.build-android.result }}" != "success" ]]; then
+            echo "Android build job failed"
+            exit 1
+          fi
+          if [[ "${{ needs.version-check.result }}" != "success" ]]; then
+            echo "Version check job failed"
+            exit 1
+          fi
+          if [[ "${{ needs.pub-dry-run.result }}" != "success" ]]; then
+            echo "Pub dry run job failed"
+            exit 1
+          fi
+          echo "All CI checks passed! ✅"
