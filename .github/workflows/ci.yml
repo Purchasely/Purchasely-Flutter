@@ -157,6 +157,60 @@ jobs:
           retention-days: 7
 
   # ============================================
+  # iOS Unit Tests (Swift)
+  # ============================================
+  ios-unit-tests:
+    name: iOS Unit Tests
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.24.x"
+          channel: "stable"
+          cache: true
+
+      - name: Setup CocoaPods cache
+        uses: actions/cache@v4
+        with:
+          path: purchasely/example/ios/Pods
+          key: ${{ runner.os }}-pods-${{ hashFiles('purchasely/example/ios/Podfile.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pods-
+
+      - name: Install Flutter dependencies
+        working-directory: purchasely
+        run: flutter pub get
+
+      - name: Install CocoaPods dependencies
+        working-directory: purchasely/example/ios
+        run: pod install --repo-update
+
+      - name: Run iOS unit tests
+        working-directory: purchasely/example/ios
+        run: |
+          xcodebuild test \
+            -workspace Runner.xcworkspace \
+            -scheme Runner \
+            -destination 'platform=iOS Simulator,name=iPhone 15,OS=latest' \
+            -only-testing:RunnerTests \
+            -resultBundlePath TestResults.xcresult \
+            | xcpretty --color --report junit --output test-results.xml || true
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ios-test-results
+          path: |
+            purchasely/example/ios/TestResults.xcresult
+            purchasely/example/ios/test-results.xml
+          retention-days: 7
+
+  # ============================================
   # iOS Build
   # ============================================
   build-ios:
@@ -347,6 +401,7 @@ jobs:
         analyze,
         test,
         android-unit-tests,
+        ios-unit-tests,
         build-ios,
         build-android,
         version-check,
@@ -366,6 +421,10 @@ jobs:
           fi
           if [[ "${{ needs.android-unit-tests.result }}" != "success" ]]; then
             echo "Android unit tests job failed"
+            exit 1
+          fi
+          if [[ "${{ needs.ios-unit-tests.result }}" != "success" ]]; then
+            echo "iOS unit tests job failed"
             exit 1
           fi
           if [[ "${{ needs.build-ios.result }}" != "success" ]]; then
