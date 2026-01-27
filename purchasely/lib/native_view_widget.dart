@@ -54,7 +54,8 @@ class PLYPresentationView extends StatelessWidget {
         );
       case TargetPlatform.iOS:
         print('TargetPlatform = iOS');
-        return SafeArea( // Wrap UiKitView with SafeArea
+        return SafeArea(
+          // Wrap UiKitView with SafeArea
           child: UiKitView(
             viewType: viewType,
             creationParams: creationParams,
@@ -66,7 +67,9 @@ class PLYPresentationView extends StatelessWidget {
                   var plan = call.arguments['plan'];
                   callback!(PresentPresentationResult(
                       PLYPurchaseResult.values[viewResult],
-                      plan != null ? Purchasely.transformToPLYPlan(plan) : null));
+                      plan != null
+                          ? Purchasely.transformToPLYPlan(plan)
+                          : null));
                 }
                 return Future.value(null);
               });

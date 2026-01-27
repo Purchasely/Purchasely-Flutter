@@ -18,9 +18,7 @@ void main() {
           'variant-A',
           'en',
           600,
-          PLYPresentationType.normal,
-          [],
-          {});
+          PLYPresentationType.normal, [], {});
 
       final view = PLYPresentationView(
         presentation: presentation,
@@ -109,7 +107,8 @@ void main() {
 
       expect(view.callback, isNotNull);
       // Invoke the callback to test it works
-      view.callback!(PresentPresentationResult(PLYPurchaseResult.purchased, null));
+      view.callback!(
+          PresentPresentationResult(PLYPurchaseResult.purchased, null));
       expect(callbackCalled, true);
     });
 
@@ -139,7 +138,8 @@ void main() {
         },
       );
 
-      final expectedResult = PresentPresentationResult(PLYPurchaseResult.restored, plan);
+      final expectedResult =
+          PresentPresentationResult(PLYPurchaseResult.restored, plan);
       view.callback!(expectedResult);
 
       expect(receivedResult, isNotNull);
@@ -147,7 +147,8 @@ void main() {
       expect(receivedResult!.plan!.vendorId, 'plan-123');
     });
 
-    testWidgets('build returns Text for unsupported platform', (WidgetTester tester) async {
+    testWidgets('build returns Text for unsupported platform',
+        (WidgetTester tester) async {
       debugDefaultTargetPlatformOverride = TargetPlatform.windows;
 
       final view = PLYPresentationView(
@@ -161,7 +162,8 @@ void main() {
       debugDefaultTargetPlatformOverride = null;
     });
 
-    testWidgets('build returns Text for Linux platform', (WidgetTester tester) async {
+    testWidgets('build returns Text for Linux platform',
+        (WidgetTester tester) async {
       debugDefaultTargetPlatformOverride = TargetPlatform.linux;
 
       final view = PLYPresentationView(
@@ -175,7 +177,8 @@ void main() {
       debugDefaultTargetPlatformOverride = null;
     });
 
-    testWidgets('build returns Text for Fuchsia platform', (WidgetTester tester) async {
+    testWidgets('build returns Text for Fuchsia platform',
+        (WidgetTester tester) async {
       debugDefaultTargetPlatformOverride = TargetPlatform.fuchsia;
 
       final view = PLYPresentationView(
@@ -222,9 +225,7 @@ void main() {
           'variant-A',
           'en',
           600,
-          PLYPresentationType.normal,
-          [],
-          {});
+          PLYPresentationType.normal, [], {});
 
       final view = Purchasely.getPresentationView(
         presentation: presentation,

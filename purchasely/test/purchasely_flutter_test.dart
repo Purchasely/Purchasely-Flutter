@@ -355,7 +355,8 @@ void main() {
       final result =
           await Purchasely.isDeeplinkHandled('https://example.com/deep');
       expect(result, true);
-      expect(methodCalls.first.arguments['deeplink'], 'https://example.com/deep');
+      expect(
+          methodCalls.first.arguments['deeplink'], 'https://example.com/deep');
     });
 
     test('fetchPresentation returns correct PLYPresentation', () async {
@@ -384,9 +385,7 @@ void main() {
           'variant-id',
           'en',
           500,
-          PLYPresentationType.normal,
-          [],
-          {});
+          PLYPresentationType.normal, [], {});
 
       final result = await Purchasely.presentPresentation(presentation,
           isFullscreen: true);
@@ -668,8 +667,8 @@ void main() {
       ]);
 
       expect(methodCalls.first.method, 'revokeDataProcessingConsent');
-      expect(methodCalls.first.arguments['purposes'],
-          ['ANALYTICS', 'CAMPAIGNS']);
+      expect(
+          methodCalls.first.arguments['purposes'], ['ANALYTICS', 'CAMPAIGNS']);
     });
   });
 
@@ -912,8 +911,14 @@ void main() {
     test('transformToDynamicOfferings skips invalid offerings', () {
       final offerings = [
         {'reference': 'ref-1', 'planVendorId': 'plan-1'},
-        {'reference': null, 'planVendorId': 'plan-2'}, // Invalid - null reference
-        {'reference': 'ref-3', 'planVendorId': null} // Invalid - null planVendorId
+        {
+          'reference': null,
+          'planVendorId': 'plan-2'
+        }, // Invalid - null reference
+        {
+          'reference': 'ref-3',
+          'planVendorId': null
+        } // Invalid - null planVendorId
       ];
 
       final result = Purchasely.transformToDynamicOfferings(offerings);
@@ -1026,10 +1031,12 @@ void main() {
     });
 
     test('mapDataProcessingLegalBasisToString returns correct strings', () {
-      expect(Purchasely.mapDataProcessingLegalBasisToString(
+      expect(
+          Purchasely.mapDataProcessingLegalBasisToString(
               PLYDataProcessingLegalBasis.essential),
           'ESSENTIAL');
-      expect(Purchasely.mapDataProcessingLegalBasisToString(
+      expect(
+          Purchasely.mapDataProcessingLegalBasisToString(
               PLYDataProcessingLegalBasis.optional),
           'OPTIONAL');
     });
@@ -1091,9 +1098,7 @@ void main() {
           'variant-A',
           'en',
           600,
-          PLYPresentationType.normal,
-          [],
-          {});
+          PLYPresentationType.normal, [], {});
 
       final view = Purchasely.getPresentationView(
         presentation: presentation,
@@ -1159,8 +1164,23 @@ void main() {
     group('PLYProduct', () {
       test('creates instance with plans', () {
         final plans = [
-          PLYPlan('plan-1', 'product-1', 'Plan 1', PLYPlanType.consumable, 1.99,
-              '\$1.99', 'USD', '\$', '1.99', null, false, null, null, null, null, false)
+          PLYPlan(
+              'plan-1',
+              'product-1',
+              'Plan 1',
+              PLYPlanType.consumable,
+              1.99,
+              '\$1.99',
+              'USD',
+              '\$',
+              '1.99',
+              null,
+              false,
+              null,
+              null,
+              null,
+              null,
+              false)
         ];
 
         final product = PLYProduct('Test Product', 'vendor-123', plans);
@@ -1173,8 +1193,8 @@ void main() {
 
     group('PLYPresentationPlan', () {
       test('creates instance and converts to map', () {
-        final plan =
-            PLYPresentationPlan('plan-123', 'product-123', 'base-123', 'offer-123');
+        final plan = PLYPresentationPlan(
+            'plan-123', 'product-123', 'base-123', 'offer-123');
 
         final map = plan.toMap();
 
@@ -1216,9 +1236,23 @@ void main() {
 
     group('PLYSubscription', () {
       test('creates instance with all properties', () {
-        final plan = PLYPlan('plan-123', 'product-123', 'Premium',
-            PLYPlanType.autoRenewingSubscription, 9.99, '\$9.99', 'USD', '\$', '9.99', 'P1M',
-            false, null, null, null, null, false);
+        final plan = PLYPlan(
+            'plan-123',
+            'product-123',
+            'Premium',
+            PLYPlanType.autoRenewingSubscription,
+            9.99,
+            '\$9.99',
+            'USD',
+            '\$',
+            '9.99',
+            'P1M',
+            false,
+            null,
+            null,
+            null,
+            null,
+            false);
 
         final product = PLYProduct('Premium Product', 'vendor-123', [plan]);
 
@@ -1235,7 +1269,8 @@ void main() {
             12);
 
         expect(subscription.purchaseToken, 'token-123');
-        expect(subscription.subscriptionSource, PLYSubscriptionSource.appleAppStore);
+        expect(subscription.subscriptionSource,
+            PLYSubscriptionSource.appleAppStore);
         expect(subscription.nextRenewalDate, '2025-02-01T00:00:00Z');
         expect(subscription.cancelledDate, isNull);
         expect(subscription.plan!.vendorId, 'plan-123');
@@ -1249,18 +1284,34 @@ void main() {
 
     group('PresentPresentationResult', () {
       test('creates instance with result and plan', () {
-        final plan = PLYPlan('plan-123', 'product-123', 'Premium',
-            PLYPlanType.autoRenewingSubscription, 9.99, '\$9.99', 'USD', '\$', '9.99', 'P1M',
-            false, null, null, null, null, false);
+        final plan = PLYPlan(
+            'plan-123',
+            'product-123',
+            'Premium',
+            PLYPlanType.autoRenewingSubscription,
+            9.99,
+            '\$9.99',
+            'USD',
+            '\$',
+            '9.99',
+            'P1M',
+            false,
+            null,
+            null,
+            null,
+            null,
+            false);
 
-        final result = PresentPresentationResult(PLYPurchaseResult.purchased, plan);
+        final result =
+            PresentPresentationResult(PLYPurchaseResult.purchased, plan);
 
         expect(result.result, PLYPurchaseResult.purchased);
         expect(result.plan!.vendorId, 'plan-123');
       });
 
       test('creates instance with null plan', () {
-        final result = PresentPresentationResult(PLYPurchaseResult.cancelled, null);
+        final result =
+            PresentPresentationResult(PLYPurchaseResult.cancelled, null);
 
         expect(result.result, PLYPurchaseResult.cancelled);
         expect(result.plan, isNull);
@@ -1269,13 +1320,13 @@ void main() {
 
     group('PaywallActionInterceptorResult', () {
       test('creates instance with all properties', () {
-        final info = PLYPaywallInfo(
-            'content-123', 'presentation-123', 'placement-123', 'abtest-123', 'variant-A');
+        final info = PLYPaywallInfo('content-123', 'presentation-123',
+            'placement-123', 'abtest-123', 'variant-A');
         final params = PLYPaywallActionParameters(
             url: 'https://example.com', title: 'Test Title');
 
-        final result =
-            PaywallActionInterceptorResult(info, PLYPaywallAction.purchase, params);
+        final result = PaywallActionInterceptorResult(
+            info, PLYPaywallAction.purchase, params);
 
         expect(result.info.contentId, 'content-123');
         expect(result.action, PLYPaywallAction.purchase);
@@ -1285,11 +1336,26 @@ void main() {
 
     group('PLYPaywallActionParameters', () {
       test('creates instance with all optional properties', () {
-        final plan = PLYPlan('plan-123', 'product-123', 'Premium',
-            PLYPlanType.autoRenewingSubscription, 9.99, '\$9.99', 'USD', '\$', '9.99', 'P1M',
-            false, null, null, null, null, false);
+        final plan = PLYPlan(
+            'plan-123',
+            'product-123',
+            'Premium',
+            PLYPlanType.autoRenewingSubscription,
+            9.99,
+            '\$9.99',
+            'USD',
+            '\$',
+            '9.99',
+            'P1M',
+            false,
+            null,
+            null,
+            null,
+            null,
+            false);
         final offer = PLYPromoOffer('offer-vendor', 'store-offer');
-        final subOffer = PLYSubscriptionOffer('sub-123', 'base-123', 'token', 'offer');
+        final subOffer =
+            PLYSubscriptionOffer('sub-123', 'base-123', 'token', 'offer');
 
         final params = PLYPaywallActionParameters(
             url: 'https://example.com',
@@ -1318,8 +1384,8 @@ void main() {
 
     group('PLYPaywallInfo', () {
       test('creates instance with all properties', () {
-        final info = PLYPaywallInfo(
-            'content-123', 'presentation-123', 'placement-123', 'abtest-123', 'variant-A');
+        final info = PLYPaywallInfo('content-123', 'presentation-123',
+            'placement-123', 'abtest-123', 'variant-A');
 
         expect(info.contentId, 'content-123');
         expect(info.presentationId, 'presentation-123');
@@ -1416,7 +1482,8 @@ void main() {
 
     group('PLYEventPropertySubscription', () {
       test('creates instance with properties', () {
-        final subscription = PLYEventPropertySubscription('plan-123', 'product-123');
+        final subscription =
+            PLYEventPropertySubscription('plan-123', 'product-123');
 
         expect(subscription.plan, 'plan-123');
         expect(subscription.product, 'product-123');
@@ -1425,7 +1492,8 @@ void main() {
 
     group('PLYDynamicOffering', () {
       test('creates instance with all properties', () {
-        final offering = PLYDynamicOffering('ref-123', 'plan-vendor-123', 'offer-vendor-123');
+        final offering = PLYDynamicOffering(
+            'ref-123', 'plan-vendor-123', 'offer-vendor-123');
 
         expect(offering.reference, 'ref-123');
         expect(offering.planVendorId, 'plan-vendor-123');
@@ -1433,7 +1501,8 @@ void main() {
       });
 
       test('toJson returns correct map', () {
-        final offering = PLYDynamicOffering('ref-123', 'plan-vendor-123', 'offer-vendor-123');
+        final offering = PLYDynamicOffering(
+            'ref-123', 'plan-vendor-123', 'offer-vendor-123');
         final json = offering.toJson();
 
         expect(json['reference'], 'ref-123');
@@ -1730,7 +1799,8 @@ void main() {
       expect(presentation!.type, PLYPresentationType.fallback);
     });
 
-    test('transformToPLYEventProperties handles valid APP_STARTED event name', () {
+    test('transformToPLYEventProperties handles valid APP_STARTED event name',
+        () {
       final propertiesMap = {
         'sdk_version': '5.6.1',
         'event_name': 'APP_STARTED',
@@ -2116,7 +2186,8 @@ void main() {
     test('displaySubscriptionCancellationInstruction calls native method',
         () async {
       await Purchasely.displaySubscriptionCancellationInstruction();
-      expect(methodCalls.first.method, 'displaySubscriptionCancellationInstruction');
+      expect(methodCalls.first.method,
+          'displaySubscriptionCancellationInstruction');
     });
 
     test('closePresentation calls native method', () async {
@@ -2140,17 +2211,8 @@ void main() {
     });
 
     test('clientPresentationDisplayed calls native method', () async {
-      final presentation = PLYPresentation(
-          'pres-123',
-          'placement-123',
-          null,
-          null,
-          null,
-          'en',
-          400,
-          PLYPresentationType.normal,
-          [],
-          {});
+      final presentation = PLYPresentation('pres-123', 'placement-123', null,
+          null, null, 'en', 400, PLYPresentationType.normal, [], {});
 
       await Purchasely.clientPresentationDisplayed(presentation);
 
@@ -2159,17 +2221,8 @@ void main() {
     });
 
     test('clientPresentationClosed calls native method', () async {
-      final presentation = PLYPresentation(
-          'pres-456',
-          'placement-456',
-          null,
-          null,
-          null,
-          'fr',
-          500,
-          PLYPresentationType.fallback,
-          [],
-          {});
+      final presentation = PLYPresentation('pres-456', 'placement-456', null,
+          null, null, 'fr', 500, PLYPresentationType.fallback, [], {});
 
       await Purchasely.clientPresentationClosed(presentation);
 
@@ -2304,8 +2357,7 @@ void main() {
       expect(methodCalls.first.arguments['processingLegalBasis'], 'OPTIONAL');
     });
 
-    test(
-        'setUserAttributeWithDoubleArray uses optional legal basis by default',
+    test('setUserAttributeWithDoubleArray uses optional legal basis by default',
         () async {
       await Purchasely.setUserAttributeWithDoubleArray('key', [1.1, 2.2]);
 
@@ -2352,7 +2404,8 @@ void main() {
       expect(methodCalls.first.arguments['storeKit1'], true);
       expect(methodCalls.first.arguments['userId'], isNull);
       expect(methodCalls.first.arguments['logLevel'], 3); // PLYLogLevel.error
-      expect(methodCalls.first.arguments['runningMode'], 3); // PLYRunningMode.full
+      expect(
+          methodCalls.first.arguments['runningMode'], 3); // PLYRunningMode.full
     });
 
     test('start with all log levels', () async {
