@@ -144,16 +144,20 @@ jobs:
         working-directory: purchasely
         run: flutter pub get
 
+      - name: Build Android to generate gradle wrapper
+        working-directory: purchasely/example
+        run: flutter build apk --debug
+
       - name: Run Android unit tests (purchasely)
         working-directory: purchasely/example/android
-        run: ./gradlew :purchasely:testDebugUnitTest
+        run: ./gradlew :purchasely_flutter:testDebugUnitTest --info
 
       - name: Upload test results (purchasely)
         uses: actions/upload-artifact@v4
         if: always()
         with:
           name: android-test-results-purchasely
-          path: purchasely/example/build/purchasely_flutter/reports/tests/
+          path: purchasely/example/android/build/purchasely_flutter/reports/tests/
           retention-days: 7
 
   # ============================================
