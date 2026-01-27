@@ -14,7 +14,7 @@ abstract class PurchaselyGooglePlatform extends PlatformInterface {
   ///
   /// Defaults to [MethodChannelPurchaselyGoogle].
   static PurchaselyGooglePlatform get instance => _instance;
-  
+
   /// Platform-specific implementations should set this with their own
   /// platform-specific class that extends [PurchaselyGooglePlatform] when
   /// they register themselves.

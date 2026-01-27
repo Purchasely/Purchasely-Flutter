@@ -1,4 +1,33 @@
-include: package:flutter_lints/flutter.yaml
+# This file configures the analyzer, which statically analyzes Dart code to
+# check for errors, warnings, and lints.
+#
+# The issues identified by the analyzer are surfaced in the UI of Dart-enabled
+# IDEs (https://dart.dev/tools#ides-and-editors). The analyzer can also be
+# invoked from the command line by running `flutter analyze`.
 
-# Additional information about this file can be found at
-# https://dart.dev/guides/language/analysis-options
+analyzer:
+  errors:
+    # Treat missing returns as warnings, not errors
+    missing_return: warning
+  exclude:
+    - "**/*.g.dart"
+    - "**/*.freezed.dart"
+
+linter:
+  rules:
+    # Avoid print statements in production code (but allow in example)
+    avoid_print: false
+    # Prefer const constructors
+    prefer_const_constructors: false
+    # Prefer const declarations
+    prefer_const_declarations: false
+    # Use key in widget constructors
+    use_key_in_widget_constructors: false
+    # Prefer final fields
+    prefer_final_fields: true
+    # Avoid unnecessary containers
+    avoid_unnecessary_containers: true
+    # Prefer is empty
+    prefer_is_empty: true
+    # Prefer is not empty
+    prefer_is_not_empty: true

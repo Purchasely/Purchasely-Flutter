@@ -1,10 +1,10 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'dart:developer';
 import 'dart:io';
 
 import 'package:purchasely_flutter/purchasely_flutter.dart';
-import 'package:purchasely_flutter/native_view_widget.dart';
 
 import 'presentation_screen.dart';
 
@@ -173,14 +173,20 @@ class _MyAppState extends State<MyApp> {
         inspect(result);
       });
 
-      Purchasely.revokeDataProcessingConsent([PLYDataProcessingPurpose.campaigns]);
+      Purchasely.revokeDataProcessingConsent(
+          [PLYDataProcessingPurpose.campaigns]);
 
       //Attributes
-      Purchasely.setUserAttributeWithString("stringKey", "StringValue", processingLegalBasis: PLYDataProcessingLegalBasis.essential);
-      Purchasely.setUserAttributeWithInt("intKey", 3, processingLegalBasis: PLYDataProcessingLegalBasis.essential);
-      Purchasely.setUserAttributeWithDouble("doubleKey", 1.2, processingLegalBasis: PLYDataProcessingLegalBasis.essential);
-      Purchasely.setUserAttributeWithBoolean("booleanKey", true, processingLegalBasis: PLYDataProcessingLegalBasis.essential);
-      Purchasely.setUserAttributeWithDate("dateKey", DateTime.now(), processingLegalBasis: PLYDataProcessingLegalBasis.essential);
+      Purchasely.setUserAttributeWithString("stringKey", "StringValue",
+          processingLegalBasis: PLYDataProcessingLegalBasis.essential);
+      Purchasely.setUserAttributeWithInt("intKey", 3,
+          processingLegalBasis: PLYDataProcessingLegalBasis.essential);
+      Purchasely.setUserAttributeWithDouble("doubleKey", 1.2,
+          processingLegalBasis: PLYDataProcessingLegalBasis.essential);
+      Purchasely.setUserAttributeWithBoolean("booleanKey", true,
+          processingLegalBasis: PLYDataProcessingLegalBasis.essential);
+      Purchasely.setUserAttributeWithDate("dateKey", DateTime.now(),
+          processingLegalBasis: PLYDataProcessingLegalBasis.essential);
 
       Purchasely.setUserAttributeWithStringArray(
           "stringArrayKey", ["StringValue", "test"]);
@@ -214,6 +220,10 @@ class _MyAppState extends State<MyApp> {
 
       manageDynamicOfferings();
 
+      if (kDebugMode) {
+        Purchasely.setDebugMode(true);
+      }
+
       Purchasely.setPaywallActionInterceptorCallback(
           (PaywallActionInterceptorResult result) {
         print('Received action from paywall');
@@ -223,7 +233,8 @@ class _MyAppState extends State<MyApp> {
           print('User wants to navigate');
           Purchasely.onProcessAction(true);
         } else if (result.action == PLYPaywallAction.close) {
-          print('User wants to close paywall - reason: ${result.parameters.closeReason}"');
+          print(
+              'User wants to close paywall - reason: ${result.parameters.closeReason}"');
           Purchasely.onProcessAction(true);
         } else if (result.action == PLYPaywallAction.login) {
           print('User wants to login');
@@ -244,7 +255,8 @@ class _MyAppState extends State<MyApp> {
           Purchasely.onProcessAction(true);
         } else if (result.action == PLYPaywallAction.web_checkout) {
           print('User wants to open web checkout');
-          print('webCheckoutProvider: ${result.parameters.webCheckoutProvider}');
+          print(
+              'webCheckoutProvider: ${result.parameters.webCheckoutProvider}');
           print('queryParameterKey: ${result.parameters.queryParameterKey}');
           print('clientReferenceId: ${result.parameters.clientReferenceId}');
           Purchasely.onProcessAction(true);

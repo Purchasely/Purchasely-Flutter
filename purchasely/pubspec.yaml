@@ -1,6 +1,6 @@
 name: purchasely_flutter
 description: Purchasely is a solution to ease the integration and boost your In-App Purchase & Subscriptions on the App Store, Google Play Store and Huawei App Gallery.
-version: 5.6.1
+version: 5.6.2
 homepage: https://www.purchasely.com/
 
 environment:
@@ -8,13 +8,13 @@ environment:
   flutter: ">=1.20.0"
 
 dependencies:
-  collection: ^1.19.0
+  collection: ^1.18.0
   flutter:
     sdk: flutter
 
 dev_dependencies:
-  #flutter_test:
-    #sdk: flutter
+  flutter_test:
+    sdk: flutter
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
