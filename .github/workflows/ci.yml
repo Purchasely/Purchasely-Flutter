@@ -140,10 +140,6 @@ jobs:
         working-directory: purchasely/example/ios
         run: pod install --repo-update
 
-      - name: Build iOS (Release - Simulator)
-        working-directory: purchasely/example
-        run: flutter build ios --release --simulator --no-codesign
-
       - name: Build iOS (Debug - Simulator)
         working-directory: purchasely/example
         run: flutter build ios --debug --simulator --no-codesign
