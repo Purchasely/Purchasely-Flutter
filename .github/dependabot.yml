@@ -1,0 +1,89 @@
+version: 2
+updates:
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    commit-message:
+      prefix: "ci"
+    labels:
+      - "dependencies"
+      - "github-actions"
+
+  # Pub (Dart/Flutter) - Main package
+  - package-ecosystem: "pub"
+    directory: "/purchasely"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    commit-message:
+      prefix: "deps"
+    labels:
+      - "dependencies"
+      - "dart"
+    ignore:
+      # Ignore major version updates to avoid breaking changes
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+
+  # Pub (Dart/Flutter) - Google package
+  - package-ecosystem: "pub"
+    directory: "/purchasely_google"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    commit-message:
+      prefix: "deps"
+    labels:
+      - "dependencies"
+      - "dart"
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+
+  # Pub (Dart/Flutter) - Android Player package
+  - package-ecosystem: "pub"
+    directory: "/purchasely_android_player"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    commit-message:
+      prefix: "deps"
+    labels:
+      - "dependencies"
+      - "dart"
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+
+  # Gradle (Android) - Main plugin
+  - package-ecosystem: "gradle"
+    directory: "/purchasely/android"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    commit-message:
+      prefix: "deps(android)"
+    labels:
+      - "dependencies"
+      - "android"
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+
+  # Gradle (Android) - Example app
+  - package-ecosystem: "gradle"
+    directory: "/purchasely/example/android"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    commit-message:
+      prefix: "deps(android)"
+    labels:
+      - "dependencies"
+      - "android"
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
