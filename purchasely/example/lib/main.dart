@@ -214,7 +214,9 @@ class _MyAppState extends State<MyApp> {
 
       manageDynamicOfferings();
 
-      Purchasely.setDebugMode(true);
+      if (kDebugMode) {
+        Purchasely.setDebugMode(true);
+      }
 
       Purchasely.setPaywallActionInterceptorCallback(
           (PaywallActionInterceptorResult result) {
