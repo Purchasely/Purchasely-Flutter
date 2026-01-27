@@ -1,4 +1,3 @@
-
 import 'purchasely_android_player_platform_interface.dart';
 
 class PurchaselyAndroidPlayer {

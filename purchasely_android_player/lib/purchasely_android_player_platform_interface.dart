@@ -8,13 +8,14 @@ abstract class PurchaselyAndroidPlayerPlatform extends PlatformInterface {
 
   static final Object _token = Object();
 
-  static PurchaselyAndroidPlayerPlatform _instance = MethodChannelPurchaselyAndroidPlayer();
+  static PurchaselyAndroidPlayerPlatform _instance =
+      MethodChannelPurchaselyAndroidPlayer();
 
   /// The default instance of [PurchaselyAndroidPlayerPlatform] to use.
   ///
   /// Defaults to [MethodChannelPurchaselyAndroidPlayer].
   static PurchaselyAndroidPlayerPlatform get instance => _instance;
-  
+
   /// Platform-specific implementations should set this with their own
   /// platform-specific class that extends [PurchaselyAndroidPlayerPlatform] when
   /// they register themselves.
