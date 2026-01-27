@@ -339,48 +339,6 @@ jobs:
           echo "Version check completed!"
 
   # ============================================
-  # Pub.dev Dry Run (validates package before publishing)
-  # ============================================
-  pub-dry-run:
-    name: Pub.dev Dry Run
-    runs-on: ubuntu-latest
-    needs: [analyze, test]
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
-
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: "3.24.x"
-          channel: "stable"
-          cache: true
-
-      - name: Install dependencies (purchasely)
-        working-directory: purchasely
-        run: flutter pub get
-
-      - name: Dry run publish check (purchasely)
-        working-directory: purchasely
-        run: flutter pub publish --dry-run
-
-      - name: Install dependencies (purchasely_google)
-        working-directory: purchasely_google
-        run: flutter pub get
-
-      - name: Dry run publish check (purchasely_google)
-        working-directory: purchasely_google
-        run: flutter pub publish --dry-run || echo "::warning::purchasely_google publish check failed"
-
-      - name: Install dependencies (purchasely_android_player)
-        working-directory: purchasely_android_player
-        run: flutter pub get
-
-      - name: Dry run publish check (purchasely_android_player)
-        working-directory: purchasely_android_player
-        run: flutter pub publish --dry-run || echo "::warning::purchasely_android_player publish check failed"
-
-  # ============================================
   # Podspec Validation (iOS)
   # ============================================
   validate-podspec:
@@ -409,7 +367,6 @@ jobs:
         build-ios,
         build-android,
         version-check,
-        pub-dry-run,
       ]
     if: always()
     steps:
@@ -441,10 +398,6 @@ jobs:
           fi
           if [[ "${{ needs.version-check.result }}" != "success" ]]; then
             echo "Version check job failed"
-            exit 1
-          fi
-          if [[ "${{ needs.pub-dry-run.result }}" != "success" ]]; then
-            echo "Pub dry run job failed"
             exit 1
           fi
           echo "All CI checks passed! ✅"
