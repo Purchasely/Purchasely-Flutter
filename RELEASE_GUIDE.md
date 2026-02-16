@@ -57,6 +57,24 @@ This script will automatically:
 - Add a changelog entry for the new version in all `CHANGELOG.md` files (if not already present)
 - Run `flutter pub publish --dry-run` to validate
 
+> **Note:** The `--dry-run` for `purchasely_google` will fail because it depends on `purchasely_flutter ^{VERSION}` which isn't published yet. This is expected.
+
+> **Known issues with publish.sh:**
+> - The changelog URL is hardcoded to `/changelog/56`. You must manually update it to match the version (e.g., `/changelog/57` for 5.7.0).
+> - The bridge version lines use tab indentation, but the codebase uses spaces. Fix the indentation in `SwiftPurchaselyFlutterPlugin.swift` and `PurchaselyFlutterPlugin.kt` after running the script.
+> - The changelog entries only contain the link. Add a brief package-specific summary of changes (see Step 1b).
+
+### Step 1b: Update Changelogs
+
+After running `publish.sh`, update each `CHANGELOG.md` with:
+1. The correct changelog URL for this version
+2. A brief summary of changes relevant to each package
+
+For example:
+- `purchasely/CHANGELOG.md`: mention iOS SDK, Android SDK, and bridge version updates
+- `purchasely_google/CHANGELOG.md`: mention Google Play SDK update only
+- `purchasely_android_player/CHANGELOG.md`: mention Player SDK update only
+
 
 ### Step 2: Update iOS SDK Version (if needed)
 
@@ -70,16 +88,26 @@ s.dependency 'Purchasely', '5.6.4'
 
 ### Step 3: Update Android SDK Version (if needed)
 
-If the Android Purchasely SDK version needs to be updated, edit the `build.gradle` file in **each package folder**:
+If the Android Purchasely SDK version needs to be updated, edit the `build.gradle` file in **each package folder** and the example app:
 
-**Files to update:**
+**Plugin files to update:**
+- `purchasely/android/build.gradle` — `io.purchasely:core`
+- `purchasely_google/android/build.gradle` — `io.purchasely:google-play`
+- `purchasely_android_player/android/build.gradle` — `io.purchasely:player`
+
+**Example app file to update:**
+- `purchasely/example/android/app/build.gradle` — `io.purchasely:google-play` and `io.purchasely:player`
+
+### Step 3b: Check Android minSdkVersion (if needed)
+
+When bumping the native Android SDK, check if the new version requires a higher `minSdkVersion`. If so, update it in **all** `build.gradle` files:
+
 - `purchasely/android/build.gradle`
 - `purchasely_google/android/build.gradle`
 - `purchasely_android_player/android/build.gradle`
+- `purchasely/example/android/app/build.gradle`
 
-```gradle
-implementation 'io.purchasely:purchasely:5.6.0'
-```
+> **Example:** `io.purchasely:core:5.7.0` raised the minimum from 21 to 23.
 
 ### Step 4: Update VERSIONS.md
 
@@ -181,9 +209,13 @@ git push origin v{VERSION}
 |------|----------------|
 | `VERSIONS.md` | Always - add new version row |
 | `purchasely/ios/purchasely_flutter.podspec` | When iOS SDK version changes |
-| `purchasely/android/build.gradle` | When Android SDK version changes |
-| `purchasely_google/android/build.gradle` | When Android SDK version changes |
-| `purchasely_android_player/android/build.gradle` | When Android SDK version changes |
+| `purchasely/android/build.gradle` | When Android SDK version changes (dependency + minSdkVersion) |
+| `purchasely_google/android/build.gradle` | When Android SDK version changes (dependency + minSdkVersion) |
+| `purchasely_android_player/android/build.gradle` | When Android SDK version changes (dependency + minSdkVersion) |
+| `purchasely/example/android/app/build.gradle` | When Android SDK version changes (google-play + player deps, minSdkVersion) |
+| All `CHANGELOG.md` files | Fix URL and add package-specific summaries after publish.sh |
+| `SwiftPurchaselyFlutterPlugin.swift` | Fix tab→space indentation after publish.sh |
+| `PurchaselyFlutterPlugin.kt` | Fix tab→space indentation after publish.sh |
 
 ---
 
@@ -225,8 +257,13 @@ flutter pub get
 
 ```
 □ Run: sh publish.sh {VERSION}
+□ Fix changelog URLs (publish.sh hardcodes /changelog/56)
+□ Add package-specific changelog summaries
+□ Fix tab→space indentation in SwiftPurchaselyFlutterPlugin.swift and PurchaselyFlutterPlugin.kt
 □ Update purchasely/ios/purchasely_flutter.podspec (iOS SDK version, if needed)
 □ Update all build.gradle files (Android SDK version, if needed)
+□ Update purchasely/example/android/app/build.gradle (Android SDK deps, if needed)
+□ Check Android minSdkVersion requirements (if Android SDK version changed)
 □ Update VERSIONS.md with new version row
 □ Run: flutter pub get && pod update (in example/ios)
 □ Run: flutter test && flutter analyze lib/
