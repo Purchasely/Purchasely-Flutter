@@ -42,12 +42,12 @@ android {
     }
 
     defaultConfig {
-        minSdkVersion 16
+        minSdkVersion 23
     }
 }
 
 dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
 
-    api 'io.purchasely:player:5.6.0'
+    api 'io.purchasely:player:5.7.0'
 }

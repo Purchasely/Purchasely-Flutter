@@ -33,6 +33,12 @@ jobs:
         working-directory: purchasely
         run: flutter pub get
 
+      - name: Override purchasely_flutter dependency to local path
+        run: |
+          echo "dependency_overrides:" > purchasely_google/pubspec_overrides.yaml
+          echo "  purchasely_flutter:" >> purchasely_google/pubspec_overrides.yaml
+          echo "    path: ../purchasely" >> purchasely_google/pubspec_overrides.yaml
+
       - name: Install dependencies (purchasely_google)
         working-directory: purchasely_google
         run: flutter pub get
@@ -89,6 +95,12 @@ jobs:
       - name: Run tests (purchasely)
         working-directory: purchasely
         run: flutter test --coverage || echo "No tests found, skipping..."
+
+      - name: Override purchasely_flutter dependency to local path
+        run: |
+          echo "dependency_overrides:" > purchasely_google/pubspec_overrides.yaml
+          echo "  purchasely_flutter:" >> purchasely_google/pubspec_overrides.yaml
+          echo "    path: ../purchasely" >> purchasely_google/pubspec_overrides.yaml
 
       - name: Install dependencies (purchasely_google)
         working-directory: purchasely_google

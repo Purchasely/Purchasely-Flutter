@@ -42,7 +42,7 @@ android {
     }
 
     defaultConfig {
-        minSdkVersion 21
+        minSdkVersion 23
     }
 
     testOptions {
@@ -58,7 +58,7 @@ dependencies {
 
     api 'androidx.lifecycle:lifecycle-runtime-ktx:2.4.0'
 
-    api 'io.purchasely:core:5.6.0'
+    api 'io.purchasely:core:5.7.0'
 
     // Test dependencies
     testImplementation 'junit:junit:4.13.2'
