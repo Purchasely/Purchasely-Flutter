@@ -1,4 +1,5 @@
 ## 5.7.0
+- Updated Android Purchasely Google Play SDK to 5.7.0.
 Full changelog available at https://docs.purchasely.com/changelog/57
 
 ## 5.6.2
