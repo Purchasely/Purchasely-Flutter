@@ -1,3 +1,6 @@
+## 5.7.0
+Full changelog available at https://docs.purchasely.com/changelog/57
+
 ## 5.6.2
 - Updated iOS Purchasely SDK to 5.6.4
 
