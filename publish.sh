@@ -25,9 +25,7 @@ update_changelog() {
 # Replace version number in yaml files
 sed -i '' "s/^.*version:.*$/version: ${VERSION}/" purchasely/pubspec.yaml
 sed -i '' "s/^.*version:.*$/version: ${VERSION}/" purchasely_google/pubspec.yaml
-sed -i '' "s/^.*purchasely_flutter:.*$/  purchasely_flutter: ^${VERSION}/" purchasely_google/pubspec.yaml
 sed -i '' "s/^.*version:.*$/version: ${VERSION}/" purchasely_android_player/pubspec.yaml
-sed -i '' "s/^.*purchasely_flutter:.*$/  purchasely_flutter: ^${VERSION}/" purchasely_android_player/pubspec.yaml
 
 # Replace version number in android plugin
 sed -i '' "s/^.*Purchasely.sdkBridgeVersion.*$/\t  Purchasely.sdkBridgeVersion = \"${VERSION}\"/" purchasely/android/src/main/kotlin/io/purchasely/purchasely_flutter/PurchaselyFlutterPlugin.kt
