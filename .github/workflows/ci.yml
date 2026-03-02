@@ -165,7 +165,7 @@ jobs:
         run: ./gradlew :purchasely_flutter:testDebugUnitTest --info
 
       - name: Upload test results (purchasely)
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: android-test-results-purchasely
@@ -217,7 +217,7 @@ jobs:
             | xcpretty --color --report junit --output test-results.xml || true
 
       - name: Upload test results
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: ios-test-results
