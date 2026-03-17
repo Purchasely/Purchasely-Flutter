@@ -11,6 +11,9 @@ on:
         type: boolean
         default: true
 
+permissions:
+  id-token: write
+
 jobs:
   # ============================================
   # Validate before publishing
@@ -86,11 +89,12 @@ jobs:
   # ============================================
   # Publish packages (sequentially, order matters)
   # ============================================
-  publish:
-    name: Publish packages
+  publish-purchasely:
+    name: Publish purchasely_flutter
     runs-on: ubuntu-latest
     needs: [validate]
     if: ${{ github.ref_type == 'tag' || (github.event_name == 'workflow_dispatch' && inputs.dry_run == false) }}
+    environment: pub.dev
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
@@ -102,31 +106,78 @@ jobs:
           channel: "stable"
           cache: true
 
-      - name: Setup pub.dev credentials
-        run: |
-          mkdir -p "$HOME/.config/dart"
-          echo '${{ secrets.PUB_CREDENTIALS }}' > "$HOME/.config/dart/pub-credentials.json"
-
-      - name: Install & publish purchasely_flutter
+      - name: Install dependencies
         working-directory: purchasely
-        run: |
-          flutter pub get
-          flutter pub publish --force
+        run: flutter pub get
+
+      - name: Publish to pub.dev
+        working-directory: purchasely
+        run: flutter pub publish --force
+
+  publish-google:
+    name: Publish purchasely_google
+    runs-on: ubuntu-latest
+    needs: [publish-purchasely]
+    environment: pub.dev
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.24.x"
+          channel: "stable"
+          cache: true
 
       - name: Wait for pub.dev indexing
         run: sleep 30
 
-      - name: Install & publish purchasely_google
+      - name: Install dependencies
         working-directory: purchasely_google
-        run: |
-          flutter pub get
-          flutter pub publish --force
+        run: flutter pub get
 
-      - name: Install & publish purchasely_android_player
+      - name: Publish to pub.dev
+        working-directory: purchasely_google
+        run: flutter pub publish --force
+
+  publish-player:
+    name: Publish purchasely_android_player
+    runs-on: ubuntu-latest
+    needs: [publish-purchasely]
+    environment: pub.dev
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.24.x"
+          channel: "stable"
+          cache: true
+
+      - name: Wait for pub.dev indexing
+        run: sleep 30
+
+      - name: Install dependencies
         working-directory: purchasely_android_player
-        run: |
-          flutter pub get
-          flutter pub publish --force
+        run: flutter pub get
+
+      - name: Publish to pub.dev
+        working-directory: purchasely_android_player
+        run: flutter pub publish --force
+
+  # ============================================
+  # Summary
+  # ============================================
+  summary:
+    name: Publish summary
+    runs-on: ubuntu-latest
+    needs: [publish-google, publish-player]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
 
       - name: Summary
         run: |
