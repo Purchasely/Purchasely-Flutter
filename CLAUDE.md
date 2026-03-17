@@ -124,3 +124,10 @@ See `RELEASE_GUIDE.md` for the complete release checklist. Key files updated dur
 - `VERSIONS.md` - Add new version row
 - `purchasely/ios/purchasely_flutter.podspec` - iOS SDK version
 - `purchasely/android/build.gradle`, `purchasely_google/android/build.gradle`, `purchasely_android_player/android/build.gradle` - Android SDK version
+
+**Publishing is automated via CI.** Pushing a tag `v{VERSION}` triggers the `publish.yml` GitHub Actions workflow, which publishes all 3 packages to pub.dev via OIDC. No local `dart pub login` or manual publish needed.
+
+## CI/CD
+
+- **CI** (`.github/workflows/ci.yml`): runs on PRs and pushes to main — analyze, format, tests (Dart + Android + iOS), builds, version consistency, podspec validation
+- **Publish** (`.github/workflows/publish.yml`): runs on tag push `v*` or manual dispatch — validates then publishes all 3 packages to pub.dev via OIDC (environment: `pub.dev`)

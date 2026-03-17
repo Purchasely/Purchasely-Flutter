@@ -1,0 +1,189 @@
+name: Publish to pub.dev
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Dry run (validate without publishing)"
+        type: boolean
+        default: true
+
+permissions:
+  id-token: write
+
+jobs:
+  # ============================================
+  # Validate before publishing
+  # ============================================
+  validate:
+    name: Validate packages
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.24.x"
+          channel: "stable"
+          cache: true
+
+      - name: Check version consistency
+        run: |
+          PURCHASELY_VERSION=$(grep '^version:' purchasely/pubspec.yaml | awk '{print $2}')
+          GOOGLE_VERSION=$(grep '^version:' purchasely_google/pubspec.yaml | awk '{print $2}')
+          PLAYER_VERSION=$(grep '^version:' purchasely_android_player/pubspec.yaml | awk '{print $2}')
+
+          echo "purchasely_flutter: $PURCHASELY_VERSION"
+          echo "purchasely_google: $GOOGLE_VERSION"
+          echo "purchasely_android_player: $PLAYER_VERSION"
+
+          if [[ "$PURCHASELY_VERSION" != "$GOOGLE_VERSION" ]] || [[ "$PURCHASELY_VERSION" != "$PLAYER_VERSION" ]]; then
+            echo "::error::Version mismatch across packages!"
+            exit 1
+          fi
+
+          # If triggered by tag, verify tag matches package version
+          if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
+            TAG_VERSION="${GITHUB_REF_NAME#v}"
+            if [[ "$TAG_VERSION" != "$PURCHASELY_VERSION" ]]; then
+              echo "::error::Tag version ($TAG_VERSION) does not match package version ($PURCHASELY_VERSION)"
+              exit 1
+            fi
+          fi
+
+      - name: Install dependencies (purchasely)
+        working-directory: purchasely
+        run: flutter pub get
+
+      - name: Dry run (purchasely)
+        working-directory: purchasely
+        run: flutter pub publish --dry-run
+
+      - name: Override purchasely_flutter dependency
+        run: |
+          echo "dependency_overrides:" > purchasely_google/pubspec_overrides.yaml
+          echo "  purchasely_flutter:" >> purchasely_google/pubspec_overrides.yaml
+          echo "    path: ../purchasely" >> purchasely_google/pubspec_overrides.yaml
+
+      - name: Install dependencies (purchasely_google)
+        working-directory: purchasely_google
+        run: flutter pub get
+
+      - name: Dry run (purchasely_google)
+        working-directory: purchasely_google
+        run: flutter pub publish --dry-run || echo "::warning::purchasely_google dry-run failed (expected if purchasely_flutter not yet published)"
+
+      - name: Install dependencies (purchasely_android_player)
+        working-directory: purchasely_android_player
+        run: flutter pub get
+
+      - name: Dry run (purchasely_android_player)
+        working-directory: purchasely_android_player
+        run: flutter pub publish --dry-run || echo "::warning::purchasely_android_player dry-run failed (expected if purchasely_flutter not yet published)"
+
+  # ============================================
+  # Publish packages (sequentially, order matters)
+  # ============================================
+  publish-purchasely:
+    name: Publish purchasely_flutter
+    runs-on: ubuntu-latest
+    needs: [validate]
+    if: ${{ github.ref_type == 'tag' || (github.event_name == 'workflow_dispatch' && inputs.dry_run == false) }}
+    environment: pub.dev
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.24.x"
+          channel: "stable"
+          cache: true
+
+      - name: Install dependencies
+        working-directory: purchasely
+        run: flutter pub get
+
+      - name: Publish to pub.dev
+        working-directory: purchasely
+        run: flutter pub publish --force
+
+  publish-google:
+    name: Publish purchasely_google
+    runs-on: ubuntu-latest
+    needs: [publish-purchasely]
+    environment: pub.dev
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.24.x"
+          channel: "stable"
+          cache: true
+
+      - name: Wait for pub.dev indexing
+        run: sleep 30
+
+      - name: Install dependencies
+        working-directory: purchasely_google
+        run: flutter pub get
+
+      - name: Publish to pub.dev
+        working-directory: purchasely_google
+        run: flutter pub publish --force
+
+  publish-player:
+    name: Publish purchasely_android_player
+    runs-on: ubuntu-latest
+    needs: [publish-purchasely]
+    environment: pub.dev
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.24.x"
+          channel: "stable"
+          cache: true
+
+      - name: Wait for pub.dev indexing
+        run: sleep 30
+
+      - name: Install dependencies
+        working-directory: purchasely_android_player
+        run: flutter pub get
+
+      - name: Publish to pub.dev
+        working-directory: purchasely_android_player
+        run: flutter pub publish --force
+
+  # ============================================
+  # Summary
+  # ============================================
+  summary:
+    name: Publish summary
+    runs-on: ubuntu-latest
+    needs: [publish-google, publish-player]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Summary
+        run: |
+          VERSION=$(grep '^version:' purchasely/pubspec.yaml | awk '{print $2}')
+          echo "## Published packages :rocket:" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "- [purchasely_flutter $VERSION](https://pub.dev/packages/purchasely_flutter/versions/$VERSION)" >> "$GITHUB_STEP_SUMMARY"
+          echo "- [purchasely_google $VERSION](https://pub.dev/packages/purchasely_google/versions/$VERSION)" >> "$GITHUB_STEP_SUMMARY"
+          echo "- [purchasely_android_player $VERSION](https://pub.dev/packages/purchasely_android_player/versions/$VERSION)" >> "$GITHUB_STEP_SUMMARY"
