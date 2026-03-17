@@ -1,3 +1,9 @@
+## 5.7.2
+- Updated iOS Purchasely SDK to 5.7.2.
+- Updated Android Purchasely Core SDK to 5.7.3.
+- Updated bridge version to 5.7.2.
+Full changelog available at https://docs.purchasely.com/changelog/57
+
 ## 5.7.1
 - Updated iOS Purchasely SDK to 5.7.1.
 - Updated Android Purchasely Core SDK to 5.7.1.
