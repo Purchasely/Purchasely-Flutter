@@ -33,6 +33,8 @@ Before starting a release, ensure you have:
 - [ ] Xcode installed (for iOS builds and CocoaPods)
 - [ ] Android Studio installed (for Android builds)
 - [ ] CocoaPods installed (`gem install cocoapods`)
+- [ ] The `pub.dev` GitHub environment exists (Settings → Environments)
+- [ ] Automated publishing is enabled on pub.dev for all 3 packages (Admin → Automated publishing)
 
 ---
 
@@ -162,22 +164,12 @@ git push -u origin version/{VERSION}
 
 Create a PR against `main` and wait for CI to pass.
 
-### Step 9: Publish
+### Step 9: Merge and Tag
 
-Once CI passes and the PR is approved, publish by running:
-
-```bash
-sh publish.sh {VERSION} true
-```
-
-This will publish all three packages to pub.dev.
-
-### Step 10: Merge and Tag
-
-After publishing:
+Once CI passes and the PR is approved:
 
 1. Merge the PR to `main`
-2. Create a release tag:
+2. Pull main and create a release tag:
 
 ```bash
 git checkout main
@@ -185,6 +177,27 @@ git pull origin main
 git tag -a v{VERSION} -m "Release {VERSION}"
 git push origin v{VERSION}
 ```
+
+### Step 10: Automated Publish (CI)
+
+Pushing the tag automatically triggers the **Publish to pub.dev** GitHub Actions workflow (`.github/workflows/publish.yml`), which:
+
+1. Validates version consistency across all 3 packages
+2. Verifies the tag matches the version in `pubspec.yaml`
+3. Publishes `purchasely_flutter` first, then `purchasely_google` and `purchasely_android_player` in parallel
+4. Authentication is handled via **OIDC** (no secrets or tokens needed)
+
+Monitor the workflow at: https://github.com/Purchasely/Purchasely-Flutter/actions/workflows/publish.yml
+
+> **Manual publish:** You can also trigger the workflow manually from the Actions tab (uncheck "dry run" to actually publish).
+
+> **Fallback (local publish):** If CI publish fails, you can still publish locally:
+> ```bash
+> dart pub login  # authenticate with pub.dev
+> cd purchasely && flutter pub publish --force
+> cd ../purchasely_google && flutter pub publish --force
+> cd ../purchasely_android_player && flutter pub publish --force
+> ```
 
 ---
 
@@ -247,9 +260,11 @@ flutter pub get
 
 ### Publish fails
 
-- Ensure you're logged in: `flutter pub login`
-- Check package score: `flutter pub publish --dry-run`
-- Verify all dependencies are published first
+- Check the workflow logs at https://github.com/Purchasely/Purchasely-Flutter/actions/workflows/publish.yml
+- Ensure automated publishing is enabled on pub.dev for all 3 packages (Admin → Automated publishing → GitHub Actions enabled)
+- Ensure the `pub.dev` GitHub environment exists (Settings → Environments)
+- Verify the tag version matches the version in `pubspec.yaml`
+- For local fallback: `dart pub login` then `flutter pub publish --force` in each package directory
 
 ---
 
@@ -269,8 +284,11 @@ flutter pub get
 □ Run: flutter test && flutter analyze lib/
 □ Commit, push, create PR
 □ Wait for CI to pass
-□ Run: sh publish.sh {VERSION} true
-□ Merge PR and create git tag
+□ Merge PR to main
+□ Create and push tag: git tag -a v{VERSION} -m "Release {VERSION}" && git push origin v{VERSION}
+□ Create GitHub release with native SDK release notes
+□ Verify publish workflow completes at Actions → Publish to pub.dev
+□ Verify packages on pub.dev
 ```
 
 ---
