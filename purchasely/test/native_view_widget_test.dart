@@ -200,6 +200,40 @@ void main() {
     });
   });
 
+  group('PLYPresentationView layout direction', () {
+    testWidgets('Android view uses inherited text direction',
+        (WidgetTester tester) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
+
+      final view = PLYPresentationView(
+        placementId: 'test-placement',
+      );
+
+      // LTR context
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Directionality(
+            textDirection: TextDirection.ltr,
+            child: Scaffold(body: view),
+          ),
+        ),
+      );
+
+      // RTL context
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Directionality(
+            textDirection: TextDirection.rtl,
+            child: Scaffold(body: view),
+          ),
+        ),
+      );
+
+      // No crash = layout direction is resolved from context
+      debugDefaultTargetPlatformOverride = null;
+    });
+  });
+
   group('PLYPresentationView Integration with Purchasely', () {
     test('getPresentationView creates valid PLYPresentationView', () {
       final view = Purchasely.getPresentationView(

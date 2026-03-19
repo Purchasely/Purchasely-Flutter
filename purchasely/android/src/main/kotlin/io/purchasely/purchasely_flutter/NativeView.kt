@@ -24,7 +24,9 @@ internal class NativeView(
 
     override fun getView(): View = layout
 
-    override fun dispose() {}
+    override fun dispose() {
+        (layout as ViewGroup).removeAllViews()
+    }
 
     init {
         layout = FrameLayout(context)
@@ -76,7 +78,7 @@ internal class NativeView(
                     )
                 }
             )
-            Log.e("Purchasely", "Presentation built successfully.")
+            Log.d("Purchasely", "Presentation view created from fallback.")
 
             layout.addView(presentationView)
         }
