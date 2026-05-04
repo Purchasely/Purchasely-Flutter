@@ -98,7 +98,8 @@ jobs:
     if: ${{ github.ref_type == 'tag' || (github.event_name == 'workflow_dispatch' && inputs.dry_run == false) }}
     permissions:
       id-token: write
-    uses: dart-lang/setup-dart/.github/workflows/publish.yml@v1
+      contents: read
+    uses: dart-lang/setup-dart/.github/workflows/publish.yml@65eb853c7ba17dde3be364c3d2858773e7144260 # v1
     with:
       environment: pub.dev
       working-directory: purchasely
@@ -107,6 +108,7 @@ jobs:
     name: Wait for pub.dev indexing
     runs-on: ubuntu-latest
     needs: [publish-purchasely]
+    if: ${{ github.ref_type == 'tag' || (github.event_name == 'workflow_dispatch' && inputs.dry_run == false) }}
     steps:
       - run: sleep 30
 
@@ -115,7 +117,8 @@ jobs:
     needs: [wait-after-purchasely]
     permissions:
       id-token: write
-    uses: dart-lang/setup-dart/.github/workflows/publish.yml@v1
+      contents: read
+    uses: dart-lang/setup-dart/.github/workflows/publish.yml@65eb853c7ba17dde3be364c3d2858773e7144260 # v1
     with:
       environment: pub.dev
       working-directory: purchasely_google
@@ -125,7 +128,8 @@ jobs:
     needs: [wait-after-purchasely]
     permissions:
       id-token: write
-    uses: dart-lang/setup-dart/.github/workflows/publish.yml@v1
+      contents: read
+    uses: dart-lang/setup-dart/.github/workflows/publish.yml@65eb853c7ba17dde3be364c3d2858773e7144260 # v1
     with:
       environment: pub.dev
       working-directory: purchasely_android_player
