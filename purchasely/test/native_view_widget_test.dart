@@ -200,6 +200,74 @@ void main() {
     });
   });
 
+  group('PLYPresentationView layout direction', () {
+    testWidgets('Android view uses inherited text direction',
+        (WidgetTester tester) async {
+      final previousPlatform = debugDefaultTargetPlatformOverride;
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
+      try {
+        final view = PLYPresentationView(
+          placementId: 'test-placement',
+        );
+
+        // LTR context
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Directionality(
+              textDirection: TextDirection.ltr,
+              child: Scaffold(body: view),
+            ),
+          ),
+        );
+
+        expect(
+          tester.widget<AndroidView>(find.byType(AndroidView)).layoutDirection,
+          TextDirection.ltr,
+        );
+
+        // RTL context
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Directionality(
+              textDirection: TextDirection.rtl,
+              child: Scaffold(body: view),
+            ),
+          ),
+        );
+
+        expect(
+          tester.widget<AndroidView>(find.byType(AndroidView)).layoutDirection,
+          TextDirection.rtl,
+        );
+      } finally {
+        debugDefaultTargetPlatformOverride = previousPlatform;
+      }
+    });
+
+    testWidgets('Android view falls back to LTR without Directionality',
+        (WidgetTester tester) async {
+      final previousPlatform = debugDefaultTargetPlatformOverride;
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
+      try {
+        final view = PLYPresentationView(placementId: 'test-placement');
+
+        await tester.pumpWidget(
+          Directionality(
+            textDirection: TextDirection.ltr,
+            child: view,
+          ),
+        );
+
+        expect(
+          tester.widget<AndroidView>(find.byType(AndroidView)).layoutDirection,
+          TextDirection.ltr,
+        );
+      } finally {
+        debugDefaultTargetPlatformOverride = previousPlatform;
+      }
+    });
+  });
+
   group('PLYPresentationView Integration with Purchasely', () {
     test('getPresentationView creates valid PLYPresentationView', () {
       final view = Purchasely.getPresentationView(

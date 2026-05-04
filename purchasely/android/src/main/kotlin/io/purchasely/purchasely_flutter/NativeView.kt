@@ -11,7 +11,6 @@ import io.purchasely.ext.PLYProductViewResult
 import io.purchasely.ext.Purchasely
 import io.purchasely.models.PLYPresentationPlan
 import io.purchasely.models.PLYPlan
-import android.view.ViewGroup
 
 internal class NativeView(
     context: Context,
@@ -24,7 +23,9 @@ internal class NativeView(
 
     override fun getView(): View = layout
 
-    override fun dispose() {}
+    override fun dispose() {
+        layout.removeAllViews()
+    }
 
     init {
         layout = FrameLayout(context)
@@ -76,14 +77,14 @@ internal class NativeView(
                     )
                 }
             )
-            Log.e("Purchasely", "Presentation built successfully.")
+            Log.d("Purchasely", "Presentation view created from fallback.")
 
             layout.addView(presentationView)
         }
     }
 
     private fun closeCallback() {
-        (layout as ViewGroup).removeAllViews()
+        layout.removeAllViews()
     }
 
     companion object {

@@ -33,10 +33,9 @@ class PLYPresentationView extends StatelessWidget {
 
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
-        print('TargetPlatform = ANDROID');
         return AndroidView(
           viewType: viewType,
-          layoutDirection: TextDirection.ltr,
+          layoutDirection: Directionality.maybeOf(context) ?? TextDirection.ltr,
           creationParams: creationParams,
           creationParamsCodec: const StandardMessageCodec(),
           onPlatformViewCreated: (int id) {
@@ -53,7 +52,6 @@ class PLYPresentationView extends StatelessWidget {
           },
         );
       case TargetPlatform.iOS:
-        print('TargetPlatform = iOS');
         return SafeArea(
           // Wrap UiKitView with SafeArea
           child: UiKitView(
