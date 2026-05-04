@@ -1,6 +1,6 @@
 name: purchasely_google
 description: Purchasely Google Play Billing dependency for Android
-version: 5.7.2
+version: 5.7.3
 homepage: https://www.purchasely.com/
 
 environment:
