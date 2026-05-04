@@ -114,7 +114,10 @@ jobs:
 
   publish-google:
     name: Publish purchasely_google
-    needs: [wait-after-purchasely]
+    # TEMP: decoupled from publish-purchasely chain to allow republishing
+    # purchasely_google after a single-package failure (5.7.3 release).
+    # Will be reverted right after.
+    needs: [validate]
     permissions:
       id-token: write
       contents: read
