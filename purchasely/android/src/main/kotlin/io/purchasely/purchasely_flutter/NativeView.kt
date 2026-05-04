@@ -11,7 +11,6 @@ import io.purchasely.ext.PLYProductViewResult
 import io.purchasely.ext.Purchasely
 import io.purchasely.models.PLYPresentationPlan
 import io.purchasely.models.PLYPlan
-import android.view.ViewGroup
 
 internal class NativeView(
     context: Context,
@@ -25,7 +24,7 @@ internal class NativeView(
     override fun getView(): View = layout
 
     override fun dispose() {
-        (layout as ViewGroup).removeAllViews()
+        layout.removeAllViews()
     }
 
     init {
@@ -85,7 +84,7 @@ internal class NativeView(
     }
 
     private fun closeCallback() {
-        (layout as ViewGroup).removeAllViews()
+        layout.removeAllViews()
     }
 
     companion object {

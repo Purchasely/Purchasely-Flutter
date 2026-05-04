@@ -24,15 +24,15 @@ class NativeView: NSObject, FlutterPlatformView {
             childView.frame = _containerView.bounds
             childView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
             _containerView.addSubview(childView)
-            _containerView.controller = controller
 
             // Attach the controller to the nearest parent VC for proper lifecycle
-            if let rootVC = UIApplication.shared.delegate?.window??.rootViewController {
+            if let rootVC = NativeView.findRootViewController() {
                 rootVC.addChild(controller)
                 controller.didMove(toParent: rootVC)
             }
         }
 
+        UIDevice.current.beginGeneratingDeviceOrientationNotifications()
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(orientationDidChange),
@@ -48,7 +48,7 @@ class NativeView: NSObject, FlutterPlatformView {
             guard let self = self else { return }
             let newSize = self._containerView.bounds.size
             controller.view.frame = self._containerView.bounds
-            controller.viewWillTransition(to: newSize, with: NoAnimationTransitionCoordinator())
+            controller.viewWillTransition(to: newSize, with: NoAnimationTransitionCoordinator(containerView: self._containerView))
             controller.view.setNeedsLayout()
             controller.view.layoutIfNeeded()
             // Also force all subviews deep in the hierarchy to relayout
@@ -68,18 +68,38 @@ class NativeView: NSObject, FlutterPlatformView {
         return _containerView
     }
 
+    /// Locates the host view controller, preferring the active scene's key window
+    /// (iOS 13+ multi-scene apps) and falling back to the app delegate's window.
+    private static func findRootViewController() -> UIViewController? {
+        if let windowScene = UIApplication.shared.connectedScenes
+            .first(where: { $0.activationState == .foregroundActive }) as? UIWindowScene,
+           let rootVC = windowScene.windows.first(where: { $0.isKeyWindow })?.rootViewController {
+            return rootVC
+        }
+        return UIApplication.shared.delegate?.window??.rootViewController
+    }
+
+    private func cleanupController() {
+        guard let controller = _controller else { return }
+        if controller.parent != nil {
+            controller.willMove(toParent: nil)
+            controller.removeFromParent()
+        }
+        if controller.view.superview != nil {
+            controller.view.removeFromSuperview()
+        }
+        _controller = nil
+    }
+
     deinit {
         NotificationCenter.default.removeObserver(self)
-        _controller?.willMove(toParent: nil)
-        _controller?.view.removeFromSuperview()
-        _controller?.removeFromParent()
+        UIDevice.current.endGeneratingDeviceOrientationNotifications()
+        cleanupController()
     }
 }
 
 /// Container view that forces child layout on bounds changes (e.g. rotation).
 private class NativeContainerView: UIView {
-    weak var controller: UIViewController?
-
     override func layoutSubviews() {
         super.layoutSubviews()
         for child in subviews {
@@ -92,8 +112,16 @@ private class NativeContainerView: UIView {
     }
 }
 
-/// Minimal transition coordinator to pass to viewWillTransition(to:with:)
+/// Minimal transition coordinator to pass to viewWillTransition(to:with:).
+/// Holds a stable container view per `UIViewControllerTransitionCoordinatorContext`'s contract.
 private class NoAnimationTransitionCoordinator: NSObject, UIViewControllerTransitionCoordinator {
+    private let _containerView: UIView
+
+    init(containerView: UIView) {
+        self._containerView = containerView
+        super.init()
+    }
+
     var isAnimated: Bool { false }
     var presentationStyle: UIModalPresentationStyle { .none }
     var initiallyInteractive: Bool { false }
@@ -105,7 +133,7 @@ private class NoAnimationTransitionCoordinator: NSObject, UIViewControllerTransi
     var completionVelocity: CGFloat { 0 }
     var completionCurve: UIView.AnimationCurve { .linear }
     var targetTransform: CGAffineTransform { .identity }
-    var containerView: UIView { UIView() }
+    var containerView: UIView { _containerView }
 
     func viewController(forKey key: UITransitionContextViewControllerKey) -> UIViewController? { nil }
     func view(forKey key: UITransitionContextViewKey) -> UIView? { nil }
@@ -142,9 +170,7 @@ extension NativeView: PLYEventDelegate {
     func eventTriggered(_ event: PLYEvent, properties: [String : Any]?) {
         if event == .presentationClosed {
             DispatchQueue.main.async { [weak self] in
-                self?._controller?.willMove(toParent: nil)
-                self?._controller?.view.removeFromSuperview()
-                self?._controller?.removeFromParent()
+                self?.cleanupController()
             }
         }
     }

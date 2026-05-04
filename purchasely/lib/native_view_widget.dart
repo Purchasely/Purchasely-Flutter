@@ -35,7 +35,7 @@ class PLYPresentationView extends StatelessWidget {
       case TargetPlatform.android:
         return AndroidView(
           viewType: viewType,
-          layoutDirection: Directionality.of(context),
+          layoutDirection: Directionality.maybeOf(context) ?? TextDirection.ltr,
           creationParams: creationParams,
           creationParamsCodec: const StandardMessageCodec(),
           onPlatformViewCreated: (int id) {
