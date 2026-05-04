@@ -89,84 +89,46 @@ jobs:
   # ============================================
   # Publish packages (sequentially, order matters)
   # ============================================
+  # Uses dart-lang/setup-dart reusable workflow which performs the OIDC
+  # token exchange with pub.dev automatically. The package admin must
+  # have configured "Automated publishing" on pub.dev for this to work.
   publish-purchasely:
     name: Publish purchasely_flutter
-    runs-on: ubuntu-latest
     needs: [validate]
     if: ${{ github.ref_type == 'tag' || (github.event_name == 'workflow_dispatch' && inputs.dry_run == false) }}
-    environment: pub.dev
+    permissions:
+      id-token: write
+    uses: dart-lang/setup-dart/.github/workflows/publish.yml@v1
+    with:
+      environment: pub.dev
+      working-directory: purchasely
+
+  wait-after-purchasely:
+    name: Wait for pub.dev indexing
+    runs-on: ubuntu-latest
+    needs: [publish-purchasely]
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
-
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: "3.24.x"
-          channel: "stable"
-          cache: true
-
-      - name: Install dependencies
-        working-directory: purchasely
-        run: flutter pub get
-
-      - name: Publish to pub.dev
-        working-directory: purchasely
-        run: flutter pub publish --force
+      - run: sleep 30
 
   publish-google:
     name: Publish purchasely_google
-    runs-on: ubuntu-latest
-    needs: [publish-purchasely]
-    environment: pub.dev
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
-
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: "3.24.x"
-          channel: "stable"
-          cache: true
-
-      - name: Wait for pub.dev indexing
-        run: sleep 30
-
-      - name: Install dependencies
-        working-directory: purchasely_google
-        run: flutter pub get
-
-      - name: Publish to pub.dev
-        working-directory: purchasely_google
-        run: flutter pub publish --force
+    needs: [wait-after-purchasely]
+    permissions:
+      id-token: write
+    uses: dart-lang/setup-dart/.github/workflows/publish.yml@v1
+    with:
+      environment: pub.dev
+      working-directory: purchasely_google
 
   publish-player:
     name: Publish purchasely_android_player
-    runs-on: ubuntu-latest
-    needs: [publish-purchasely]
-    environment: pub.dev
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
-
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: "3.24.x"
-          channel: "stable"
-          cache: true
-
-      - name: Wait for pub.dev indexing
-        run: sleep 30
-
-      - name: Install dependencies
-        working-directory: purchasely_android_player
-        run: flutter pub get
-
-      - name: Publish to pub.dev
-        working-directory: purchasely_android_player
-        run: flutter pub publish --force
+    needs: [wait-after-purchasely]
+    permissions:
+      id-token: write
+    uses: dart-lang/setup-dart/.github/workflows/publish.yml@v1
+    with:
+      environment: pub.dev
+      working-directory: purchasely_android_player
 
   # ============================================
   # Summary
