@@ -1,7 +1,34 @@
 ## 5.7.3
-- Updated iOS Purchasely SDK to 5.7.4.
-- Updated Android Purchasely Core SDK to 5.7.4.
-- Updated bridge version to 5.7.3.
+
+### Native SDK updates
+- **iOS SDK:** 5.7.2 → 5.7.4
+- **Android SDK:** 5.7.3 → 5.7.4
+- Bridge version updated to 5.7.3.
+
+### Flutter
+- **Native view rotation fix (iOS)** — resolved nested view content loss after device rotation on `PLYPaywallView` (#110).
+- Added publish workflow to automate releases to pub.dev (#109).
+
+### Bug fixes (iOS)
+- **Paywall completion on user-initiated dismissal** — completion is now consistently delivered when the user dismisses a paywall by swiping the modal sheet, tapping the drawer/popin overlay, or dragging the sheet down. Previously the host app could remain stuck in a loading state.
+- **`closeAll` action on standalone drawer/popin** — now correctly dismisses paywalls displayed as a standalone drawer or popin (outside of a flow).
+- **Pending purchases preserved in observer modes** — in `observer` mode, the SDK no longer finishes pending StoreKit transactions, leaving them under the host app's control.
+- **Flow UI no longer collapses after back navigation** — fixed a layout collapse when toggling a conditional switch after navigating back in a multi-step flow.
+- **Conditional components stability** — fixed cases where conditional components could disappear during simultaneous tap and device rotation, or render inconsistently when bound to multiple audience selections.
+- **Introductory offer eligibility** — users with an active subscription in a given group are no longer considered eligible for an introductory offer in that same group.
+- **Promo-code redemption tracking** — restored correct attribution of paywall presentations following a promo-code redemption.
+- **Selected media on paywalls** — `*_selected_url` images, Lottie animations, and videos now display correctly even when no dedicated `styles.selected` block is defined.
+- **Page control state** — non-default styles are now reapplied after trait changes (e.g. light/dark mode).
+- **Stability** — fixed a UIKit rendering crash.
+
+### Bug fixes (Android)
+- **Anonymous → identified user transfer in PaywallObserver mode** — purchases made before login are now correctly carried over to the user account on `userLogin()`. Previously, receipts reported through `synchronize()` did not flag the user as having purchased, so the transfer step was skipped.
+- **Screen re-render crash** — fixed `IllegalStateException: The specified child already has a parent` that could be thrown when a screen was rebuilt in rapid succession (orientation changes, repeated rendering).
+- **Modal/Drawer flow crash** — fixed an `IllegalStateException` raised when the modal or drawer from a Flow state changed after the host fragment had been detached (e.g. fast back-press or activity teardown).
+
+### Improvements
+- Improved internal concurrency handling in the eligibility flow (iOS).
+
 Full changelog available at https://docs.purchasely.com/changelog/57
 
 ## 5.7.2
