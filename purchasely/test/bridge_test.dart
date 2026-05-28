@@ -179,5 +179,139 @@ void main() {
       expect((args['transition'] as Map)['type'], 'modal');
       expect((args['transition'] as Map)['dismissible'], false);
     });
+
+    test('display() outcome carries 5 fields including closeReason (P0.2)',
+        () async {
+      final request = PresentationBuilder.placement('home').build();
+      await request.preload();
+      calls.clear();
+
+      // ignore: unawaited_futures
+      final futureOutcome = request.display(const Transition.modal());
+      await Future<void>.delayed(Duration.zero);
+
+      await emitEvent(<String, Object?>{
+        'event': 'onDismissed',
+        'requestId': request.requestId,
+        'outcome': <String, Object?>{
+          'purchaseResult': 'purchased',
+          'closeReason': 'button',
+          'plan': <String, Object?>{'vendorId': 'monthly'},
+        },
+      });
+
+      final outcome = await futureOutcome;
+      expect(outcome.purchaseResult, PurchaseResult.purchased);
+      expect(outcome.closeReason, CloseReason.button);
+      expect(outcome.error, isNull);
+      expect(outcome.plan, isNotNull);
+      expect(outcome.presentation, isNotNull);
+    });
+
+    test('display() outcome carries error and null closeReason on failure',
+        () async {
+      final request = PresentationBuilder.placement('home').build();
+      await request.preload();
+      calls.clear();
+
+      // ignore: unawaited_futures
+      final futureOutcome = request.display(const Transition.modal());
+      await Future<void>.delayed(Duration.zero);
+
+      await emitEvent(<String, Object?>{
+        'event': 'onDismissed',
+        'requestId': request.requestId,
+        'outcome': <String, Object?>{
+          'error': <String, Object?>{
+            'code': 'NETWORK',
+            'message': 'offline',
+          },
+        },
+      });
+
+      final outcome = await futureOutcome;
+      expect(outcome.error, isNotNull);
+      expect(outcome.error!.message, 'offline');
+      // P0.2 mutual exclusion: error ⇒ closeReason null
+      expect(outcome.closeReason, isNull);
+    });
+
+    test('onCloseRequested fires the builder callback', () async {
+      var fired = false;
+      final request = PresentationBuilder.placement('home').onCloseRequested(() {
+        fired = true;
+      }).build();
+
+      // ignore: unawaited_futures
+      request.preload();
+      await Future<void>.delayed(Duration.zero);
+
+      await emitEvent(<String, Object?>{
+        'event': 'onCloseRequested',
+        'requestId': request.requestId,
+      });
+
+      expect(fired, true);
+    });
+
+    test('interceptor lifecycle: register → trigger → resolve', () async {
+      InterceptorInfo? capturedInfo;
+      ActionPayload? capturedPayload;
+      await PurchaselyV6Bridge.ensureInstalled().registerInterceptor(
+        PresentationActionKind.purchase,
+        (info, payload) async {
+          capturedInfo = info;
+          capturedPayload = payload;
+          return InterceptResult.success;
+        },
+      );
+
+      // The register call must have hit the MethodChannel.
+      final registerCall =
+          calls.firstWhere((c) => c.method == 'v6/registerInterceptor');
+      expect((registerCall.arguments as Map)['kind'], 'purchase');
+
+      // Fire a triggered event from "native".
+      await emitEvent(<String, Object?>{
+        'event': 'interceptorTriggered',
+        'requestId': 'cb-1',
+        'kind': 'purchase',
+        'info': <String, Object?>{'contentId': 'c1'},
+        'payload': <String, Object?>{
+          'plan': <String, Object?>{'vendorId': 'monthly'},
+        },
+      });
+
+      // Let the async handler run.
+      await Future<void>.delayed(Duration.zero);
+      await Future<void>.delayed(Duration.zero);
+
+      expect(capturedInfo, isNotNull);
+      expect(capturedInfo!.contentId, 'c1');
+      expect(capturedPayload, isA<PurchasePayload>());
+
+      // The bridge must have posted the result back via interceptorResolve.
+      final resolveCall =
+          calls.firstWhere((c) => c.method == 'v6/interceptorResolve');
+      final args = resolveCall.arguments as Map;
+      expect(args['invocationId'], 'cb-1');
+      expect(args['result'], 'success');
+    });
+
+    test('removeInterceptor unregisters the kind on the native side',
+        () async {
+      await PurchaselyV6Bridge.ensureInstalled().registerInterceptor(
+        PresentationActionKind.login,
+        (_, __) async => InterceptResult.success,
+      );
+      calls.clear();
+
+      await PurchaselyV6Bridge.ensureInstalled()
+          .removeInterceptor(PresentationActionKind.login);
+
+      final removeCall =
+          calls.firstWhere((c) => c.method == 'v6/removeInterceptor');
+      expect((removeCall.arguments as Map)['kind'], 'login');
+    });
   });
 }
