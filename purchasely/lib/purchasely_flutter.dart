@@ -5,6 +5,26 @@ import 'package:flutter/services.dart';
 
 import 'native_view_widget.dart';
 
+// --- Purchasely SDK v6 cross-platform façade ---
+//
+// The new v6 API is exposed from `lib/src/` and re-exported here so callers
+// can `import 'package:purchasely_flutter/purchasely_flutter.dart';` and get
+// both the legacy v5 surface (the `Purchasely` static class below) and the
+// new v6 builder-based API (`PurchaselyBuilder`, `PresentationBuilder`,
+// `Presentation`, `PresentationOutcome`, `Transition`, ActionInterceptor…).
+//
+// During the migration the two surfaces co-exist. The v6 builder enums are
+// named `V6RunningMode` / `V6LogLevel` so they don't clash with the legacy v5
+// `PLYRunningMode` (4 values) / `PLYLogLevel` (4 values) enums exported by
+// the static `Purchasely` class below.
+export 'src/action_interceptor.dart';
+export 'src/presentation.dart';
+export 'src/presentation_builder.dart';
+export 'src/presentation_outcome.dart';
+export 'src/presentation_request.dart';
+export 'src/purchasely_builder.dart';
+export 'src/transition.dart';
+
 class Purchasely {
   static const MethodChannel _channel = const MethodChannel('purchasely');
   static const EventChannel _stream = EventChannel('purchasely-events');

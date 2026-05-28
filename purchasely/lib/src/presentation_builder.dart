@@ -21,7 +21,7 @@ import 'request_id.dart';
 ///     .display(const Transition.modal());
 /// ```
 class PresentationBuilder {
-  PresentationSource _source;
+  final PresentationSource _source;
   String? _contentId;
   String? _backgroundColorHex;
   String? _progressColorHex;

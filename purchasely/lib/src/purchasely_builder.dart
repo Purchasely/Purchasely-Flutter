@@ -4,13 +4,18 @@ import 'dart:async';
 
 import 'package:flutter/services.dart';
 
-/// Running mode for the SDK.
+/// Running mode for the SDK (v6).
 ///
-/// Default in v6 is [PLYRunningMode.observer] (was `full` in v5).
-enum PLYRunningMode { observer, full }
+/// Default in v6 is [V6RunningMode.observer] (was `full` in v5).
+/// Named differently from the legacy v5 [V6RunningMode] (4 values) to avoid
+/// an ambiguous re-export at the package boundary.
+enum V6RunningMode { observer, full }
 
-/// Log level for the SDK.
-enum PLYLogLevel { debug, info, warn, error }
+/// Log level for the SDK (v6).
+///
+/// Renamed from `V6LogLevel` to avoid an ambiguous re-export with the legacy
+/// v5 enum of the same name (same values, but kept distinct for clarity).
+enum V6LogLevel { debug, info, warn, error }
 
 /// Storekit transaction handling on iOS.
 enum StorekitVersion { storeKit1, storeKit2 }
@@ -24,8 +29,8 @@ enum PLYStore { google, huawei, amazon }
 class PurchaselyBuilder {
   final String _apiKey;
   String? _appUserId;
-  PLYRunningMode _runningMode;
-  PLYLogLevel _logLevel;
+  V6RunningMode _runningMode;
+  V6LogLevel _logLevel;
   bool? _allowDeeplink;
   bool _allowCampaigns;
   // Android only
@@ -35,8 +40,8 @@ class PurchaselyBuilder {
 
   PurchaselyBuilder._(this._apiKey,
       {String? appUserId,
-      PLYRunningMode runningMode = PLYRunningMode.observer,
-      PLYLogLevel logLevel = PLYLogLevel.error,
+      V6RunningMode runningMode = V6RunningMode.observer,
+      V6LogLevel logLevel = V6LogLevel.error,
       bool? allowDeeplink,
       bool allowCampaigns = true,
       List<PLYStore> stores = const [PLYStore.google],
@@ -58,12 +63,12 @@ class PurchaselyBuilder {
     return this;
   }
 
-  PurchaselyBuilder runningMode(PLYRunningMode mode) {
+  PurchaselyBuilder runningMode(V6RunningMode mode) {
     _runningMode = mode;
     return this;
   }
 
-  PurchaselyBuilder logLevel(PLYLogLevel level) {
+  PurchaselyBuilder logLevel(V6LogLevel level) {
     _logLevel = level;
     return this;
   }
