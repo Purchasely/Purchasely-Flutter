@@ -7,6 +7,7 @@ import 'dart:io';
 import 'package:purchasely_flutter/purchasely_flutter.dart';
 
 import 'presentation_screen.dart';
+import 'v6_demo_screen.dart';
 
 void main() {
   runApp(const MyApp());
@@ -533,6 +534,23 @@ class _MyAppState extends State<MyApp> {
             child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
+            // v6 façade demo — start, display, interceptor, enriched outcome.
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.only(left: 20.0, right: 30.0),
+                backgroundColor: Colors.indigo,
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () {
+                final navigator = navigatorKey.currentState;
+                navigator?.push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const V6DemoScreen(),
+                  ),
+                );
+              },
+              child: const Text('Open v6 demo'),
+            ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.only(left: 20.0, right: 30.0),
