@@ -236,6 +236,38 @@ void main() {
       expect(outcome.closeReason, isNull);
     });
 
+    test('re-display() after dismiss resolves the second future', () async {
+      // Regression: after a dismiss the request entry is dropped, so a second
+      // display() on the same Presentation handle must re-register the entry —
+      // otherwise its dismiss completer is never stored and the future hangs.
+      final request = PresentationBuilder.placement('home').build();
+      final presentation = await request.preload();
+      calls.clear();
+
+      // First display → dismiss.
+      // ignore: unawaited_futures
+      final firstOutcome = presentation.display(const Transition.modal());
+      await Future<void>.delayed(Duration.zero);
+      await emitEvent(<String, Object?>{
+        'event': 'onDismissed',
+        'requestId': presentation.requestId,
+        'outcome': <String, Object?>{'purchaseResult': 'cancelled'},
+      });
+      expect((await firstOutcome).purchaseResult, PurchaseResult.cancelled);
+
+      // Second display on the same handle → dismiss. The future must complete.
+      // ignore: unawaited_futures
+      final secondOutcome = presentation.display(const Transition.modal());
+      await Future<void>.delayed(Duration.zero);
+      expect(calls.where((c) => c.method == 'v6/display'), hasLength(2));
+      await emitEvent(<String, Object?>{
+        'event': 'onDismissed',
+        'requestId': presentation.requestId,
+        'outcome': <String, Object?>{'purchaseResult': 'purchased'},
+      });
+      expect((await secondOutcome).purchaseResult, PurchaseResult.purchased);
+    });
+
     test('onCloseRequested fires the builder callback', () async {
       var fired = false;
       final request = PresentationBuilder.placement('home').onCloseRequested(() {

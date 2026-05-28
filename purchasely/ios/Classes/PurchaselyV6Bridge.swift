@@ -209,7 +209,7 @@ final class PurchaselyV6Bridge {
             self?.events.emit([
                 "event": "onDismissed",
                 "requestId": requestId,
-                "outcome": self?.outcomeToMap(outcome, presentation: presentation, error: nil) as Any?,
+                "outcome": self?.outcomeToMap(outcome, presentation: presentation, error: nil, requestId: requestId) as Any?,
             ])
         }
 
@@ -282,7 +282,8 @@ final class PurchaselyV6Bridge {
                 let outcome = self.outcomeToMap(
                     PLYPresentationOutcome(purchaseResult: .none, plan: nil),
                     presentation: nil,
-                    error: error
+                    error: error,
+                    requestId: requestId
                 )
                 self.events.emit([
                     "event": "onDismissed",
@@ -404,7 +405,8 @@ final class PurchaselyV6Bridge {
 
     private func outcomeToMap(_ outcome: PLYPresentationOutcome,
                               presentation: PLYPresentation?,
-                              error: Error?) -> [String: Any?] {
+                              error: Error?,
+                              requestId: String) -> [String: Any?] {
         let purchaseResult: String? = {
             switch outcome.purchaseResult {
             case .purchased: return "purchased"
@@ -424,7 +426,7 @@ final class PurchaselyV6Bridge {
         }
 
         return [
-            "presentation": presentation.map { presentationToMap($0, requestId: "") } as Any?,
+            "presentation": presentation.map { presentationToMap($0, requestId: requestId) } as Any?,
             "purchaseResult": purchaseResult,
             "plan": planMap as Any?,
             // BRIDGE-CONTRACT P0.2 — iOS SDK doesn't surface closeReason yet.

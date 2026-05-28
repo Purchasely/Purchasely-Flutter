@@ -178,14 +178,18 @@ class PurchaselyV6Bridge {
     Presentation presentation,
     Transition? transition,
   ) async {
-    final entry = _entries[presentation.requestId];
     // For a presentation that originated from a preload, the request is
-    // already registered; the previous display completer (if any) was wired
-    // by the request-level call. Re-displaying re-uses the same requestId.
+    // already registered. After a prior dismiss the entry was dropped by
+    // `_handleOnDismissed`, so a re-display() must re-register it (keyed by the
+    // same requestId) from the presentation handle — otherwise the dismiss
+    // completer would have nowhere to live and the returned future would hang.
+    final entry = _entries.putIfAbsent(
+      presentation.requestId,
+      () => _RequestEntry(null, presentation: presentation),
+    );
+    entry.presentation = presentation;
     final completer = Completer<PresentationOutcome>();
-    if (entry != null) {
-      entry.dismissCompleter = completer;
-    }
+    entry.dismissCompleter = completer;
     try {
       await _method.invokeMethod<dynamic>(
         'v6/display',
@@ -197,6 +201,11 @@ class PurchaselyV6Bridge {
     } on PlatformException catch (e) {
       final err = PresentationError(
           code: e.code, message: e.message, details: e.details);
+      // The native side rejected the display synchronously: clear the pending
+      // dismiss completer and drop the entry so a stray onDismissed can't
+      // double-complete, then surface the error on the Future.
+      entry.dismissCompleter = null;
+      _entries.remove(presentation.requestId);
       if (!completer.isCompleted) {
         completer.complete(PresentationOutcome(
           presentation: presentation,
@@ -287,19 +296,22 @@ class PurchaselyV6Bridge {
   void _handleOnLoaded(String? requestId, Map<dynamic, dynamic> envelope) {
     if (requestId == null) return;
     final entry = _entries[requestId];
-    if (entry == null) return;
+    // onLoaded only fires for the preload path, where the entry still carries
+    // the originating request.
+    final request = entry?.request;
+    if (request == null) return;
     final error = _errorFromMap(envelope['error']);
     final pMap = envelope['presentation'];
     Presentation? presentation;
     if (pMap is Map) {
-      presentation = _presentationFromRaw(pMap, entry.request);
-      entry.presentation = presentation;
+      presentation = _presentationFromRaw(pMap, request);
+      entry!.presentation = presentation;
     }
     if (presentation != null) {
-      entry.request.onLoaded?.call(presentation, error);
+      request.onLoaded?.call(presentation, error);
     } else if (error != null) {
       // Surface load failures via onPresented(null, error) per BRIDGE-CONTRACT P0.4.
-      entry.request.onPresented?.call(null, error);
+      request.onPresented?.call(null, error);
     }
   }
 
@@ -308,8 +320,12 @@ class PurchaselyV6Bridge {
     final entry = _entries[requestId];
     if (entry == null) return;
     final pMap = envelope['presentation'];
-    final presentation = pMap is Map
-        ? _presentationFromRaw(pMap, entry.request)
+    final request = entry.request;
+    // Re-parse only when we still have the originating request (preload path);
+    // on a re-display the entry has no request, so reuse the existing handle
+    // which already carries the host's (possibly reassigned) callbacks.
+    final presentation = (pMap is Map && request != null)
+        ? _presentationFromRaw(pMap, request)
         : entry.presentation;
     if (presentation != null) {
       entry.presentation = presentation;
@@ -317,7 +333,7 @@ class PurchaselyV6Bridge {
     final error = _errorFromMap(envelope['error']);
     // Fire the presentation-level handler first (mutable, may have been reassigned),
     // then fall back to the request-level handler if the presentation didn't override.
-    final handler = presentation?.onPresented ?? entry.request.onPresented;
+    final handler = presentation?.onPresented ?? request?.onPresented;
     handler?.call(presentation, error);
   }
 
@@ -326,7 +342,7 @@ class PurchaselyV6Bridge {
     final entry = _entries[requestId];
     if (entry == null) return;
     final handler =
-        entry.presentation?.onCloseRequested ?? entry.request.onCloseRequested;
+        entry.presentation?.onCloseRequested ?? entry.request?.onCloseRequested;
     handler?.call();
   }
 
@@ -337,7 +353,7 @@ class PurchaselyV6Bridge {
     final outcome =
         _outcomeFromMap(envelope['outcome'], fallback: entry.presentation);
     final handler =
-        entry.presentation?.onDismissed ?? entry.request.onDismissed;
+        entry.presentation?.onDismissed ?? entry.request?.onDismissed;
     handler?.call(outcome);
     final completer = entry.dismissCompleter;
     entry.dismissCompleter = null;
@@ -444,8 +460,12 @@ class PurchaselyV6Bridge {
 // --- Per-request bookkeeping ----------------------------------------------
 
 class _RequestEntry {
-  _RequestEntry(this.request);
-  final PresentationRequest request;
+  _RequestEntry(this.request, {this.presentation});
+
+  /// The originating request. Null when the entry was (re-)created from a
+  /// [Presentation] handle on a re-display, after the original request entry
+  /// was dropped by [PurchaselyV6Bridge._handleOnDismissed].
+  final PresentationRequest? request;
   Presentation? presentation;
   Completer<PresentationOutcome>? dismissCompleter;
 }

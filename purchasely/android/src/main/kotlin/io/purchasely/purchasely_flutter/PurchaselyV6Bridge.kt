@@ -18,7 +18,6 @@ import io.purchasely.ext.presentation.PLYPresentationAction
 import io.purchasely.ext.presentation.PLYPresentationBase
 import io.purchasely.ext.presentation.PLYPresentationOutcome
 import io.purchasely.ext.presentation.preload
-import io.purchasely.models.PLYError
 import io.purchasely.views.presentation.models.PLYTransition
 import io.purchasely.views.presentation.models.PLYTransitionType
 import java.util.concurrent.ConcurrentHashMap
@@ -277,14 +276,9 @@ internal class PurchaselyV6Bridge(
     }
 
     private fun v6Close(args: Map<String, Any?>?, result: MethodChannel.Result) {
-        val requestId = args?.get("requestId") as? String
-        if (requestId != null) {
-            // Per-request close — fall through to global closeAllScreens since
-            // the SDK doesn't expose per-presentation programmatic close.
-            Purchasely.closeAllScreens()
-        } else {
-            Purchasely.closeAllScreens()
-        }
+        // The v6 Android SDK does not expose per-presentation programmatic close;
+        // close all screens regardless of whether a requestId was provided.
+        Purchasely.closeAllScreens()
         result.success(true)
     }
 
@@ -412,12 +406,6 @@ internal class PurchaselyV6Bridge(
     }
 
     private fun errorToMap(error: Throwable): Map<String, Any?> {
-        if (error is PLYError) {
-            return mapOf(
-                "code" to error.javaClass.simpleName,
-                "message" to error.message,
-            )
-        }
         return mapOf(
             "code" to error.javaClass.simpleName,
             "message" to error.message,
