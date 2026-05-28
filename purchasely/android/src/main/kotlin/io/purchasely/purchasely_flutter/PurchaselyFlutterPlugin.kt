@@ -50,9 +50,14 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
     private lateinit var eventChannel: EventChannel
     private lateinit var purchaseChannel: EventChannel
     private lateinit var userAttributeChannel: EventChannel
+    private lateinit var v6EventChannel: EventChannel
 
     private lateinit var context: Context
     private var activity: Activity? = null
+
+    // v6 bridge — handles `v6/*` MethodChannel calls and emits lifecycle/interceptor
+    // events on the `purchasely/v6-events` EventChannel.
+    private var v6Bridge: PurchaselyV6Bridge? = null
 
     override fun onDetachedFromEngine(@NonNull binding: FlutterPlugin.FlutterPluginBinding) {
         channel.setMethodCallHandler(null)
@@ -152,9 +157,26 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
         flutterPluginBinding
             .platformViewRegistry
             .registerViewFactory(NativeViewFactory.VIEW_TYPE_ID, NativeViewFactory(flutterPluginBinding.binaryMessenger))
+
+        // --- v6 bridge ---
+        v6EventChannel = EventChannel(flutterPluginBinding.binaryMessenger, "purchasely/v6-events")
+        val bridge = PurchaselyV6Bridge(
+            context = context,
+            activitySupplier = { activity },
+            coroutineScope = this,
+        )
+        bridge.attachEventChannel(v6EventChannel)
+        v6Bridge = bridge
     }
 
     override fun onMethodCall(@NonNull call: MethodCall, @NonNull result: Result) {
+        // v6 bridge gets first dispatch — handles every method whose name is
+        // prefixed with "v6/". Returns false otherwise so the legacy v5 surface
+        // below keeps handling everything else.
+        @Suppress("UNCHECKED_CAST")
+        val v6Args = (call.arguments as? Map<String, Any?>)
+        if (v6Bridge?.handle(call.method, v6Args, result) == true) return
+
         when(call.method) {
             "start" -> {
                 call.argument<String>("apiKey")?.let { apiKey ->
@@ -499,9 +521,9 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
             .stores(getStoresInstances(stores))
             .logLevel(LogLevel.values()[logLevel])
             .runningMode(when(runningMode) {
+                // v6 SDK collapses transaction-only / paywall-observer onto Observer.
                 0 -> PLYRunningMode.Full
-                1 -> PLYRunningMode.PaywallObserver
-                2 -> PLYRunningMode.PaywallObserver
+                1, 2 -> PLYRunningMode.Observer
                 else -> PLYRunningMode.Full
             })
             .userId(userId)
@@ -510,11 +532,12 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
         Purchasely.sdkBridgeVersion = "5.7.3"
         Purchasely.appTechnology = PLYAppTechnology.FLUTTER
 
-        Purchasely.start { isConfigured, error ->
-            if(isConfigured) {
+        // v6 SDK uses a single-arg callback `(PLYError?) -> Unit`
+        Purchasely.start { error ->
+            if (error == null) {
                 result.safeSuccess(true)
             } else {
-                result.safeError("0", error?.message ?: "Purchasely SDK not configured", error)
+                result.safeError("0", error.message ?: "Purchasely SDK not configured", error)
             }
         }
     }
