@@ -21,7 +21,11 @@ Flutter Plugin for Purchasely SDK
   s.pod_target_xcconfig = { 'DEFINES_MODULE' => 'YES', 'EXCLUDED_ARCHS[sdk=iphonesimulator*]' => 'i386' }
   s.swift_version = '5.0'
 
-  s.dependency 'Purchasely', '5.7.4'
+  # Pinned to the v6 line — the Flutter v6 bridge (PurchaselyV6Bridge.swift)
+  # depends on the v6 builder DSL (Purchasely.apiKey(...).start),
+  # PLYPresentationBuilder, PLYPresentationRequest, and the new
+  # interceptAction(_:handler:) overload.
+  s.dependency 'Purchasely', '6.0.0'
   s.static_framework = true
 
 end

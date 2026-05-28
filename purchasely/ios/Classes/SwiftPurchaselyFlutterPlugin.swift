@@ -18,6 +18,12 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
     let userAttributesChannel: FlutterEventChannel
     let userAttributesHandler: UserAttributesHandler
 
+    // v6 bridge — handles `v6/*` MethodChannel calls and emits lifecycle/interceptor
+    // events on the `purchasely/v6-events` EventChannel.
+    let v6EventChannel: FlutterEventChannel
+    let v6EventHandler: PurchaselyV6EventHandler
+    let v6Bridge: PurchaselyV6Bridge
+
     var presentedPresentationViewController: UIViewController?
 
     var onProcessActionHandler: ((Bool) -> Void)?
@@ -38,6 +44,12 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
         self.userAttributesHandler = UserAttributesHandler()
         self.userAttributesChannel.setStreamHandler(self.userAttributesHandler)
 
+        self.v6EventChannel = FlutterEventChannel(name: "purchasely/v6-events",
+                                                  binaryMessenger: registrar.messenger())
+        self.v6EventHandler = PurchaselyV6EventHandler()
+        self.v6EventChannel.setStreamHandler(self.v6EventHandler)
+        self.v6Bridge = PurchaselyV6Bridge(events: self.v6EventHandler)
+
         super.init()
     }
 
@@ -54,6 +66,12 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
 
     public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         let arguments = call.arguments as? [String: Any]
+        // v6 bridge gets first dispatch — handles every method prefixed with
+        // "v6/". Returns false otherwise so the legacy v5 switch below keeps
+        // handling everything else.
+        if v6Bridge.handle(call.method, arguments: arguments, result: result) {
+            return
+        }
         switch call.method {
         case "start":
             start(arguments: call.arguments as? [String: Any], result: result)
