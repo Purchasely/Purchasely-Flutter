@@ -1,3 +1,34 @@
+## 6.0.0-beta.0
+
+- **New cross-platform v6 API**. Adds a builder-based fluent API matching the
+  iOS and Android v6 SDKs:
+  - `PurchaselyBuilder.apiKey(...).runningMode(...).logLevel(...).start()`
+  - `PresentationBuilder.placement(id) / .screen(id) / .defaultSource()` →
+    `.contentId(...).onLoaded(...).onPresented(...).onCloseRequested(...).onDismissed(...).build()`
+  - `PresentationRequest.preload()` / `.display(transition)` — `display()`
+    resolves at **dismiss time** with the enriched 5-field `PresentationOutcome`
+    (`presentation`, `purchaseResult`, `plan`, `closeReason`, `error`).
+  - `Purchasely.interceptAction(PresentationActionKind, handler)` — typed
+    action interceptors with `InterceptResult.success` / `.failed` /
+    `.notHandled`.
+- **Bridge contract (see `BRIDGE-CONTRACT.md`).** iOS workarounds:
+  - `onCloseRequested` is synthesised from iOS `onClose`.
+  - Enriched 5-field outcome synthesised from the 2-field iOS native outcome;
+    `closeReason` is `null` until the native fix lands.
+  - `display(...)` Future resolves at the `onDismissed` event, not at the
+    SDK's display completion handler.
+  - Error completions synthesise `onPresented(null, error)` + a dismissal
+    outcome so Dart callbacks fire uniformly across platforms.
+- **Native SDK bump.**
+  - iOS: `Purchasely 6.0.0` (was 5.7.4).
+  - Android: `io.purchasely:core 6.0.0` (was 5.7.4).
+- **Breaking — running mode default.** The native v6 SDKs default to Observer
+  mode (was Full in v5). The v6 builder mirrors this; legacy callers passing
+  `PLYRunningMode.full` are unchanged.
+- The legacy v5 `Purchasely.*` static surface remains available during the
+  6.x beta line for incremental migration. New code should adopt the v6
+  builders.
+
 ## 5.7.3
 - Updated iOS Purchasely SDK to 5.7.4.
 - Updated Android Purchasely Core SDK to 5.7.4.
