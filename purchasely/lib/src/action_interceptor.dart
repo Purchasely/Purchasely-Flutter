@@ -105,9 +105,8 @@ class InterceptorInfo {
     final presentationMap = map['presentation'];
     return InterceptorInfo(
       contentId: map['contentId'] as String?,
-      presentation: presentationMap is Map
-          ? Presentation.fromMap(presentationMap)
-          : null,
+      presentation:
+          presentationMap is Map ? Presentation.fromMap(presentationMap) : null,
     );
   }
 }
@@ -193,8 +192,8 @@ class _EmptyPayload extends ActionPayload {
 }
 
 /// Parse an action payload sent by the bridge.
-ActionPayload? actionPayloadFromMap(PresentationActionKind kind,
-    Map<dynamic, dynamic>? rawParameters) {
+ActionPayload? actionPayloadFromMap(
+    PresentationActionKind kind, Map<dynamic, dynamic>? rawParameters) {
   final parameters = rawParameters ?? const {};
 
   Map<String, dynamic>? _stringMap(Object? value) {
@@ -234,8 +233,8 @@ ActionPayload? actionPayloadFromMap(PresentationActionKind kind,
       if (id == null) return null;
       return OpenPresentationPayload(presentationId: id);
     case PresentationActionKind.openPlacement:
-      final id = (parameters['placementId'] ?? parameters['placement'])
-          as String?;
+      final id =
+          (parameters['placementId'] ?? parameters['placement']) as String?;
       if (id == null) return null;
       return OpenPlacementPayload(placementId: id);
     case PresentationActionKind.webCheckout:
