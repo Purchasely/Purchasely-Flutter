@@ -4,6 +4,8 @@ import 'dart:async';
 
 import 'package:flutter/services.dart';
 
+import 'bridge.dart';
+
 /// Running mode for the SDK (v6).
 ///
 /// Default in v6 is [V6RunningMode.observer] (was `full` in v5).
@@ -101,6 +103,9 @@ class PurchaselyBuilder {
   /// Start the SDK. Resolves to `true` once configured, throws a
   /// [PlatformException] otherwise.
   Future<bool> start() async {
+    // Wire the v6 dispatcher (idempotent) so subsequent PresentationBuilder /
+    // PresentationRequest calls have a live channel to talk to.
+    PurchaselyV6Bridge.ensureInstalled();
     const channel = MethodChannel('purchasely');
     final result = await channel.invokeMethod<bool>(
       'v6/start',

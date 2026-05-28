@@ -18,6 +18,7 @@ import 'native_view_widget.dart';
 // `PLYRunningMode` (4 values) / `PLYLogLevel` (4 values) enums exported by
 // the static `Purchasely` class below.
 export 'src/action_interceptor.dart';
+export 'src/bridge.dart' show PurchaselyV6Bridge;
 export 'src/presentation.dart';
 export 'src/presentation_builder.dart';
 export 'src/presentation_outcome.dart';

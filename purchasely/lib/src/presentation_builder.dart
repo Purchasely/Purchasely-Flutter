@@ -1,5 +1,6 @@
 // Purchasely SDK v6 — Fluent builder for `PresentationRequest`.
 
+import 'bridge.dart';
 import 'presentation.dart';
 import 'presentation_outcome.dart';
 import 'presentation_request.dart';
@@ -108,6 +109,9 @@ class PresentationBuilder {
   /// Build the immutable [PresentationRequest]. A stable [requestId] is
   /// generated for the bridge to route events back.
   PresentationRequest build() {
+    // Lazy install of the v6 dispatcher so any v6 entry point initialises it,
+    // not just PurchaselyBuilder.start().
+    PurchaselyV6Bridge.ensureInstalled();
     return PresentationRequest(
       requestId: nextRequestId(),
       source: _source,
