@@ -36,8 +36,7 @@ class _V6DemoScreenState extends State<V6DemoScreen> {
       )
           .runningMode(V6RunningMode.observer)
           .logLevel(V6LogLevel.debug)
-          .stores([PLYStore.google])
-          .start();
+          .stores([PLYStore.google]).start();
       setState(() => _status = 'Started: $ok');
     } catch (e) {
       setState(() => _status = 'Start failed: $e');
@@ -52,8 +51,7 @@ class _V6DemoScreenState extends State<V6DemoScreen> {
     });
 
     try {
-      final outcome = await PresentationBuilder
-          .placement('onboarding')
+      final outcome = await PresentationBuilder.placement('onboarding')
           .contentId('demo-content-42')
           .onLoaded((presentation, error) {
             debugPrint(
@@ -157,8 +155,7 @@ class _V6DemoScreenState extends State<V6DemoScreen> {
               ],
             ),
             const SizedBox(height: 16),
-            Text(_status,
-                style: const TextStyle(fontWeight: FontWeight.w500)),
+            Text(_status, style: const TextStyle(fontWeight: FontWeight.w500)),
             const SizedBox(height: 16),
             if (_lastOutcome != null) _outcomeCard(_lastOutcome!),
             if (_lastError != null) _errorCard(_lastError!),

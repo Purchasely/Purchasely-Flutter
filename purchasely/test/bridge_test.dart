@@ -270,7 +270,8 @@ void main() {
 
     test('onCloseRequested fires the builder callback', () async {
       var fired = false;
-      final request = PresentationBuilder.placement('home').onCloseRequested(() {
+      final request =
+          PresentationBuilder.placement('home').onCloseRequested(() {
         fired = true;
       }).build();
 
@@ -330,8 +331,7 @@ void main() {
       expect(args['result'], 'success');
     });
 
-    test('removeInterceptor unregisters the kind on the native side',
-        () async {
+    test('removeInterceptor unregisters the kind on the native side', () async {
       await PurchaselyV6Bridge.ensureInstalled().registerInterceptor(
         PresentationActionKind.login,
         (_, __) async => InterceptResult.success,
