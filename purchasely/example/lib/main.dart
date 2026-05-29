@@ -1,13 +1,20 @@
-import 'package:flutter/foundation.dart';
+// Purchasely Flutter example app — v6 API.
+//
+// Demonstrates the canonical v6 flow:
+//   1. Initialise the SDK via `PurchaselyBuilder.apiKey(...).start()`.
+//   2. Showcase a few "kept-v5" helpers that still live on the static
+//      `Purchasely` class (user login, a user attribute, restore).
+//   3. Navigate to `V6DemoScreen` to display a paywall via
+//      `PresentationBuilder` and register a v6 action interceptor.
+
 import 'package:flutter/material.dart';
-import 'dart:async';
-import 'dart:developer';
-import 'dart:io';
 
 import 'package:purchasely_flutter/purchasely_flutter.dart';
 
-import 'presentation_screen.dart';
 import 'v6_demo_screen.dart';
+
+/// Placeholder API key — replace with your own from the Purchasely console.
+const String _apiKey = 'fcb39be4-2ba4-4db7-bde3-2a5a1e20745d';
 
 void main() {
   runApp(const MyApp());
@@ -17,11 +24,12 @@ class MyApp extends StatefulWidget {
   const MyApp({Key? key}) : super(key: key);
 
   @override
-  _MyAppState createState() => _MyAppState();
+  State<MyApp> createState() => _MyAppState();
 }
 
 class _MyAppState extends State<MyApp> {
   final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+  String _status = 'Initialising…';
 
   @override
   void initState() {
@@ -32,494 +40,50 @@ class _MyAppState extends State<MyApp> {
   // Platform messages are asynchronous, so we initialize in an async method.
   Future<void> initPurchaselySdk() async {
     try {
-      Purchasely.readyToOpenDeeplink(true);
-
-      /*Purchasely.listenToEvents((event) {
-        print('Flutter Event : ${event.name}');
-        print('Event properties : ${event.properties.event_name}');
-        print(
-            'Event property displayed_options: ${event.properties.displayed_options}');
-        print(
-            'Event property selected_option_id: ${event.properties.selected_option_id}');
-        print(
-            'Event property selected_options: ${event.properties.selected_options}');
-        inspect(event);
-      });*/
-
-      bool configured = await Purchasely.start(
-          apiKey: 'fcb39be4-2ba4-4db7-bde3-2a5a1e20745d',
-          androidStores: ['Google'],
-          storeKit1: true,
-          logLevel: PLYLogLevel.debug);
-
-      // Default values
-      /*bool configured = await Purchasely.start(
-        apiKey: 'fcb39be4-2ba4-4db7-bde3-2a5a1e20745d',
-        androidStores: ['Google'],
-        storeKit1: false,
-        logLevel: PLYLogLevel.error,
-        runningMode: PLYRunningMode.full,
-        userId: null,
-      );*/
+      // v6 initialisation via the fluent builder.
+      final bool configured = await PurchaselyBuilder.apiKey(_apiKey)
+          .runningMode(V6RunningMode.full)
+          .logLevel(V6LogLevel.debug)
+          .stores([PLYStore.google]).start();
 
       if (!configured) {
-        print('Purchasely SDK not configured');
+        _setStatus('Purchasely SDK not configured');
         return;
       }
 
-      Purchasely.readyToOpenDeeplink(true);
-      Purchasely.setLogLevel(PLYLogLevel.debug);
+      // Kept-v5 helpers — these still live on the static `Purchasely` class
+      // and remain usable after a v6 init.
+      await Purchasely.userLogin('MY_USER_ID');
+      await Purchasely.setUserAttributeWithString('favorite_color', 'blue');
+      await Purchasely.setLanguage('en');
 
-      Purchasely.setUserAttributeListener(MyUserAttributeListener());
-
-      Purchasely.userLogin("MY_USER_ID");
-
-      Purchasely.setAttribute(
-          PLYAttribute.firebase_app_instance_id, "firebaseAppInstanceId");
-      Purchasely.setAttribute(
-          PLYAttribute.airship_channel_id, "airshipChannelId");
-      Purchasely.setAttribute(PLYAttribute.airship_user_id, "airshipUserId");
-      Purchasely.setAttribute(
-          PLYAttribute.batch_installation_id, "batchInstallationId");
-      Purchasely.setAttribute(PLYAttribute.adjust_id, "adjustUserId");
-      Purchasely.setAttribute(PLYAttribute.appsflyer_id, "appsflyerId");
-      Purchasely.setAttribute(
-          PLYAttribute.mixpanel_distinct_id, "mixpanelDistinctId");
-      Purchasely.setAttribute(PLYAttribute.clever_tap_id, "cleverTapId");
-      Purchasely.setAttribute(
-          PLYAttribute.sendinblueUserEmail, "sendinblueUserEmail");
-      Purchasely.setAttribute(
-          PLYAttribute.iterableUserEmail, "iterableUserEmail");
-      Purchasely.setAttribute(PLYAttribute.iterableUserId, "iterableUserId");
-      Purchasely.setAttribute(
-          PLYAttribute.atInternetIdClient, "atInternetIdClient");
-      Purchasely.setAttribute(PLYAttribute.mParticleUserId, "mParticleUserId");
-      Purchasely.setAttribute(
-          PLYAttribute.customerioUserId, "customerioUserId");
-      Purchasely.setAttribute(
-          PLYAttribute.customerioUserEmail, "customerioUserEmail");
-      Purchasely.setAttribute(PLYAttribute.branchUserDeveloperIdentity,
-          "branchUserDeveloperIdentity");
-      Purchasely.setAttribute(PLYAttribute.amplitudeUserId, "amplitudeUserId");
-      Purchasely.setAttribute(
-          PLYAttribute.amplitudeDeviceId, "amplitudeDeviceId");
-      Purchasely.setAttribute(
-          PLYAttribute.moengageUniqueId, "moengageUniqueId");
-      Purchasely.setAttribute(
-          PLYAttribute.oneSignalExternalId, "oneSignalExternalId");
-      Purchasely.setAttribute(
-          PLYAttribute.batchCustomUserId, "batchCustomUserId");
-
-      Purchasely.setLanguage("en");
-
-      String anonymousId = await Purchasely.anonymousUserId;
-      print('Anonymous Id : $anonymousId');
-
-      bool isAnonymous = await Purchasely.isAnonymous();
-      print('is Anonymous ? : $isAnonymous');
-
-      bool isEligible =
-          await Purchasely.isEligibleForIntroOffer('PURCHASELY_PLUS_YEARLY');
-      print('is eligible ? : $isEligible');
-
-      try {
-        List<PLYSubscription> subscriptions =
-            await Purchasely.userSubscriptions();
-        print(' ==> Active Subscriptions');
-        if (subscriptions.isNotEmpty) {
-          print(subscriptions.first.plan);
-          print(subscriptions.first.subscriptionSource);
-          print(subscriptions.first.nextRenewalDate);
-          print(subscriptions.first.cancelledDate);
-        }
-      } catch (e) {
-        print(e);
-      }
-
-      try {
-        List<PLYSubscription> expiredSubscriptions =
-            await Purchasely.userSubscriptionsHistory();
-        print(' ==> Expired Subscriptions');
-        if (expiredSubscriptions.isNotEmpty) {
-          print(expiredSubscriptions.first.plan);
-          print(expiredSubscriptions.first.subscriptionSource);
-          print(expiredSubscriptions.first.nextRenewalDate);
-          print(expiredSubscriptions.first.cancelledDate);
-        }
-      } catch (e) {
-        print(e);
-      }
-
-      List<PLYProduct> products = await Purchasely.allProducts();
-      inspect(products);
-
-      PLYProduct product =
-          await Purchasely.productWithIdentifier("PURCHASELY_PLUS");
-      print('Product found');
-      inspect(product);
-
-      /*Purchasely.setDefaultPresentationResultCallback(
-          (PresentPresentationResult value) {
-        print('Default Presentation Result Callback');
-        //print('Presentation Result : ' + value.result.toString());
-
-        if (value.plan != null) {
-          //User bought a plan
-        }
-      });*/
-
-      Purchasely.setDefaultPresentationResultCallback(
-          (PresentPresentationResult result) {
-        print('Received result from screen');
-        inspect(result);
-      });
-
-      Purchasely.revokeDataProcessingConsent(
-          [PLYDataProcessingPurpose.campaigns]);
-
-      //Attributes
-      Purchasely.setUserAttributeWithString("stringKey", "StringValue",
-          processingLegalBasis: PLYDataProcessingLegalBasis.essential);
-      Purchasely.setUserAttributeWithInt("intKey", 3,
-          processingLegalBasis: PLYDataProcessingLegalBasis.essential);
-      Purchasely.setUserAttributeWithDouble("doubleKey", 1.2,
-          processingLegalBasis: PLYDataProcessingLegalBasis.essential);
-      Purchasely.setUserAttributeWithBoolean("booleanKey", true,
-          processingLegalBasis: PLYDataProcessingLegalBasis.essential);
-      Purchasely.setUserAttributeWithDate("dateKey", DateTime.now(),
-          processingLegalBasis: PLYDataProcessingLegalBasis.essential);
-
-      Purchasely.setUserAttributeWithStringArray(
-          "stringArrayKey", ["StringValue", "test"]);
-      Purchasely.setUserAttributeWithIntArray("intArrayKey", [3, 8, 42]);
-      Purchasely.setUserAttributeWithDoubleArray(
-          "doubleArrayKey", [1.2, 19.9, 2323.213]);
-      Purchasely.setUserAttributeWithBooleanArray(
-          "booleanArrayKey", [true, true, false, false]);
-
-      Purchasely.incrementUserAttribute("sessions");
-      Purchasely.incrementUserAttribute("sessions");
-      Purchasely.incrementUserAttribute("sessions");
-      Purchasely.decrementUserAttribute("sessions");
-
-      Purchasely.incrementUserAttribute("app_views", value: 8);
-
-      Map<dynamic, dynamic> attributes = await Purchasely.userAttributes();
-      attributes.forEach((key, value) {
-        print("Attribute $key is $value");
-      });
-
-      dynamic dateAttribute = await Purchasely.userAttribute("dateKey");
-      print(dateAttribute.year);
-
-      Purchasely.clearUserAttribute("dateKey");
-
-      Purchasely.clearUserAttributes();
-      print(await Purchasely.userAttributes());
-
-      Purchasely.clearBuiltInAttributes();
-
-      manageDynamicOfferings();
-
-      if (kDebugMode) {
-        Purchasely.setDebugMode(true);
-      }
-
-      Purchasely.setPaywallActionInterceptorCallback(
-          (PaywallActionInterceptorResult result) {
-        print('Received action from paywall');
-        inspect(result);
-
-        if (result.action == PLYPaywallAction.navigate) {
-          print('User wants to navigate');
-          Purchasely.onProcessAction(true);
-        } else if (result.action == PLYPaywallAction.close) {
-          print(
-              'User wants to close paywall - reason: ${result.parameters.closeReason}"');
-          Purchasely.onProcessAction(true);
-        } else if (result.action == PLYPaywallAction.login) {
-          print('User wants to login');
-          //Present your own screen for user to log in
-          Purchasely.closePresentation();
-          Purchasely.userLogin('MY_USER_ID');
-          //Call this method to update Purchasely Paywall
-          Purchasely.onProcessAction(true);
-        } else if (result.action == PLYPaywallAction.open_presentation) {
-          print('User wants to open a new paywall');
-          Purchasely.onProcessAction(true);
-        } else if (result.action == PLYPaywallAction.purchase) {
-          print('User wants to purchase');
-          //If you want to intercept it, hide paywall and display your screen
-          Purchasely.hidePresentation();
-        } else if (result.action == PLYPaywallAction.restore) {
-          print('User wants to restore his purchases');
-          Purchasely.onProcessAction(true);
-        } else if (result.action == PLYPaywallAction.web_checkout) {
-          print('User wants to open web checkout');
-          print(
-              'webCheckoutProvider: ${result.parameters.webCheckoutProvider}');
-          print('queryParameterKey: ${result.parameters.queryParameterKey}');
-          print('clientReferenceId: ${result.parameters.clientReferenceId}');
-          Purchasely.onProcessAction(true);
-        } else {
-          print('Action unknown ' + result.action.toString());
-          Purchasely.onProcessAction(true);
-        }
-      });
+      _setStatus('SDK ready (configured: $configured).');
     } catch (e) {
-      print(e);
+      _setStatus('Init failed: $e');
     }
+  }
 
-    // If the widget was removed from the tree while the asynchronous platform
-    // message was in flight, we want to discard the reply rather than calling
-    // setState to update our non-existent appearance.
+  void _setStatus(String value) {
     if (!mounted) return;
-  }
-
-  Future<void> manageDynamicOfferings() async {
-    // Set a dynamic offering
-    final PLYDynamicOffering p1yOfferData = PLYDynamicOffering(
-      'p1yOffer',
-      'PURCHASELY_PLUS_YEARLY',
-      'Winback',
-    );
-    final bool p1yOfferSuccess =
-        await Purchasely.setDynamicOffering(p1yOfferData);
-    print('Dynamic offering p1yOffer set success: $p1yOfferSuccess');
-
-    final PLYDynamicOffering p1mData = PLYDynamicOffering(
-      'p1m',
-      'PURCHASELY_PLUS_MONTHLY',
-      'NON_EXISTING_OFFER', // This might result in 'false' or an error depending on native handling
-    );
-    final bool p1mSuccess = await Purchasely.setDynamicOffering(p1mData);
-    print('Dynamic offering p1mError set success: $p1mSuccess');
-
-    final PLYDynamicOffering p1yData = PLYDynamicOffering(
-      'p1y',
-      'PURCHASELY_PLUS_YEARLY',
-      null, // offerVendorId is nullable
-    );
-    final bool p1ySuccess = await Purchasely.setDynamicOffering(p1yData);
-    print('Dynamic offering p1y set success: $p1ySuccess');
-
-    // Get dynamic offerings
-    final List<PLYDynamicOffering> offerings =
-        await Purchasely.getDynamicOfferings();
-    print('Dynamic offerings: ${offerings.map((o) => o.toString()).toList()}');
-
-    // Remove a dynamic offering
-    Purchasely.removeDynamicOffering('p1yOffer');
-    print('Removed dynamic offering: p1yOffer');
-
-    // Clear all dynamic offerings
-    Purchasely.clearDynamicOfferings();
-    print('Cleared all dynamic offerings');
-
-    final List<PLYDynamicOffering> offeringsEmpty =
-        await Purchasely.getDynamicOfferings();
-    print(
-        'Dynamic offerings after clear: ${offeringsEmpty.map((o) => o.toString()).toList()}');
-  }
-
-  Future<void> displayPresentation() async {
-    try {
-      var result = await Purchasely.presentPresentationForPlacement("STRIPE",
-          isFullscreen: true);
-
-      switch (result.result) {
-        case PLYPurchaseResult.cancelled:
-          {
-            print("User cancelled purchased");
-          }
-          break;
-        case PLYPurchaseResult.purchased:
-          {
-            print("User purchased ${result.plan?.name}");
-          }
-          break;
-        case PLYPurchaseResult.restored:
-          {
-            print("User restored ${result.plan?.name}");
-          }
-          break;
-      }
-    } catch (e) {
-      print(e);
-    }
-  }
-
-  Future<void> displayPresentationNativeView(BuildContext context) async {
-    // You can fetch the presentation before displaying it when ready
-    var presentation = await Purchasely.fetchPresentation("Settings");
-
-    if (presentation != null) {
-      navigatorKey.currentState?.push(
-        MaterialPageRoute(
-            builder: (context) => PresentationScreen(
-                    properties: {
-                      'presentation': presentation,
-                      //'contentId': null, // Optional
-                    },
-                    callback: (PresentPresentationResult result) {
-                      print('Presentation was closed');
-                      print(
-                          'Presentation result:${result.result} - plan:${result.plan?.vendorId}');
-                      navigatorKey.currentState?.pop();
-                    })),
-      );
-    } else {
-      print("No presentation found");
-
-      // You can also display a presentation without fetching it before
-      // Purchasely will fetch it automatically, display a loader and display it
-      navigatorKey.currentState?.push(
-        MaterialPageRoute(
-            builder: (context) => PresentationScreen(
-                    properties: const {
-                      'placementId': 'onboarding',
-                      //'presentationId': 'TF1', // You can also set a presentationId directly but this is not recommended
-                      //'contentId': null, // Optional
-                    },
-                    callback: (PresentPresentationResult result) {
-                      print('Presentation was closed');
-                      print(
-                          'Presentation result:${result.result} - plan:${result.plan?.vendorId}');
-                      navigatorKey.currentState?.pop();
-                    })),
-      );
-    }
-  }
-
-  Future<void> fetchPresentation() async {
-    try {
-      var presentation = await Purchasely.fetchPresentation("FLOW");
-
-      if (presentation == null) {
-        print("No presentation found");
-        return;
-      }
-
-      print("Presentation: ${presentation}");
-
-      if (presentation.type == PLYPresentationType.deactivated) {
-        // No paywall to display
-        return;
-      }
-
-      if (presentation.type == PLYPresentationType.client) {
-        print("Presentation metadata: ${presentation.metadata}");
-        return;
-      }
-
-      //Display Purchasely paywall
-      var presentResult = await Purchasely.presentPresentation(presentation,
-          isFullscreen: true);
-
-      print("-------");
-      print("Presentation closed with result: ${presentResult.result}");
-
-      switch (presentResult.result) {
-        case PLYPurchaseResult.cancelled:
-          {
-            print("User cancelled purchased");
-          }
-          break;
-        case PLYPurchaseResult.purchased:
-          {
-            print("User purchased ${presentResult.plan?.name}");
-          }
-          break;
-        case PLYPurchaseResult.restored:
-          {
-            print("User restored ${presentResult.plan?.name}");
-          }
-          break;
-      }
-    } catch (e) {
-      print(e);
-    }
-  }
-
-  Future<void> displaySubscriptions() async {
-    try {
-      Purchasely.presentSubscriptions();
-    } catch (e) {
-      print(e);
-    }
-  }
-
-  Future<void> continuePurchase() async {
-    Purchasely.showPresentation();
-    Purchasely.onProcessAction(true);
-  }
-
-  Future<void> purchase() async {
-    try {
-      Map<dynamic, dynamic> plan = await Purchasely.purchaseWithPlanVendorId(
-          vendorId: 'PURCHASELY_PLUS_MONTHLY');
-      print('Plan is $plan');
-    } catch (e) {
-      print(e);
-    }
-  }
-
-  Future<void> purchaseWithPromotionalOffer() async {
-    try {
-      Map<dynamic, dynamic> plan = await Purchasely.purchaseWithPlanVendorId(
-          vendorId: 'PURCHASELY_PLUS_YEARLY',
-          offerId: 'com.purchasely.plus.yearly.promo');
-      print('Plan is $plan');
-    } catch (e) {
-      print(e);
-    }
-  }
-
-  Future<void> signPromotionalOffer() async {
-    try {
-      Map<dynamic, dynamic> signature = await Purchasely.signPromotionalOffer(
-          'com.purchasely.plus.yearly',
-          'com.purchasely.plus.yearly.winback.test');
-      print('Signature $signature');
-    } catch (e) {
-      print(e);
-    }
+    setState(() => _status = value);
   }
 
   Future<void> restoreAllProducts() async {
-    bool restored;
-    print('start restoration');
+    _setStatus('Restoring purchases…');
     try {
-      restored = await Purchasely.restoreAllProducts();
+      final bool restored = await Purchasely.restoreAllProducts();
+      _setStatus('Restore complete (restored: $restored).');
     } catch (e) {
-      print('Exception $e');
-      restored = false;
+      _setStatus('Restore failed: $e');
     }
-
-    print('restored ? $restored');
   }
 
-  Future<void> synchronize() async {
-    Purchasely.synchronize();
-    print('synchronization with Purchasely');
-  }
-
-  Future<void> hidePresentation() async {
-    Purchasely.hidePresentation();
-  }
-
-  Future<void> showPresentation() async {
-    Purchasely.showPresentation();
-  }
-
-  Future<void> closePresentation() async {
-    Purchasely.closePresentation();
-  }
-
-  Future<void> testFunction() async {
-    displayPresentation();
-    sleep(const Duration(seconds: 3));
-    displayPresentation();
+  void _openV6Demo() {
+    navigatorKey.currentState?.push(
+      MaterialPageRoute<void>(
+        builder: (_) => const V6DemoScreen(),
+      ),
+    );
   }
 
   @override
@@ -527,154 +91,35 @@ class _MyAppState extends State<MyApp> {
     return MaterialApp(
       navigatorKey: navigatorKey,
       home: Scaffold(
-        appBar: AppBar(
-          title: const Text('Purchasely Flutter Sample'),
-        ),
+        appBar: AppBar(title: const Text('Purchasely Flutter Sample')),
         body: Center(
-            child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            // v6 façade demo — start, display, interceptor, enriched outcome.
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.only(left: 20.0, right: 30.0),
-                backgroundColor: Colors.indigo,
-                foregroundColor: Colors.white,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: <Widget>[
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Text(
+                  _status,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontWeight: FontWeight.w500),
+                ),
               ),
-              onPressed: () {
-                final navigator = navigatorKey.currentState;
-                navigator?.push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => const V6DemoScreen(),
-                  ),
-                );
-              },
-              child: const Text('Open v6 demo'),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.only(left: 20.0, right: 30.0),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.indigo,
+                  foregroundColor: Colors.white,
+                ),
+                onPressed: _openV6Demo,
+                child: const Text('Open v6 demo'),
               ),
-              onPressed: () {
-                displayPresentation();
-              },
-              child: const Text('Display presentation'),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.only(left: 20.0, right: 30.0),
+              ElevatedButton(
+                onPressed: restoreAllProducts,
+                child: const Text('Restore purchases'),
               ),
-              onPressed: () {
-                displayPresentationNativeView(context);
-              },
-              child: const Text('Display presentation (Native View)'),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.only(left: 20.0, right: 30.0),
-              ),
-              onPressed: () {
-                fetchPresentation();
-              },
-              child: const Text('Fetch presentation'),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.only(left: 20.0, right: 30.0),
-              ),
-              onPressed: () {
-                showPresentation();
-              },
-              child: const Text('Show presentation'),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.only(left: 20.0, right: 30.0),
-              ),
-              onPressed: () {
-                closePresentation();
-              },
-              child: const Text('Close presentation'),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.only(left: 20.0, right: 30.0),
-              ),
-              onPressed: () {
-                continuePurchase();
-              },
-              child: const Text('Continue purchase'),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.only(left: 20.0, right: 30.0),
-              ),
-              onPressed: () {
-                purchase();
-              },
-              child: const Text('Purchase'),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.only(left: 20.0, right: 30.0),
-              ),
-              onPressed: () {
-                purchaseWithPromotionalOffer();
-              },
-              child: const Text('Purchase with promotional offer'),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.only(left: 20.0, right: 30.0),
-              ),
-              onPressed: () {
-                signPromotionalOffer();
-              },
-              child: const Text('Sign promotional offer'),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.only(left: 20.0, right: 30.0),
-              ),
-              onPressed: () {
-                displaySubscriptions();
-              },
-              child: const Text('Display subscriptions'),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.only(left: 20.0, right: 30.0),
-              ),
-              onPressed: () {
-                restoreAllProducts();
-              },
-              child: const Text('Restore purchases'),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.only(left: 20.0, right: 30.0),
-              ),
-              onPressed: () {
-                synchronize();
-              },
-              child: const Text('Synchronize'),
-            ),
-          ],
-        )),
+            ],
+          ),
+        ),
       ),
     );
-  }
-}
-
-class MyUserAttributeListener implements UserAttributeListener {
-  @override
-  void onUserAttributeSet(String key, PLYUserAttributeType type, dynamic value,
-      PLYUserAttributeSource source) {
-    print("Attribute set: $key, Type: $type, Value: $value, Source: $source");
-  }
-
-  @override
-  void onUserAttributeRemoved(String key, PLYUserAttributeSource source) {
-    print("Attribute removed: $key, Source: $source");
   }
 }

@@ -1,9 +1,10 @@
 // Purchasely SDK v6 — Action interceptor API.
 //
 // Sealed class hierarchy for typed action payloads. Each action carries its
-// own parameters. Use `Purchasely.interceptAction(kind, handler)` to register
-// per-action interceptors. The handler returns an `InterceptResult` (or a
-// Future<InterceptResult>) to let the SDK know how the action was handled.
+// own parameters. Use
+// `PurchaselyV6Bridge.ensureInstalled().registerInterceptor(kind, handler)` to
+// register per-action interceptors. The handler returns an `InterceptResult`
+// (or a Future<InterceptResult>) to let the SDK know how the action was handled.
 
 import 'dart:async';
 

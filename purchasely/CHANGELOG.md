@@ -8,8 +8,8 @@
   - `PresentationRequest.preload()` / `.display(transition)` — `display()`
     resolves at **dismiss time** with the enriched 5-field `PresentationOutcome`
     (`presentation`, `purchaseResult`, `plan`, `closeReason`, `error`).
-  - `Purchasely.interceptAction(PresentationActionKind, handler)` — typed
-    action interceptors with `InterceptResult.success` / `.failed` /
+  - `PurchaselyV6Bridge.ensureInstalled().registerInterceptor(PresentationActionKind, handler)`
+    — typed action interceptors with `InterceptResult.success` / `.failed` /
     `.notHandled`.
 - **Bridge contract (see `BRIDGE-CONTRACT.md`).** iOS workarounds:
   - `onCloseRequested` is synthesised from iOS `onClose`.
@@ -25,9 +25,26 @@
 - **Breaking — running mode default.** The native v6 SDKs default to Observer
   mode (was Full in v5). The v6 builder mirrors this; legacy callers passing
   `PLYRunningMode.full` are unchanged.
-- The legacy v5 `Purchasely.*` static surface remains available during the
-  6.x beta line for incremental migration. New code should adopt the v6
-  builders.
+- **Breaking — presentation & interceptor are v6-only.** The legacy v5
+  presentation-display methods (`presentPresentation*`, `fetchPresentation`,
+  `presentProduct/PlanWithIdentifier`, `getPresentationView` + the
+  `PLYPresentationView` inline widget, `close/hide/showPresentation`,
+  `setDefaultPresentationResultHandler`) and the v5 action interceptor
+  (`setPaywallActionInterceptor` / `onProcessAction`) are **removed** — use the
+  v6 `PresentationBuilder` / `PresentationRequest.display()` and
+  `PurchaselyV6Bridge.ensureInstalled().registerInterceptor(...)`.
+  `Purchasely.start(...)` is removed; init via
+  `PurchaselyBuilder`. The term *paywall* no longer exists — a screen is a
+  **Presentation**.
+- **Kept from v5.** All non-presentation APIs remain on the `Purchasely` class
+  (purchases, restore, login/logout, user attributes, product/plan lookups,
+  subscription data, event streams, dynamic offerings, consent, config); they
+  now require a `PurchaselyBuilder` start first.
+- **Platform note.** `presentSubscriptions` /
+  `displaySubscriptionCancellationInstruction` still work on iOS but are **no-ops on
+  Android** (native 6.0 removed the built-in subscriptions screen).
+- See **`MIGRATION.md`** for the full v5 → v6 mapping. The Purchasely AI plugin
+  can automate most of the migration.
 
 ## 5.7.3
 - Updated iOS Purchasely SDK to 5.7.4.

@@ -118,7 +118,7 @@ final class PurchaselyV6Bridge {
             switch logLevel {
             case "debug": builder = builder.logLevel(.debug)
             case "info":  builder = builder.logLevel(.info)
-            case "warn":  builder = builder.logLevel(.warning)
+            case "warn":  builder = builder.logLevel(.warn)
             default:      builder = builder.logLevel(.error)
             }
         }
@@ -500,8 +500,10 @@ final class PurchaselyV6Bridge {
         case "fullScreen":    return .fullScreen
         case "push":          return .push
         case "modal":         return .modal
-        case "drawer":        return .drawer
-        case "popin":         return .popin
+        // `drawer`/`popin` are static factory functions on PLYDisplayMode in
+        // v6 (they take height/dismissible params); the others are static vars.
+        case "drawer":        return .drawer()
+        case "popin":         return .popin()
         case "inlinePaywall": return .inlinePaywall
         default: return nil
         }
