@@ -464,6 +464,7 @@ internal class PurchaselyV6Bridge(
             "modal" -> PLYTransitionType.MODAL
             "drawer" -> PLYTransitionType.DRAWER
             "popin" -> PLYTransitionType.POPIN
+            "inlinePaywall" -> PLYTransitionType.INLINE_PAYWALL
             else -> return null
         }
         val heightPercentage = (map["heightPercentage"] as? Number)?.toFloat()
