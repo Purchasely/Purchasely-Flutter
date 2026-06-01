@@ -6,10 +6,12 @@ React Native migration, there is **no "v6" naming in the Dart API** — the publ
 symbols keep their plain names (`PurchaselyBuilder`, `PresentationBuilder`,
 `PresentationOutcome`, `Transition`, …).
 
-Only three areas changed: **starting the SDK**, **displaying / preloading /
+Three areas are breaking changes: **starting the SDK**, **displaying / preloading /
 closing a presentation**, and the **action interceptor**. Everything else on the
 `Purchasely` class — purchases, restore, identity, catalog, subscriptions, user
-attributes, events, dynamic offerings, consent and config — is **unchanged**.
+attributes, events, dynamic offerings, consent and config — remains
+source-compatible. Deeplinks also get the v6 names (`allowDeeplink`,
+`handleDeeplink`) while the old v5 names remain as deprecated aliases.
 
 A paywall is now called a **Presentation** (or *Screen*).
 
@@ -40,8 +42,8 @@ A paywall is now called a **Presentation** (or *Screen*).
   `Purchasely.interceptAction(kind, handler)`, where
   `handler` returns an `InterceptResult` (`success` / `failed` / `notHandled`).
 - Inline rendering uses the `PLYPresentationView` widget.
-- **All other `Purchasely.*` methods are UNCHANGED** — see
-  [What's unchanged](#whats-unchanged).
+- Other `Purchasely.*` methods remain source-compatible; deeplinks use the v6
+  names with deprecated v5 aliases — see [What's unchanged](#whats-unchanged).
 
 ---
 
@@ -68,8 +70,8 @@ been removed in favour of the builder API.
 
 > **Reminder.** Everything *not* in this table — purchases, restore, login,
 > attributes, subscriptions, products, events, offerings, consent and config —
-> keeps the exact same `Purchasely.*` signatures. Only the paywall surface
-> moved.
+> keeps source-compatible `Purchasely.*` signatures. Deeplinks use the v6 names
+> documented below with deprecated aliases for the old names.
 
 ---
 
@@ -102,7 +104,7 @@ final bool configured = await PurchaselyBuilder.apiKey('<YOUR_API_KEY>')
     .runningMode(RunningMode.full)              // RunningMode.observer (default) | full
     .logLevel(LogLevel.error)                   // debug | info | warn | error
     .allowDeeplink(true)                         // allow the SDK to open deeplinks
-    .allowCampaigns(true)                        // automatic campaigns (default true)
+    .allowCampaigns(true)                        // optional campaign display gate
     .stores([PLYStore.google])                   // Android only: google | huawei | amazon
     .storekitVersion(StorekitVersion.storeKit2)  // iOS only: storeKit2 (default) | storeKit1
     .start();
@@ -114,9 +116,9 @@ final bool configured = await PurchaselyBuilder.apiKey('<YOUR_API_KEY>')
 > `.runningMode(RunningMode.full)` to keep the previous behaviour where
 > Purchasely owns the purchase flow.
 
-> **`allowDeeplink` replaces the start-time call.** Allowing deeplinks is now
-> part of the builder. `Purchasely.readyToOpenDeeplink(bool)` still exists if you
-> need to toggle it later at runtime.
+> **`allowDeeplink` replaces the old v5 name.** Allowing deeplinks can be set on
+> the builder or toggled later with `Purchasely.allowDeeplink(bool)`.
+> `readyToOpenDeeplink` remains only as a deprecated compatibility alias.
 
 ---
 
@@ -167,6 +169,16 @@ if (outcome.error != null) {
 `purchaseResult` is the `PurchaseResult` enum
 (`purchased` / `cancelled` / `restored`) and is `null` when the user dismissed
 the screen without a purchase action.
+
+> **iOS limitation in native 6.0.** The iOS SDK does not currently expose
+> `closeReason` on `PLYPresentationOutcome`, nor a loaded presentation
+> `contentId` on `PLYPresentation`. Flutter reports these fields as `null` on
+> iOS; Android 6.0 reports the native values.
+
+> **Plan offer fields.** Android 6.0 renamed introductory-price helpers to
+> offer-price helpers. Flutter now exposes the v6 names (`hasOfferPrice`,
+> `offerPrice`, `offerAmount`, `offerDuration`, `offerPeriod`) and keeps the old
+> `intro*` fields populated as deprecated compatibility aliases.
 
 ### Targeting a specific screen / product
 
@@ -307,8 +319,8 @@ PresentationBuilder.defaultSource()
     .build()
     .display();
 
-// isDeeplinkHandled is UNCHANGED:
-final handled = await Purchasely.isDeeplinkHandled('app://ply/presentations/');
+// v6 deeplink handler:
+final handled = await Purchasely.handleDeeplink('app://ply/presentations/');
 ```
 
 ---
@@ -336,8 +348,8 @@ PLYPresentationView(request: request);
 ## What's unchanged
 
 Only the **paywall surface** (start, display / preload / close / back, and the
-action interceptor) changed. Every other `Purchasely.*` method keeps the same
-name, signature and behaviour:
+action interceptor) has breaking API changes. Every other `Purchasely.*` method
+remains source-compatible; deeplinks add v6 names with deprecated aliases:
 
 - **Purchases**: `purchaseWithPlanVendorId`, `signPromotionalOffer`.
 - **Restore**: `restoreAllProducts`, `silentRestoreAllProducts`,
@@ -347,7 +359,7 @@ name, signature and behaviour:
   `isEligibleForIntroOffer`.
 - **Subscriptions data**: `userSubscriptions`, `userSubscriptionsHistory`,
   `presentSubscriptions` (see callout below),
-  `displaySubscriptionCancellationInstruction`.
+  `displaySubscriptionCancellationInstruction` (with platform limitations below).
 - **User attributes**: `setUserAttributeWithString` / `WithInt` / `WithDouble` /
   `WithBoolean` / `WithDate` / `WithStringArray` / `WithIntArray` /
   `WithDoubleArray` / `WithBooleanArray`, `incrementUserAttribute`,
@@ -360,13 +372,17 @@ name, signature and behaviour:
   `removeDynamicOffering`, `clearDynamicOfferings`.
 - **Consent**: `revokeDataProcessingConsent`.
 - **Config / misc**: `setLanguage`, `setThemeMode`, `setLogLevel`,
-  `synchronize`, `readyToOpenDeeplink`, `isDeeplinkHandled`, `setDebugMode`.
+  `synchronize`, `allowDeeplink`, `handleDeeplink`, `setDebugMode`.
+  (`readyToOpenDeeplink` / `isDeeplinkHandled` remain deprecated aliases.)
 
-> **`presentSubscriptions` is a no-op on Android in 6.0.** The native
-> subscriptions screen was removed from the Android SDK, so
-> `Purchasely.presentSubscriptions()` does nothing on Android. It still works on
-> iOS. Build your own subscriptions screen with `userSubscriptions()` if you
-> need cross-platform parity.
+> **Removed Android subscription/cancellation UI.** The native subscriptions
+> screen and cancellation survey UI were removed from the Android 6.0 SDK, so
+> `Purchasely.presentSubscriptions()` and
+> `Purchasely.displaySubscriptionCancellationInstruction()` are no-ops on
+> Android. `presentSubscriptions()` still works on iOS; the cancellation
+> instruction helper is a no-op on iOS too. Build your own subscriptions screen
+> with `userSubscriptions()` / `userSubscriptionsHistory()` if you need
+> cross-platform parity.
 
 > **Native dependency.** This release targets the Purchasely 6.0 native SDKs
 > (iOS `Purchasely 6.0.0`, Android `io.purchasely:core 6.0.0`). These versions

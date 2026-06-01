@@ -29,7 +29,7 @@ class PurchaselyBuilder {
   RunningMode _runningMode;
   LogLevel _logLevel;
   bool? _allowDeeplink;
-  bool _allowCampaigns;
+  bool? _allowCampaigns;
   // Android only
   List<PLYStore> _stores;
   // iOS only
@@ -40,7 +40,7 @@ class PurchaselyBuilder {
       RunningMode runningMode = RunningMode.observer,
       LogLevel logLevel = LogLevel.error,
       bool? allowDeeplink,
-      bool allowCampaigns = true,
+      bool? allowCampaigns,
       List<PLYStore> stores = const [PLYStore.google],
       StorekitVersion storekitVersion = StorekitVersion.storeKit2})
       : _appUserId = appUserId,
@@ -77,6 +77,7 @@ class PurchaselyBuilder {
   }
 
   /// Whether the SDK is allowed to display campaign-driven presentations.
+  /// Omit this modifier to keep each native SDK's default/backend-configured value.
   PurchaselyBuilder allowCampaigns(bool allow) {
     _allowCampaigns = allow;
     return this;
@@ -110,7 +111,7 @@ class PurchaselyBuilder {
         'runningMode': _runningMode.name,
         'logLevel': _logLevel.name,
         'allowDeeplink': _allowDeeplink,
-        'allowCampaigns': _allowCampaigns,
+        if (_allowCampaigns != null) 'allowCampaigns': _allowCampaigns,
         'stores': _stores.map((s) => s.name).toList(),
         'storekitVersion': _storekitVersion.name,
       },

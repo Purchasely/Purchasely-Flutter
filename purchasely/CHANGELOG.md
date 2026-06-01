@@ -1,12 +1,11 @@
 ## 6.0.0-beta.0
 
-- **Adapts the plugin to the Purchasely 6.0 native SDKs.** Only the paywall
-  surface changed: **starting the SDK**, **displaying / preloading / closing a
-  presentation**, and the **action interceptor**. Everything else on the
-  `Purchasely` class (purchases, restore, identity, catalog, subscriptions data,
-  user attributes, events, dynamic offerings, consent, config) keeps the same
-  names, signatures and behaviour. See `MIGRATION-v6.md` for the complete
-  old→new mapping.
+- **Adapts the plugin to the Purchasely 6.0 native SDKs.** The breaking changes
+  are limited to the paywall surface: **starting the SDK**, **displaying /
+  preloading / closing a presentation**, and the **action interceptor**. Other
+  `Purchasely` APIs remain source-compatible; deeplinks now expose the v6 names
+  (`allowDeeplink`, `handleDeeplink`) with deprecated v5 aliases. See
+  `MIGRATION-v6.md` for the complete old→new mapping.
 - **Start.** The SDK is now started with the fluent builder
   `PurchaselyBuilder.apiKey(...).appUserId(...).runningMode(...).logLevel(...).allowDeeplink(...).allowCampaigns(...).stores([...]).storekitVersion(...).start()`.
 - **Presentation.** Build a request with `PresentationBuilder`
@@ -21,19 +20,21 @@
     programmatic control.
   - Inline (embedded) rendering uses the `PLYPresentationView` widget.
 - **Action interceptor.** Replaced by
-  `Purchasely.interceptAction(PresentationActionKind, handler)`
-  (plus `removeInterceptor` / `removeAllInterceptors`). The handler receives a
-  typed `ActionPayload` (e.g. `NavigatePayload`, `PurchasePayload`) and returns
-  an `InterceptResult` (`success` / `failed` / `notHandled`) — there is no more
+  `Purchasely.interceptAction(PresentationActionKind, handler)` (plus
+  `removeInterceptor` / `removeAllInterceptors`). The handler receives a typed
+  `ActionPayload` (e.g. `NavigatePayload`, `PurchasePayload`) and returns an
+  `InterceptResult` (`success` / `failed` / `notHandled`) — there is no more
   `onProcessAction`.
 - **Behaviour — running mode default.** The 6.0 native SDKs default to
   **Observer** mode (was Full). The builder mirrors this default
   (`RunningMode.observer`); pass `.runningMode(RunningMode.full)` to keep the
   previous Full behaviour.
-- **Behaviour — `presentSubscriptions` is a no-op on Android.** The native
-  subscriptions screen was removed from the Android 6.0 SDK, so
-  `Purchasely.presentSubscriptions()` does nothing on Android. It still works on
-  iOS.
+- **Behaviour — removed Android subscription/cancellation UI.** The native
+  subscriptions screen and cancellation survey UI were removed from the Android
+  6.0 SDK, so `Purchasely.presentSubscriptions()` and
+  `Purchasely.displaySubscriptionCancellationInstruction()` are no-ops on
+  Android. `presentSubscriptions()` still works on iOS; the cancellation
+  instruction helper is a no-op on iOS too.
 - **Native SDK bump.**
   - iOS: `Purchasely 6.0.0` (was 5.7.4).
   - Android: `io.purchasely:core 6.0.0` (was 5.7.4).

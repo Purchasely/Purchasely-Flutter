@@ -34,7 +34,7 @@ void main() {
             return true;
           case 'isEligibleForIntroOffer':
             return true;
-          case 'isDeeplinkHandled':
+          case 'handleDeeplink':
             return true;
           case 'productWithIdentifier':
             return {
@@ -221,10 +221,22 @@ void main() {
       expect(methodCalls.first.arguments['planVendorId'], 'plan-123');
     });
 
-    test('isDeeplinkHandled calls native method correctly', () async {
+    test('handleDeeplink calls native method correctly', () async {
+      final result =
+          await Purchasely.handleDeeplink('https://example.com/deep');
+      expect(result, true);
+      expect(methodCalls.first.method, 'handleDeeplink');
+      expect(
+          methodCalls.first.arguments['deeplink'], 'https://example.com/deep');
+    });
+
+    test('deprecated isDeeplinkHandled alias bridges to handleDeeplink',
+        () async {
+      // ignore: deprecated_member_use_from_same_package
       final result =
           await Purchasely.isDeeplinkHandled('https://example.com/deep');
       expect(result, true);
+      expect(methodCalls.first.method, 'handleDeeplink');
       expect(
           methodCalls.first.arguments['deeplink'], 'https://example.com/deep');
     });
@@ -460,11 +472,20 @@ void main() {
       expect(methodCalls.first.arguments['language'], 'fr');
     });
 
-    test('readyToOpenDeeplink calls native method correctly', () async {
+    test('allowDeeplink calls native method correctly', () async {
+      await Purchasely.allowDeeplink(true);
+
+      expect(methodCalls.first.method, 'allowDeeplink');
+      expect(methodCalls.first.arguments['allowDeeplink'], true);
+    });
+
+    test('deprecated readyToOpenDeeplink alias bridges to allowDeeplink',
+        () async {
+      // ignore: deprecated_member_use_from_same_package
       await Purchasely.readyToOpenDeeplink(true);
 
-      expect(methodCalls.first.method, 'readyToOpenDeeplink');
-      expect(methodCalls.first.arguments['readyToOpenDeeplink'], true);
+      expect(methodCalls.first.method, 'allowDeeplink');
+      expect(methodCalls.first.arguments['allowDeeplink'], true);
     });
 
     test('setDebugMode calls native method correctly', () async {
@@ -544,6 +565,43 @@ void main() {
       expect(plan.introDuration, 'P1W');
       expect(plan.introPeriod, 'week');
       expect(plan.hasFreeTrial, true);
+    });
+
+    test('transformToPLYPlan maps Android v6 offer fields', () {
+      final planMap = {
+        'vendorId': 'vendor-123',
+        'productId': 'product-123',
+        'name': 'Test Plan',
+        'type': 'RENEWING_SUBSCRIPTION',
+        'amount': 9.99,
+        'localizedAmount': '\$9.99',
+        'currencyCode': 'USD',
+        'currencySymbol': '\$',
+        'price': '\$9.99 / month',
+        'period': 'month',
+        'hasOfferPrice': true,
+        'offerPrice': '\$4.99',
+        'offerAmount': 4.99,
+        'offerDuration': '7 days',
+        'offerPeriod': 'week',
+        'hasFreeTrial': true
+      };
+
+      final plan = Purchasely.transformToPLYPlan(planMap);
+
+      expect(plan, isNotNull);
+      expect(plan!.type, PLYPlanType.autoRenewingSubscription);
+      expect(plan.hasOfferPrice, true);
+      expect(plan.offerPrice, '\$4.99');
+      expect(plan.offerAmount, 4.99);
+      expect(plan.offerDuration, '7 days');
+      expect(plan.offerPeriod, 'week');
+      // Deprecated v5 field names stay populated for source compatibility.
+      expect(plan.hasIntroductoryPrice, true);
+      expect(plan.introPrice, '\$4.99');
+      expect(plan.introAmount, 4.99);
+      expect(plan.introDuration, '7 days');
+      expect(plan.introPeriod, 'week');
     });
 
     test('transformToPLYPlan handles invalid type gracefully', () {
@@ -1830,6 +1888,7 @@ void main() {
       expect(startCall.arguments['runningMode'], 'observer');
       expect(startCall.arguments['logLevel'], 'error');
       expect(startCall.arguments['storekitVersion'], 'storeKit2');
+      expect(startCall.arguments.containsKey('allowCampaigns'), false);
     });
 
     test('start forwards every modifier', () async {

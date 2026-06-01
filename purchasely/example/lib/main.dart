@@ -1,3 +1,5 @@
+// ignore_for_file: avoid_print, library_private_types_in_public_api
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'dart:developer';
@@ -30,8 +32,6 @@ class _MyAppState extends State<MyApp> {
   // Platform messages are asynchronous, so we initialize in an async method.
   Future<void> initPurchaselySdk() async {
     try {
-      Purchasely.readyToOpenDeeplink(true);
-
       /*Purchasely.listenToEvents((event) {
         print('Flutter Event : ${event.name}');
         print('Event properties : ${event.properties.event_name}');
@@ -43,6 +43,7 @@ class _MyAppState extends State<MyApp> {
       )
           .runningMode(RunningMode.full)
           .logLevel(LogLevel.debug)
+          .allowDeeplink(true)
           .stores([PLYStore.google]).start();
 
       if (!configured) {
@@ -50,7 +51,7 @@ class _MyAppState extends State<MyApp> {
         return;
       }
 
-      Purchasely.readyToOpenDeeplink(true);
+      Purchasely.allowDeeplink(true);
       Purchasely.setLogLevel(PLYLogLevel.debug);
 
       Purchasely.setUserAttributeListener(MyUserAttributeListener());
@@ -315,6 +316,7 @@ class _MyAppState extends State<MyApp> {
 
   Future<void> displaySubscriptions() async {
     try {
+      // iOS only in native v6; Android removed this built-in UI.
       Purchasely.presentSubscriptions();
     } catch (e) {
       print(e);

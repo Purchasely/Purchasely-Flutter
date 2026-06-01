@@ -312,6 +312,8 @@ void main() {
         'info': <String, Object?>{'contentId': 'c1'},
         'payload': <String, Object?>{
           'plan': <String, Object?>{'vendorId': 'monthly'},
+          'subscriptionOffer': <String, Object?>{'offerId': 'intro'},
+          'offer': <String, Object?>{'vendorId': 'promo'},
         },
       });
 
@@ -322,6 +324,9 @@ void main() {
       expect(capturedInfo, isNotNull);
       expect(capturedInfo!.contentId, 'c1');
       expect(capturedPayload, isA<PurchasePayload>());
+      final purchase = capturedPayload as PurchasePayload;
+      expect(purchase.subscriptionOffer?['offerId'], 'intro');
+      expect(purchase.offer?['vendorId'], 'promo');
 
       // The bridge must have posted the result back via interceptorResolve.
       final resolveCall =
@@ -366,6 +371,8 @@ void main() {
           .appUserId('U')
           .runningMode(RunningMode.full)
           .logLevel(LogLevel.warn)
+          .allowDeeplink(true)
+          .allowCampaigns(false)
           .stores([PLYStore.google]).start();
       expect(ok, isTrue);
 
@@ -376,8 +383,9 @@ void main() {
       expect(args['runningMode'], 'full');
       expect(args['logLevel'], 'warn');
       expect(args['stores'], <String>['google']);
-      // The native side also reads these keys — they must be present.
-      expect(args.containsKey('allowCampaigns'), isTrue);
+      // The native side also reads these keys when the builder sets them.
+      expect(args['allowDeeplink'], true);
+      expect(args['allowCampaigns'], false);
       expect(args.containsKey('storekitVersion'), isTrue);
     });
   });

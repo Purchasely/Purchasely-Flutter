@@ -17,7 +17,6 @@ import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import androidx.annotation.NonNull
-import androidx.fragment.app.FragmentActivity
 
 import io.purchasely.billing.Store
 import io.purchasely.ext.*
@@ -237,8 +236,13 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
                 setLogLevel(call.argument<Int>("logLevel"))
                 result.safeSuccess(true)
             }
+            "allowDeeplink" -> {
+                allowDeeplink(call.argument<Boolean>("allowDeeplink"))
+                result.safeSuccess(true)
+            }
             "readyToOpenDeeplink" -> {
-                readyToOpenDeeplink(call.argument<Boolean>("readyToOpenDeeplink"))
+                // Deprecated Flutter v5 alias kept for source compatibility.
+                allowDeeplink(call.argument<Boolean>("readyToOpenDeeplink"))
                 result.safeSuccess(true)
             }
             "setLanguage" -> {
@@ -293,12 +297,13 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
                 displaySubscriptionCancellationInstruction()
                 result.safeSuccess(true)
             }
-            "isDeeplinkHandled" -> isDeeplinkHandled(call.argument<String>("deeplink"), result)
+            "handleDeeplink" -> handleDeeplink(call.argument<String>("deeplink"), result)
+            "isDeeplinkHandled" -> handleDeeplink(call.argument<String>("deeplink"), result)
             "userSubscriptions" -> launch { userSubscriptions(result) }
             "userSubscriptionsHistory" -> launch { userSubscriptionsHistory(result) }
             "presentSubscriptions" -> {
                 // The native SDK no longer exposes a subscriptions screen; no-op.
-                Log.w("Purchasely", "presentSubscriptions is no longer supported by the native SDK")
+                Log.w("Purchasely", "presentSubscriptions is no longer supported by the Android v6 SDK")
                 result.safeSuccess(true)
             }
             "setThemeMode" -> {
@@ -439,6 +444,28 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
     }
 
     //region start
+    private fun logLevelFrom(raw: Any?): LogLevel {
+        return when (raw) {
+            is Number -> LogLevel.values().getOrElse(raw.toInt()) { LogLevel.ERROR }
+            is String -> LogLevel.values().firstOrNull { it.name.equals(raw, ignoreCase = true) } ?: LogLevel.ERROR
+            else -> LogLevel.ERROR
+        }
+    }
+
+    private fun runningModeFrom(raw: Any?): PLYRunningMode {
+        return when (raw) {
+            is Number -> when (raw.toInt()) {
+                3 -> PLYRunningMode.Full
+                else -> PLYRunningMode.Observer
+            }
+            is String -> when (raw.lowercase(Locale.US)) {
+                "full" -> PLYRunningMode.Full
+                else -> PLYRunningMode.Observer
+            }
+            else -> PLYRunningMode.Observer
+        }
+    }
+
     private fun start(args: Map<String, Any?>?, result: Result) {
         val a = args ?: emptyMap()
         val apiKey = a["apiKey"] as? String
@@ -446,38 +473,26 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
             result.safeError("-1", "apiKey must not be null", null)
             return
         }
-        val appUserId = a["appUserId"] as? String
+        val userId = (a["appUserId"] as? String) ?: (a["userId"] as? String)
+        val logLevel = logLevelFrom(a["logLevel"])
+        val runningMode = runningModeFrom(a["runningMode"])
         val stores = (a["stores"] as? List<*>)?.mapNotNull { it as? String } ?: emptyList()
-
-        val logLevel = when (a["logLevel"] as? String) {
-            "debug" -> LogLevel.DEBUG
-            "info" -> LogLevel.INFO
-            "warn" -> LogLevel.WARN
-            else -> LogLevel.ERROR
-        }
-        val runningMode = when (a["runningMode"] as? String) {
-            "full" -> PLYRunningMode.Full
-            else -> PLYRunningMode.Observer
-        }
-        val allowCampaigns = a["allowCampaigns"] as? Boolean ?: true
         val allowDeeplink = a["allowDeeplink"] as? Boolean
+        val allowCampaigns = a["allowCampaigns"] as? Boolean ?: true
 
-        val builder = Purchasely.Builder(context)
+        Purchasely.Builder(context)
             .apiKey(apiKey)
             .stores(getStoresInstances(stores))
             .logLevel(logLevel)
             .runningMode(runningMode)
-            .allowCampaigns(allowCampaigns)
+            .userId(userId)
+            .apply {
+                allowDeeplink?.let { this.allowDeeplink(it) }
+                this.allowCampaigns(allowCampaigns)
+            }
+            .build()
 
-        if (allowDeeplink != null) {
-            builder.allowDeeplink(allowDeeplink)
-        }
-        if (!appUserId.isNullOrBlank()) {
-            builder.userId(appUserId)
-        }
-
-        builder.build()
-
+        Purchasely.sdkBridgeVersion = "6.0.0-beta.0"
         Purchasely.appTechnology = PLYAppTechnology.FLUTTER
 
         Purchasely.start { error ->
@@ -529,8 +544,6 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
             }
             onDismissed { outcome ->
                 displayCallbacks.remove(requestId)
-                loadedPresentations.remove(requestId)
-                preparedRequests.remove(requestId)
                 emit(eventEnvelope("onDismissed", requestId).apply {
                     put("outcome", outcomeToMap(outcome))
                 })
@@ -593,6 +606,7 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
             }
             result.safeSuccess(true)
         } catch (t: Throwable) {
+            displayCallbacks.remove(requestId)
             result.safeError("-1", t.message ?: "display failed", t)
         }
     }
@@ -777,6 +791,13 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
                     "basePlanId" to action.plan.basePlanId,
                 ),
                 "subscriptionOffer" to action.subscriptionOffer?.toMap(),
+                "offer" to action.offer?.let { offer ->
+                    mapOf(
+                        "vendorId" to offer.vendorId,
+                        "storeOfferId" to offer.storeOfferId,
+                        "publicId" to offer.publicId,
+                    )
+                },
             )
             is PLYPresentationAction.Close -> mapOf("closeReason" to action.closeReason.value)
             is PLYPresentationAction.CloseAll -> mapOf("closeReason" to action.closeReason.value)
@@ -897,8 +918,8 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
         Purchasely.logLevel = LogLevel.values()[logLevel ?: 0]
     }
 
-    private fun readyToOpenDeeplink(readyToOpenDeeplink: Boolean?) {
-        Purchasely.allowDeeplink = readyToOpenDeeplink ?: true
+    private fun allowDeeplink(allowDeeplink: Boolean?) {
+        Purchasely.allowDeeplink = allowDeeplink ?: true
     }
 
     private fun synchronize() {
@@ -932,7 +953,7 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
         }
     }
 
-    private fun isDeeplinkHandled(deeplink: String?, result: Result) {
+    private fun handleDeeplink(deeplink: String?, result: Result) {
         if (deeplink == null) {
             result.safeError("-1", "Deeplink must not be null", null)
             return
@@ -942,10 +963,8 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
     }
 
     private fun displaySubscriptionCancellationInstruction() {
-        val flutterActivity = activity
-        if(flutterActivity is FragmentActivity) {
-            Purchasely.displaySubscriptionCancellationInstruction(flutterActivity, 0)
-        }
+        // The native Android v6 SDK removed the built-in cancellation survey UI.
+        Log.w("Purchasely", "displaySubscriptionCancellationInstruction is no longer supported by the Android v6 SDK")
     }
 
     private suspend fun userSubscriptions(result: Result) {
@@ -1226,28 +1245,19 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
 
     private fun getStoresInstances(stores: List<String>?): ArrayList<Store> {
         val result = ArrayList<Store>()
-        if (stores?.contains("google") == true
-            && Package.getPackage("io.purchasely.google") != null) {
-            try {
-                result.add(Class.forName("io.purchasely.google.GoogleStore").newInstance() as Store)
-            } catch (e: Exception) {
-                Log.e("Purchasely", "Google Store not found :" + e.message, e)
+        stores.orEmpty().forEach { store ->
+            val className = when (store.lowercase(Locale.US)) {
+                "google" -> "io.purchasely.google.GoogleStore"
+                "huawei" -> "io.purchasely.huawei.HuaweiStore"
+                "amazon" -> "io.purchasely.amazon.AmazonStore"
+                else -> null
             }
-        }
-        if (stores?.contains("huawei") == true
-            && Package.getPackage("io.purchasely.huawei") != null) {
-            try {
-                result.add(Class.forName("io.purchasely.huawei.HuaweiStore").newInstance() as Store)
-            } catch (e: Exception) {
-                Log.e("Purchasely", e.message, e)
-            }
-        }
-        if (stores?.contains("amazon") == true
-            && Package.getPackage("io.purchasely.amazon") != null) {
-            try {
-                result.add(Class.forName("io.purchasely.amazon.AmazonStore").newInstance() as Store)
-            } catch (e: Exception) {
-                Log.e("Purchasely", e.message, e)
+            if (className != null) {
+                try {
+                    result.add(Class.forName(className).getDeclaredConstructor().newInstance() as Store)
+                } catch (e: Exception) {
+                    Log.e("Purchasely", "$store Store not found: ${e.message}", e)
+                }
             }
         }
         return result
@@ -1309,7 +1319,9 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
 
         private lateinit var channel : MethodChannel
 
-        // Prepared/loaded presentations keyed by Dart requestId.
+        // Prepared/loaded presentations keyed by Dart requestId. They are retained after
+        // dismissal so a Dart Presentation handle can be displayed again and so the inline
+        // platform view can resolve a preloaded requestId. There is no native dispose API yet.
         val preparedRequests = ConcurrentHashMap<String, PLYPresentationBase.Prepared>()
         val loadedPresentations = ConcurrentHashMap<String, PLYPresentationBase.Loaded>()
         val displayCallbacks = ConcurrentHashMap<String, (PLYPresentationOutcome) -> Unit>()

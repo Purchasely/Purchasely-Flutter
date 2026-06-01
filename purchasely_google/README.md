@@ -1,52 +1,47 @@
 ![Purchasely](images/icon.png)
 
-# Purchasely
+# Purchasely Google Play extension
 
-Purchasely is a solution to ease the integration and boost your In-App Purchase & Subscriptions on the App Store, Google Play Store and Huawei App Gallery.
+Android Google Play Billing extension for the Purchasely Flutter SDK.
 
 ## Installation
 
-```
+Use the exact same version for every Purchasely Flutter package:
+
+```yaml
 dependencies:
-  purchasely_flutter: ^5.1.0
+  purchasely_flutter: 6.0.0-beta.0
+  purchasely_google: 6.0.0-beta.0
 ```
 
+This package pulls `io.purchasely:google-play:6.0.0` on Android. Until the native
+6.0.0 artifacts are published on Maven Central, local builds may need the
+`mavenLocal()` workaround documented in the main package migration guide.
+
 ## Usage
+
+Initialize the SDK with the v6 builder and include the Google store:
 
 ```dart
 import 'package:purchasely_flutter/purchasely_flutter.dart';
 
-// ...
+final configured = await PurchaselyBuilder.apiKey('<YOUR_API_KEY>')
+    .runningMode(RunningMode.full)
+    .stores([PLYStore.google])
+    .start();
+```
 
-bool configured = await Purchasely.start(
-    apiKey: '<YOUR_API_KEY>',
-    androidStores: ['Google, Huawei, Amazon'],
-    storeKit1: false,
-    logLevel: PLYLogLevel.error,
-    runningMode: PLYRunningMode.full,
-    userId: null,
-);
+Display presentations with `PresentationBuilder`:
 
-var result = await Purchasely.presentPresentationForPlacement("<YOUR_PLACEMENT_ID>", isFullscreen: true);
+```dart
+final outcome = await PresentationBuilder.placement('<YOUR_PLACEMENT_ID>')
+    .build()
+    .display(const Transition.fullScreen());
 
-switch (result.result) {
-  case PLYPurchaseResult.cancelled:
-  {
-    print("User cancelled purchased");
-  }
-  break;
-  case PLYPurchaseResult.purchased:
-  {
-    print("User purchased ${result.plan?.name}");
-  }
-  break;
-  case PLYPurchaseResult.restored:
-  {
-    print("User restored ${result.plan?.name}");
-  }
-  break;
+if (outcome.purchaseResult == PurchaseResult.purchased) {
+  print('User purchased ${outcome.plan}');
 }
 ```
 
-## 🏁 Documentation
-A complete documentation is available on our website [https://docs.purchasely.com](https://docs.purchasely.com)
+See the repository `MIGRATION-v6.md` and `sdk_public_doc.md` for the complete v6
+API mapping.

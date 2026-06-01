@@ -5,8 +5,9 @@ Purchasely Flutter SDK with Dart.
 
 > **Upgrading to 6.0?** This release adapts the plugin to the Purchasely 6.0
 > native SDKs. The paywall surface (start, display / preload / close, action
-> interceptor) moved to a fluent builder API documented here; everything else on
-> the `Purchasely` class is unchanged. See
+> interceptor) moved to a fluent builder API documented here; other `Purchasely`
+> APIs remain source-compatible. Deeplinks use the v6 names with deprecated
+> aliases. See
 > [`MIGRATION-v6.md`](./MIGRATION-v6.md) for the complete old→new mapping. The
 > Purchasely AI plugin and skills (`purchasely-integrate`, `purchasely-review`,
 > `purchasely-debug`) can apply the migration for you.
@@ -39,9 +40,9 @@ guide.
 
 | Requirement | iOS | Android |
 |-------------|-----|---------|
-| Minimum OS Version | 11.0 | 21 |
-| compileSdkVersion | - | 33 |
-| targetSdkVersion | - | 33 |
+| Minimum OS Version | 13.4 | 23 |
+| compileSdkVersion | - | 35 |
+| targetSdkVersion | - | 35 |
 
 ---
 
@@ -51,7 +52,7 @@ Add the Purchasely Flutter SDK to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  purchasely_flutter: ^6.0.0
+  purchasely_flutter: 6.0.0-beta.0
 ```
 
 Then run:
@@ -73,8 +74,8 @@ Google Play Billing extension:
 
 ```yaml
 dependencies:
-  purchasely_flutter: ^6.0.0
-  purchasely_google: ^6.0.0
+  purchasely_flutter: 6.0.0-beta.0
+  purchasely_google: 6.0.0-beta.0
 ```
 
 #### Video Player (Required for Video Paywalls)
@@ -83,7 +84,7 @@ If your presentations contain videos, add the Android video player extension:
 
 ```yaml
 dependencies:
-  purchasely_android_player: ^6.0.0
+  purchasely_android_player: 6.0.0-beta.0
 ```
 
 > ⚠️ **All Purchasely packages must be at the exact same version.** Mismatched
@@ -111,7 +112,7 @@ Backend & SDK configuration**.
 > `setDefaultPresentationResultHandler`, …) have been replaced. See
 > [`MIGRATION-v6.md`](./MIGRATION-v6.md) for the complete old→new mapping. All
 > other `Purchasely.*` methods (user, products, subscriptions, attributes,
-> events) are unchanged.
+> events) remain source-compatible.
 
 Initialize the Purchasely SDK as early as possible in your application lifecycle
 using `PurchaselyBuilder.apiKey(...)`. Only the API key is required; every other
@@ -131,6 +132,7 @@ try {
       .logLevel(LogLevel.error)                    // LogLevel.debug in development
       .appUserId(null)                             // set your user id here if you know it
       .stores([PLYStore.google])                   // Android: google | huawei | amazon
+      .allowCampaigns(true)                        // optional campaign display gate
       .storekitVersion(StorekitVersion.storeKit2)  // iOS: storeKit2 (recommended) | storeKit1
       .start();
 
@@ -666,8 +668,8 @@ await PurchaselyBuilder.apiKey('<YOUR_API_KEY>')
     .start();
 ```
 
-`Purchasely.readyToOpenDeeplink(bool)` still exists if you need to toggle this at
-runtime.
+`Purchasely.allowDeeplink(bool)` can also toggle this at runtime. The old
+`readyToOpenDeeplink` name remains only as a deprecated alias.
 
 ### Setting the Default Presentation Handler
 
@@ -689,7 +691,7 @@ PresentationBuilder.defaultSource()
 ### Checking a Deeplink
 
 ```dart
-final handled = await Purchasely.isDeeplinkHandled('app://ply/presentations/');
+final handled = await Purchasely.handleDeeplink('app://ply/presentations/');
 print('Deeplink handled by Purchasely? $handled');
 ```
 
@@ -751,11 +753,29 @@ await Purchasely.interceptAction(
 
 ### Native Subscriptions Screen
 
-> **`presentSubscriptions` is a no-op on Android in 6.0.** The native
-> subscriptions screen was removed from the Android SDK, so
-> `Purchasely.presentSubscriptions()` does nothing on Android. It still works on
-> iOS. Build your own subscriptions screen with `userSubscriptions()` if you need
+> **Removed Android subscription/cancellation UI.** The native subscriptions
+> screen and cancellation survey UI were removed from the Android 6.0 SDK, so
+> `Purchasely.presentSubscriptions()` and
+> `Purchasely.displaySubscriptionCancellationInstruction()` are no-ops on
+> Android. `presentSubscriptions()` still works on iOS; the cancellation
+> instruction helper is a no-op on iOS too. Build your own UI with
+> `userSubscriptions()` / `userSubscriptionsHistory()` if you need
 > cross-platform parity.
+
+### iOS Presentation Fields
+
+The native iOS 6.0 SDK does not currently expose `closeReason` on
+`PLYPresentationOutcome`, nor a loaded presentation `contentId` on
+`PLYPresentation`. Flutter therefore reports `outcome.closeReason` and
+`presentation.contentId` as `null` on iOS rather than synthesising values. Android
+6.0 does expose both fields.
+
+### Plan Offer Fields
+
+Android 6.0 renamed introductory-price helpers to offer-price helpers. Flutter
+exposes the v6 names on `PLYPlan` (`hasOfferPrice`, `offerPrice`, `offerAmount`,
+`offerDuration`, `offerPeriod`) and keeps the old `intro*` fields populated as
+deprecated compatibility aliases.
 
 ---
 
@@ -772,7 +792,7 @@ await Purchasely.interceptAction(
    - The SDK is properly initialized
    - You have an active internet connection
 
-4. **StoreKit issues on iOS**: Ensure your iOS deployment target is at least 11.0.
+4. **StoreKit issues on iOS**: Ensure your iOS deployment target is at least 13.4.
 
 ### Debug Mode
 

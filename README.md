@@ -5,15 +5,15 @@
 Purchasely is a solution to ease the integration and boost your In-App Purchase & Subscriptions on the App Store, Google Play Store and Huawei App Gallery.
 
 > **Upgrading to 6.0?** The paywall surface (start, display/preload/close, action
-> interceptor) moved to a fluent builder API; everything else on the `Purchasely`
-> class is unchanged. See [`MIGRATION-v6.md`](./MIGRATION-v6.md) for the complete
-> old→new mapping.
+> interceptor) moved to a fluent builder API; other `Purchasely` APIs remain
+> source-compatible (deeplinks use v6 names with deprecated aliases). See
+> [`MIGRATION-v6.md`](./MIGRATION-v6.md) for the complete old→new mapping.
 
 ## Installation
 
 ```yaml
 dependencies:
-  purchasely_flutter: ^6.0.0
+  purchasely_flutter: 6.0.0-beta.0
 ```
 
 ## Usage
@@ -27,6 +27,9 @@ await PurchaselyBuilder.apiKey('<YOUR_API_KEY>')
     .logLevel(LogLevel.error)
     .stores([PLYStore.google])
     .start();
+
+// Runtime deeplink toggle (v6 name):
+await Purchasely.allowDeeplink(true);
 
 // 2. Build a presentation request and display it.
 //    `.display(...)` resolves at *dismiss* time with the 5-field

@@ -8,7 +8,8 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
 
     // Presentation/interceptor state shared with the inline NativeView. Keyed by
     // the Dart-side `requestId` so close/back/display and the platform view can
-    // find the right handle.
+    // find the right handle. Retained after dismissal to support re-displaying a
+    // Dart Presentation handle; there is no native dispose API yet.
     static var requests: [String: PLYPresentationRequest] = [:]
     static var loadedPresentations: [String: PLYPresentation] = [:]
     // invocationId -> SDK interceptor completion. Single-shot, removed on resolve.
@@ -109,9 +110,15 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             userLogin(arguments: arguments, result: result)
         case "userLogout":
             userLogout(result: result)
+        case "allowDeeplink":
+            let parameter = arguments?["allowDeeplink"] as? Bool
+            allowDeeplink(allowDeeplink: parameter)
+            result(true)
         case "readyToOpenDeeplink":
+            // Deprecated Flutter v5 alias kept for source compatibility.
             let parameter = arguments?["readyToOpenDeeplink"] as? Bool
-            readyToOpenDeeplink(readyToOpenDeeplink: parameter)
+            allowDeeplink(allowDeeplink: parameter)
+            result(true)
         case "setLogLevel":
             let parameter = (arguments?["logLevel"] as? Int) ?? PLYLogger.PLYLogLevel.debug.rawValue
             let logLevel = PLYLogger.PLYLogLevel(rawValue: parameter) ?? PLYLogger.PLYLogLevel.debug
@@ -127,15 +134,18 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             allProducts(result)
         case "purchaseWithPlanVendorId":
             purchaseWithPlanVendorId(arguments: arguments, result: result)
+        case "handleDeeplink":
+            let parameter = arguments?["deeplink"] as? String
+            handleDeeplink(parameter, result: result)
         case "isDeeplinkHandled":
             let parameter = arguments?["deeplink"] as? String
-            isDeeplinkHandled(parameter, result: result)
+            handleDeeplink(parameter, result: result)
         case "userSubscriptions":
             userSubscriptions(result)
         case "userSubscriptionsHistory":
             userSubscriptionsHistory(result)
         case "presentSubscriptions":
-            presentSubscriptions()
+            presentSubscriptions(result: result)
         case "setThemeMode":
             setThemeMode(arguments: arguments)
         case "setAttribute":
@@ -179,7 +189,7 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             clearBuiltInAttributes()
         case "displaySubscriptionCancellationInstruction":
             // iOS has no dedicated cancellation-instruction screen; no-op.
-            result(FlutterMethodNotImplemented)
+            result(true)
         case "isAnonymous":
             isAnonymous(result: result)
         case "signPromotionalOffer":
@@ -219,25 +229,22 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
 
         var builder = Purchasely.apiKey(apiKey)
             .appTechnology(.flutter)
+            .sdkBridgeVersion("6.0.0-beta.0")
 
-        if let appUserId = arguments["appUserId"] as? String, !appUserId.isEmpty {
-            builder = builder.appUserId(appUserId)
+        if let userId = (arguments["appUserId"] as? String) ?? (arguments["userId"] as? String), !userId.isEmpty {
+            builder = builder.appUserId(userId)
         }
 
-        let runningMode: PLYRunningMode = (arguments["runningMode"] as? String) == "full" ? .full : .observer
-        builder = builder.runningMode(runningMode)
+        builder = builder.runningMode(Self.runningMode(from: arguments["runningMode"]))
+        builder = builder.logLevel(Self.logLevel(from: arguments["logLevel"]))
+        builder = builder.storekitSettings(Self.storekitSettings(from: arguments))
 
-        let logLevel: PLYLogger.PLYLogLevel
-        switch arguments["logLevel"] as? String {
-        case "debug": logLevel = .debug
-        case "info": logLevel = .info
-        case "warn": logLevel = .warn
-        default: logLevel = .error
+        if let allowDeeplink = arguments["allowDeeplink"] as? Bool {
+            Purchasely.allowDeeplink(allowDeeplink)
         }
-        builder = builder.logLevel(logLevel)
-
-        let storeKit1 = (arguments["storekitVersion"] as? String) == "storeKit1"
-        builder = builder.storekitSettings(storeKit1 ? .storeKit1 : .storeKit2)
+        if let allowCampaigns = arguments["allowCampaigns"] as? Bool {
+            Purchasely.allowCampaigns(allowCampaigns)
+        }
 
         DispatchQueue.main.async {
             builder.start { error in
@@ -310,8 +317,6 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
                 "requestId": requestId,
                 "outcome": self?.outcomeToMap(outcome, presentation: presentation, error: nil, requestId: requestId) as Any?,
             ])
-            SwiftPurchaselyFlutterPlugin.loadedPresentations.removeValue(forKey: requestId)
-            SwiftPurchaselyFlutterPlugin.requests.removeValue(forKey: requestId)
         }
 
         let request = builder.build()
@@ -390,9 +395,7 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
                     "requestId": requestId,
                     "outcome": outcome,
                 ])
-                result(FlutterError(code: "DISPLAY",
-                                    message: error.localizedDescription,
-                                    details: Self.errorToMap(error)))
+                result(true)
             } else {
                 result(true)
             }
@@ -477,6 +480,39 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
     }
 
     // MARK: - Presentation serializers
+
+    private static func runningMode(from raw: Any?) -> PLYRunningMode {
+        if let value = raw as? Int {
+            return PLYRunningMode(rawValue: value) ?? .observer
+        }
+        if let value = raw as? String, value.lowercased() == "full" {
+            return .full
+        }
+        return .observer
+    }
+
+    private static func logLevel(from raw: Any?) -> PLYLogger.PLYLogLevel {
+        if let value = raw as? Int {
+            return PLYLogger.PLYLogLevel(rawValue: value) ?? .error
+        }
+        if let value = raw as? String {
+            switch value.lowercased() {
+            case "debug": return .debug
+            case "info": return .info
+            case "warn": return .warn
+            default: return .error
+            }
+        }
+        return .error
+    }
+
+    private static func storekitSettings(from arguments: [String: Any]) -> StorekitSettings {
+        if let value = arguments["storekitVersion"] as? String {
+            return value == "storeKit1" ? .storeKit1 : .storeKit2
+        }
+        let storeKit1 = arguments["storeKit1"] as? Bool ?? false
+        return storeKit1 ? .storeKit1 : .storeKit2
+    }
 
     private func presentationToMap(_ p: PLYPresentation, requestId: String) -> [String: Any] {
         return [
@@ -706,8 +742,8 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
         result(true)
     }
 
-    private func readyToOpenDeeplink(readyToOpenDeeplink: Bool?) {
-        Purchasely.readyToOpenDeeplink(readyToOpenDeeplink ?? true)
+    private func allowDeeplink(allowDeeplink: Bool?) {
+        Purchasely.allowDeeplink(allowDeeplink ?? true)
     }
 
     private func productWithIdentifier(arguments: [String: Any]?, result: @escaping FlutterResult) {
@@ -805,14 +841,14 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
         }
     }
 
-    private func isDeeplinkHandled(_ deeplink: String?, result: @escaping FlutterResult) {
+    private func handleDeeplink(_ deeplink: String?, result: @escaping FlutterResult) {
         guard let deeplink = deeplink, let url = URL(string: deeplink) else {
             result(FlutterError.error(code: "-1", message: "deeplink must not be nil", error: nil))
             return
         }
 
         DispatchQueue.main.async {
-            result(Purchasely.isDeeplinkHandled(deeplink: url))
+            result(Purchasely.handleDeeplink(url))
         }
     }
 
@@ -838,14 +874,17 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
         }
     }
 
-    private func presentSubscriptions() {
+    private func presentSubscriptions(result: @escaping FlutterResult) {
         if let controller = Purchasely.subscriptionsController() {
             let navCtrl = UINavigationController.init(rootViewController: controller)
             navCtrl.navigationBar.topItem?.leftBarButtonItem = UIBarButtonItem(barButtonSystemItem: .done, target: navCtrl, action: #selector(UIViewController.close))
 
             DispatchQueue.main.async {
                 Purchasely.showController(navCtrl, type: .subscriptionList)
+                result(true)
             }
+        } else {
+            result(true)
         }
     }
 

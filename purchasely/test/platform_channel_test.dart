@@ -334,11 +334,31 @@ void main() {
         expect(methodCalls.first.arguments['language'], 'fr');
       });
 
-      test('isDeeplinkHandled returns boolean', () async {
+      test('handleDeeplink returns boolean', () async {
+        final handled = await Purchasely.handleDeeplink('app://premium');
+
+        expect(methodCalls.first.method, 'handleDeeplink');
+        expect(methodCalls.first.arguments['deeplink'], 'app://premium');
+        expect(handled, true);
+      });
+
+      test('allowDeeplink sends v6 method name', () async {
+        await Purchasely.allowDeeplink(true);
+
+        expect(methodCalls.first.method, 'allowDeeplink');
+        expect(methodCalls.first.arguments['allowDeeplink'], true);
+      });
+
+      test('deprecated deeplink aliases still bridge to v6 methods', () async {
+        // ignore: deprecated_member_use_from_same_package
+        await Purchasely.readyToOpenDeeplink(false);
+        // ignore: deprecated_member_use_from_same_package
         final handled = await Purchasely.isDeeplinkHandled('app://premium');
 
-        expect(methodCalls.first.method, 'isDeeplinkHandled');
-        expect(methodCalls.first.arguments['deeplink'], 'app://premium');
+        expect(methodCalls[0].method, 'allowDeeplink');
+        expect(methodCalls[0].arguments['allowDeeplink'], false);
+        expect(methodCalls[1].method, 'handleDeeplink');
+        expect(methodCalls[1].arguments['deeplink'], 'app://premium');
         expect(handled, true);
       });
     });
@@ -668,9 +688,9 @@ dynamic _handleMethodCall(MethodCall methodCall) {
       return null;
     case 'setThemeMode':
       return null;
-    case 'readyToOpenDeeplink':
+    case 'allowDeeplink':
       return null;
-    case 'isDeeplinkHandled':
+    case 'handleDeeplink':
       return true;
     case 'restoreAllProducts':
       return true;

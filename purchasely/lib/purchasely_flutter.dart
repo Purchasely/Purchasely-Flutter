@@ -160,9 +160,15 @@ class Purchasely {
     return restored;
   }
 
+  static Future<void> allowDeeplink(bool allowDeeplink) async {
+    await _channel.invokeMethod(
+        'allowDeeplink', <String, dynamic>{'allowDeeplink': allowDeeplink});
+  }
+
+  @Deprecated(
+      'Use allowDeeplink instead. This v5 alias will be removed in a future major version.')
   static Future<void> readyToOpenDeeplink(bool readyToOpenDeeplink) async {
-    _channel.invokeMethod('readyToOpenDeeplink',
-        <String, dynamic>{'readyToOpenDeeplink': readyToOpenDeeplink});
+    await allowDeeplink(readyToOpenDeeplink);
   }
 
   static Future<void> setLanguage(String language) async {
@@ -220,11 +226,11 @@ class Purchasely {
   }
 
   static Future<void> presentSubscriptions() async {
-    _channel.invokeMethod('presentSubscriptions');
+    await _channel.invokeMethod('presentSubscriptions');
   }
 
   static Future<void> displaySubscriptionCancellationInstruction() async {
-    _channel.invokeMethod('displaySubscriptionCancellationInstruction');
+    await _channel.invokeMethod('displaySubscriptionCancellationInstruction');
   }
 
   static Future<List<PLYSubscription>> userSubscriptions() async {
@@ -292,9 +298,15 @@ class Purchasely {
     return subscriptions;
   }
 
-  static Future<bool> isDeeplinkHandled(String deepLink) async {
+  static Future<bool> handleDeeplink(String deepLink) async {
     return await _channel.invokeMethod(
-        'isDeeplinkHandled', <String, dynamic>{'deeplink': deepLink});
+        'handleDeeplink', <String, dynamic>{'deeplink': deepLink});
+  }
+
+  @Deprecated(
+      'Use handleDeeplink instead. This v5 alias will be removed in a future major version.')
+  static Future<bool> isDeeplinkHandled(String deepLink) async {
+    return await handleDeeplink(deepLink);
   }
 
   static void listenToEvents(Function(PLYEvent) block) {
@@ -562,29 +574,56 @@ class Purchasely {
   static PLYPlan? transformToPLYPlan(Map<dynamic, dynamic> plan) {
     if (plan.isEmpty) return null;
 
-    PLYPlanType type = PLYPlanType.unknown;
-    try {
-      type = PLYPlanType.values[plan['type']];
-    } catch (e) {
-      print(e);
-    }
+    final offerPrice = plan['offerPrice'] ?? plan['introPrice'];
+    final offerAmount = plan['offerAmount'] ?? plan['introAmount'];
+    final offerDuration = plan['offerDuration'] ?? plan['introDuration'];
+    final offerPeriod = plan['offerPeriod'] ?? plan['introPeriod'];
+    final hasOfferPrice = plan['hasOfferPrice'] ?? plan['hasIntroductoryPrice'];
+
     return PLYPlan(
-        plan['vendorId'],
-        plan['productId'],
-        plan['name'],
-        type,
-        plan['amount'],
-        plan['localizedAmount'],
-        plan['currencyCode'],
-        plan['currencySymbol'],
-        plan['price'],
-        plan['period'],
-        plan['hasIntroductoryPrice'],
-        plan['introPrice'],
-        plan['introAmount'],
-        plan['introDuration'],
-        plan['introPeriod'],
-        plan['hasFreeTrial']);
+      plan['vendorId'],
+      plan['productId'],
+      plan['name'],
+      _mapPlanType(plan['type']),
+      plan['amount'],
+      plan['localizedAmount'],
+      plan['currencyCode'],
+      plan['currencySymbol'],
+      plan['price'],
+      plan['period'],
+      hasOfferPrice,
+      offerPrice,
+      offerAmount,
+      offerDuration,
+      offerPeriod,
+      plan['hasFreeTrial'],
+      hasOfferPrice,
+      offerPrice,
+      offerAmount,
+      offerDuration,
+      offerPeriod,
+    );
+  }
+
+  static PLYPlanType _mapPlanType(dynamic rawType) {
+    if (rawType is int && rawType >= 0 && rawType < PLYPlanType.values.length) {
+      return PLYPlanType.values[rawType];
+    }
+    if (rawType is String) {
+      switch (rawType) {
+        case 'CONSUMABLE':
+          return PLYPlanType.consumable;
+        case 'NON_CONSUMABLE':
+          return PLYPlanType.nonConsumable;
+        case 'RENEWING_SUBSCRIPTION':
+          return PLYPlanType.autoRenewingSubscription;
+        case 'NON_RENEWING_SUBSCRIPTION':
+          return PLYPlanType.nonRenewingSubscription;
+        default:
+          return PLYPlanType.unknown;
+      }
+    }
+    return PLYPlanType.unknown;
   }
 
   static PLYPromoOffer? transformToPLYPromoOffer(Map<dynamic, dynamic> offer) {
@@ -901,6 +940,11 @@ class PLYPlan {
   String? introDuration;
   String? introPeriod;
   bool? hasFreeTrial;
+  bool? hasOfferPrice;
+  String? offerPrice;
+  double? offerAmount;
+  String? offerDuration;
+  String? offerPeriod;
 
   PLYPlan(
       this.vendorId,
@@ -918,7 +962,18 @@ class PLYPlan {
       this.introAmount,
       this.introDuration,
       this.introPeriod,
-      this.hasFreeTrial);
+      this.hasFreeTrial,
+      [this.hasOfferPrice,
+      this.offerPrice,
+      this.offerAmount,
+      this.offerDuration,
+      this.offerPeriod]) {
+    hasOfferPrice ??= hasIntroductoryPrice;
+    offerPrice ??= introPrice;
+    offerAmount ??= introAmount;
+    offerDuration ??= introDuration;
+    offerPeriod ??= introPeriod;
+  }
 }
 
 class PLYPromoOffer {
