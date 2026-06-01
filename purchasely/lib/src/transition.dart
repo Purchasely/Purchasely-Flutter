@@ -1,4 +1,4 @@
-// Purchasely SDK v6 — Presentation transitions.
+// Purchasely SDK — Presentation transitions.
 
 /// Display transition type for a presentation.
 enum TransitionType {

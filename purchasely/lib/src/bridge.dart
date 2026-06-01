@@ -1,18 +1,17 @@
-// Purchasely SDK v6 — Dart-side MethodChannel/EventChannel dispatcher.
+// Purchasely SDK — Dart-side MethodChannel/EventChannel dispatcher.
 //
-// Wires the v6 façade (`lib/src/presentation*.dart`, `lib/src/purchasely_builder.dart`,
-// `lib/src/action_interceptor.dart`) to the native bridges:
-//   * Android  : PurchaselyV6Bridge.kt  (commit d164581)
-//   * iOS      : PurchaselyV6Bridge.swift (commit 7dbd052)
+// Wires the presentation façade (`lib/src/presentation*.dart`,
+// `lib/src/purchasely_builder.dart`, `lib/src/action_interceptor.dart`) to the
+// unified native plugin (one plugin per platform).
 //
-// Channel contract (see `BRIDGE-CONTRACT.md` + the native bridges' docstring):
-//   - MethodChannel : `purchasely`            — calls Dart → native
-//   - EventChannel  : `purchasely/v6-events`  — events native → Dart
+// Channel contract:
+//   - MethodChannel : `purchasely`                      — calls Dart → native
+//   - EventChannel  : `purchasely-presentation-events`  — events native → Dart
 //
-// MethodChannel verbs (all prefixed with `v6/`):
-//   v6/start, v6/preload, v6/display, v6/close, v6/back,
-//   v6/registerInterceptor, v6/removeInterceptor, v6/removeAllInterceptors,
-//   v6/interceptorResolve
+// MethodChannel verbs:
+//   start, preload, display, close, back,
+//   registerInterceptor, removeInterceptor, removeAllInterceptors,
+//   interceptorResolve
 //
 // EventChannel envelopes — every event carries `event` + `requestId` keys:
 //   * onLoaded            : { event, requestId, presentation?, error? }
@@ -22,8 +21,8 @@
 //   * interceptorTriggered: { event, requestId = invocationId, kind, info, payload }
 //
 // Initialisation: the singletons on `PresentationActions` /
-// `PresentationRequestActions` are installed lazily the first time a v6 entry
-// point is invoked (cf. [PurchaselyV6Bridge.ensureInstalled]).
+// `PresentationRequestActions` are installed lazily the first time a
+// presentation entry point is invoked (cf. [PurchaselyBridge.ensureInstalled]).
 
 import 'dart:async';
 
@@ -40,26 +39,27 @@ import 'transition.dart';
 /// Single dispatcher that owns the MethodChannel + EventChannel and keeps
 /// track of in-flight presentations, request-keyed callbacks and registered
 /// interceptors. Installed lazily via [ensureInstalled].
-class PurchaselyV6Bridge {
-  PurchaselyV6Bridge._({
+class PurchaselyBridge {
+  PurchaselyBridge._({
     MethodChannel? methodChannel,
     EventChannel? eventChannel,
   })  : _method = methodChannel ?? const MethodChannel('purchasely'),
-        _events = eventChannel ?? const EventChannel('purchasely/v6-events');
+        _events = eventChannel ??
+            const EventChannel('purchasely-presentation-events');
 
-  static PurchaselyV6Bridge? _instance;
+  static PurchaselyBridge? _instance;
   static bool _wired = false;
 
   /// Idempotent install: wires the dispatcher into [PresentationActions] and
   /// [PresentationRequestActions]. Called automatically by [_install];
   /// exposed for tests that need to inject mock channels.
-  static PurchaselyV6Bridge ensureInstalled({
+  static PurchaselyBridge ensureInstalled({
     MethodChannel? methodChannel,
     EventChannel? eventChannel,
   }) {
     if (_instance == null || methodChannel != null || eventChannel != null) {
       _instance?._dispose();
-      _instance = PurchaselyV6Bridge._(
+      _instance = PurchaselyBridge._(
         methodChannel: methodChannel,
         eventChannel: eventChannel,
       );
@@ -124,7 +124,7 @@ class PurchaselyV6Bridge {
     _registerRequest(request);
     try {
       final raw = await _method.invokeMethod<dynamic>(
-        'v6/preload',
+        'preload',
         _argsForRequest(request),
       );
       final loaded = _presentationFromRaw(raw, request);
@@ -144,13 +144,13 @@ class PurchaselyV6Bridge {
     _registerRequest(request);
     final entry = _entries[request.requestId]!;
     // Native bridges resolve the Dart-side display Future via the onDismissed
-    // event — not via the MethodChannel response. The MethodChannel `v6/display`
+    // event — not via the MethodChannel response. The MethodChannel `display`
     // returns immediately with `true` once the SDK accepted the display call.
     final completer = Completer<PresentationOutcome>();
     entry.dismissCompleter = completer;
     try {
       await _method.invokeMethod<dynamic>(
-        'v6/display',
+        'display',
         <String, Object?>{
           ..._argsForRequest(request),
           if (transition != null) 'transition': transition.toMap(),
@@ -192,7 +192,7 @@ class PurchaselyV6Bridge {
     entry.dismissCompleter = completer;
     try {
       await _method.invokeMethod<dynamic>(
-        'v6/display',
+        'display',
         <String, Object?>{
           'requestId': presentation.requestId,
           if (transition != null) 'transition': transition.toMap(),
@@ -218,14 +218,14 @@ class PurchaselyV6Bridge {
 
   Future<void> _close(Presentation presentation) async {
     await _method.invokeMethod<dynamic>(
-      'v6/close',
+      'close',
       <String, Object?>{'requestId': presentation.requestId},
     );
   }
 
   Future<void> _back(Presentation presentation) async {
     await _method.invokeMethod<dynamic>(
-      'v6/back',
+      'back',
       <String, Object?>{'requestId': presentation.requestId},
     );
   }
@@ -238,7 +238,7 @@ class PurchaselyV6Bridge {
   ) async {
     _interceptors[kind.wire] = handler;
     await _method.invokeMethod<dynamic>(
-      'v6/registerInterceptor',
+      'registerInterceptor',
       <String, Object?>{'kind': kind.wire},
     );
   }
@@ -246,20 +246,20 @@ class PurchaselyV6Bridge {
   Future<void> removeInterceptor(PresentationActionKind kind) async {
     _interceptors.remove(kind.wire);
     await _method.invokeMethod<dynamic>(
-      'v6/removeInterceptor',
+      'removeInterceptor',
       <String, Object?>{'kind': kind.wire},
     );
   }
 
   Future<void> removeAllInterceptors() async {
     _interceptors.clear();
-    await _method.invokeMethod<dynamic>('v6/removeAllInterceptors');
+    await _method.invokeMethod<dynamic>('removeAllInterceptors');
   }
 
   Future<void> _resolveInterceptor(
       String invocationId, InterceptResult result) async {
     await _method.invokeMethod<dynamic>(
-      'v6/interceptorResolve',
+      'interceptorResolve',
       <String, Object?>{
         'invocationId': invocationId,
         'result': result.wire,
@@ -310,7 +310,7 @@ class PurchaselyV6Bridge {
     if (presentation != null) {
       request.onLoaded?.call(presentation, error);
     } else if (error != null) {
-      // Surface load failures via onPresented(null, error) per BRIDGE-CONTRACT P0.4.
+      // Surface load failures via onPresented(null, error).
       request.onPresented?.call(null, error);
     }
   }
@@ -464,7 +464,7 @@ class _RequestEntry {
 
   /// The originating request. Null when the entry was (re-)created from a
   /// [Presentation] handle on a re-display, after the original request entry
-  /// was dropped by [PurchaselyV6Bridge._handleOnDismissed].
+  /// was dropped by [PurchaselyBridge._handleOnDismissed].
   final PresentationRequest? request;
   Presentation? presentation;
   Completer<PresentationOutcome>? dismissCompleter;
@@ -474,7 +474,7 @@ class _RequestEntry {
 
 class _BridgePresentationActions extends PresentationActions {
   _BridgePresentationActions(this._bridge);
-  final PurchaselyV6Bridge _bridge;
+  final PurchaselyBridge _bridge;
 
   @override
   Future<PresentationOutcome> display(
@@ -490,7 +490,7 @@ class _BridgePresentationActions extends PresentationActions {
 
 class _BridgePresentationRequestActions extends PresentationRequestActions {
   _BridgePresentationRequestActions(this._bridge);
-  final PurchaselyV6Bridge _bridge;
+  final PurchaselyBridge _bridge;
 
   @override
   Future<Presentation> preload(PresentationRequest request) =>
@@ -511,7 +511,7 @@ final PresentationRequestActions _uninitialisedRequest =
 
 class _UninitialisedPresentationActions extends PresentationActions {
   StateError _err() => StateError(
-      'Purchasely bridge not initialised — call any v6 entry point first.');
+      'Purchasely bridge not initialised — call any presentation entry point first.');
   @override
   Future<PresentationOutcome> display(_, __) => throw _err();
   @override
@@ -522,7 +522,7 @@ class _UninitialisedPresentationActions extends PresentationActions {
 
 class _UninitialisedRequestActions extends PresentationRequestActions {
   StateError _err() => StateError(
-      'Purchasely bridge not initialised — call any v6 entry point first.');
+      'Purchasely bridge not initialised — call any presentation entry point first.');
   @override
   Future<Presentation> preload(_) => throw _err();
   @override

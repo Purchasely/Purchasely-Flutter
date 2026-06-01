@@ -1,4 +1,4 @@
-// Purchasely SDK v6 — Action interceptor API.
+// Purchasely SDK — Action interceptor API.
 //
 // Sealed class hierarchy for typed action payloads. Each action carries its
 // own parameters. Use `Purchasely.interceptAction(kind, handler)` to register

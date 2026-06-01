@@ -1,7 +1,4 @@
-// Purchasely SDK v6 — Presentation outcome models.
-//
-// See `BRIDGE-CONTRACT.md` (`reports/v6-presentation-comparison-v3-claude/`)
-// for the cross-platform contract these types implement.
+// Purchasely SDK — Presentation outcome models.
 
 import 'presentation.dart';
 
@@ -34,7 +31,7 @@ class PresentationError implements Exception {
 /// The outcome of a presentation session, delivered when the presentation is
 /// dismissed (or fails before display).
 ///
-/// Five fields, matching the v6 cross-platform contract:
+/// Five fields, matching the cross-platform contract:
 ///  * [presentation] — the presentation that produced this outcome, or `null`
 ///    if the presentation never reached the displayed state (pre-display
 ///    failure).

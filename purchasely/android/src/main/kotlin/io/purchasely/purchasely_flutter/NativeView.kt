@@ -6,11 +6,7 @@ import android.view.View
 import android.widget.FrameLayout
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.platform.PlatformView
-import io.purchasely.ext.PLYPresentationProperties
-import io.purchasely.ext.PLYProductViewResult
-import io.purchasely.ext.Purchasely
-import io.purchasely.models.PLYPresentationPlan
-import io.purchasely.models.PLYPlan
+import io.purchasely.ext.presentation.PLYPresentationOutcome
 
 internal class NativeView(
     context: Context,
@@ -29,87 +25,36 @@ internal class NativeView(
 
     init {
         layout = FrameLayout(context)
-        val presentationId = creationParams?.get("presentationId") as? String
-        val placementId = creationParams?.get("placementId") as? String
-        val presentationMap = creationParams?.get("presentation") as? Map<String, Any>
-        val presentation = PurchaselyFlutterPlugin.presentationsLoaded.lastOrNull {
-            it.id == presentationMap?.get("id") as? String
-                    && it.placementId == presentationMap?.get(
-                "placementId"
-            ) as? String
-        }
+
+        // The inline native view is built from a Presentation that was already
+        // loaded (via `preload`) and is keyed by the Dart requestId.
+        val requestId = creationParams?.get("requestId") as? String
+        val presentation = requestId?.let { PurchaselyFlutterPlugin.loadedPresentations[it] }
 
         if (presentation != null) {
-            Log.d("Purchasely", "PLYPresentation found: ${presentation}")
+            Log.d("Purchasely", "Loaded Presentation found for requestId=$requestId")
 
-            // Build the presentation view
-            val presentationView = presentation.buildView(
-                context = context,
-                properties = PLYPresentationProperties(
-                    onClose = { closeCallback() }
-                ),
-                callback = { result, plan ->
-                    methodChannel.invokeMethod(
-                        "onPresentationResult", mapOf(
-                            "result" to result.ordinal,
-                            "plan" to plan?.toMap(),
-                        )
-                    )
-                }
-            )
+            val presentationView = presentation.buildView(context) { outcome ->
+                methodChannel.invokeMethod("onPresentationResult", outcomeToMap(outcome))
+            }
             Log.d("Purchasely", "Presentation built successfully.")
             layout.addView(presentationView)
         } else {
-            Log.e("Purchasely", "PLYPresentation not found: using presentationId=$presentationId and placementId=$placementId.")
-            val presentationView = Purchasely.presentationView(
-                context = context,
-                properties = PLYPresentationProperties(
-                    presentationId = presentationId,
-                    placementId = placementId,
-                    onClose = { closeCallback() }
-                ),
-                callback = { result, plan ->
-                    methodChannel.invokeMethod(
-                        "onPresentationResult", mapOf(
-                            "result" to result.ordinal,
-                            "plan" to plan?.toMap(),
-                        )
-                    )
-                }
-            )
-            Log.d("Purchasely", "Presentation view created from fallback.")
-
-            layout.addView(presentationView)
+            Log.e("Purchasely", "Loaded Presentation not found for requestId=$requestId; nothing to display inline.")
         }
     }
 
-    private fun closeCallback() {
-        layout.removeAllViews()
-    }
-
-    companion object {
-        fun parsePLYPresentationPlans(plans: List<Map<String, Any>>?): List<PLYPresentationPlan> {
-            val parsedPlans = mutableListOf<PLYPresentationPlan>()
-
-            plans?.forEach { planMap ->
-                val planVendorId = planMap["planVendorId"] as? String
-                val storeProductId = planMap["storeProductId"] as? String
-                val basePlanId = planMap["basePlanId"] as? String
-                val offerId = planMap["offerId"] as? String
-
-                val presentationPlan = PLYPresentationPlan(
-                    planVendorId = planVendorId,
-                    storeProductId = storeProductId,
-                    basePlanId = basePlanId,
-                    storeOfferId = offerId,
-                    offerVendorId = null,
-                    default = false
+    private fun outcomeToMap(outcome: PLYPresentationOutcome): Map<String, Any?> {
+        return mapOf(
+            "purchaseResult" to outcome.purchaseResult?.name?.lowercase(),
+            "plan" to outcome.plan?.let { plan ->
+                mapOf(
+                    "vendorId" to plan.vendorId,
+                    "productId" to plan.getProductId(),
+                    "basePlanId" to plan.basePlanId,
                 )
-
-                parsedPlans.add(presentationPlan)
-            }
-
-            return parsedPlans
-        }
+            },
+            "closeReason" to outcome.closeReason?.value,
+        )
     }
 }

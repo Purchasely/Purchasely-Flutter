@@ -1,5 +1,5 @@
 // Unit tests for `lib/src/bridge.dart` — the Dart-side dispatcher that
-// wires the v6 façade to the native MethodChannel/EventChannel.
+// wires the presentation façade to the native MethodChannel/EventChannel.
 //
 // These tests don't need the native plugin: a fake EventChannel binary
 // messenger is installed so we can both observe MethodChannel calls and
@@ -12,9 +12,9 @@ import 'package:purchasely_flutter/purchasely_flutter.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  group('PurchaselyV6Bridge', () {
+  group('PurchaselyBridge', () {
     const methodChannelName = 'purchasely';
-    const eventChannelName = 'purchasely/v6-events';
+    const eventChannelName = 'purchasely-presentation-events';
 
     late List<MethodCall> calls;
     late TestDefaultBinaryMessenger messenger;
@@ -44,7 +44,7 @@ void main() {
         (call) async {
           calls.add(call);
           switch (call.method) {
-            case 'v6/preload':
+            case 'preload':
               return <String, Object?>{
                 'screenId': 'screen_42',
                 'placementId': (call.arguments as Map?)?['source']?['id'],
@@ -52,17 +52,17 @@ void main() {
                 'type': 0,
                 'plans': <Map<String, Object?>>[],
               };
-            case 'v6/display':
+            case 'display':
               return true;
-            case 'v6/close':
-            case 'v6/back':
+            case 'close':
+            case 'back':
               return true;
-            case 'v6/registerInterceptor':
-            case 'v6/removeInterceptor':
-            case 'v6/removeAllInterceptors':
-            case 'v6/interceptorResolve':
+            case 'registerInterceptor':
+            case 'removeInterceptor':
+            case 'removeAllInterceptors':
+            case 'interceptorResolve':
               return true;
-            case 'v6/start':
+            case 'start':
               return true;
             default:
               return null;
@@ -80,23 +80,23 @@ void main() {
 
       // Force-install the bridge with the default channels so the singletons
       // get wired against the test messenger.
-      PurchaselyV6Bridge.debugReset();
-      PurchaselyV6Bridge.ensureInstalled();
+      PurchaselyBridge.debugReset();
+      PurchaselyBridge.ensureInstalled();
     });
 
     tearDown(() {
-      PurchaselyV6Bridge.debugReset();
+      PurchaselyBridge.debugReset();
       messenger.setMockMethodCallHandler(
           const MethodChannel(methodChannelName), null);
       messenger.setMockMessageHandler(eventChannelName, null);
     });
 
-    test('preload() invokes v6/preload and returns a Presentation', () async {
+    test('preload() invokes preload and returns a Presentation', () async {
       final request = PresentationBuilder.placement('home').build();
       final presentation = await request.preload();
 
       expect(calls, hasLength(1));
-      expect(calls.single.method, 'v6/preload');
+      expect(calls.single.method, 'preload');
       final args = calls.single.arguments as Map;
       expect(args['requestId'], request.requestId);
       expect((args['source'] as Map)['kind'], 'placementId');
@@ -118,7 +118,7 @@ void main() {
       // The display call should have been invoked.
       // Give the microtask queue a tick so the awaited invokeMethod resolves.
       await Future<void>.delayed(Duration.zero);
-      expect(calls.map((c) => c.method).toList(), <String>['v6/display']);
+      expect(calls.map((c) => c.method).toList(), <String>['display']);
 
       // Fire the onDismissed event from the "native" side.
       await emitEvent(<String, Object?>{
@@ -134,7 +134,7 @@ void main() {
       expect(outcome.purchaseResult, PurchaseResult.purchased);
     });
 
-    test('onLoaded event tires the builder callback', () async {
+    test('onLoaded event fires the builder callback', () async {
       Presentation? loaded;
       PresentationError? capturedErr;
       final request = PresentationBuilder.placement('home').onLoaded((p, e) {
@@ -166,16 +166,16 @@ void main() {
     });
 
     test('display() with a Transition forwards the wire payload', () async {
-      final request = PresentationBuilder.screen('paywall_42').build();
+      final request = PresentationBuilder.screen('screen_42').build();
       // Don't await — just check the MethodCall arguments.
       // ignore: unawaited_futures
       request.display(const Transition.modal(dismissible: false));
       await Future<void>.delayed(Duration.zero);
 
-      final displayCall = calls.firstWhere((c) => c.method == 'v6/display');
+      final displayCall = calls.firstWhere((c) => c.method == 'display');
       final args = displayCall.arguments as Map;
       expect((args['source'] as Map)['kind'], 'screenId');
-      expect((args['source'] as Map)['id'], 'paywall_42');
+      expect((args['source'] as Map)['id'], 'screen_42');
       expect((args['transition'] as Map)['type'], 'modal');
       expect((args['transition'] as Map)['dismissible'], false);
     });
@@ -259,7 +259,7 @@ void main() {
       // ignore: unawaited_futures
       final secondOutcome = presentation.display(const Transition.modal());
       await Future<void>.delayed(Duration.zero);
-      expect(calls.where((c) => c.method == 'v6/display'), hasLength(2));
+      expect(calls.where((c) => c.method == 'display'), hasLength(2));
       await emitEvent(<String, Object?>{
         'event': 'onDismissed',
         'requestId': presentation.requestId,
@@ -290,7 +290,7 @@ void main() {
     test('interceptor lifecycle: register → trigger → resolve', () async {
       InterceptorInfo? capturedInfo;
       ActionPayload? capturedPayload;
-      await PurchaselyV6Bridge.ensureInstalled().registerInterceptor(
+      await PurchaselyBridge.ensureInstalled().registerInterceptor(
         PresentationActionKind.purchase,
         (info, payload) async {
           capturedInfo = info;
@@ -301,7 +301,7 @@ void main() {
 
       // The register call must have hit the MethodChannel.
       final registerCall =
-          calls.firstWhere((c) => c.method == 'v6/registerInterceptor');
+          calls.firstWhere((c) => c.method == 'registerInterceptor');
       expect((registerCall.arguments as Map)['kind'], 'purchase');
 
       // Fire a triggered event from "native".
@@ -325,24 +325,24 @@ void main() {
 
       // The bridge must have posted the result back via interceptorResolve.
       final resolveCall =
-          calls.firstWhere((c) => c.method == 'v6/interceptorResolve');
+          calls.firstWhere((c) => c.method == 'interceptorResolve');
       final args = resolveCall.arguments as Map;
       expect(args['invocationId'], 'cb-1');
       expect(args['result'], 'success');
     });
 
     test('removeInterceptor unregisters the kind on the native side', () async {
-      await PurchaselyV6Bridge.ensureInstalled().registerInterceptor(
+      await PurchaselyBridge.ensureInstalled().registerInterceptor(
         PresentationActionKind.login,
         (_, __) async => InterceptResult.success,
       );
       calls.clear();
 
-      await PurchaselyV6Bridge.ensureInstalled()
+      await PurchaselyBridge.ensureInstalled()
           .removeInterceptor(PresentationActionKind.login);
 
       final removeCall =
-          calls.firstWhere((c) => c.method == 'v6/removeInterceptor');
+          calls.firstWhere((c) => c.method == 'removeInterceptor');
       expect((removeCall.arguments as Map)['kind'], 'login');
     });
   });

@@ -1,10 +1,26 @@
-// Purchasely SDK v6 — Fluent builder for `PresentationRequest`.
+// Purchasely SDK — Fluent builder for `PresentationRequest`.
+
+import 'dart:math';
 
 import 'bridge.dart';
 import 'presentation.dart';
 import 'presentation_outcome.dart';
 import 'presentation_request.dart';
-import 'request_id.dart';
+
+final _rand = Random.secure();
+
+/// Returns a 128-bit hex identifier suitable for cross-isolate routing.
+///
+/// The cross-platform contract uses a `requestId` for every
+/// [PresentationRequest] so events and lifecycle calls can be routed back from
+/// native to Dart.
+String _nextRequestId() {
+  final buf = StringBuffer('ply_');
+  for (var i = 0; i < 4; i++) {
+    buf.write(_rand.nextInt(0xFFFFFFFF).toRadixString(16).padLeft(8, '0'));
+  }
+  return buf.toString();
+}
 
 /// Fluent builder for a [PresentationRequest].
 ///
@@ -109,11 +125,11 @@ class PresentationBuilder {
   /// Build the immutable [PresentationRequest]. A stable [requestId] is
   /// generated for the bridge to route events back.
   PresentationRequest build() {
-    // Lazy install of the v6 dispatcher so any v6 entry point initialises it,
-    // not just PurchaselyBuilder.start().
-    PurchaselyV6Bridge.ensureInstalled();
+    // Lazy install of the dispatcher so any presentation entry point
+    // initialises it, not just PurchaselyBuilder.start().
+    PurchaselyBridge.ensureInstalled();
     return PresentationRequest(
-      requestId: nextRequestId(),
+      requestId: _nextRequestId(),
       source: _source,
       contentId: _contentId,
       backgroundColorHex: _backgroundColorHex,

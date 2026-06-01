@@ -1,30 +1,27 @@
-// Demo screen for the Purchasely Flutter v6 API.
+// Demo screen for the Purchasely Flutter presentation API.
 //
-// Shows the canonical v6 flow:
+// Shows the canonical flow:
 //   1. Initialise the SDK via `PurchaselyBuilder.apiKey(...).start()`.
 //   2. Build a presentation request via `PresentationBuilder.placement(...)`.
 //   3. Display it and surface the enriched 5-field `PresentationOutcome`
 //      (presentation, purchaseResult, plan, closeReason, error).
 //
-// Interceptor registration is exposed via the `Register interceptor` button
-// — see `registerNavigateInterceptor()` below. The Dart-side bridge wiring
-// for interceptors is documented in `lib/src/action_interceptor.dart` and
-// forwarded to the native bridges via the `v6/registerInterceptor` channel
-// call. (The Dart-side bridge dispatcher lives in a separate file and is
-// added as the façade is wired end-to-end.)
+// Interceptor registration is exposed via the `Register interceptor` button —
+// see `registerNavigateInterceptor()` below. It forwards to the native side
+// through the bridge's `registerInterceptor` channel call.
 
 import 'package:flutter/material.dart';
 import 'package:purchasely_flutter/purchasely_flutter.dart';
 
-class V6DemoScreen extends StatefulWidget {
-  const V6DemoScreen({Key? key}) : super(key: key);
+class PresentationDemoScreen extends StatefulWidget {
+  const PresentationDemoScreen({Key? key}) : super(key: key);
 
   @override
-  State<V6DemoScreen> createState() => _V6DemoScreenState();
+  State<PresentationDemoScreen> createState() => _PresentationDemoScreenState();
 }
 
-class _V6DemoScreenState extends State<V6DemoScreen> {
-  String _status = 'Tap "Start v6 SDK" to begin.';
+class _PresentationDemoScreenState extends State<PresentationDemoScreen> {
+  String _status = 'Tap "Start SDK" to begin.';
   PresentationOutcome? _lastOutcome;
   PresentationError? _lastError;
 
@@ -34,8 +31,8 @@ class _V6DemoScreenState extends State<V6DemoScreen> {
       final ok = await PurchaselyBuilder.apiKey(
         'fcb39be4-2ba4-4db7-bde3-2a5a1e20745d',
       )
-          .runningMode(V6RunningMode.observer)
-          .logLevel(V6LogLevel.debug)
+          .runningMode(RunningMode.observer)
+          .logLevel(LogLevel.debug)
           .stores([PLYStore.google]).start();
       setState(() => _status = 'Started: $ok');
     } catch (e) {
@@ -43,7 +40,7 @@ class _V6DemoScreenState extends State<V6DemoScreen> {
     }
   }
 
-  Future<void> _displayPaywall() async {
+  Future<void> _displayPresentation() async {
     setState(() {
       _status = 'Displaying…';
       _lastOutcome = null;
@@ -55,16 +52,16 @@ class _V6DemoScreenState extends State<V6DemoScreen> {
           .contentId('demo-content-42')
           .onLoaded((presentation, error) {
             debugPrint(
-                'v6 onLoaded — screenId=${presentation.screenId} error=$error');
+                'onLoaded — screenId=${presentation.screenId} error=$error');
           })
           .onPresented((presentation, error) {
-            debugPrint('v6 onPresented — error=$error');
+            debugPrint('onPresented — error=$error');
           })
           .onCloseRequested(() {
-            debugPrint('v6 onCloseRequested');
+            debugPrint('onCloseRequested');
           })
           .onDismissed((o) {
-            debugPrint('v6 onDismissed — outcome=$o');
+            debugPrint('onDismissed — outcome=$o');
           })
           .build()
           .display(const Transition.modal());
@@ -84,11 +81,18 @@ class _V6DemoScreenState extends State<V6DemoScreen> {
   }
 
   /// Register a typed `navigate` action interceptor that just logs the
-  /// outbound URL. Currently a no-op placeholder pending the Dart-side
-  /// bridge dispatcher (the `v6/registerInterceptor` call lives there).
-  void _registerNavigateInterceptor() {
-    debugPrint('TODO: dispatch v6/registerInterceptor for navigate.');
-    setState(() => _status = 'Interceptor registration (placeholder)');
+  /// outbound URL.
+  Future<void> _registerNavigateInterceptor() async {
+    await PurchaselyBridge.ensureInstalled().registerInterceptor(
+      PresentationActionKind.navigate,
+      (info, payload) {
+        if (payload is NavigatePayload) {
+          debugPrint('Intercepted navigate to ${payload.url}');
+        }
+        return InterceptResult.notHandled;
+      },
+    );
+    setState(() => _status = 'Navigate interceptor registered');
   }
 
   Widget _outcomeCard(PresentationOutcome outcome) {
@@ -134,7 +138,7 @@ class _V6DemoScreenState extends State<V6DemoScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Purchasely v6 demo')),
+      appBar: AppBar(title: const Text('Purchasely presentation demo')),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -145,10 +149,10 @@ class _V6DemoScreenState extends State<V6DemoScreen> {
               runSpacing: 8,
               children: [
                 ElevatedButton(
-                    onPressed: _startSdk, child: const Text('Start v6 SDK')),
+                    onPressed: _startSdk, child: const Text('Start SDK')),
                 ElevatedButton(
-                    onPressed: _displayPaywall,
-                    child: const Text('Display paywall')),
+                    onPressed: _displayPresentation,
+                    child: const Text('Display presentation')),
                 ElevatedButton(
                     onPressed: _registerNavigateInterceptor,
                     child: const Text('Register interceptor')),

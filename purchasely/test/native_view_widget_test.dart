@@ -9,208 +9,69 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('PLYPresentationView', () {
-    test('creates instance with all parameters', () {
-      final presentation = PLYPresentation(
-          'pres-123',
-          'placement-123',
-          'audience-123',
-          'abtest-123',
-          'variant-A',
-          'en',
-          600,
-          PLYPresentationType.normal, [], {});
+    const methodChannelName = 'purchasely';
+    const eventChannelName = 'purchasely-presentation-events';
+    late TestDefaultBinaryMessenger messenger;
 
-      final view = PLYPresentationView(
-        presentation: presentation,
-        placementId: 'placement-456',
-        presentationId: 'presentation-789',
-        contentId: 'content-123',
-        callback: (result) {},
+    setUp(() {
+      messenger =
+          TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+
+      messenger.setMockMethodCallHandler(
+        const MethodChannel(methodChannelName),
+        (call) async {
+          switch (call.method) {
+            case 'preload':
+              return <String, Object?>{
+                'screenId': 'screen_42',
+                'placementId': (call.arguments as Map?)?['source']?['id'],
+                'height': 600,
+                'type': 0,
+                'plans': <Map<String, Object?>>[],
+              };
+            default:
+              return null;
+          }
+        },
       );
+      messenger.setMockMessageHandler(
+          eventChannelName, (message) async => null);
 
-      expect(view.presentation, presentation);
-      expect(view.placementId, 'placement-456');
-      expect(view.presentationId, 'presentation-789');
-      expect(view.contentId, 'content-123');
-      expect(view.callback, isNotNull);
+      PurchaselyBridge.debugReset();
+      PurchaselyBridge.ensureInstalled();
     });
 
-    test('creates instance with minimal parameters', () {
-      final view = PLYPresentationView();
-
-      expect(view.presentation, isNull);
-      expect(view.placementId, isNull);
-      expect(view.presentationId, isNull);
-      expect(view.contentId, isNull);
-      expect(view.callback, isNull);
-    });
-
-    test('has correct channel name', () {
-      final view = PLYPresentationView();
-
-      expect(view.channel, isA<MethodChannel>());
+    tearDown(() {
+      PurchaselyBridge.debugReset();
+      messenger.setMockMethodCallHandler(
+          const MethodChannel(methodChannelName), null);
+      messenger.setMockMessageHandler(eventChannelName, null);
     });
 
     test('has correct view type', () {
-      final view = PLYPresentationView();
-
-      expect(view.viewType, 'io.purchasely.purchasely_flutter/native_view');
+      expect(PLYPresentationView.viewType,
+          'io.purchasely.purchasely_flutter/native_view');
     });
 
-    test('creates instance with only presentation', () {
-      final presentation = PLYPresentation(
-          'pres-123',
-          'placement-123',
-          null,
-          null,
-          null,
-          'en',
-          400,
-          PLYPresentationType.fallback,
-          [PLYPresentationPlan('plan-123', 'product-123', null, null)],
-          {'theme': 'dark'});
-
-      final view = PLYPresentationView(presentation: presentation);
-
-      expect(view.presentation!.id, 'pres-123');
-      expect(view.presentation!.type, PLYPresentationType.fallback);
-    });
-
-    test('creates instance with only placementId', () {
-      final view = PLYPresentationView(placementId: 'placement-only');
-
-      expect(view.placementId, 'placement-only');
-      expect(view.presentation, isNull);
-    });
-
-    test('creates instance with only presentationId', () {
-      final view = PLYPresentationView(presentationId: 'presentation-only');
-
-      expect(view.presentationId, 'presentation-only');
-      expect(view.presentation, isNull);
-    });
-
-    test('creates instance with only contentId', () {
-      final view = PLYPresentationView(contentId: 'content-only');
-
-      expect(view.contentId, 'content-only');
-      expect(view.presentation, isNull);
-    });
-
-    test('creates instance with only callback', () {
-      bool callbackCalled = false;
-      final view = PLYPresentationView(
-        callback: (result) {
-          callbackCalled = true;
-        },
-      );
-
-      expect(view.callback, isNotNull);
-      // Invoke the callback to test it works
-      view.callback!(
-          PresentPresentationResult(PLYPurchaseResult.purchased, null));
-      expect(callbackCalled, true);
-    });
-
-    test('callback receives correct result', () {
-      PresentPresentationResult? receivedResult;
-      final plan = PLYPlan(
-          'plan-123',
-          'product-123',
-          'Premium',
-          PLYPlanType.autoRenewingSubscription,
-          9.99,
-          '\$9.99',
-          'USD',
-          '\$',
-          '9.99',
-          'P1M',
-          false,
-          null,
-          null,
-          null,
-          null,
-          false);
-
-      final view = PLYPresentationView(
-        callback: (result) {
-          receivedResult = result;
-        },
-      );
-
-      final expectedResult =
-          PresentPresentationResult(PLYPurchaseResult.restored, plan);
-      view.callback!(expectedResult);
-
-      expect(receivedResult, isNotNull);
-      expect(receivedResult!.result, PLYPurchaseResult.restored);
-      expect(receivedResult!.plan!.vendorId, 'plan-123');
-    });
-
-    testWidgets('build returns Text for unsupported platform',
+    testWidgets('shows a loading indicator before preload resolves',
         (WidgetTester tester) async {
-      debugDefaultTargetPlatformOverride = TargetPlatform.windows;
-
-      final view = PLYPresentationView(
-        placementId: 'test-placement',
-      );
+      final request = PresentationBuilder.placement('home').build();
+      final view = PLYPresentationView(request: request);
 
       await tester.pumpWidget(MaterialApp(home: Scaffold(body: view)));
 
-      expect(find.textContaining('is not supported yet'), findsOneWidget);
-
-      debugDefaultTargetPlatformOverride = null;
+      // First frame: preload future not yet resolved.
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
     });
 
-    testWidgets('build returns Text for Linux platform',
-        (WidgetTester tester) async {
-      debugDefaultTargetPlatformOverride = TargetPlatform.linux;
-
-      final view = PLYPresentationView(
-        placementId: 'test-placement',
-      );
-
-      await tester.pumpWidget(MaterialApp(home: Scaffold(body: view)));
-
-      expect(find.textContaining('is not supported yet'), findsOneWidget);
-
-      debugDefaultTargetPlatformOverride = null;
-    });
-
-    testWidgets('build returns Text for Fuchsia platform',
-        (WidgetTester tester) async {
-      debugDefaultTargetPlatformOverride = TargetPlatform.fuchsia;
-
-      final view = PLYPresentationView(
-        placementId: 'test-placement',
-      );
-
-      await tester.pumpWidget(MaterialApp(home: Scaffold(body: view)));
-
-      expect(find.textContaining('is not supported yet'), findsOneWidget);
-
-      debugDefaultTargetPlatformOverride = null;
-    });
-
-    test('view type is consistent', () {
-      final view1 = PLYPresentationView();
-      final view2 = PLYPresentationView(placementId: 'test');
-
-      expect(view1.viewType, view2.viewType);
-    });
-  });
-
-  group('PLYPresentationView layout direction', () {
-    testWidgets('Android view uses inherited text direction',
+    testWidgets('renders an AndroidView with the requestId after preload',
         (WidgetTester tester) async {
       final previousPlatform = debugDefaultTargetPlatformOverride;
       debugDefaultTargetPlatformOverride = TargetPlatform.android;
       try {
-        final view = PLYPresentationView(
-          placementId: 'test-placement',
-        );
+        final request = PresentationBuilder.placement('home').build();
+        final view = PLYPresentationView(request: request);
 
-        // LTR context
         await tester.pumpWidget(
           MaterialApp(
             home: Directionality(
@@ -219,101 +80,53 @@ void main() {
             ),
           ),
         );
+        // Let the preload future resolve, then rebuild.
+        await tester.pumpAndSettle();
 
-        expect(
-          tester.widget<AndroidView>(find.byType(AndroidView)).layoutDirection,
-          TextDirection.ltr,
-        );
-
-        // RTL context
-        await tester.pumpWidget(
-          MaterialApp(
-            home: Directionality(
-              textDirection: TextDirection.rtl,
-              child: Scaffold(body: view),
-            ),
-          ),
-        );
-
-        expect(
-          tester.widget<AndroidView>(find.byType(AndroidView)).layoutDirection,
-          TextDirection.rtl,
-        );
+        final androidView =
+            tester.widget<AndroidView>(find.byType(AndroidView));
+        expect(androidView.viewType, PLYPresentationView.viewType);
+        expect(androidView.layoutDirection, TextDirection.ltr);
+        final params = androidView.creationParams as Map;
+        expect(params['requestId'], request.requestId);
       } finally {
         debugDefaultTargetPlatformOverride = previousPlatform;
       }
     });
 
-    testWidgets('Android view falls back to LTR without Directionality',
+    testWidgets('renders a UiKitView with the requestId on iOS',
         (WidgetTester tester) async {
       final previousPlatform = debugDefaultTargetPlatformOverride;
-      debugDefaultTargetPlatformOverride = TargetPlatform.android;
+      debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
       try {
-        final view = PLYPresentationView(placementId: 'test-placement');
+        final request = PresentationBuilder.placement('home').build();
+        final view = PLYPresentationView(request: request);
 
-        await tester.pumpWidget(
-          Directionality(
-            textDirection: TextDirection.ltr,
-            child: view,
-          ),
-        );
+        await tester.pumpWidget(MaterialApp(home: Scaffold(body: view)));
+        await tester.pumpAndSettle();
 
-        expect(
-          tester.widget<AndroidView>(find.byType(AndroidView)).layoutDirection,
-          TextDirection.ltr,
-        );
+        final uiKitView = tester.widget<UiKitView>(find.byType(UiKitView));
+        expect(uiKitView.viewType, PLYPresentationView.viewType);
+        final params = uiKitView.creationParams as Map;
+        expect(params['requestId'], request.requestId);
       } finally {
         debugDefaultTargetPlatformOverride = previousPlatform;
       }
     });
-  });
 
-  group('PLYPresentationView Integration with Purchasely', () {
-    test('getPresentationView creates valid PLYPresentationView', () {
-      final view = Purchasely.getPresentationView(
-        placementId: 'placement-123',
-        presentationId: 'presentation-456',
-        contentId: 'content-789',
-        callback: (result) {},
-      );
+    testWidgets('build returns Text for unsupported platform',
+        (WidgetTester tester) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.windows;
 
-      expect(view, isNotNull);
-      expect(view, isA<PLYPresentationView>());
-      expect(view!.placementId, 'placement-123');
-      expect(view.presentationId, 'presentation-456');
-      expect(view.contentId, 'content-789');
-    });
+      final request = PresentationBuilder.placement('home').build();
+      final view = PLYPresentationView(request: request);
 
-    test('getPresentationView with presentation parameter', () {
-      final presentation = PLYPresentation(
-          'pres-123',
-          'placement-123',
-          'audience-123',
-          'abtest-123',
-          'variant-A',
-          'en',
-          600,
-          PLYPresentationType.normal, [], {});
+      await tester.pumpWidget(MaterialApp(home: Scaffold(body: view)));
+      await tester.pumpAndSettle();
 
-      final view = Purchasely.getPresentationView(
-        presentation: presentation,
-        callback: (result) {},
-      );
+      expect(find.textContaining('is not supported yet'), findsOneWidget);
 
-      expect(view, isNotNull);
-      expect(view!.presentation, presentation);
-      expect(view.presentation!.id, 'pres-123');
-    });
-
-    test('getPresentationView with null parameters returns view', () {
-      final view = Purchasely.getPresentationView();
-
-      expect(view, isNotNull);
-      expect(view!.presentation, isNull);
-      expect(view.placementId, isNull);
-      expect(view.presentationId, isNull);
-      expect(view.contentId, isNull);
-      expect(view.callback, isNull);
+      debugDefaultTargetPlatformOverride = null;
     });
   });
 }

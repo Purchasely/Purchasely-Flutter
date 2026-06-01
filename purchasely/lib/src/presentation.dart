@@ -1,4 +1,4 @@
-// Purchasely SDK v6 — Loaded presentation handle.
+// Purchasely SDK — Loaded presentation handle.
 //
 // A `Presentation` is what the SDK returns once a `PresentationRequest` has
 // been preloaded (or displayed). It carries metadata about the screen and
@@ -64,7 +64,7 @@ abstract class PresentationActions {
 
 class _UninitialisedActions extends PresentationActions {
   StateError _err() => StateError(
-      'Purchasely bridge not initialised — call any v6 entry point first.');
+      'Purchasely bridge not initialised — call any presentation entry point first.');
 
   @override
   Future<PresentationOutcome> display(_, __) => throw _err();
@@ -137,9 +137,9 @@ class Presentation {
 
   /// Builds a [Presentation] from the wire map sent by the native bridge.
   ///
-  /// Tolerant of either the v6 wire format (`screenId`) or the legacy v5
-  /// format (`id`). iOS bridge maps `id` -> `screenId` once at the SDK
-  /// boundary; this fallback keeps the Dart-side parsing resilient.
+  /// Tolerant of either wire format (`screenId` or `id`). The iOS bridge maps
+  /// `id` -> `screenId` once at the SDK boundary; this fallback keeps the
+  /// Dart-side parsing resilient.
   factory Presentation.fromMap(Map<dynamic, dynamic> map) {
     final plansList = (map['plans'] as List?)
             ?.whereType<Map>()

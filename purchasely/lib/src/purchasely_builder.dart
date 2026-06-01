@@ -1,4 +1,4 @@
-// Purchasely SDK v6 — Fluent builder for SDK initialisation.
+// Purchasely SDK — Fluent builder for SDK initialisation.
 
 import 'dart:async';
 
@@ -6,18 +6,13 @@ import 'package:flutter/services.dart';
 
 import 'bridge.dart';
 
-/// Running mode for the SDK (v6).
+/// Running mode for the SDK.
 ///
-/// Default in v6 is [V6RunningMode.observer] (was `full` in v5).
-/// Named differently from the legacy v5 [V6RunningMode] (4 values) to avoid
-/// an ambiguous re-export at the package boundary.
-enum V6RunningMode { observer, full }
+/// Default is [RunningMode.observer].
+enum RunningMode { observer, full }
 
-/// Log level for the SDK (v6).
-///
-/// Renamed from `V6LogLevel` to avoid an ambiguous re-export with the legacy
-/// v5 enum of the same name (same values, but kept distinct for clarity).
-enum V6LogLevel { debug, info, warn, error }
+/// Log level for the SDK.
+enum LogLevel { debug, info, warn, error }
 
 /// Storekit transaction handling on iOS.
 enum StorekitVersion { storeKit1, storeKit2 }
@@ -31,8 +26,8 @@ enum PLYStore { google, huawei, amazon }
 class PurchaselyBuilder {
   final String _apiKey;
   String? _appUserId;
-  V6RunningMode _runningMode;
-  V6LogLevel _logLevel;
+  RunningMode _runningMode;
+  LogLevel _logLevel;
   bool? _allowDeeplink;
   bool _allowCampaigns;
   // Android only
@@ -42,8 +37,8 @@ class PurchaselyBuilder {
 
   PurchaselyBuilder._(this._apiKey,
       {String? appUserId,
-      V6RunningMode runningMode = V6RunningMode.observer,
-      V6LogLevel logLevel = V6LogLevel.error,
+      RunningMode runningMode = RunningMode.observer,
+      LogLevel logLevel = LogLevel.error,
       bool? allowDeeplink,
       bool allowCampaigns = true,
       List<PLYStore> stores = const [PLYStore.google],
@@ -65,12 +60,12 @@ class PurchaselyBuilder {
     return this;
   }
 
-  PurchaselyBuilder runningMode(V6RunningMode mode) {
+  PurchaselyBuilder runningMode(RunningMode mode) {
     _runningMode = mode;
     return this;
   }
 
-  PurchaselyBuilder logLevel(V6LogLevel level) {
+  PurchaselyBuilder logLevel(LogLevel level) {
     _logLevel = level;
     return this;
   }
@@ -103,12 +98,12 @@ class PurchaselyBuilder {
   /// Start the SDK. Resolves to `true` once configured, throws a
   /// [PlatformException] otherwise.
   Future<bool> start() async {
-    // Wire the v6 dispatcher (idempotent) so subsequent PresentationBuilder /
+    // Wire the dispatcher (idempotent) so subsequent PresentationBuilder /
     // PresentationRequest calls have a live channel to talk to.
-    PurchaselyV6Bridge.ensureInstalled();
+    PurchaselyBridge.ensureInstalled();
     const channel = MethodChannel('purchasely');
     final result = await channel.invokeMethod<bool>(
-      'v6/start',
+      'start',
       <String, Object?>{
         'apiKey': _apiKey,
         'appUserId': _appUserId,

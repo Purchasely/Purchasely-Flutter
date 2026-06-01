@@ -1,4 +1,4 @@
-// Purchasely SDK v6 — Presentation request (lifecycle handle).
+// Purchasely SDK — Presentation request (lifecycle handle).
 
 import 'dart:async';
 
@@ -18,7 +18,7 @@ abstract class PresentationRequestActions {
 
 class _UninitialisedRequest extends PresentationRequestActions {
   StateError _err() => StateError(
-      'Purchasely bridge not initialised — call any v6 entry point first.');
+      'Purchasely bridge not initialised — call any presentation entry point first.');
 
   @override
   Future<Presentation> preload(_) => throw _err();

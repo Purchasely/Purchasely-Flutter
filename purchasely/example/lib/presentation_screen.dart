@@ -1,78 +1,50 @@
-import 'dart:developer';
-
 import 'package:flutter/material.dart';
 import 'package:purchasely_flutter/native_view_widget.dart';
 import 'package:purchasely_flutter/purchasely_flutter.dart';
 
+/// Renders a Purchasely presentation inline (embedded) inside a screen.
+///
+/// Build the [PresentationRequest] with the fluent [PresentationBuilder] and
+/// pass it in. The [PLYPresentationView] preloads it and hands the resulting
+/// `requestId` to the native inline view.
 class PresentationScreen extends StatelessWidget {
-  final Map<String, dynamic> properties;
-  final Function(PresentPresentationResult)? callback;
+  final PresentationRequest request;
 
-  PresentationScreen({required this.properties, this.callback});
+  const PresentationScreen({Key? key, required this.request}) : super(key: key);
+
+  /// Convenience constructor that builds a [PresentationRequest] for a
+  /// placement, wiring the dismiss callback to pop the screen.
+  factory PresentationScreen.placement(
+    String placementId, {
+    Key? key,
+    String? contentId,
+    void Function(PresentationOutcome outcome)? onDismissed,
+  }) {
+    final request = PresentationBuilder.placement(placementId)
+        .contentId(contentId)
+        .onPresented((presentation, error) {
+      debugPrint('Presentation presented — error=$error');
+    }).onDismissed((outcome) {
+      debugPrint(
+          'Presentation dismissed — purchaseResult=${outcome.purchaseResult}');
+      onDismissed?.call(outcome);
+    }).build();
+    return PresentationScreen(key: key, request: request);
+  }
 
   @override
   Widget build(BuildContext context) {
     return SafeArea(
-      // Wrap with SafeArea
       child: Scaffold(
         body: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Expanded(
-              child: _buildPresentationView(),
+              child: PLYPresentationView(request: request),
             )
           ],
         ),
       ),
     );
-  }
-
-  Widget _buildPresentationView() {
-    // You can set a paywall action interceptor if you want to handle the close differently,
-    // handle login or make the purchase yourself
-    Purchasely.setPaywallActionInterceptorCallback(
-        (PaywallActionInterceptorResult result) {
-      print('Received action from paywall');
-      inspect(result);
-
-      if (result.action == PLYPaywallAction.navigate) {
-        print('User wants to navigate');
-        Purchasely.onProcessAction(true);
-      } else if (result.action == PLYPaywallAction.close) {
-        print(
-            'User wants to close paywall - reason: ${result.parameters.closeReason}"');
-        Purchasely.onProcessAction(true);
-      } else if (result.action == PLYPaywallAction.login) {
-        print('User wants to login');
-        //Present your own screen for user to log in
-        Purchasely.userLogin('MY_USER_ID');
-        Purchasely.onProcessAction(true);
-      } else if (result.action == PLYPaywallAction.open_presentation) {
-        print('User wants to open a new paywall');
-        Purchasely.onProcessAction(true);
-      } else if (result.action == PLYPaywallAction.purchase) {
-        print('User wants to purchase');
-        Purchasely.onProcessAction(true);
-      } else if (result.action == PLYPaywallAction.restore) {
-        print('User wants to restore his purchases');
-        Purchasely.onProcessAction(true);
-      } else {
-        print('Action unknown ' + result.action.toString());
-        Purchasely.onProcessAction(true);
-      }
-    });
-
-    PLYPresentationView? presentationView = Purchasely.getPresentationView(
-        presentation: properties['presentation'],
-        presentationId: properties['presentationId'],
-        placementId: properties['placementId'],
-        contentId: properties['contentId'],
-        callback: callback ??
-            (PresentPresentationResult result) {
-              print(
-                  'Presentation result:${result.result} - plan:${result.plan?.vendorId}');
-            });
-
-    return presentationView ?? Container();
   }
 }

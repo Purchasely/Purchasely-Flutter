@@ -1,7 +1,6 @@
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:purchasely_flutter/purchasely_flutter.dart';
-import 'package:purchasely_flutter/native_view_widget.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -37,52 +36,6 @@ void main() {
             return true;
           case 'isDeeplinkHandled':
             return true;
-          case 'fetchPresentation':
-            return {
-              'id': 'presentation-123',
-              'placementId': 'placement-456',
-              'audienceId': 'audience-789',
-              'abTestId': 'abtest-001',
-              'abTestVariantId': 'variant-A',
-              'language': 'en',
-              'height': 600,
-              'type': 0,
-              'plans': [
-                {
-                  'planVendorId': 'plan-123',
-                  'storeProductId': 'product-123',
-                  'basePlanId': 'base-plan',
-                  'offerId': 'offer-123'
-                }
-              ],
-              'metadata': {'key': 'value'}
-            };
-          case 'presentPresentation':
-          case 'presentPresentationWithIdentifier':
-          case 'presentPresentationForPlacement':
-          case 'presentProductWithIdentifier':
-          case 'presentPlanWithIdentifier':
-            return {
-              'result': 0,
-              'plan': {
-                'vendorId': 'plan-vendor-123',
-                'productId': 'product-123',
-                'name': 'Premium Plan',
-                'type': 2,
-                'amount': 9.99,
-                'localizedAmount': '\$9.99',
-                'currencyCode': 'USD',
-                'currencySymbol': '\$',
-                'price': '9.99',
-                'period': 'P1M',
-                'hasIntroductoryPrice': true,
-                'introPrice': '\$4.99',
-                'introAmount': 4.99,
-                'introDuration': 'P1W',
-                'introPeriod': 'week',
-                'hasFreeTrial': false
-              }
-            };
           case 'productWithIdentifier':
             return {
               'name': 'Test Product',
@@ -204,68 +157,6 @@ void main() {
             return 'test-value';
           case 'userAttributes':
             return {'attr1': 'value1', 'attr2': 'value2'};
-          case 'setDefaultPresentationResultHandler':
-            return {
-              'result': 0,
-              'plan': {
-                'vendorId': 'plan-vendor-123',
-                'productId': 'product-123',
-                'name': 'Premium Plan',
-                'type': 2,
-                'amount': 9.99,
-                'localizedAmount': '\$9.99',
-                'currencyCode': 'USD',
-                'currencySymbol': '\$',
-                'price': '9.99',
-                'period': 'P1M',
-                'hasIntroductoryPrice': false,
-                'introPrice': null,
-                'introAmount': null,
-                'introDuration': null,
-                'introPeriod': null,
-                'hasFreeTrial': false
-              }
-            };
-          case 'setPaywallActionInterceptor':
-            return {
-              'info': {
-                'contentId': 'content-123',
-                'presentationId': 'presentation-123',
-                'placementId': 'placement-123',
-                'abTestId': 'abtest-123',
-                'abTestVariantId': 'variant-A'
-              },
-              'action': 'purchase',
-              'parameters': {
-                'url': 'https://example.com',
-                'title': 'Test Title',
-                'plan': {
-                  'vendorId': 'plan-vendor-123',
-                  'productId': 'product-123',
-                  'name': 'Premium Plan',
-                  'type': 2,
-                  'amount': 9.99,
-                  'localizedAmount': '\$9.99',
-                  'currencyCode': 'USD',
-                  'currencySymbol': '\$',
-                  'price': '9.99',
-                  'period': 'P1M',
-                  'hasIntroductoryPrice': false,
-                  'introPrice': null,
-                  'introAmount': null,
-                  'introDuration': null,
-                  'introPeriod': null,
-                  'hasFreeTrial': false
-                },
-                'offer': null,
-                'subscriptionOffer': null,
-                'presentation': 'presentation-456',
-                'clientReferenceId': 'ref-123',
-                'webCheckoutProvider': 'stripe',
-                'queryParameterKey': 'session_id',
-                'closeReason': null
-              }
-            };
           case 'setDynamicOffering':
             return true;
           case 'getDynamicOfferings':
@@ -290,27 +181,6 @@ void main() {
     tearDown(() {
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(channel, null);
-    });
-
-    test('start calls native method with correct parameters', () async {
-      final result = await Purchasely.start(
-        apiKey: 'test-api-key',
-        androidStores: ['Google'],
-        storeKit1: false,
-        userId: 'user-123',
-        logLevel: PLYLogLevel.debug,
-        runningMode: PLYRunningMode.full,
-      );
-
-      expect(result, true);
-      expect(methodCalls.length, 1);
-      expect(methodCalls.first.method, 'start');
-      expect(methodCalls.first.arguments['apiKey'], 'test-api-key');
-      expect(methodCalls.first.arguments['stores'], ['Google']);
-      expect(methodCalls.first.arguments['storeKit1'], false);
-      expect(methodCalls.first.arguments['userId'], 'user-123');
-      expect(methodCalls.first.arguments['logLevel'], 0);
-      expect(methodCalls.first.arguments['runningMode'], 3);
     });
 
     test('anonymousUserId returns correct value', () async {
@@ -357,42 +227,6 @@ void main() {
       expect(result, true);
       expect(
           methodCalls.first.arguments['deeplink'], 'https://example.com/deep');
-    });
-
-    test('fetchPresentation returns correct PLYPresentation', () async {
-      final result = await Purchasely.fetchPresentation('placement-123',
-          presentationId: 'presentation-456', contentId: 'content-789');
-
-      expect(result, isNotNull);
-      expect(result!.id, 'presentation-123');
-      expect(result.placementId, 'placement-456');
-      expect(result.audienceId, 'audience-789');
-      expect(result.abTestId, 'abtest-001');
-      expect(result.abTestVariantId, 'variant-A');
-      expect(result.language, 'en');
-      expect(result.height, 600);
-      expect(result.type, PLYPresentationType.normal);
-      expect(result.plans!.length, 1);
-      expect(result.metadata['key'], 'value');
-    });
-
-    test('presentPresentation returns correct result', () async {
-      final presentation = PLYPresentation(
-          'test-id',
-          'placement-id',
-          'audience-id',
-          'abtest-id',
-          'variant-id',
-          'en',
-          500,
-          PLYPresentationType.normal, [], {});
-
-      final result = await Purchasely.presentPresentation(presentation,
-          isFullscreen: true);
-
-      expect(result.result, PLYPurchaseResult.purchased);
-      expect(result.plan, isNotNull);
-      expect(result.plan!.vendorId, 'plan-vendor-123');
     });
 
     test('productWithIdentifier returns correct product', () async {
@@ -619,13 +453,6 @@ void main() {
       expect(methodCalls.first.arguments['mode'], 1);
     });
 
-    test('onProcessAction calls native method correctly', () async {
-      await Purchasely.onProcessAction(true);
-
-      expect(methodCalls.first.method, 'onProcessAction');
-      expect(methodCalls.first.arguments['processAction'], true);
-    });
-
     test('setLanguage calls native method correctly', () async {
       await Purchasely.setLanguage('fr');
 
@@ -783,100 +610,6 @@ void main() {
       expect(subscription.basePlanId, 'base-plan-123');
       expect(subscription.offerToken, 'token-123');
       expect(subscription.offerId, 'offer-123');
-    });
-
-    test('transformToPLYPresentation returns null for empty map', () {
-      final result = Purchasely.transformToPLYPresentation({});
-      expect(result, isNull);
-    });
-
-    test('transformToPLYPresentation returns correct presentation', () {
-      final presentationMap = {
-        'id': 'pres-123',
-        'placementId': 'placement-123',
-        'audienceId': 'audience-123',
-        'abTestId': 'abtest-123',
-        'abTestVariantId': 'variant-A',
-        'language': 'en',
-        'height': 800,
-        'type': 1,
-        'plans': [
-          {
-            'planVendorId': 'plan-123',
-            'storeProductId': 'product-123',
-            'basePlanId': 'base-123',
-            'offerId': 'offer-123'
-          }
-        ],
-        'metadata': {'theme': 'dark', 'version': '2.0'}
-      };
-
-      final presentation =
-          Purchasely.transformToPLYPresentation(presentationMap);
-
-      expect(presentation, isNotNull);
-      expect(presentation!.id, 'pres-123');
-      expect(presentation.placementId, 'placement-123');
-      expect(presentation.audienceId, 'audience-123');
-      expect(presentation.abTestId, 'abtest-123');
-      expect(presentation.abTestVariantId, 'variant-A');
-      expect(presentation.language, 'en');
-      expect(presentation.height, 800);
-      expect(presentation.type, PLYPresentationType.fallback);
-      expect(presentation.plans!.length, 1);
-      expect(presentation.plans![0].planVendorId, 'plan-123');
-      expect(presentation.metadata['theme'], 'dark');
-    });
-
-    test('transformToPLYPresentation uses default height when null', () {
-      final presentationMap = {
-        'id': 'pres-123',
-        'placementId': 'placement-123',
-        'audienceId': null,
-        'abTestId': null,
-        'abTestVariantId': null,
-        'language': 'en',
-        'height': null,
-        'type': 0,
-        'plans': [],
-        'metadata': null
-      };
-
-      final presentation =
-          Purchasely.transformToPLYPresentation(presentationMap);
-
-      expect(presentation!.height, 0);
-    });
-
-    test('transformPLYPresentationToMap returns correct map', () {
-      final presentation = PLYPresentation(
-          'pres-123',
-          'placement-123',
-          'audience-123',
-          'abtest-123',
-          'variant-A',
-          'en',
-          600,
-          PLYPresentationType.normal,
-          [PLYPresentationPlan('plan-123', 'product-123', 'base-123', null)],
-          {'key': 'value'});
-
-      final map = Purchasely.transformPLYPresentationToMap(presentation);
-
-      expect(map['id'], 'pres-123');
-      expect(map['placementId'], 'placement-123');
-      expect(map['audienceId'], 'audience-123');
-      expect(map['abTestId'], 'abtest-123');
-      expect(map['abTestVariantId'], 'variant-A');
-      expect(map['language'], 'en');
-      expect(map['type'], 0);
-    });
-
-    test('transformPLYPresentationToMap handles null presentation', () {
-      final map = Purchasely.transformPLYPresentationToMap(null);
-
-      expect(map['id'], isNull);
-      expect(map['placementId'], isNull);
     });
 
     test('transformToDynamicOfferings returns empty list for null input', () {
@@ -1076,40 +809,6 @@ void main() {
     });
   });
 
-  group('PLYPresentationView', () {
-    test('getPresentationView returns PLYPresentationView', () {
-      final view = Purchasely.getPresentationView(
-        placementId: 'placement-123',
-        presentationId: 'presentation-123',
-        contentId: 'content-123',
-        callback: (result) {},
-      );
-
-      expect(view, isNotNull);
-      expect(view, isA<PLYPresentationView>());
-    });
-
-    test('getPresentationView with presentation parameter', () {
-      final presentation = PLYPresentation(
-          'pres-123',
-          'placement-123',
-          'audience-123',
-          'abtest-123',
-          'variant-A',
-          'en',
-          600,
-          PLYPresentationType.normal, [], {});
-
-      final view = Purchasely.getPresentationView(
-        presentation: presentation,
-        callback: (result) {},
-      );
-
-      expect(view, isNotNull);
-      expect(view!.presentation, presentation);
-    });
-  });
-
   group('Model Classes', () {
     group('PLYPlan', () {
       test('creates instance with all properties', () {
@@ -1205,35 +904,6 @@ void main() {
       });
     });
 
-    group('PLYPresentation', () {
-      test('creates instance and converts to map', () {
-        final plans = [
-          PLYPresentationPlan('plan-123', 'product-123', 'base-123', null)
-        ];
-        final presentation = PLYPresentation(
-            'pres-123',
-            'placement-123',
-            'audience-123',
-            'abtest-123',
-            'variant-A',
-            'en',
-            600,
-            PLYPresentationType.normal,
-            plans,
-            {'key': 'value'});
-
-        final map = presentation.toMap();
-
-        expect(map['id'], 'pres-123');
-        expect(map['placementId'], 'placement-123');
-        expect(map['language'], 'en');
-        expect(map['height'], 600);
-        expect(map['type'], 'PLYPresentationType.normal');
-        expect(map['plans'].length, 1);
-        expect(map['metadata']['key'], 'value');
-      });
-    });
-
     group('PLYSubscription', () {
       test('creates instance with all properties', () {
         final plan = PLYPlan(
@@ -1279,119 +949,6 @@ void main() {
         expect(subscription.subscriptionDurationInDays, 365);
         expect(subscription.subscriptionDurationInWeeks, 52);
         expect(subscription.subscriptionDurationInMonths, 12);
-      });
-    });
-
-    group('PresentPresentationResult', () {
-      test('creates instance with result and plan', () {
-        final plan = PLYPlan(
-            'plan-123',
-            'product-123',
-            'Premium',
-            PLYPlanType.autoRenewingSubscription,
-            9.99,
-            '\$9.99',
-            'USD',
-            '\$',
-            '9.99',
-            'P1M',
-            false,
-            null,
-            null,
-            null,
-            null,
-            false);
-
-        final result =
-            PresentPresentationResult(PLYPurchaseResult.purchased, plan);
-
-        expect(result.result, PLYPurchaseResult.purchased);
-        expect(result.plan!.vendorId, 'plan-123');
-      });
-
-      test('creates instance with null plan', () {
-        final result =
-            PresentPresentationResult(PLYPurchaseResult.cancelled, null);
-
-        expect(result.result, PLYPurchaseResult.cancelled);
-        expect(result.plan, isNull);
-      });
-    });
-
-    group('PaywallActionInterceptorResult', () {
-      test('creates instance with all properties', () {
-        final info = PLYPaywallInfo('content-123', 'presentation-123',
-            'placement-123', 'abtest-123', 'variant-A');
-        final params = PLYPaywallActionParameters(
-            url: 'https://example.com', title: 'Test Title');
-
-        final result = PaywallActionInterceptorResult(
-            info, PLYPaywallAction.purchase, params);
-
-        expect(result.info.contentId, 'content-123');
-        expect(result.action, PLYPaywallAction.purchase);
-        expect(result.parameters.url, 'https://example.com');
-      });
-    });
-
-    group('PLYPaywallActionParameters', () {
-      test('creates instance with all optional properties', () {
-        final plan = PLYPlan(
-            'plan-123',
-            'product-123',
-            'Premium',
-            PLYPlanType.autoRenewingSubscription,
-            9.99,
-            '\$9.99',
-            'USD',
-            '\$',
-            '9.99',
-            'P1M',
-            false,
-            null,
-            null,
-            null,
-            null,
-            false);
-        final offer = PLYPromoOffer('offer-vendor', 'store-offer');
-        final subOffer =
-            PLYSubscriptionOffer('sub-123', 'base-123', 'token', 'offer');
-
-        final params = PLYPaywallActionParameters(
-            url: 'https://example.com',
-            title: 'Test Title',
-            plan: plan,
-            offer: offer,
-            subscriptionOffer: subOffer,
-            presentation: 'pres-123',
-            clientReferenceId: 'ref-123',
-            queryParameterKey: 'session_id',
-            webCheckoutProvider: 'stripe',
-            closeReason: 'user_action');
-
-        expect(params.url, 'https://example.com');
-        expect(params.title, 'Test Title');
-        expect(params.plan!.vendorId, 'plan-123');
-        expect(params.offer!.vendorId, 'offer-vendor');
-        expect(params.subscriptionOffer!.subscriptionId, 'sub-123');
-        expect(params.presentation, 'pres-123');
-        expect(params.clientReferenceId, 'ref-123');
-        expect(params.queryParameterKey, 'session_id');
-        expect(params.webCheckoutProvider, 'stripe');
-        expect(params.closeReason, 'user_action');
-      });
-    });
-
-    group('PLYPaywallInfo', () {
-      test('creates instance with all properties', () {
-        final info = PLYPaywallInfo('content-123', 'presentation-123',
-            'placement-123', 'abtest-123', 'variant-A');
-
-        expect(info.contentId, 'content-123');
-        expect(info.presentationId, 'presentation-123');
-        expect(info.placementId, 'placement-123');
-        expect(info.abTestId, 'abtest-123');
-        expect(info.abTestVariantId, 'variant-A');
       });
     });
 
@@ -1569,20 +1126,6 @@ void main() {
       expect(PLYPlanType.autoRenewingSubscription.index, 2);
       expect(PLYPlanType.nonRenewingSubscription.index, 3);
       expect(PLYPlanType.unknown.index, 4);
-    });
-
-    test('PLYPaywallAction has all expected values', () {
-      expect(PLYPaywallAction.close.index, 0);
-      expect(PLYPaywallAction.close_all.index, 1);
-      expect(PLYPaywallAction.login.index, 2);
-      expect(PLYPaywallAction.navigate.index, 3);
-      expect(PLYPaywallAction.purchase.index, 4);
-      expect(PLYPaywallAction.restore.index, 5);
-      expect(PLYPaywallAction.open_presentation.index, 6);
-      expect(PLYPaywallAction.open_placement.index, 7);
-      expect(PLYPaywallAction.promo_code.index, 8);
-      expect(PLYPaywallAction.open_flow_step.index, 9);
-      expect(PLYPaywallAction.web_checkout.index, 10);
     });
 
     test('PLYAttribute has all expected values', () {
@@ -1776,27 +1319,6 @@ void main() {
 
       expect(properties.carousels.length, 1);
       expect(properties.carousels[0].is_carousel_auto_playing, false);
-    });
-
-    test('transformToPLYPresentation handles valid fallback type', () {
-      final presentationMap = {
-        'id': 'pres-123',
-        'placementId': 'placement-123',
-        'audienceId': null,
-        'abTestId': null,
-        'abTestVariantId': null,
-        'language': 'en',
-        'height': 400,
-        'type': 1, // Fallback type
-        'plans': [],
-        'metadata': null
-      };
-
-      final presentation =
-          Purchasely.transformToPLYPresentation(presentationMap);
-
-      expect(presentation, isNotNull);
-      expect(presentation!.type, PLYPresentationType.fallback);
     });
 
     test('transformToPLYEventProperties handles valid APP_STARTED event name',
@@ -2093,46 +1615,6 @@ void main() {
     });
   });
 
-  group('Presentation Types Coverage', () {
-    test('transformToPLYPresentation handles deactivated type', () {
-      final presentationMap = {
-        'id': 'pres-123',
-        'placementId': 'placement-123',
-        'audienceId': null,
-        'abTestId': null,
-        'abTestVariantId': null,
-        'language': 'en',
-        'height': 400,
-        'type': 2,
-        'plans': [],
-        'metadata': {}
-      };
-
-      final presentation =
-          Purchasely.transformToPLYPresentation(presentationMap);
-      expect(presentation!.type, PLYPresentationType.deactivated);
-    });
-
-    test('transformToPLYPresentation handles client type', () {
-      final presentationMap = {
-        'id': 'pres-123',
-        'placementId': 'placement-123',
-        'audienceId': null,
-        'abTestId': null,
-        'abTestVariantId': null,
-        'language': 'en',
-        'height': 400,
-        'type': 3,
-        'plans': [],
-        'metadata': {}
-      };
-
-      final presentation =
-          Purchasely.transformToPLYPresentation(presentationMap);
-      expect(presentation!.type, PLYPresentationType.client);
-    });
-  });
-
   group('Subscription Sources Coverage', () {
     test('all subscription sources are mapped correctly', () {
       expect(PLYSubscriptionSource.appleAppStore.index, 0);
@@ -2173,11 +1655,6 @@ void main() {
       expect(methodCalls.first.method, 'userLogout');
     });
 
-    test('close calls native method', () async {
-      await Purchasely.close();
-      expect(methodCalls.first.method, 'close');
-    });
-
     test('presentSubscriptions calls native method', () async {
       await Purchasely.presentSubscriptions();
       expect(methodCalls.first.method, 'presentSubscriptions');
@@ -2190,44 +1667,9 @@ void main() {
           'displaySubscriptionCancellationInstruction');
     });
 
-    test('closePresentation calls native method', () async {
-      await Purchasely.closePresentation();
-      expect(methodCalls.first.method, 'closePresentation');
-    });
-
-    test('hidePresentation calls native method', () async {
-      await Purchasely.hidePresentation();
-      expect(methodCalls.first.method, 'hidePresentation');
-    });
-
-    test('showPresentation calls native method', () async {
-      await Purchasely.showPresentation();
-      expect(methodCalls.first.method, 'showPresentation');
-    });
-
     test('userDidConsumeSubscriptionContent calls native method', () async {
       await Purchasely.userDidConsumeSubscriptionContent();
       expect(methodCalls.first.method, 'userDidConsumeSubscriptionContent');
-    });
-
-    test('clientPresentationDisplayed calls native method', () async {
-      final presentation = PLYPresentation('pres-123', 'placement-123', null,
-          null, null, 'en', 400, PLYPresentationType.normal, [], {});
-
-      await Purchasely.clientPresentationDisplayed(presentation);
-
-      expect(methodCalls.first.method, 'clientPresentationDisplayed');
-      expect(methodCalls.first.arguments['presentation']['id'], 'pres-123');
-    });
-
-    test('clientPresentationClosed calls native method', () async {
-      final presentation = PLYPresentation('pres-456', 'placement-456', null,
-          null, null, 'fr', 500, PLYPresentationType.fallback, [], {});
-
-      await Purchasely.clientPresentationClosed(presentation);
-
-      expect(methodCalls.first.method, 'clientPresentationClosed');
-      expect(methodCalls.first.arguments['presentation']['id'], 'pres-456');
     });
   });
 
@@ -2254,23 +1696,6 @@ void main() {
       expect(PLYAttribute.moengageUniqueId.index, 18);
       expect(PLYAttribute.oneSignalExternalId.index, 19);
       expect(PLYAttribute.batchCustomUserId.index, 20);
-    });
-  });
-
-  group('PLYPaywallAction Coverage', () {
-    test('all PLYPaywallAction enum values', () {
-      expect(PLYPaywallAction.values.length, 11);
-      expect(PLYPaywallAction.close.name, 'close');
-      expect(PLYPaywallAction.close_all.name, 'close_all');
-      expect(PLYPaywallAction.login.name, 'login');
-      expect(PLYPaywallAction.navigate.name, 'navigate');
-      expect(PLYPaywallAction.purchase.name, 'purchase');
-      expect(PLYPaywallAction.restore.name, 'restore');
-      expect(PLYPaywallAction.open_presentation.name, 'open_presentation');
-      expect(PLYPaywallAction.open_placement.name, 'open_placement');
-      expect(PLYPaywallAction.promo_code.name, 'promo_code');
-      expect(PLYPaywallAction.open_flow_step.name, 'open_flow_step');
-      expect(PLYPaywallAction.web_checkout.name, 'web_checkout');
     });
   });
 
@@ -2373,7 +1798,7 @@ void main() {
     });
   });
 
-  group('Start Method Variations', () {
+  group('PurchaselyBuilder.start', () {
     late MethodChannel channel;
     final List<MethodCall> methodCalls = [];
 
@@ -2386,63 +1811,46 @@ void main() {
         methodCalls.add(methodCall);
         return true;
       });
+      PurchaselyBridge.debugReset();
     });
 
     tearDown(() {
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(channel, null);
+      PurchaselyBridge.debugReset();
     });
 
-    test('start with minimal parameters uses defaults', () async {
-      await Purchasely.start(
-        apiKey: 'test-key',
-        storeKit1: true,
-      );
+    test('start with minimal config uses defaults', () async {
+      final ok = await PurchaselyBuilder.apiKey('test-key').start();
 
-      expect(methodCalls.first.arguments['apiKey'], 'test-key');
-      expect(methodCalls.first.arguments['stores'], ['Google']);
-      expect(methodCalls.first.arguments['storeKit1'], true);
-      expect(methodCalls.first.arguments['userId'], isNull);
-      expect(methodCalls.first.arguments['logLevel'], 3); // PLYLogLevel.error
-      expect(
-          methodCalls.first.arguments['runningMode'], 3); // PLYRunningMode.full
+      expect(ok, true);
+      final startCall = methodCalls.firstWhere((c) => c.method == 'start');
+      expect(startCall.arguments['apiKey'], 'test-key');
+      expect(startCall.arguments['stores'], ['google']);
+      expect(startCall.arguments['runningMode'], 'observer');
+      expect(startCall.arguments['logLevel'], 'error');
+      expect(startCall.arguments['storekitVersion'], 'storeKit2');
     });
 
-    test('start with all log levels', () async {
-      for (final level in PLYLogLevel.values) {
-        methodCalls.clear();
-        await Purchasely.start(
-          apiKey: 'test-key',
-          storeKit1: false,
-          logLevel: level,
-        );
+    test('start forwards every modifier', () async {
+      await PurchaselyBuilder.apiKey('test-key')
+          .appUserId('user-123')
+          .runningMode(RunningMode.full)
+          .logLevel(LogLevel.debug)
+          .allowDeeplink(true)
+          .allowCampaigns(false)
+          .stores([PLYStore.google, PLYStore.huawei, PLYStore.amazon])
+          .storekitVersion(StorekitVersion.storeKit1)
+          .start();
 
-        expect(methodCalls.first.arguments['logLevel'], level.index);
-      }
-    });
-
-    test('start with all running modes', () async {
-      for (final mode in PLYRunningMode.values) {
-        methodCalls.clear();
-        await Purchasely.start(
-          apiKey: 'test-key',
-          storeKit1: false,
-          runningMode: mode,
-        );
-
-        expect(methodCalls.first.arguments['runningMode'], mode.index);
-      }
-    });
-
-    test('start with multiple android stores', () async {
-      await Purchasely.start(
-        apiKey: 'test-key',
-        storeKit1: false,
-        androidStores: ['Google', 'Huawei', 'Amazon'],
-      );
-
-      expect(methodCalls.first.arguments['stores'],
-          ['Google', 'Huawei', 'Amazon']);
+      final startCall = methodCalls.firstWhere((c) => c.method == 'start');
+      expect(startCall.arguments['appUserId'], 'user-123');
+      expect(startCall.arguments['runningMode'], 'full');
+      expect(startCall.arguments['logLevel'], 'debug');
+      expect(startCall.arguments['allowDeeplink'], true);
+      expect(startCall.arguments['allowCampaigns'], false);
+      expect(startCall.arguments['stores'], ['google', 'huawei', 'amazon']);
+      expect(startCall.arguments['storekitVersion'], 'storeKit1');
     });
   });
 }

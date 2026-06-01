@@ -17,7 +17,11 @@ class NativeView: NSObject, FlutterPlatformView {
         _containerView = NativeContainerView(frame: frame)
         super.init()
         Purchasely.setEventDelegate(self)
-        self._controller = SwiftPurchaselyFlutterPlugin.getPresentationController(for: args, with: channel)
+
+        // The inline native view is built from a Presentation that was already
+        // loaded (via `preload`) and is keyed by the Dart requestId.
+        // Creation-param contract: `{ "requestId": <String> }`.
+        self._controller = SwiftPurchaselyFlutterPlugin.presentationController(for: args)
 
         if let controller = _controller {
             let childView = controller.view!

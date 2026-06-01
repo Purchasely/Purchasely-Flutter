@@ -4,10 +4,15 @@ import Purchasely
 
 public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
 
-    private static var presentationsLoaded = [PLYPresentation]()
-    private static var purchaseResult: FlutterResult?
-
     private static var isStarted: Bool = false
+
+    // Presentation/interceptor state shared with the inline NativeView. Keyed by
+    // the Dart-side `requestId` so close/back/display and the platform view can
+    // find the right handle.
+    static var requests: [String: PLYPresentationRequest] = [:]
+    static var loadedPresentations: [String: PLYPresentation] = [:]
+    // invocationId -> SDK interceptor completion. Single-shot, removed on resolve.
+    private static var pendingInterceptors: [String: (PLYInterceptResult) -> Void] = [:]
 
     let eventChannel: FlutterEventChannel
     let eventHandler: SwiftEventHandler
@@ -18,15 +23,13 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
     let userAttributesChannel: FlutterEventChannel
     let userAttributesHandler: UserAttributesHandler
 
-    // v6 bridge — handles `v6/*` MethodChannel calls and emits lifecycle/interceptor
-    // events on the `purchasely/v6-events` EventChannel.
-    let v6EventChannel: FlutterEventChannel
-    let v6EventHandler: PurchaselyV6EventHandler
-    let v6Bridge: PurchaselyV6Bridge
+    // Presentation/interceptor lifecycle events flow over a dedicated stream,
+    // discriminated by the `event` key; each carries a `requestId` so Dart can
+    // route back.
+    let presentationChannel: FlutterEventChannel
+    let presentationEventHandler: PresentationEventHandler
 
     var presentedPresentationViewController: UIViewController?
-
-    var onProcessActionHandler: ((Bool) -> Void)?
 
     public init(with registrar: FlutterPluginRegistrar) {
         self.eventChannel = FlutterEventChannel(name: "purchasely-events",
@@ -44,11 +47,10 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
         self.userAttributesHandler = UserAttributesHandler()
         self.userAttributesChannel.setStreamHandler(self.userAttributesHandler)
 
-        self.v6EventChannel = FlutterEventChannel(name: "purchasely/v6-events",
-                                                  binaryMessenger: registrar.messenger())
-        self.v6EventHandler = PurchaselyV6EventHandler()
-        self.v6EventChannel.setStreamHandler(self.v6EventHandler)
-        self.v6Bridge = PurchaselyV6Bridge(events: self.v6EventHandler)
+        self.presentationChannel = FlutterEventChannel(name: "purchasely-presentation-events",
+                                                       binaryMessenger: registrar.messenger())
+        self.presentationEventHandler = PresentationEventHandler()
+        self.presentationChannel.setStreamHandler(self.presentationEventHandler)
 
         super.init()
     }
@@ -66,37 +68,32 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
 
     public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         let arguments = call.arguments as? [String: Any]
-        // v6 bridge gets first dispatch — handles every method prefixed with
-        // "v6/". Returns false otherwise so the legacy v5 switch below keeps
-        // handling everything else.
-        if v6Bridge.handle(call.method, arguments: arguments, result: result) {
-            return
-        }
         switch call.method {
+        // --- start ---
         case "start":
-            start(arguments: call.arguments as? [String: Any], result: result)
+            start(arguments: arguments, result: result)
+
+        // --- presentation lifecycle ---
+        case "preload":
+            preload(arguments, result: result)
+        case "display":
+            display(arguments, result: result)
         case "close":
-            DispatchQueue.main.async {
-                result(true)
-            }
-        case "setDefaultPresentationResultHandler":
-            setDefaultPresentationResultHandler(result: result)
-        case "fetchPresentation":
-            fetchPresentation(arguments: arguments, result: result)
-        case "presentPresentation":
-            presentPresentation(arguments: arguments, result: result)
-        case "clientPresentationDisplayed":
-            clientPresentationDisplayed(arguments: arguments)
-        case "clientPresentationClosed":
-            clientPresentationClosed(arguments: arguments)
-        case "presentPresentationWithIdentifier":
-            presentPresentationWithIdentifier(arguments: arguments, result: result)
-        case "presentProductWithIdentifier":
-            presentProductWithIdentifier(arguments: arguments, result: result)
-        case "presentPlanWithIdentifier":
-            presentPlanWithIdentifier(arguments: arguments, result: result)
-        case "presentPresentationForPlacement":
-            presentPresentationForPlacement(arguments: arguments, result: result)
+            closePresentation(arguments, result: result)
+        case "back":
+            back(arguments, result: result)
+
+        // --- action interceptor ---
+        case "registerInterceptor":
+            registerInterceptor(arguments, result: result)
+        case "removeInterceptor":
+            removeInterceptor(arguments, result: result)
+        case "removeAllInterceptors":
+            removeAllInterceptors(result: result)
+        case "interceptorResolve":
+            interceptorResolve(arguments, result: result)
+
+        // --- kept v5 surface ---
         case "restoreAllProducts":
             restoreAllProducts(result)
         case "silentRestoreAllProducts":
@@ -143,14 +140,9 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             setThemeMode(arguments: arguments)
         case "setAttribute":
             setAttribute(arguments: arguments)
-        case "setPaywallActionInterceptor":
-            setPaywallActionInterceptor(result: result)
         case "setLanguage":
             let parameter = arguments?["language"] as? String
             setLanguage(with: parameter)
-        case "onProcessAction":
-            let parameter = arguments?["processAction"] as? Bool
-            onProcessAction(parameter ?? true)
         case "userDidConsumeSubscriptionContent":
             userDidConsumeSubscriptionContent()
         case "setUserAttributeWithString":
@@ -186,15 +178,10 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
         case "clearBuiltInAttributes":
             clearBuiltInAttributes()
         case "displaySubscriptionCancellationInstruction":
+            // iOS has no dedicated cancellation-instruction screen; no-op.
             result(FlutterMethodNotImplemented)
         case "isAnonymous":
             isAnonymous(result: result)
-        case "hidePresentation":
-            hidePresentation()
-        case "showPresentation":
-            showPresentation()
-        case "closePresentation":
-            closePresentation()
         case "signPromotionalOffer":
             signPromotionalOffer(arguments: arguments, result: result)
         case "isEligibleForIntroOffer":
@@ -216,97 +203,426 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
         }
     }
 
-    internal static func getPresentationController(for args: Any?, with channel: FlutterMethodChannel) -> UIViewController? {
+    // MARK: - start
 
-        if let creationParams = args as? [String: Any] {
+    private func start(arguments: [String: Any]?, result: @escaping FlutterResult) {
 
-            let presentationId = creationParams["presentationId"] as? String
-            let placementId = creationParams["placementId"] as? String
+        guard let arguments = arguments, let apiKey = arguments["apiKey"] as? String, !apiKey.isEmpty else {
+            result(FlutterError.failedArgumentField("apiKey", type: String.self))
+            return
+        }
 
-            guard let presentationMap = creationParams["presentation"] as? [String:Any],
-                  let mapPresentationId = presentationMap["id"] as? String,
-                  let mapPlacementId = presentationMap["placementId"] as? String,
-                  let presentationLoaded = presentationsLoaded.filter({ $0.id == mapPresentationId && $0.placementId == mapPlacementId }).first,
-                  let presentationLoadedController = presentationLoaded.controller else {
-                return SwiftPurchaselyFlutterPlugin.createNativeViewController(presentationId: presentationId, placementId: placementId, channel: channel)
-            }
+        guard !SwiftPurchaselyFlutterPlugin.isStarted else {
+            result(true)
+            return
+        }
 
-            SwiftPurchaselyFlutterPlugin.purchaseResult = { result in
-                if let value = result as? [String : Any] {
-                    channel.invokeMethod("onPresentationResult", arguments: ["result": value["result"],
-                                                                             "plan": value["plan"]])
+        var builder = Purchasely.apiKey(apiKey)
+            .appTechnology(.flutter)
+            .sdkBridgeVersion("5.7.3")
+
+        if let userId = arguments["userId"] as? String, !userId.isEmpty {
+            builder = builder.appUserId(userId)
+        }
+
+        let runningMode = PLYRunningMode(rawValue: (arguments["runningMode"] as? Int) ?? PLYRunningMode.full.rawValue) ?? PLYRunningMode.full
+        builder = builder.runningMode(runningMode)
+
+        let logLevel = PLYLogger.PLYLogLevel(rawValue: (arguments["logLevel"] as? Int) ?? PLYLogger.PLYLogLevel.debug.rawValue) ?? .debug
+        builder = builder.logLevel(logLevel)
+
+        let storeKit1 = arguments["storeKit1"] as? Bool ?? false
+        builder = builder.storekitSettings(storeKit1 ? .storeKit1 : .storeKit2)
+
+        DispatchQueue.main.async {
+            builder.start { error in
+                if let error = error {
+                    result(FlutterError.error(code: "0", message: "Purchasely SDK not configured", error: error))
+                } else {
+                    SwiftPurchaselyFlutterPlugin.isStarted = true
+                    result(true)
                 }
             }
-            return presentationLoadedController
         }
-        return nil
     }
 
-    private static func createNativeViewController(presentationId: String?,
-                          placementId: String?,
-                          channel: FlutterMethodChannel?) -> UIViewController? {
-        if let presentationId = presentationId {
-            let controller = Purchasely.presentationController(
-                with: presentationId,
-                loaded: nil,
-                completion: { result, plan in
-                    if let plan = plan {
-                        channel?.invokeMethod("onPresentationResult", arguments: ["result": result.rawValue,
-                                                                                  "plan": plan.toMap])
-                    } else {
-                        channel?.invokeMethod("onPresentationResult", arguments: ["result": result.rawValue,
-                                                                                  "plan": nil])
-                    }
-                }
-            )
-            return controller
+    // MARK: - Presentation lifecycle
+
+    /// Build a `PLYPresentationRequest` from a Dart-side request map. The map
+    /// shape mirrors `PresentationRequest.toMap()` in
+    /// `lib/src/presentation_request.dart`.
+    private func buildRequest(_ args: [String: Any], requestId: String) -> PLYPresentationRequest {
+        let source = args["source"] as? [String: Any]
+        let kind = (source?["kind"] as? String) ?? "defaultSource"
+        let id = source?["id"] as? String
+        let contentId = args["contentId"] as? String
+
+        let builder: PLYPresentationBuilder = {
+            switch kind {
+            case "placementId":
+                return id.map { PLYPresentationBuilder.from(placementId: $0) } ?? .default()
+            case "screenId":
+                return id.map { PLYPresentationBuilder.from(presentationId: $0) } ?? .default()
+            default:
+                return .default()
+            }
+        }()
+
+        if let contentId = contentId { _ = builder.contentId(contentId) }
+        if let hex = args["backgroundColor"] as? String, let color = UIColor.ply_from(hex: hex) {
+            _ = builder.backgroundColor(color)
         }
-        else if let placementId = placementId {
-            let controller = Purchasely.presentationController(
-                for: placementId,
-                loaded: nil,
-                completion: { result, plan in
-                    if let plan = plan {
-                        channel?.invokeMethod("onPresentationResult", arguments: ["result": result.rawValue,
-                                                                                  "plan": plan.toMap])
-                    } else {
-                        channel?.invokeMethod("onPresentationResult", arguments: ["result": result.rawValue,
-                                                                                  "plan": nil])
-                    }
-                }
-            )
-            return controller
+        if let hex = args["progressColor"] as? String, let color = UIColor.ply_from(hex: hex) {
+            _ = builder.progressColor(color)
         }
-        return nil
+
+        // Builder-seeded callbacks are transferred onto the loaded presentation
+        // automatically by the SDK. They run on the main actor; we emit on the
+        // EventChannel sink (main queue) directly.
+        _ = builder.onPresented { [weak self] presentation, error in
+            self?.presentationEventHandler.emit([
+                "event": "onPresented",
+                "requestId": requestId,
+                "presentation": presentation.map { self?.presentationToMap($0, requestId: requestId) ?? [:] } as Any?,
+                "error": error.map { Self.errorToMap($0) } as Any?,
+            ])
+        }
+
+        _ = builder.onClose { [weak self] in
+            // iOS exposes `onClose` (close-requested semantics). Renamed to
+            // `onCloseRequested` on the wire so the Dart-side façade matches
+            // the cross-platform contract.
+            self?.presentationEventHandler.emit([
+                "event": "onCloseRequested",
+                "requestId": requestId,
+            ])
+        }
+
+        _ = builder.onDismissed { [weak self] outcome in
+            let presentation = SwiftPurchaselyFlutterPlugin.loadedPresentations[requestId]
+            self?.presentationEventHandler.emit([
+                "event": "onDismissed",
+                "requestId": requestId,
+                "outcome": self?.outcomeToMap(outcome, presentation: presentation, error: nil, requestId: requestId) as Any?,
+            ])
+        }
+
+        let request = builder.build()
+        SwiftPurchaselyFlutterPlugin.requests[requestId] = request
+        return request
     }
+
+    private func preload(_ args: [String: Any]?, result: @escaping FlutterResult) {
+        guard let args = args, let requestId = args["requestId"] as? String, !requestId.isEmpty else {
+            result(FlutterError(code: "ARG_INVALID", message: "requestId required", details: nil))
+            return
+        }
+        let request = buildRequest(args, requestId: requestId)
+        request.preload { [weak self] presentation, error in
+            guard let self = self else { return }
+            if let presentation = presentation {
+                SwiftPurchaselyFlutterPlugin.loadedPresentations[requestId] = presentation
+                self.presentationEventHandler.emit([
+                    "event": "onLoaded",
+                    "requestId": requestId,
+                    "presentation": self.presentationToMap(presentation, requestId: requestId),
+                ])
+                result(self.presentationToMap(presentation, requestId: requestId))
+            } else {
+                let errMap = error.map { Self.errorToMap($0) } ?? ["code": "Unknown", "message": "unknown"]
+                self.presentationEventHandler.emit([
+                    "event": "onLoaded",
+                    "requestId": requestId,
+                    "error": errMap,
+                ])
+                result(FlutterError(code: "PRELOAD",
+                                    message: error?.localizedDescription ?? "preload failed",
+                                    details: errMap))
+            }
+        }
+    }
+
+    private func display(_ args: [String: Any]?, result: @escaping FlutterResult) {
+        guard let args = args, let requestId = args["requestId"] as? String, !requestId.isEmpty else {
+            result(FlutterError(code: "ARG_INVALID", message: "requestId required", details: nil))
+            return
+        }
+        let request = SwiftPurchaselyFlutterPlugin.requests[requestId] ?? buildRequest(args, requestId: requestId)
+
+        let transitionMap = args["transition"] as? [String: Any]
+        let displayMode = Self.parseTransition(transitionMap)
+
+        request.display(transition: displayMode) { [weak self] presentation, error in
+            guard let self = self else { return }
+            // The Dart-side `.display()` Future resolves at *dismiss* time, not
+            // here. We don't `result(...)` with the outcome — that's emitted via
+            // the `onDismissed` event and the Dart façade resolves its Future
+            // from there. We acknowledge the dispatch via `result(true)` on
+            // success, and synthesise the error-path callbacks on failure.
+            if let presentation = presentation {
+                SwiftPurchaselyFlutterPlugin.loadedPresentations[requestId] = presentation
+                result(true)
+            } else if let error = error {
+                // Synthesise onPresented(nil, error) so the Dart-side builder
+                // onPresented handler fires uniformly across platforms.
+                self.presentationEventHandler.emit([
+                    "event": "onPresented",
+                    "requestId": requestId,
+                    "presentation": nil as Any?,
+                    "error": Self.errorToMap(error),
+                ])
+                // Also synthesise onDismissed with the error outcome.
+                let outcome = self.outcomeToMap(
+                    PLYPresentationOutcome(purchaseResult: .none, plan: nil),
+                    presentation: nil,
+                    error: error,
+                    requestId: requestId
+                )
+                self.presentationEventHandler.emit([
+                    "event": "onDismissed",
+                    "requestId": requestId,
+                    "outcome": outcome,
+                ])
+                result(FlutterError(code: "DISPLAY",
+                                    message: error.localizedDescription,
+                                    details: Self.errorToMap(error)))
+            } else {
+                result(true)
+            }
+        }
+    }
+
+    private func closePresentation(_ args: [String: Any]?, result: @escaping FlutterResult) {
+        let requestId = args?["requestId"] as? String
+        if let id = requestId, let presentation = SwiftPurchaselyFlutterPlugin.loadedPresentations[id] {
+            presentation.close()
+        } else {
+            // No per-request handle — fall back to closing every loaded
+            // presentation (best-effort; the iOS SDK doesn't expose a global
+            // "closeAll").
+            SwiftPurchaselyFlutterPlugin.loadedPresentations.values.forEach { $0.close() }
+        }
+        result(true)
+    }
+
+    private func back(_ args: [String: Any]?, result: @escaping FlutterResult) {
+        let requestId = args?["requestId"] as? String
+        if let id = requestId, let presentation = SwiftPurchaselyFlutterPlugin.loadedPresentations[id] {
+            presentation.back()
+        }
+        result(true)
+    }
+
+    // MARK: - Action interceptor
+
+    private func registerInterceptor(_ args: [String: Any]?, result: @escaping FlutterResult) {
+        guard let kindWire = args?["kind"] as? String,
+              let action = Self.actionFromWire(kindWire) else {
+            result(FlutterError(code: "ARG_INVALID", message: "unknown action kind", details: nil))
+            return
+        }
+
+        Purchasely.interceptAction(action) { [weak self] info, params, completion in
+            guard let self = self else { completion(.notHandled); return }
+            let id = "ply_ic_\(Int.random(in: 0..<Int.max))"
+            SwiftPurchaselyFlutterPlugin.pendingInterceptors[id] = completion
+            self.presentationEventHandler.emit([
+                "event": "interceptorTriggered",
+                "requestId": id,
+                "kind": kindWire,
+                "info": Self.interceptorInfoToMap(info),
+                "payload": Self.actionParamsToMap(params),
+            ])
+        }
+
+        result(true)
+    }
+
+    private func removeInterceptor(_ args: [String: Any]?, result: @escaping FlutterResult) {
+        if let kindWire = args?["kind"] as? String,
+           let action = Self.actionFromWire(kindWire) {
+            Purchasely.removeActionInterceptor(action)
+        }
+        result(true)
+    }
+
+    private func removeAllInterceptors(result: @escaping FlutterResult) {
+        Purchasely.removeAllActionInterceptors()
+        result(true)
+    }
+
+    private func interceptorResolve(_ args: [String: Any]?, result: @escaping FlutterResult) {
+        let id = args?["invocationId"] as? String
+        let value = args?["result"] as? String
+        let ply: PLYInterceptResult = {
+            switch value {
+            case "success": return .success
+            case "failed":  return .failed
+            default:        return .notHandled
+            }
+        }()
+        if let id = id, let completion = SwiftPurchaselyFlutterPlugin.pendingInterceptors.removeValue(forKey: id) {
+            DispatchQueue.main.async {
+                completion(ply)
+            }
+        }
+        result(true)
+    }
+
+    // MARK: - Presentation serializers
+
+    private func presentationToMap(_ p: PLYPresentation, requestId: String) -> [String: Any] {
+        return [
+            "requestId": requestId,
+            // iOS `id` maps to wire `screenId`. The Dart factory tolerates both
+            // keys; we send `screenId` for forward compatibility with the
+            // contract.
+            "screenId": p.id,
+            "placementId": p.placementId as Any,
+            "contentId": NSNull(),
+            "audienceId": p.audienceId as Any,
+            "abTestId": p.abTestId as Any,
+            "abTestVariantId": p.abTestVariantId as Any,
+            "campaignId": p.campaignId as Any,
+            "flowId": p.flowId as Any,
+            "language": p.language,
+            "type": p.type.rawValue,
+            "height": p.height,
+            "plans": p.plans.map { plan -> [String: Any?] in
+                [
+                    "planVendorId": plan.planVendorId,
+                    "storeProductId": plan.storeProductId,
+                    "basePlanId": nil as Any?,  // iOS doesn't expose basePlanId on PLYPresentationPlan
+                    "offerId": plan.offerId,
+                ]
+            },
+        ]
+    }
+
+    private func outcomeToMap(_ outcome: PLYPresentationOutcome,
+                              presentation: PLYPresentation?,
+                              error: Error?,
+                              requestId: String) -> [String: Any?] {
+        let purchaseResult: String? = {
+            switch outcome.purchaseResult {
+            case .purchased: return "purchased"
+            case .cancelled: return "cancelled"
+            case .restored:  return "restored"
+            case .none:      return nil
+            @unknown default: return nil
+            }
+        }()
+
+        var planMap: [String: Any?]? = nil
+        if let plan = outcome.plan {
+            planMap = [
+                "vendorId": plan.vendorId,
+                "productId": plan.appleProductId as Any?,
+            ]
+        }
+
+        return [
+            "presentation": presentation.map { presentationToMap($0, requestId: requestId) } as Any?,
+            "purchaseResult": purchaseResult,
+            "plan": planMap as Any?,
+            // iOS SDK doesn't surface closeReason yet.
+            "closeReason": nil as Any?,
+            "error": error.map { Self.errorToMap($0) } as Any?,
+        ]
+    }
+
+    private static func errorToMap(_ error: Error) -> [String: Any] {
+        let ns = error as NSError
+        return [
+            "code": "\(ns.domain).\(ns.code)",
+            "message": ns.localizedDescription,
+        ]
+    }
+
+    private static func interceptorInfoToMap(_ info: PLYInterceptorInfo) -> [String: Any?] {
+        // Mirror Android's shape — only the keys consumed by the Dart façade.
+        return [
+            "contentId": info.contentId,
+            "presentation": info.presentation.map { p in
+                [
+                    "screenId": p.id,
+                    "placementId": p.placementId as Any,
+                ]
+            } as Any?,
+        ]
+    }
+
+    private static func actionParamsToMap(_ params: PLYPresentationActionParameters?) -> [String: Any]? {
+        guard let params = params else { return nil }
+        var map: [String: Any] = [:]
+        if let url = params.url?.absoluteString { map["url"] = url }
+        if let title = params.title { map["title"] = title }
+        if let plan = params.plan {
+            map["plan"] = [
+                "vendorId": plan.vendorId as Any,
+                "productId": plan.appleProductId as Any?,
+            ]
+        }
+        if let presentationId = params.presentation { map["presentationId"] = presentationId }
+        if let placementId = params.placement { map["placementId"] = placementId }
+        // `webCheckoutProvider` is a non-optional enum with `.none` sentinel;
+        // forward the raw value so the Dart side can treat .none as "absent".
+        map["webCheckoutProvider"] = params.webCheckoutProvider.rawValue
+        if let clientRef = params.clientReferenceId { map["clientReferenceId"] = clientRef }
+        if let queryParam = params.queryParameterKey { map["queryParameterKey"] = queryParam }
+        return map
+    }
+
+    private static func actionFromWire(_ wire: String) -> PLYPresentationAction? {
+        switch wire {
+        case "close":             return .close
+        case "close_all":         return .closeAll
+        case "login":             return .login
+        case "navigate":          return .navigate
+        case "purchase":          return .purchase
+        case "restore":           return .restore
+        case "open_presentation": return .openPresentation
+        case "open_placement":    return .openPlacement
+        case "promo_code":        return .promoCode
+        case "web_checkout":      return .webCheckout
+        default: return nil
+        }
+    }
+
+    private static func parseTransition(_ map: [String: Any]?) -> PLYDisplayMode? {
+        guard let map = map, let type = map["type"] as? String else { return nil }
+        let heightPercentage = (map["heightPercentage"] as? NSNumber)?.doubleValue
+        let dismissible = map["dismissible"] as? Bool ?? true
+        switch type {
+        case "fullScreen":    return .fullScreen
+        case "push":          return .push
+        case "modal":         return .modal
+        case "drawer":        return .drawer(heightPercentage: heightPercentage ?? 0.5, dismissible: dismissible)
+        case "popin":         return .popin(heightPercentage: heightPercentage ?? 0.5, dismissible: dismissible)
+        case "inlinePaywall": return .inlinePaywall
+        default: return nil
+        }
+    }
+
+    // MARK: - Inline native view support
+
+    /// Resolves the controller for the inline platform view. Mirrors Android:
+    /// the inline view is built from a presentation that was already loaded
+    /// (via `preload`) and is keyed by the Dart `requestId`.
+    /// Creation-param contract: `{ "requestId": <String> }`.
+    static func presentationController(for args: Any?) -> UIViewController? {
+        guard let creationParams = args as? [String: Any],
+              let requestId = creationParams["requestId"] as? String,
+              let presentation = loadedPresentations[requestId] else {
+            return nil
+        }
+        return presentation.controller
+    }
+
+    // MARK: - Kept v5 surface
 
     private func isAnonymous(result: @escaping FlutterResult) {
         result(Purchasely.isAnonymous())
-    }
-
-    private func hidePresentation() {
-        if let presentedPresentationViewController = presentedPresentationViewController {
-            DispatchQueue.main.async {
-                var presentingViewController = presentedPresentationViewController;
-                while let presentingController = presentingViewController.presentingViewController {
-                    presentingViewController = presentingController
-                }
-                presentingViewController.dismiss(animated: true, completion: nil)
-            }
-        }
-    }
-
-    private func closePresentation() {
-        self.presentedPresentationViewController = nil
-        Purchasely.closeDisplayedPresentation()
-    }
-
-    private func showPresentation() {
-        if let presentedPresentationViewController = presentedPresentationViewController {
-            DispatchQueue.main.async {
-                Purchasely.showController(presentedPresentationViewController, type: .productPage)
-            }
-        }
     }
 
     private func isEligibleForIntroOffer(arguments: [String: Any]?, result: @escaping FlutterResult) {
@@ -323,307 +639,6 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             } failure: { error in
                 result(FlutterError.error(code:"-1", message:"plan \(planVendorId) not found", error: error))
             }
-        }
-    }
-
-    private func start(arguments: [String: Any]?, result: @escaping FlutterResult) {
-
-        guard let arguments = arguments, let apiKey = arguments["apiKey"] as? String else {
-            result(FlutterError.failedArgumentField("apiKey", type: String.self))
-            return
-        }
-
-        guard !SwiftPurchaselyFlutterPlugin.isStarted else {
-            result(true)
-            return
-        }
-
-        Purchasely.setSdkBridgeVersion("5.7.3")
-        Purchasely.setAppTechnology(PLYAppTechnology.flutter)
-
-        let logLevel = PLYLogger.PLYLogLevel(rawValue: (arguments["logLevel"] as? Int) ?? PLYLogger.PLYLogLevel.debug.rawValue) ?? .debug
-        let userId = arguments["userId"] as? String
-        let runningMode = PLYRunningMode(rawValue: (arguments["runningMode"] as? Int) ?? PLYRunningMode.full.rawValue) ?? PLYRunningMode.full
-        let storeKitSettingRawValue = arguments["storeKit1"] as? Bool ?? false
-        let storeKitSetting = storeKitSettingRawValue ? StorekitSettings.storeKit1 : StorekitSettings.storeKit2
-
-        DispatchQueue.main.async {
-            Purchasely.start(withAPIKey: apiKey,
-                             appUserId: userId,
-                             runningMode: runningMode,
-                             paywallActionsInterceptor: nil,
-                             storekitSettings: storeKitSetting,
-                             logLevel: logLevel) { success, error in
-                if success {
-                    SwiftPurchaselyFlutterPlugin.isStarted = true
-                    result(success)
-                } else {
-                    result(FlutterError.error(code: "0", message: "Purchasely SDK not configured", error: error))
-                }
-            }
-        }
-    }
-
-    private func fetchPresentation(arguments: [String: Any]?, result: @escaping FlutterResult) {
-
-        let placementId = arguments?["placementVendorId"] as? String
-        let presentationId = arguments?["presentationVendorId"] as? String
-        let contentId = arguments?["contentId"] as? String
-
-        if let placementId = placementId {
-            Purchasely.fetchPresentation(for: placementId, contentId: contentId, fetchCompletion: { [weak self] presentation, error in
-                guard let `self` = self else { return }
-                DispatchQueue.main.async {
-                    if let error = error {
-                        result(FlutterError.error(code: "-1", message: "Error while fetching presentation", error: error))
-                    } else if let presentation = presentation {
-                        SwiftPurchaselyFlutterPlugin.presentationsLoaded.removeAll(where: { $0.id == presentation.id })
-                        SwiftPurchaselyFlutterPlugin.presentationsLoaded.append(presentation)
-                        result(presentation.toMap)
-                    }
-                }
-            }) { [weak self] productResult, plan in
-                guard let `self` = self else { return }
-                let value: [String: Any] = ["result": productResult.rawValue, "plan": plan?.toMap ?? [:]]
-                DispatchQueue.main.async {
-                    SwiftPurchaselyFlutterPlugin.purchaseResult?(value)
-                }
-            }
-        } else if let presentationId = presentationId {
-            Purchasely.fetchPresentation(with: presentationId, contentId: contentId, fetchCompletion: { [weak self] presentation, error in
-                guard let `self` = self else { return }
-                DispatchQueue.main.async {
-                    if let error = error {
-                        result(FlutterError.error(code: "-1", message: "Error while fetching presentation", error: error))
-                    } else if let presentation = presentation {
-                        SwiftPurchaselyFlutterPlugin.presentationsLoaded.removeAll(where: { $0.id == presentation.id })
-                        SwiftPurchaselyFlutterPlugin.presentationsLoaded.append(presentation)
-                        result(presentation.toMap)
-                    }
-                }
-            }) { [weak self] productResult, plan in
-                guard let `self` = self else { return }
-                let value: [String: Any] = ["result": productResult.rawValue, "plan": plan?.toMap ?? [:]]
-                DispatchQueue.main.async {
-                    SwiftPurchaselyFlutterPlugin.purchaseResult?(value)
-                }
-            }
-        }
-    }
-
-    private func presentPresentation(arguments: [String: Any]?, result: @escaping FlutterResult) {
-        guard let presentationMap = arguments?["presentation"] as? [String: Any] else {
-            result(FlutterError.error(code: "-1", message: "Presentation cannot be nil", error: nil))
-            return
-        }
-
-        SwiftPurchaselyFlutterPlugin.purchaseResult = result
-
-        guard let presentationId = presentationMap["id"] as? String,
-                let placementId = presentationMap["placementId"] as? String,
-                let presentationLoaded = SwiftPurchaselyFlutterPlugin.presentationsLoaded.filter({ $0.id == presentationId && $0.placementId == placementId }).first,
-                let controller = presentationLoaded.controller else {
-            result(FlutterError.error(code: "-1", message: "Presentation not loaded", error: nil))
-            return
-        }
-
-        SwiftPurchaselyFlutterPlugin.presentationsLoaded.removeAll(where: { $0.id == presentationId })
-
-        let navCtrl = UINavigationController(rootViewController: controller)
-        navCtrl.navigationBar.isTranslucent = true
-        navCtrl.navigationBar.setBackgroundImage(UIImage(), for: .default)
-        navCtrl.navigationBar.shadowImage = UIImage()
-        navCtrl.navigationBar.tintColor = UIColor.white
-
-        self.presentedPresentationViewController = navCtrl
-
-        if let isFullscreen = arguments?["isFullscreen"] as? Bool, isFullscreen {
-            navCtrl.modalPresentationStyle = .fullScreen
-        }
-
-        DispatchQueue.main.async {
-            if presentationLoaded.isFlow {
-                presentationLoaded.display()
-            } else {
-                Purchasely.showController(navCtrl, type: .productPage)
-            }
-            
-        }
-    }
-
-    private func clientPresentationDisplayed(arguments: [String: Any]?) {
-        guard let presentationMap = arguments?["presentation"] as? [String: Any] else {
-            print("Presentation cannot be nil")
-            return
-        }
-
-        guard let presentationId = presentationMap["id"] as? String,
-                let placementId = presentationMap["placementId"] as? String,
-                let presentationLoaded = SwiftPurchaselyFlutterPlugin.presentationsLoaded.filter({ $0.id == presentationId && $0.placementId == placementId }).first else { return }
-
-        Purchasely.clientPresentationOpened(with: presentationLoaded)
-    }
-
-    private func clientPresentationClosed(arguments: [String: Any]?) {
-        guard let presentationMap = arguments?["presentation"] as? [String: Any] else {
-            print("Presentation cannot be nil")
-            return
-        }
-
-        guard let presentationId = presentationMap["id"] as? String,
-              let placementId = presentationMap["placementId"] as? String,
-              let presentationLoaded = SwiftPurchaselyFlutterPlugin.presentationsLoaded.filter({ $0.id == presentationId && $0.placementId == placementId }).first else { return }
-
-        Purchasely.clientPresentationClosed(with: presentationLoaded)
-    }
-
-    private func presentPresentationWithIdentifier(arguments: [String: Any]?, result: @escaping FlutterResult) {
-
-        let presentationVendorId = arguments?["presentationVendorId"] as? String
-        let contentId = arguments?["contentId"] as? String
-
-        let controller = Purchasely.presentationController(with: presentationVendorId,
-                                                           contentId: contentId,
-                                                           loaded: nil) { productResult, plan in
-            let value: [String: Any] = ["result": productResult.rawValue, "plan": plan?.toMap ?? [:]]
-            DispatchQueue.main.async {
-                result(value)
-            }
-        }
-
-        if let controller = controller {
-            let navCtrl = UINavigationController(rootViewController: controller)
-            navCtrl.navigationBar.isTranslucent = true
-            navCtrl.navigationBar.setBackgroundImage(UIImage(), for: .default)
-            navCtrl.navigationBar.shadowImage = UIImage()
-            navCtrl.navigationBar.tintColor = UIColor.white
-
-            self.presentedPresentationViewController = navCtrl
-
-            if let isFullscreen = arguments?["isFullscreen"] as? Bool, isFullscreen {
-                navCtrl.modalPresentationStyle = .fullScreen
-            }
-
-            DispatchQueue.main.async {
-                Purchasely.showController(navCtrl, type: .productPage)
-            }
-        } else {
-            result(FlutterError.error(code: "-1", message: "You are using a running mode that prevent paywalls to be displayed", error: nil))
-        }
-    }
-
-    private func presentPresentationForPlacement(arguments: [String: Any]?, result: @escaping FlutterResult) {
-
-        let placementVendorId = (arguments?["placementVendorId"] as? String) ?? ""
-        let contentId = arguments?["contentId"] as? String
-
-        let controller = Purchasely.presentationController(for: placementVendorId,
-                                                           contentId: contentId,
-                                                           loaded: nil) { productResult, plan in
-            let value: [String: Any] = ["result": productResult.rawValue, "plan": plan?.toMap ?? [:]]
-            DispatchQueue.main.async {
-                result(value)
-            }
-        }
-
-        if let controller = controller {
-            let navCtrl = UINavigationController(rootViewController: controller)
-            navCtrl.navigationBar.isTranslucent = true
-            navCtrl.navigationBar.setBackgroundImage(UIImage(), for: .default)
-            navCtrl.navigationBar.shadowImage = UIImage()
-            navCtrl.navigationBar.tintColor = UIColor.white
-
-            self.presentedPresentationViewController = navCtrl
-
-            if let isFullscreen = arguments?["isFullscreen"] as? Bool, isFullscreen {
-                navCtrl.modalPresentationStyle = .fullScreen
-            }
-
-            DispatchQueue.main.async {
-                Purchasely.showController(navCtrl, type: .productPage)
-            }
-        } else {
-            result(FlutterError.error(code: "-1", message: "You are using a running mode that prevent paywalls to be displayed", error: nil))
-        }
-    }
-
-    private func presentProductWithIdentifier(arguments: [String: Any]?, result: @escaping FlutterResult) {
-
-        guard let arguments = arguments, let productVendorId = arguments["productVendorId"] as? String else {
-            result(FlutterError.error(code: "-1", message: "product vendor id must not be nil", error: nil))
-            return
-        }
-        let presentationVendorId = arguments["presentationVendorId"] as? String
-        let contentId = arguments["contentId"] as? String
-
-        let controller = Purchasely.productController(for: productVendorId,
-                                                         with: presentationVendorId,
-                                                         contentId: contentId,
-                                                         loaded: nil) { productResult, plan in
-            let value: [String: Any] = ["result": productResult.rawValue, "plan": plan?.toMap ?? [:]]
-            DispatchQueue.main.async {
-                result(value)
-            }
-        }
-
-        if let controller = controller {
-            let navCtrl = UINavigationController(rootViewController: controller)
-            navCtrl.navigationBar.isTranslucent = true
-            navCtrl.navigationBar.setBackgroundImage(UIImage(), for: .default)
-            navCtrl.navigationBar.shadowImage = UIImage()
-            navCtrl.navigationBar.tintColor = UIColor.white
-
-            self.presentedPresentationViewController = navCtrl
-
-            if let isFullscreen = arguments["isFullscreen"] as? Bool, isFullscreen {
-                navCtrl.modalPresentationStyle = .fullScreen
-            }
-
-            DispatchQueue.main.async {
-                Purchasely.showController(navCtrl, type: .productPage)
-            }
-        } else {
-            result(FlutterError.error(code: "-1", message: "You are using a running mode that prevent paywalls to be displayed", error: nil))
-        }
-    }
-
-    private func presentPlanWithIdentifier(arguments: [String: Any]?, result: @escaping FlutterResult) {
-
-        guard let arguments = arguments, let planVendorId = arguments["planVendorId"] as? String else {
-            result(FlutterError.error(code: "-1", message: "plan vendor id must not be nil", error: nil))
-            return
-        }
-        let presentationVendorId = arguments["presentationVendorId"] as? String
-        let contentId = arguments["contentId"] as? String
-
-        let controller = Purchasely.planController(for: planVendorId,
-                                                      with: presentationVendorId,
-                                                      contentId: contentId,
-                                                      loaded:nil) { productResult, plan in
-            let value: [String: Any] = ["result": productResult.rawValue, "plan": plan?.toMap ?? [:]]
-            DispatchQueue.main.async {
-                result(value)
-            }
-        }
-
-        if let controller = controller {
-            let navCtrl = UINavigationController(rootViewController: controller)
-            navCtrl.navigationBar.isTranslucent = true
-            navCtrl.navigationBar.setBackgroundImage(UIImage(), for: .default)
-            navCtrl.navigationBar.shadowImage = UIImage()
-            navCtrl.navigationBar.tintColor = UIColor.white
-
-            self.presentedPresentationViewController = navCtrl
-
-            if let isFullscreen = arguments["isFullscreen"] as? Bool, isFullscreen {
-                navCtrl.modalPresentationStyle = .fullScreen
-            }
-
-            DispatchQueue.main.async {
-                Purchasely.showController(navCtrl, type: .productPage)
-            }
-        } else {
-            result(FlutterError.error(code: "-1", message: "You are using a running mode that prevent paywalls to be displayed", error: nil))
         }
     }
 
@@ -686,15 +701,6 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
 
     private func readyToOpenDeeplink(readyToOpenDeeplink: Bool?) {
         Purchasely.readyToOpenDeeplink(readyToOpenDeeplink ?? true)
-    }
-
-    private func setDefaultPresentationResultHandler(result: @escaping FlutterResult) {
-        DispatchQueue.main.async {
-            Purchasely.setDefaultPresentationResultHandler { productResult, plan in
-                let value: [String: Any] = ["result": productResult.rawValue, "plan": plan?.toMap ?? [:]]
-                result(value)
-            }
-        }
     }
 
     private func productWithIdentifier(arguments: [String: Any]?, result: @escaping FlutterResult) {
@@ -909,7 +915,7 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
         }
         Purchasely.setUserAttribute(withStringValue: value, forKey: key, processingLegalBasis: processingLegalBasis)
     }
-    
+
     private func setUserAttributeWithStringArray(arguments: [String: Any]?) {
         guard let (key, value, processingLegalBasis) = mapUserAttributesCallArguments(arguments: arguments, type: [String].self) else {
             return
@@ -923,7 +929,7 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
         }
         Purchasely.setUserAttribute(withIntValue: value, forKey: key, processingLegalBasis: processingLegalBasis)
     }
-    
+
     private func setUserAttributeWithIntArray(arguments: [String: Any]?) {
         guard let (key, value, processingLegalBasis) = mapUserAttributesCallArguments(arguments: arguments, type: [Int].self) else {
             return
@@ -937,7 +943,7 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
         }
         Purchasely.setUserAttribute(withDoubleValue: value, forKey: key, processingLegalBasis: processingLegalBasis)
     }
-    
+
     private func setUserAttributeWithDoubleArray(arguments: [String: Any]?) {
         guard let (key, value, processingLegalBasis) = mapUserAttributesCallArguments(arguments: arguments, type: [Double].self) else {
             return
@@ -951,7 +957,7 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
         }
         Purchasely.setUserAttribute(withBoolValue: value, forKey: key, processingLegalBasis: processingLegalBasis)
     }
-    
+
     private func setUserAttributeWithBooleanArray(arguments: [String: Any]?) {
         guard let (key, value, processingLegalBasis) = mapUserAttributesCallArguments(arguments: arguments, type: [Bool].self) else {
             return
@@ -1008,7 +1014,7 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
     private func clearUserAttributes() {
         Purchasely.clearUserAttributes()
     }
-    
+
     private func clearBuiltInAttributes() {
         Purchasely.clearBuiltInAttributes()
     }
@@ -1033,55 +1039,10 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
         }
     }
 
-    private func setPaywallActionInterceptor(result: @escaping FlutterResult) {
-        DispatchQueue.main.async {
-            Purchasely.setPaywallActionsInterceptor { [weak self] action, parameters, info, onProcessAction in
-                guard let `self` = self else { return }
-                self.onProcessActionHandler = onProcessAction
-                var value = [String: Any]()
-
-                let actionString: String = switch action {
-                case .login:
-                    "login"
-                case .purchase:
-                    "purchase"
-                case .close:
-                    "close"
-                case .closeAll:
-                    "close_all"
-                case .restore:
-                    "restore"
-                case .navigate:
-                    "navigate"
-                case .promoCode:
-                    "promo_code"
-                case .openPresentation:
-                    "open_presentation"
-                case .openPlacement:
-                    "open_placement"
-                case .webCheckout:
-                    "web_checkout"
-                }
-
-                value["action"] = actionString
-                value["info"] = info?.toMap ?? [:]
-                value["parameters"] = parameters?.toMap ?? [:]
-
-                result(value)
-            }
-        }
-    }
-
-    private func onProcessAction(_ proceed: Bool) {
-        DispatchQueue.main.async { [weak self] in
-            self?.onProcessActionHandler?(proceed)
-        }
-    }
-
     private func userDidConsumeSubscriptionContent() {
         Purchasely.userDidConsumeSubscriptionContent()
     }
-    
+
     private func setDynamicOffering(arguments: [String: Any]?, result: @escaping FlutterResult) {
         guard let arguments = arguments,
               let reference = arguments["reference"] as? String,
@@ -1089,7 +1050,7 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             result(FlutterError.error(code: "-1", message: "reference and planVendorId must not be nil", error: nil))
             return
         }
-        
+
         let offerVendorId = arguments["offerVendorId"] as? String
 
         DispatchQueue.main.async {
@@ -1098,7 +1059,7 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             })
         }
     }
-    
+
     private func getDynamicOfferings(result: @escaping FlutterResult) {
         DispatchQueue.main.async {
             Purchasely.getDynamicOfferings { offerings in
@@ -1107,30 +1068,30 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
                 offerings.forEach(  { offering in
                     // create new dictionary for each offering
                     var map = [String: String]()
-                    
+
                     map["reference"] = offering.reference
                     map["planVendorId"] = offering.planId
-                    
+
                     if let offerId = offering.offerId {
                         map["offerVendorId"] = offerId
                     }
-                    
+
                     list.append(map)
                 })
                 result(list)
             }
         }
     }
-    
+
     private func removeDynamicOffering(arguments: [String: Any]?) {
         guard let arguments = arguments,
               let reference = arguments["reference"] as? String else {
             return
         }
-        
+
         Purchasely.removeDynamicOffering(reference: reference)
     }
-    
+
     private func clearDynamicOfferings() {
         Purchasely.clearDynamicOfferings()
     }
@@ -1155,13 +1116,35 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
         }
         Purchasely.revokeDataProcessingConsent(for: purposes)
     }
-    
+
     private func setDebugMode(arguments: [String: Any]?) {
         guard let arguments, let enabled = arguments["debugMode"] as? Bool else {
             return
         }
-        
+
         Purchasely.setDebugMode(enabled: enabled)
+    }
+}
+
+// MARK: - Presentation EventChannel handler
+
+final class PresentationEventHandler: NSObject, FlutterStreamHandler {
+    private var sink: FlutterEventSink?
+
+    func onListen(withArguments _: Any?, eventSink events: @escaping FlutterEventSink) -> FlutterError? {
+        sink = events
+        return nil
+    }
+
+    func onCancel(withArguments _: Any?) -> FlutterError? {
+        sink = nil
+        return nil
+    }
+
+    func emit(_ payload: [String: Any?]) {
+        DispatchQueue.main.async { [weak self] in
+            self?.sink?(payload.compactMapValues { $0 })
+        }
     }
 }
 
@@ -1250,10 +1233,10 @@ class UserAttributesHandler: NSObject, FlutterStreamHandler, PLYUserAttributeDel
         //Purchasely.setUserAttributeDelegate(nil)
         return nil
     }
-    
+
     func onUserAttributeSet(key: String, type: PLYUserAttributeType, value: Any?, source: PLYUserAttributeSource) {
         guard let eventSink = self.eventSink else { return }
-        
+
         var formattedType = ""
         switch type {
         case .string:
@@ -1328,6 +1311,24 @@ extension UIViewController {
         self.dismiss(animated: true, completion: nil)
     }
 
+}
+
+// MARK: - UIColor helper
+
+extension UIColor {
+    static func ply_from(hex: String) -> UIColor? {
+        var s = hex.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+        if s.hasPrefix("#") { s.removeFirst() }
+        guard s.count == 6 || s.count == 8 else { return nil }
+        if s.count == 6 { s = "FF" + s }
+        var rgba: UInt64 = 0
+        guard Scanner(string: s).scanHexInt64(&rgba) else { return nil }
+        let a = CGFloat((rgba >> 24) & 0xFF) / 255.0
+        let r = CGFloat((rgba >> 16) & 0xFF) / 255.0
+        let g = CGFloat((rgba >> 8)  & 0xFF) / 255.0
+        let b = CGFloat( rgba        & 0xFF) / 255.0
+        return UIColor(red: r, green: g, blue: b, alpha: a)
+    }
 }
 
 // WARNING: This enum must be strictly identical to the one in the Flutter side (purchasely_flutter.PLYAttribute).

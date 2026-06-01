@@ -1,13 +1,11 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'dart:async';
 import 'dart:developer';
-import 'dart:io';
 
 import 'package:purchasely_flutter/purchasely_flutter.dart';
 
 import 'presentation_screen.dart';
-import 'v6_demo_screen.dart';
+import 'presentation_demo_screen.dart';
 
 void main() {
   runApp(const MyApp());
@@ -37,30 +35,15 @@ class _MyAppState extends State<MyApp> {
       /*Purchasely.listenToEvents((event) {
         print('Flutter Event : ${event.name}');
         print('Event properties : ${event.properties.event_name}');
-        print(
-            'Event property displayed_options: ${event.properties.displayed_options}');
-        print(
-            'Event property selected_option_id: ${event.properties.selected_option_id}');
-        print(
-            'Event property selected_options: ${event.properties.selected_options}');
         inspect(event);
       });*/
 
-      bool configured = await Purchasely.start(
-          apiKey: 'fcb39be4-2ba4-4db7-bde3-2a5a1e20745d',
-          androidStores: ['Google'],
-          storeKit1: true,
-          logLevel: PLYLogLevel.debug);
-
-      // Default values
-      /*bool configured = await Purchasely.start(
-        apiKey: 'fcb39be4-2ba4-4db7-bde3-2a5a1e20745d',
-        androidStores: ['Google'],
-        storeKit1: false,
-        logLevel: PLYLogLevel.error,
-        runningMode: PLYRunningMode.full,
-        userId: null,
-      );*/
+      bool configured = await PurchaselyBuilder.apiKey(
+        'fcb39be4-2ba4-4db7-bde3-2a5a1e20745d',
+      )
+          .runningMode(RunningMode.full)
+          .logLevel(LogLevel.debug)
+          .stores([PLYStore.google]).start();
 
       if (!configured) {
         print('Purchasely SDK not configured');
@@ -158,22 +141,6 @@ class _MyAppState extends State<MyApp> {
       print('Product found');
       inspect(product);
 
-      /*Purchasely.setDefaultPresentationResultCallback(
-          (PresentPresentationResult value) {
-        print('Default Presentation Result Callback');
-        //print('Presentation Result : ' + value.result.toString());
-
-        if (value.plan != null) {
-          //User bought a plan
-        }
-      });*/
-
-      Purchasely.setDefaultPresentationResultCallback(
-          (PresentPresentationResult result) {
-        print('Received result from screen');
-        inspect(result);
-      });
-
       Purchasely.revokeDataProcessingConsent(
           [PLYDataProcessingPurpose.campaigns]);
 
@@ -225,47 +192,16 @@ class _MyAppState extends State<MyApp> {
         Purchasely.setDebugMode(true);
       }
 
-      Purchasely.setPaywallActionInterceptorCallback(
-          (PaywallActionInterceptorResult result) {
-        print('Received action from paywall');
-        inspect(result);
-
-        if (result.action == PLYPaywallAction.navigate) {
-          print('User wants to navigate');
-          Purchasely.onProcessAction(true);
-        } else if (result.action == PLYPaywallAction.close) {
-          print(
-              'User wants to close paywall - reason: ${result.parameters.closeReason}"');
-          Purchasely.onProcessAction(true);
-        } else if (result.action == PLYPaywallAction.login) {
-          print('User wants to login');
-          //Present your own screen for user to log in
-          Purchasely.closePresentation();
-          Purchasely.userLogin('MY_USER_ID');
-          //Call this method to update Purchasely Paywall
-          Purchasely.onProcessAction(true);
-        } else if (result.action == PLYPaywallAction.open_presentation) {
-          print('User wants to open a new paywall');
-          Purchasely.onProcessAction(true);
-        } else if (result.action == PLYPaywallAction.purchase) {
-          print('User wants to purchase');
-          //If you want to intercept it, hide paywall and display your screen
-          Purchasely.hidePresentation();
-        } else if (result.action == PLYPaywallAction.restore) {
-          print('User wants to restore his purchases');
-          Purchasely.onProcessAction(true);
-        } else if (result.action == PLYPaywallAction.web_checkout) {
-          print('User wants to open web checkout');
-          print(
-              'webCheckoutProvider: ${result.parameters.webCheckoutProvider}');
-          print('queryParameterKey: ${result.parameters.queryParameterKey}');
-          print('clientReferenceId: ${result.parameters.clientReferenceId}');
-          Purchasely.onProcessAction(true);
-        } else {
-          print('Action unknown ' + result.action.toString());
-          Purchasely.onProcessAction(true);
-        }
-      });
+      // Register a typed `navigate` action interceptor as an example.
+      await PurchaselyBridge.ensureInstalled().registerInterceptor(
+        PresentationActionKind.navigate,
+        (info, payload) {
+          if (payload is NavigatePayload) {
+            print('User wants to navigate to ${payload.url}');
+          }
+          return InterceptResult.notHandled;
+        },
+      );
     } catch (e) {
       print(e);
     }
@@ -324,24 +260,22 @@ class _MyAppState extends State<MyApp> {
 
   Future<void> displayPresentation() async {
     try {
-      var result = await Purchasely.presentPresentationForPlacement("STRIPE",
-          isFullscreen: true);
+      final outcome = await PresentationBuilder.placement('STRIPE')
+          .build()
+          .display(const Transition.fullScreen());
 
-      switch (result.result) {
-        case PLYPurchaseResult.cancelled:
-          {
-            print("User cancelled purchased");
-          }
+      switch (outcome.purchaseResult) {
+        case PurchaseResult.cancelled:
+          print("User cancelled purchase");
           break;
-        case PLYPurchaseResult.purchased:
-          {
-            print("User purchased ${result.plan?.name}");
-          }
+        case PurchaseResult.purchased:
+          print("User purchased ${outcome.plan}");
           break;
-        case PLYPurchaseResult.restored:
-          {
-            print("User restored ${result.plan?.name}");
-          }
+        case PurchaseResult.restored:
+          print("User restored ${outcome.plan}");
+          break;
+        case null:
+          print("Presentation dismissed without a purchase");
           break;
       }
     } catch (e) {
@@ -349,96 +283,19 @@ class _MyAppState extends State<MyApp> {
     }
   }
 
-  Future<void> displayPresentationNativeView(BuildContext context) async {
-    // You can fetch the presentation before displaying it when ready
-    var presentation = await Purchasely.fetchPresentation("Settings");
-
-    if (presentation != null) {
-      navigatorKey.currentState?.push(
-        MaterialPageRoute(
-            builder: (context) => PresentationScreen(
-                    properties: {
-                      'presentation': presentation,
-                      //'contentId': null, // Optional
-                    },
-                    callback: (PresentPresentationResult result) {
-                      print('Presentation was closed');
-                      print(
-                          'Presentation result:${result.result} - plan:${result.plan?.vendorId}');
-                      navigatorKey.currentState?.pop();
-                    })),
-      );
-    } else {
-      print("No presentation found");
-
-      // You can also display a presentation without fetching it before
-      // Purchasely will fetch it automatically, display a loader and display it
-      navigatorKey.currentState?.push(
-        MaterialPageRoute(
-            builder: (context) => PresentationScreen(
-                    properties: const {
-                      'placementId': 'onboarding',
-                      //'presentationId': 'TF1', // You can also set a presentationId directly but this is not recommended
-                      //'contentId': null, // Optional
-                    },
-                    callback: (PresentPresentationResult result) {
-                      print('Presentation was closed');
-                      print(
-                          'Presentation result:${result.result} - plan:${result.plan?.vendorId}');
-                      navigatorKey.currentState?.pop();
-                    })),
-      );
-    }
-  }
-
-  Future<void> fetchPresentation() async {
-    try {
-      var presentation = await Purchasely.fetchPresentation("FLOW");
-
-      if (presentation == null) {
-        print("No presentation found");
-        return;
-      }
-
-      print("Presentation: ${presentation}");
-
-      if (presentation.type == PLYPresentationType.deactivated) {
-        // No paywall to display
-        return;
-      }
-
-      if (presentation.type == PLYPresentationType.client) {
-        print("Presentation metadata: ${presentation.metadata}");
-        return;
-      }
-
-      //Display Purchasely paywall
-      var presentResult = await Purchasely.presentPresentation(presentation,
-          isFullscreen: true);
-
-      print("-------");
-      print("Presentation closed with result: ${presentResult.result}");
-
-      switch (presentResult.result) {
-        case PLYPurchaseResult.cancelled:
-          {
-            print("User cancelled purchased");
-          }
-          break;
-        case PLYPurchaseResult.purchased:
-          {
-            print("User purchased ${presentResult.plan?.name}");
-          }
-          break;
-        case PLYPurchaseResult.restored:
-          {
-            print("User restored ${presentResult.plan?.name}");
-          }
-          break;
-      }
-    } catch (e) {
-      print(e);
-    }
+  Future<void> displayPresentationInline(BuildContext context) async {
+    navigatorKey.currentState?.push(
+      MaterialPageRoute(
+        builder: (context) => PresentationScreen.placement(
+          'onboarding',
+          onDismissed: (outcome) {
+            print('Presentation was closed');
+            print('Presentation result: ${outcome.purchaseResult}');
+            navigatorKey.currentState?.pop();
+          },
+        ),
+      ),
+    );
   }
 
   Future<void> displaySubscriptions() async {
@@ -447,11 +304,6 @@ class _MyAppState extends State<MyApp> {
     } catch (e) {
       print(e);
     }
-  }
-
-  Future<void> continuePurchase() async {
-    Purchasely.showPresentation();
-    Purchasely.onProcessAction(true);
   }
 
   Future<void> purchase() async {
@@ -504,24 +356,6 @@ class _MyAppState extends State<MyApp> {
     print('synchronization with Purchasely');
   }
 
-  Future<void> hidePresentation() async {
-    Purchasely.hidePresentation();
-  }
-
-  Future<void> showPresentation() async {
-    Purchasely.showPresentation();
-  }
-
-  Future<void> closePresentation() async {
-    Purchasely.closePresentation();
-  }
-
-  Future<void> testFunction() async {
-    displayPresentation();
-    sleep(const Duration(seconds: 3));
-    displayPresentation();
-  }
-
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -534,7 +368,7 @@ class _MyAppState extends State<MyApp> {
             child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
-            // v6 façade demo — start, display, interceptor, enriched outcome.
+            // Presentation API demo — start, display, interceptor, enriched outcome.
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.only(left: 20.0, right: 30.0),
@@ -545,11 +379,11 @@ class _MyAppState extends State<MyApp> {
                 final navigator = navigatorKey.currentState;
                 navigator?.push(
                   MaterialPageRoute<void>(
-                    builder: (_) => const V6DemoScreen(),
+                    builder: (_) => const PresentationDemoScreen(),
                   ),
                 );
               },
-              child: const Text('Open v6 demo'),
+              child: const Text('Open presentation demo'),
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
@@ -565,45 +399,9 @@ class _MyAppState extends State<MyApp> {
                 padding: const EdgeInsets.only(left: 20.0, right: 30.0),
               ),
               onPressed: () {
-                displayPresentationNativeView(context);
+                displayPresentationInline(context);
               },
-              child: const Text('Display presentation (Native View)'),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.only(left: 20.0, right: 30.0),
-              ),
-              onPressed: () {
-                fetchPresentation();
-              },
-              child: const Text('Fetch presentation'),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.only(left: 20.0, right: 30.0),
-              ),
-              onPressed: () {
-                showPresentation();
-              },
-              child: const Text('Show presentation'),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.only(left: 20.0, right: 30.0),
-              ),
-              onPressed: () {
-                closePresentation();
-              },
-              child: const Text('Close presentation'),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.only(left: 20.0, right: 30.0),
-              ),
-              onPressed: () {
-                continuePurchase();
-              },
-              child: const Text('Continue purchase'),
+              child: const Text('Display presentation (Inline View)'),
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
