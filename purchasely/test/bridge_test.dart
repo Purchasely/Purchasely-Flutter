@@ -345,5 +345,17 @@ void main() {
           calls.firstWhere((c) => c.method == 'removeInterceptor');
       expect((removeCall.arguments as Map)['kind'], 'login');
     });
+
+    test('Purchasely.interceptAction registers via the same channel call',
+        () async {
+      await Purchasely.interceptAction(
+        PresentationActionKind.navigate,
+        (_, __) async => InterceptResult.notHandled,
+      );
+
+      final registerCall =
+          calls.firstWhere((c) => c.method == 'registerInterceptor');
+      expect((registerCall.arguments as Map)['kind'], 'navigate');
+    });
   });
 }

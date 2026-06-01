@@ -193,7 +193,7 @@ class _MyAppState extends State<MyApp> {
       }
 
       // Register a typed `navigate` action interceptor as an example.
-      await PurchaselyBridge.ensureInstalled().registerInterceptor(
+      await Purchasely.interceptAction(
         PresentationActionKind.navigate,
         (info, payload) {
           if (payload is NavigatePayload) {

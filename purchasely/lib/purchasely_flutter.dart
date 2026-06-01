@@ -3,6 +3,10 @@ import 'dart:developer';
 
 import 'package:flutter/services.dart';
 
+import 'src/action_interceptor.dart'
+    show PresentationActionKind, ActionInterceptorHandler;
+import 'src/bridge.dart' show PurchaselyBridge;
+
 // --- Purchasely SDK cross-platform API ---
 //
 // The presentation API is exposed from `lib/src/` and re-exported here so
@@ -34,6 +38,25 @@ class Purchasely {
   static var purchases;
 
   // --- Public Methods ---
+
+  // --- Action interceptor ---
+
+  /// Registers a typed interceptor for [kind] actions triggered from a
+  /// Presentation. The handler returns an `InterceptResult` (or a
+  /// `Future<InterceptResult>`). Thin façade over [PurchaselyBridge].
+  static Future<void> interceptAction(
+    PresentationActionKind kind,
+    ActionInterceptorHandler handler,
+  ) =>
+      PurchaselyBridge.ensureInstalled().registerInterceptor(kind, handler);
+
+  /// Removes the interceptor previously registered for [kind].
+  static Future<void> removeInterceptor(PresentationActionKind kind) =>
+      PurchaselyBridge.ensureInstalled().removeInterceptor(kind);
+
+  /// Removes all registered action interceptors.
+  static Future<void> removeAllInterceptors() =>
+      PurchaselyBridge.ensureInstalled().removeAllInterceptors();
 
   /// Removes the user attribute listener
   static void clearUserAttributeListener() {

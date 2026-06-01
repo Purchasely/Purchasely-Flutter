@@ -7,8 +7,8 @@
 //      (presentation, purchaseResult, plan, closeReason, error).
 //
 // Interceptor registration is exposed via the `Register interceptor` button —
-// see `registerNavigateInterceptor()` below. It forwards to the native side
-// through the bridge's `registerInterceptor` channel call.
+// see `registerNavigateInterceptor()` below. It uses the clean public API
+// `Purchasely.interceptAction(kind, handler)`.
 
 import 'package:flutter/material.dart';
 import 'package:purchasely_flutter/purchasely_flutter.dart';
@@ -83,7 +83,7 @@ class _PresentationDemoScreenState extends State<PresentationDemoScreen> {
   /// Register a typed `navigate` action interceptor that just logs the
   /// outbound URL.
   Future<void> _registerNavigateInterceptor() async {
-    await PurchaselyBridge.ensureInstalled().registerInterceptor(
+    await Purchasely.interceptAction(
       PresentationActionKind.navigate,
       (info, payload) {
         if (payload is NavigatePayload) {

@@ -37,7 +37,7 @@ A paywall is now called a **Presentation** (or *Screen*).
 - A loaded `Presentation` exposes `display()`, `close()` and `back()` for
   programmatic control.
 - The interceptor is now
-  `PurchaselyBridge.ensureInstalled().registerInterceptor(kind, handler)`, where
+  `Purchasely.interceptAction(kind, handler)`, where
   `handler` returns an `InterceptResult` (`success` / `failed` / `notHandled`).
 - Inline rendering uses the `PLYPresentationView` widget.
 - **All other `Purchasely.*` methods are UNCHANGED** — see
@@ -64,7 +64,7 @@ been removed in favour of the builder API.
 | `Purchasely.showPresentation()` | `presentation.display()` (on the loaded `Presentation`) |
 | `Purchasely.clientPresentationDisplayed(...)` / `clientPresentationClosed(...)` | handled via the `PresentationRequest` lifecycle (`preload` → inspect `PresentationType.client` → render your own UI) |
 | `Purchasely.setDefaultPresentationResultHandler(cb)` / `setDefaultPresentationResultCallback(cb)` | `PresentationBuilder.defaultSource().onDismissed((outcome) => …).build().display()` |
-| `Purchasely.setPaywallActionInterceptorCallback(cb)` + `Purchasely.onProcessAction(bool)` | `PurchaselyBridge.ensureInstalled().registerInterceptor(kind, handler)` — handler returns `InterceptResult.success` / `.failed` / `.notHandled` (no more `onProcessAction`) |
+| `Purchasely.setPaywallActionInterceptorCallback(cb)` + `Purchasely.onProcessAction(bool)` | `Purchasely.interceptAction(kind, handler)` — handler returns `InterceptResult.success` / `.failed` / `.notHandled` (no more `onProcessAction`) |
 
 > **Reminder.** Everything *not* in this table — purchases, restore, login,
 > attributes, subscriptions, products, events, offerings, consent and config —
@@ -233,7 +233,7 @@ presentation.back();     // navigate back inside a multi-step (Flow) presentatio
 ## Action interceptor
 
 `setPaywallActionInterceptorCallback` + `onProcessAction` are replaced by
-`PurchaselyBridge.ensureInstalled().registerInterceptor(kind, handler)`. Register
+`Purchasely.interceptAction(kind, handler)`. Register
 **one handler per action kind**; the handler returns an `InterceptResult`
 (`success` / `failed` / `notHandled`) instead of calling
 `onProcessAction(true/false)`.
@@ -256,9 +256,7 @@ Purchasely.setPaywallActionInterceptorCallback((info, action, parameters, proces
 ```dart
 import 'package:purchasely_flutter/purchasely_flutter.dart';
 
-final bridge = PurchaselyBridge.ensureInstalled();
-
-await bridge.registerInterceptor(
+await Purchasely.interceptAction(
   PresentationActionKind.purchase,
   (info, payload) async {
     if (payload is PurchasePayload) {
@@ -269,7 +267,7 @@ await bridge.registerInterceptor(
   },
 );
 
-await bridge.registerInterceptor(
+await Purchasely.interceptAction(
   PresentationActionKind.navigate,
   (info, payload) async {
     if (payload is NavigatePayload) {
@@ -281,8 +279,8 @@ await bridge.registerInterceptor(
 );
 
 // Cleanup
-await bridge.removeInterceptor(PresentationActionKind.purchase);
-await bridge.removeAllInterceptors();
+await Purchasely.removeInterceptor(PresentationActionKind.purchase);
+await Purchasely.removeAllInterceptors();
 ```
 
 Action kinds (`PresentationActionKind`): `close`, `closeAll`, `login`,

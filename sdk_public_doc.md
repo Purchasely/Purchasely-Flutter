@@ -284,9 +284,7 @@ while using Purchasely for presentation display. Register an interceptor for the
 import 'package:flutter/foundation.dart';
 import 'package:purchasely_flutter/purchasely_flutter.dart';
 
-final bridge = PurchaselyBridge.ensureInstalled();
-
-await bridge.registerInterceptor(
+await Purchasely.interceptAction(
   PresentationActionKind.purchase,
   (info, payload) async {
     if (payload is! PurchasePayload) {
@@ -316,7 +314,7 @@ await bridge.registerInterceptor(
   },
 );
 
-await bridge.registerInterceptor(
+await Purchasely.interceptAction(
   PresentationActionKind.restore,
   (info, payload) async {
     try {
@@ -336,7 +334,7 @@ await bridge.registerInterceptor(
 
 The action interceptor lets you intercept and handle user actions on the
 presentation. Register **one handler per action kind** with
-`PurchaselyBridge.ensureInstalled().registerInterceptor(kind, handler)`. The
+`Purchasely.interceptAction(kind, handler)`. The
 handler returns an `InterceptResult` that tells the SDK how the action was
 handled:
 
@@ -363,9 +361,7 @@ handled:
 ```dart
 import 'package:purchasely_flutter/purchasely_flutter.dart';
 
-final bridge = PurchaselyBridge.ensureInstalled();
-
-await bridge.registerInterceptor(
+await Purchasely.interceptAction(
   PresentationActionKind.navigate,
   (info, payload) async {
     if (payload is NavigatePayload) {
@@ -377,7 +373,7 @@ await bridge.registerInterceptor(
   },
 );
 
-await bridge.registerInterceptor(
+await Purchasely.interceptAction(
   PresentationActionKind.login,
   (info, payload) async {
     print('User wants to login');
@@ -391,8 +387,8 @@ await bridge.registerInterceptor(
 ### Removing interceptors
 
 ```dart
-await bridge.removeInterceptor(PresentationActionKind.navigate);
-await bridge.removeAllInterceptors();
+await Purchasely.removeInterceptor(PresentationActionKind.navigate);
+await Purchasely.removeAllInterceptors();
 ```
 
 ---
@@ -433,7 +429,7 @@ Purchasely.userLogout();
 To handle the login button on the presentation, intercept the `login` action:
 
 ```dart
-await PurchaselyBridge.ensureInstalled().registerInterceptor(
+await Purchasely.interceptAction(
   PresentationActionKind.login,
   (info, payload) async {
     // Present your own screen for the user to log in
@@ -739,7 +735,7 @@ When intercepting purchases on Android, you can access additional parameters fro
 the typed `PurchasePayload`:
 
 ```dart
-await PurchaselyBridge.ensureInstalled().registerInterceptor(
+await Purchasely.interceptAction(
   PresentationActionKind.purchase,
   (info, payload) async {
     if (payload is PurchasePayload &&

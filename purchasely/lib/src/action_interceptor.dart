@@ -2,7 +2,7 @@
 //
 // Sealed class hierarchy for typed action payloads. Each action carries its
 // own parameters. Register a per-action handler with
-// `PurchaselyBridge.ensureInstalled().registerInterceptor(kind, handler)`. The
+// `Purchasely.interceptAction(kind, handler)`. The
 // handler returns an `InterceptResult` (or a `Future<InterceptResult>`) to let
 // the SDK know how the action was handled.
 
