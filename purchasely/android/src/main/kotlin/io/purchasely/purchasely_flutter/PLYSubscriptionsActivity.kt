@@ -1,8 +1,8 @@
 package io.purchasely.purchasely_flutter
 
 import android.os.Bundle
-import android.util.Log
 import androidx.fragment.app.FragmentActivity
+import io.purchasely.ext.Purchasely
 
 class PLYSubscriptionsActivity : FragmentActivity() {
 
@@ -10,11 +10,22 @@ class PLYSubscriptionsActivity : FragmentActivity() {
     super.onCreate(savedInstanceState)
     setContentView(R.layout.activity_ply_subscriptions_activity)
 
-    // The v6 Purchasely SDK no longer exposes a built-in subscriptions screen
-    // (`Purchasely.subscriptionsFragment()` was removed). Nothing to host, so
-    // finish gracefully until a v6 subscriptions surface is wired.
-    Log.w("Purchasely", "Subscriptions screen is not available in the v6 SDK")
-    supportFinishAfterTransition()
+    val fragment = Purchasely.subscriptionsFragment() ?: let {
+      supportFinishAfterTransition()
+      return
+    }
+
+    supportFragmentManager
+      .beginTransaction()
+      .addToBackStack(null)
+      .replace(R.id.container, fragment, "SubscriptionsFragment")
+      .commitAllowingStateLoss()
+
+    supportFragmentManager.addOnBackStackChangedListener {
+      if(supportFragmentManager.backStackEntryCount == 0) {
+        supportFinishAfterTransition()
+      }
+    }
   }
 
 }

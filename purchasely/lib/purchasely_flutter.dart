@@ -3,23 +3,20 @@ import 'dart:developer';
 
 import 'package:flutter/services.dart';
 
+import 'native_view_widget.dart';
+
 // --- Purchasely SDK v6 cross-platform façade ---
 //
-// The v6 Presentation + action-interceptor + init API is exposed from
-// `lib/src/` and re-exported here so callers can
-// `import 'package:purchasely_flutter/purchasely_flutter.dart';` and get the
-// v6 builder-based API (`PurchaselyBuilder`, `PresentationBuilder`,
+// The new v6 API is exposed from `lib/src/` and re-exported here so callers
+// can `import 'package:purchasely_flutter/purchasely_flutter.dart';` and get
+// both the legacy v5 surface (the `Purchasely` static class below) and the
+// new v6 builder-based API (`PurchaselyBuilder`, `PresentationBuilder`,
 // `Presentation`, `PresentationOutcome`, `Transition`, ActionInterceptor…).
 //
-// The `Purchasely` static class below retains the non-presentation v5 surface
-// (purchases, restore, identity, attributes, subscriptions data,
-// products/plans, events, dynamic offerings, consent, config). All
-// presentation display, the v5 action interceptor and the v5 `start` init
-// have been removed in favour of the v6 façade.
-//
-// The v6 builder enums are named `V6RunningMode` / `V6LogLevel` so they don't
-// clash with the v5 `PLYRunningMode` / `PLYLogLevel` enums exported by the
-// static `Purchasely` class below.
+// During the migration the two surfaces co-exist. The v6 builder enums are
+// named `V6RunningMode` / `V6LogLevel` so they don't clash with the legacy v5
+// `PLYRunningMode` (4 values) / `PLYLogLevel` (4 values) enums exported by
+// the static `Purchasely` class below.
 export 'src/action_interceptor.dart';
 export 'src/bridge.dart' show PurchaselyV6Bridge;
 export 'src/presentation.dart';
@@ -109,6 +106,141 @@ class Purchasely {
     }
   }
 
+  static Future<bool> start(
+      {required final String apiKey,
+      final List<String>? androidStores = const ['Google'],
+      required bool storeKit1,
+      final String? userId,
+      final PLYLogLevel logLevel = PLYLogLevel.error,
+      final PLYRunningMode runningMode = PLYRunningMode.full}) async {
+    return await _channel.invokeMethod('start', <String, dynamic>{
+      'apiKey': apiKey,
+      'stores': androidStores,
+      'storeKit1': storeKit1,
+      'userId': userId,
+      'logLevel': logLevel.index,
+      'runningMode': runningMode.index
+    });
+  }
+
+  static Future<PLYPresentation?> fetchPresentation(String? placementId,
+      {String? presentationId, String? contentId}) async {
+    final result =
+        await _channel.invokeMethod('fetchPresentation', <String, dynamic>{
+      'placementVendorId': placementId,
+      'presentationVendorId': presentationId,
+      'contentId': contentId
+    });
+
+    return transformToPLYPresentation(result);
+  }
+
+  static Future<PresentPresentationResult> presentPresentation(
+      PLYPresentation? presentation,
+      {bool isFullscreen = false}) async {
+    final result =
+        await _channel.invokeMethod('presentPresentation', <String, dynamic>{
+      'presentation': transformPLYPresentationToMap(presentation),
+      'isFullscreen': isFullscreen
+    });
+    return PresentPresentationResult(PLYPurchaseResult.values[result['result']],
+        transformToPLYPlan(result['plan']));
+  }
+
+  static PLYPresentationView? getPresentationView({
+    PLYPresentation? presentation,
+    String? presentationId,
+    String? placementId,
+    String? contentId,
+    Function(PresentPresentationResult)? callback,
+  }) {
+    return PLYPresentationView(
+        presentation: presentation,
+        presentationId: presentationId,
+        placementId: placementId,
+        contentId: contentId,
+        callback: callback);
+  }
+
+  static Future<void> clientPresentationDisplayed(
+      PLYPresentation presentation) async {
+    return await _channel.invokeMethod(
+        'clientPresentationDisplayed', <String, dynamic>{
+      'presentation': transformPLYPresentationToMap(presentation)
+    });
+  }
+
+  static Future<void> clientPresentationClosed(
+      PLYPresentation presentation) async {
+    return await _channel.invokeMethod(
+        'clientPresentationClosed', <String, dynamic>{
+      'presentation': transformPLYPresentationToMap(presentation)
+    });
+  }
+
+  static Future<PresentPresentationResult> presentPresentationWithIdentifier(
+      String? presentationVendorId,
+      {String? contentId,
+      bool isFullscreen = false}) async {
+    final result = await _channel
+        .invokeMethod('presentPresentationWithIdentifier', <String, dynamic>{
+      'presentationVendorId': presentationVendorId,
+      'contentId': contentId,
+      'isFullscreen': isFullscreen
+    });
+    return PresentPresentationResult(PLYPurchaseResult.values[result['result']],
+        transformToPLYPlan(result['plan']));
+  }
+
+  static Future<PresentPresentationResult> presentPresentationForPlacement(
+      String? placementVendorId,
+      {String? contentId,
+      bool isFullscreen = false}) async {
+    final result = await _channel
+        .invokeMethod('presentPresentationForPlacement', <String, dynamic>{
+      'placementVendorId': placementVendorId,
+      'contentId': contentId,
+      'isFullscreen': isFullscreen
+    });
+    return PresentPresentationResult(PLYPurchaseResult.values[result['result']],
+        transformToPLYPlan(result['plan']));
+  }
+
+  static Future<PresentPresentationResult> presentProductWithIdentifier(
+      String productVendorId,
+      {String? presentationVendorId,
+      String? contentId,
+      bool isFullscreen = false}) async {
+    final result = await _channel
+        .invokeMethod('presentProductWithIdentifier', <String, dynamic>{
+      'productVendorId': productVendorId,
+      'presentationVendorId': presentationVendorId,
+      'contentId': contentId,
+      'isFullscreen': isFullscreen
+    });
+    PLYPlan? plan;
+    if (!result['plan'].isEmpty) plan = transformToPLYPlan(result['plan']);
+
+    return PresentPresentationResult(
+        PLYPurchaseResult.values[result['result']], plan);
+  }
+
+  static Future<PresentPresentationResult> presentPlanWithIdentifier(
+      String planVendorId,
+      {String? presentationVendorId,
+      String? contentId,
+      bool isFullscreen = false}) async {
+    final result = await _channel
+        .invokeMethod('presentPlanWithIdentifier', <String, dynamic>{
+      'planVendorId': planVendorId,
+      'presentationVendorId': presentationVendorId,
+      'contentId': contentId,
+      'isFullscreen': isFullscreen
+    });
+    return PresentPresentationResult(PLYPurchaseResult.values[result['result']],
+        transformToPLYPlan(result['plan']));
+  }
+
   static Future<bool> restoreAllProducts() async {
     final bool restored = await _channel.invokeMethod('restoreAllProducts');
     return restored;
@@ -153,6 +285,10 @@ class Purchasely {
   static Future<void> setLanguage(String language) async {
     _channel
         .invokeMethod('setLanguage', <String, dynamic>{'language': language});
+  }
+
+  static Future<void> close() async {
+    _channel.invokeMethod('close');
   }
 
   static Future<PLYProduct> productWithIdentifier(String vendorId) async {
@@ -314,6 +450,69 @@ class Purchasely {
   static Future<void> setAttribute(PLYAttribute attribute, String value) async {
     return await _channel.invokeMethod('setAttribute',
         <String, dynamic>{'attribute': attribute.index, 'value': value});
+  }
+
+  static Future<PresentPresentationResult>
+      setDefaultPresentationResultHandler() async {
+    final result =
+        await _channel.invokeMethod('setDefaultPresentationResultHandler');
+    print('Default Presentation Result Handler: $result');
+    print(inspect(result));
+    return PresentPresentationResult(PLYPurchaseResult.values[result['result']],
+        transformToPLYPlan(result['plan']));
+  }
+
+  static Future<PaywallActionInterceptorResult>
+      setPaywallActionInterceptor() async {
+    final result = await _channel.invokeMethod('setPaywallActionInterceptor');
+    final Map<dynamic, dynamic>? plan = result['parameters']['plan'];
+    final Map<dynamic, dynamic>? offer = result['parameters']['offer'];
+    final Map<dynamic, dynamic>? subscriptionOffer =
+        result['parameters']['subscriptionOffer'];
+
+    final info = PLYPaywallInfo(
+        result['info']['contentId'],
+        result['info']['presentationId'],
+        result['info']['placementId'],
+        result['info']['abTestId'],
+        result['info']['abTestVariantId']);
+
+    final action = PLYPaywallAction.values.firstWhere(
+        (e) => e.toString() == 'PLYPaywallAction.' + result['action']);
+
+    final parameters = PLYPaywallActionParameters(
+      url: result['parameters']['url'],
+      title: result['parameters']['title'],
+      plan: plan != null ? transformToPLYPlan(plan) : null,
+      offer: offer != null ? transformToPLYPromoOffer(offer) : null,
+      subscriptionOffer: subscriptionOffer != null
+          ? transformToPLYSubscription(subscriptionOffer)
+          : null,
+      presentation: result['parameters']['presentation'],
+      clientReferenceId: result['parameters']['clientReferenceId'],
+      webCheckoutProvider: result['parameters']['webCheckoutProvider'],
+      queryParameterKey: result['parameters']['queryParameterKey'],
+      closeReason: result['parameters']['closeReason'],
+    );
+
+    return PaywallActionInterceptorResult(info, action, parameters);
+  }
+
+  static Future<void> onProcessAction(bool processAction) async {
+    return await _channel.invokeMethod(
+        'onProcessAction', <String, dynamic>{'processAction': processAction});
+  }
+
+  static Future<void> closePresentation() async {
+    return await _channel.invokeMethod('closePresentation');
+  }
+
+  static Future<void> hidePresentation() async {
+    return await _channel.invokeMethod('hidePresentation');
+  }
+
+  static Future<void> showPresentation() async {
+    return await _channel.invokeMethod('showPresentation');
   }
 
   static Future<bool> isAnonymous() async {
@@ -501,6 +700,30 @@ class Purchasely {
     _channel.invokeMethod('clearBuiltInAttributes');
   }
 
+  static void setDefaultPresentationResultCallback(Function callback) {
+    setDefaultPresentationResultHandler().then((value) {
+      setDefaultPresentationResultCallback(callback);
+      try {
+        callback(value);
+      } catch (e) {
+        print(
+            '[Purchasely] Error with callback for default presentation result handler: $e');
+      }
+    });
+  }
+
+  static void setPaywallActionInterceptorCallback(Function callback) {
+    setPaywallActionInterceptor().then((value) {
+      setPaywallActionInterceptorCallback(callback);
+      try {
+        callback(value);
+      } catch (e) {
+        print(
+            '[Purchasely] Error with callback for paywall action interceptor handler: $e');
+      }
+    });
+  }
+
   static Future<void> setThemeMode(PLYThemeMode mode) async {
     return await _channel
         .invokeMethod('setThemeMode', <String, dynamic>{'mode': mode.index});
@@ -570,6 +793,82 @@ class Purchasely {
         plan['introDuration'],
         plan['introPeriod'],
         plan['hasFreeTrial']);
+  }
+
+  static PLYPromoOffer? transformToPLYPromoOffer(Map<dynamic, dynamic> offer) {
+    if (offer.isEmpty) return null;
+
+    return PLYPromoOffer(
+      offer['vendorId'],
+      offer['storeOfferId'],
+    );
+  }
+
+  static PLYSubscriptionOffer? transformToPLYSubscription(
+      Map<dynamic, dynamic> subscriptionOffer) {
+    if (subscriptionOffer.isEmpty) return null;
+
+    return PLYSubscriptionOffer(
+      subscriptionOffer['subscriptionId'],
+      subscriptionOffer['basePlanId'],
+      subscriptionOffer['offerToken'],
+      subscriptionOffer['offerId'],
+    );
+  }
+
+  static PLYPresentation? transformToPLYPresentation(
+      Map<dynamic, dynamic> presentation) {
+    if (presentation.isEmpty) return null;
+
+    PLYPresentationType type = PLYPresentationType.normal;
+    try {
+      type = PLYPresentationType.values[presentation['type']];
+    } catch (e) {
+      print(e);
+    }
+
+    List<PLYPresentationPlan> plans = (presentation['plans'] as List)
+        .map((e) => PLYPresentationPlan(e['planVendorId'], e['storeProductId'],
+            e['basePlanId'], e['offerId']))
+        .toList();
+
+    Map<String, dynamic> metadata = {};
+    presentation['metadata']?.forEach((key, value) {
+      metadata[key] = value;
+    });
+
+    return PLYPresentation(
+        presentation['id'],
+        presentation['placementId'],
+        presentation['audienceId'],
+        presentation['abTestId'],
+        presentation['abTestVariantId'],
+        presentation['language'],
+        presentation['height'] ?? 0,
+        type,
+        plans,
+        metadata);
+  }
+
+  static Map<dynamic, dynamic> transformPLYPresentationToMap(
+      PLYPresentation? presentation) {
+    var presentationMap = new Map();
+
+    presentationMap['id'] = presentation?.id;
+    presentationMap['placementId'] = presentation?.placementId;
+    presentationMap['audienceId'] = presentation?.audienceId;
+    presentationMap['abTestId'] = presentation?.abTestId;
+    presentationMap['abTestVariantId'] = presentation?.abTestVariantId;
+    presentationMap['language'] = presentation?.language;
+    presentationMap['type'] = presentation?.type.index;
+
+    // Need to convert to list of map if we want to send it over to native bridge
+    //presentationMap['plans'] = presentation?.plans;
+
+    // No need to send metadata
+    //presentationMap['metadata'] = presentation?.metadata;
+
+    return presentationMap;
   }
 
   static List<PLYDynamicOffering> transformToDynamicOfferings(
@@ -758,6 +1057,10 @@ enum PLYDataProcessingPurpose {
 
 enum PLYThemeMode { light, dark, system }
 
+enum PLYPurchaseResult { purchased, cancelled, restored }
+
+enum PLYPresentationType { normal, fallback, deactivated, client }
+
 enum PLYSubscriptionSource {
   appleAppStore,
   googlePlayStore,
@@ -772,6 +1075,20 @@ enum PLYPlanType {
   autoRenewingSubscription,
   nonRenewingSubscription,
   unknown
+}
+
+enum PLYPaywallAction {
+  close,
+  close_all,
+  login,
+  navigate,
+  purchase,
+  restore,
+  open_presentation,
+  open_placement,
+  promo_code,
+  open_flow_step,
+  web_checkout,
 }
 
 enum PLYEventName {
@@ -881,12 +1198,88 @@ class PLYPlan {
       this.hasFreeTrial);
 }
 
+class PLYPromoOffer {
+  String? vendorId;
+  String? storeOfferId;
+
+  PLYPromoOffer(this.vendorId, this.storeOfferId);
+}
+
+class PLYSubscriptionOffer {
+  String subscriptionId;
+  String? basePlanId;
+  String? offerToken;
+  String? offerId;
+
+  PLYSubscriptionOffer(
+      this.subscriptionId, this.basePlanId, this.offerToken, this.offerId);
+}
+
 class PLYProduct {
   String name;
   String vendorId;
   List<PLYPlan> plans;
 
   PLYProduct(this.name, this.vendorId, this.plans);
+}
+
+class PLYPresentationPlan {
+  String? planVendorId;
+  String? storeProductId;
+  String? basePlanId;
+  String? offerId;
+
+  PLYPresentationPlan(
+      this.planVendorId, this.storeProductId, this.basePlanId, this.offerId);
+
+  Map<String, dynamic> toMap() {
+    return {
+      'planVendorId': planVendorId,
+      'storeProductId': storeProductId,
+      'basePlanId': basePlanId,
+      'offerId': offerId,
+    };
+  }
+}
+
+class PLYPresentation {
+  String? id;
+  String? placementId;
+  String? audienceId;
+  String? abTestId;
+  String? abTestVariantId;
+  String language;
+  int height = 0;
+  PLYPresentationType type;
+  List<PLYPresentationPlan>? plans;
+  Map<String, dynamic> metadata;
+
+  PLYPresentation(
+      this.id,
+      this.placementId,
+      this.audienceId,
+      this.abTestId,
+      this.abTestVariantId,
+      this.language,
+      this.height,
+      this.type,
+      this.plans,
+      this.metadata);
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'placementId': placementId,
+      'audienceId': audienceId,
+      'abTestId': abTestId,
+      'abTestVariantId': abTestVariantId,
+      'language': language,
+      'height': height,
+      'type': type.toString(),
+      'plans': plans?.map((plan) => plan.toMap()).toList(),
+      'metadata': metadata,
+    };
+  }
 }
 
 class PLYSubscription {
@@ -912,6 +1305,57 @@ class PLYSubscription {
       this.subscriptionDurationInDays,
       this.subscriptionDurationInWeeks,
       this.subscriptionDurationInMonths);
+}
+
+class PresentPresentationResult {
+  PLYPurchaseResult result;
+  PLYPlan? plan;
+
+  PresentPresentationResult(this.result, this.plan);
+}
+
+class PaywallActionInterceptorResult {
+  PLYPaywallInfo info;
+  PLYPaywallAction action;
+  PLYPaywallActionParameters parameters;
+
+  PaywallActionInterceptorResult(this.info, this.action, this.parameters);
+}
+
+class PLYPaywallActionParameters {
+  String? url;
+  String? title;
+  PLYPlan? plan;
+  PLYPromoOffer? offer;
+  PLYSubscriptionOffer? subscriptionOffer;
+  String? presentation;
+  String? clientReferenceId;
+  String? queryParameterKey;
+  String? webCheckoutProvider;
+  String? closeReason;
+
+  PLYPaywallActionParameters(
+      {this.url,
+      this.title,
+      this.plan,
+      this.offer,
+      this.subscriptionOffer,
+      this.presentation,
+      this.clientReferenceId,
+      this.queryParameterKey,
+      this.webCheckoutProvider,
+      this.closeReason});
+}
+
+class PLYPaywallInfo {
+  String? contentId;
+  String? presentationId;
+  String? placementId;
+  String? abTestId;
+  String? abTestVariantId;
+
+  PLYPaywallInfo(this.contentId, this.presentationId, this.placementId,
+      this.abTestId, this.abTestVariantId);
 }
 
 class PLYEventPropertyPlan {

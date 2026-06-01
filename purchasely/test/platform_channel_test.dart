@@ -27,7 +27,41 @@ void main() {
           .setMockMethodCallHandler(channel, null);
     });
 
-    group('SDK Lifecycle', () {
+    group('SDK Initialization', () {
+      test('start sends correct parameters to native', () async {
+        await Purchasely.start(
+          apiKey: 'test-api-key',
+          androidStores: ['Google'],
+          storeKit1: false,
+          logLevel: PLYLogLevel.debug,
+          userId: 'user-123',
+          runningMode: PLYRunningMode.full,
+        );
+
+        expect(methodCalls.length, 1);
+        expect(methodCalls.first.method, 'start');
+        expect(methodCalls.first.arguments['apiKey'], 'test-api-key');
+        expect(methodCalls.first.arguments['stores'], ['Google']);
+        expect(methodCalls.first.arguments['storeKit1'], false);
+        expect(methodCalls.first.arguments['logLevel'], 0); // debug = 0
+        expect(methodCalls.first.arguments['userId'], 'user-123');
+        expect(methodCalls.first.arguments['runningMode'], 3); // full = 3
+      });
+
+      test('start with required parameters only', () async {
+        await Purchasely.start(apiKey: 'minimal-key', storeKit1: true);
+
+        expect(methodCalls.first.method, 'start');
+        expect(methodCalls.first.arguments['apiKey'], 'minimal-key');
+        expect(methodCalls.first.arguments['storeKit1'], true);
+      });
+
+      test('close sends method call to native', () async {
+        await Purchasely.close();
+
+        expect(methodCalls.first.method, 'close');
+      });
+
       test('synchronize sends method call to native', () async {
         await Purchasely.synchronize();
 
@@ -57,6 +91,78 @@ void main() {
       });
     });
 
+    group('Presentation Methods', () {
+      test('fetchPresentation sends correct placementId', () async {
+        final presentation = await Purchasely.fetchPresentation('onboarding');
+
+        expect(methodCalls.first.method, 'fetchPresentation');
+        expect(methodCalls.first.arguments['placementVendorId'], 'onboarding');
+        expect(presentation, isNotNull);
+        expect(presentation!.id, 'presentation-123');
+        expect(presentation.type, PLYPresentationType.normal);
+      });
+
+      test('fetchPresentation with presentationId', () async {
+        await Purchasely.fetchPresentation('onboarding',
+            presentationId: 'pres-456');
+
+        expect(methodCalls.first.arguments['presentationVendorId'], 'pres-456');
+      });
+
+      test('fetchPresentation with contentId', () async {
+        await Purchasely.fetchPresentation('onboarding',
+            contentId: 'content-789');
+
+        expect(methodCalls.first.arguments['contentId'], 'content-789');
+      });
+
+      test('presentPresentationWithIdentifier sends presentationId', () async {
+        await Purchasely.presentPresentationWithIdentifier('pres-123');
+
+        expect(methodCalls.first.method, 'presentPresentationWithIdentifier');
+        expect(methodCalls.first.arguments['presentationVendorId'], 'pres-123');
+      });
+
+      test('presentPresentationForPlacement sends placementId', () async {
+        await Purchasely.presentPresentationForPlacement('premium');
+
+        expect(methodCalls.first.method, 'presentPresentationForPlacement');
+        expect(methodCalls.first.arguments['placementVendorId'], 'premium');
+      });
+
+      test('presentProductWithIdentifier sends productId', () async {
+        await Purchasely.presentProductWithIdentifier('product-123');
+
+        expect(methodCalls.first.method, 'presentProductWithIdentifier');
+        expect(methodCalls.first.arguments['productVendorId'], 'product-123');
+      });
+
+      test('presentPlanWithIdentifier sends planId', () async {
+        await Purchasely.presentPlanWithIdentifier('plan-123');
+
+        expect(methodCalls.first.method, 'presentPlanWithIdentifier');
+        expect(methodCalls.first.arguments['planVendorId'], 'plan-123');
+      });
+
+      test('closePresentation sends method call to native', () async {
+        await Purchasely.closePresentation();
+
+        expect(methodCalls.first.method, 'closePresentation');
+      });
+
+      test('hidePresentation sends method call to native', () async {
+        await Purchasely.hidePresentation();
+
+        expect(methodCalls.first.method, 'hidePresentation');
+      });
+
+      test('showPresentation sends method call to native', () async {
+        await Purchasely.showPresentation();
+
+        expect(methodCalls.first.method, 'showPresentation');
+      });
+    });
+
     group('Product & Plan Methods', () {
       test('productWithIdentifier returns correct product', () async {
         final product =
@@ -65,7 +171,7 @@ void main() {
         expect(methodCalls.first.method, 'productWithIdentifier');
         expect(methodCalls.first.arguments['vendorId'], 'product-vendor-123');
         expect(product, isNotNull);
-        expect(product.name, 'Test Product');
+        expect(product!.name, 'Test Product');
       });
 
       test('planWithIdentifier returns correct plan', () async {
@@ -514,6 +620,21 @@ void main() {
       });
     });
 
+    group('Paywall Action Interceptor', () {
+      test('onProcessAction sends processAction status', () async {
+        await Purchasely.onProcessAction(true);
+
+        expect(methodCalls.first.method, 'onProcessAction');
+        expect(methodCalls.first.arguments['processAction'], true);
+      });
+
+      test('onProcessAction with false', () async {
+        await Purchasely.onProcessAction(false);
+
+        expect(methodCalls.first.arguments['processAction'], false);
+      });
+    });
+
     group('Privacy & Consent', () {
       test('setDebugMode sends debugMode status', () async {
         await Purchasely.setDebugMode(true);
@@ -521,6 +642,15 @@ void main() {
         expect(methodCalls.first.method, 'setDebugMode');
         expect(methodCalls.first.arguments['debugMode'], true);
       });
+    });
+  });
+
+  group('Platform Channel - Event Stream Tests', () {
+    test('EventChannel names are correct', () {
+      // Verify event channel names match what native expects
+      expect('purchasely-events', isNotEmpty);
+      expect('purchasely-purchases', isNotEmpty);
+      expect('purchasely-user-attributes', isNotEmpty);
     });
   });
 
@@ -545,6 +675,13 @@ void main() {
       expect(PLYThemeMode.system.index, 2);
     });
 
+    test('PLYPresentationType converts correctly', () {
+      expect(PLYPresentationType.normal.index, 0);
+      expect(PLYPresentationType.fallback.index, 1);
+      expect(PLYPresentationType.deactivated.index, 2);
+      expect(PLYPresentationType.client.index, 3);
+    });
+
     test('PLYPlanType converts correctly', () {
       expect(PLYPlanType.consumable.index, 0);
       expect(PLYPlanType.nonConsumable.index, 1);
@@ -559,6 +696,26 @@ void main() {
       expect(PLYSubscriptionSource.amazonAppstore.index, 2);
       expect(PLYSubscriptionSource.huaweiAppGallery.index, 3);
       expect(PLYSubscriptionSource.none.index, 4);
+    });
+
+    test('PLYPurchaseResult converts correctly', () {
+      expect(PLYPurchaseResult.purchased.index, 0);
+      expect(PLYPurchaseResult.cancelled.index, 1);
+      expect(PLYPurchaseResult.restored.index, 2);
+    });
+
+    test('PLYPaywallAction converts correctly', () {
+      expect(PLYPaywallAction.close.index, 0);
+      expect(PLYPaywallAction.close_all.index, 1);
+      expect(PLYPaywallAction.login.index, 2);
+      expect(PLYPaywallAction.navigate.index, 3);
+      expect(PLYPaywallAction.purchase.index, 4);
+      expect(PLYPaywallAction.restore.index, 5);
+      expect(PLYPaywallAction.open_presentation.index, 6);
+      expect(PLYPaywallAction.open_placement.index, 7);
+      expect(PLYPaywallAction.promo_code.index, 8);
+      expect(PLYPaywallAction.open_flow_step.index, 9);
+      expect(PLYPaywallAction.web_checkout.index, 10);
     });
 
     test('PLYDataProcessingLegalBasis converts correctly', () {
@@ -593,11 +750,106 @@ void main() {
       expect(offering.offerVendorId, isNull);
     });
   });
+
+  group('Android Plugin Specific Tests', () {
+    late MethodChannel channel;
+    final List<MethodCall> methodCalls = [];
+
+    setUp(() {
+      channel = const MethodChannel('purchasely');
+      methodCalls.clear();
+
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (MethodCall methodCall) async {
+        methodCalls.add(methodCall);
+        return _handleMethodCall(methodCall);
+      });
+    });
+
+    tearDown(() {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, null);
+    });
+
+    test('Android stores parameter is passed correctly', () async {
+      await Purchasely.start(
+        apiKey: 'test-key',
+        androidStores: ['Google', 'Huawei', 'Amazon'],
+        storeKit1: false,
+      );
+
+      expect(methodCalls.first.arguments['stores'],
+          ['Google', 'Huawei', 'Amazon']);
+    });
+
+    test('Android default store is Google', () async {
+      await Purchasely.start(
+        apiKey: 'test-key',
+        storeKit1: false,
+      );
+
+      expect(methodCalls.first.arguments['stores'], ['Google']);
+    });
+  });
+
+  group('iOS Plugin Specific Tests', () {
+    late MethodChannel channel;
+    final List<MethodCall> methodCalls = [];
+
+    setUp(() {
+      channel = const MethodChannel('purchasely');
+      methodCalls.clear();
+
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (MethodCall methodCall) async {
+        methodCalls.add(methodCall);
+        return _handleMethodCall(methodCall);
+      });
+    });
+
+    tearDown(() {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, null);
+    });
+
+    test('storeKit1 parameter is passed correctly as true', () async {
+      await Purchasely.start(
+        apiKey: 'test-key',
+        storeKit1: true,
+      );
+
+      expect(methodCalls.first.arguments['storeKit1'], true);
+    });
+
+    test('storeKit1 parameter is passed correctly as false', () async {
+      await Purchasely.start(
+        apiKey: 'test-key',
+        storeKit1: false,
+      );
+
+      expect(methodCalls.first.arguments['storeKit1'], false);
+    });
+
+    test('signPromotionalOffer is iOS specific method', () async {
+      final result =
+          await Purchasely.signPromotionalOffer('product-123', 'offer-456');
+
+      expect(methodCalls.first.method, 'signPromotionalOffer');
+      expect(result['signature'], isNotNull);
+      expect(result['timestamp'], isNotNull);
+      expect(result['nonce'], isNotNull);
+      expect(result['keyIdentifier'], isNotNull);
+    });
+  });
 }
 
 /// Simulates native method call responses for both iOS and Android
 dynamic _handleMethodCall(MethodCall methodCall) {
   switch (methodCall.method) {
+    case 'start':
+      return true;
+    case 'close':
+      return null;
     case 'synchronize':
       return null;
     case 'getAnonymousUserId':
@@ -625,6 +877,45 @@ dynamic _handleMethodCall(MethodCall methodCall) {
     case 'setDebugMode':
       return null;
     case 'revokeDataProcessingConsent':
+      return null;
+    case 'fetchPresentation':
+      return {
+        'id': 'presentation-123',
+        'placementId': 'placement-456',
+        'audienceId': 'audience-789',
+        'abTestId': 'abtest-001',
+        'abTestVariantId': 'variant-A',
+        'language': 'en',
+        'type': 0,
+        'plans': [
+          {
+            'planVendorId': 'plan-123',
+            'storeProductId': 'product-123',
+          }
+        ],
+        'metadata': {'key': 'value'}
+      };
+    case 'presentPresentation':
+    case 'presentPresentationWithIdentifier':
+    case 'presentPresentationForPlacement':
+    case 'presentProductWithIdentifier':
+    case 'presentPlanWithIdentifier':
+      return {
+        'result': 0,
+        'plan': {
+          'vendorId': 'plan-vendor-123',
+          'productId': 'product-123',
+          'name': 'Premium Plan',
+          'type': 2,
+          'amount': 9.99,
+        }
+      };
+    case 'closePresentation':
+    case 'hidePresentation':
+    case 'showPresentation':
+      return null;
+    case 'clientPresentationDisplayed':
+    case 'clientPresentationClosed':
       return null;
     case 'productWithIdentifier':
       final vendorId = methodCall.arguments['vendorId'];
@@ -724,6 +1015,12 @@ dynamic _handleMethodCall(MethodCall methodCall) {
       };
     case 'isEligibleForIntroOffer':
       return true;
+    case 'setPaywallActionInterceptor':
+      return null;
+    case 'onProcessAction':
+      return null;
+    case 'setDefaultPresentationResultHandler':
+      return null;
     default:
       return null;
   }

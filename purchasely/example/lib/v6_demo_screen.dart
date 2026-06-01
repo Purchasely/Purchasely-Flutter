@@ -84,25 +84,11 @@ class _V6DemoScreenState extends State<V6DemoScreen> {
   }
 
   /// Register a typed `navigate` action interceptor that just logs the
-  /// outbound URL and lets the SDK proceed. The interceptor is wired through
-  /// the v6 bridge via the `v6/registerInterceptor` channel call.
-  Future<void> _registerNavigateInterceptor() async {
-    try {
-      await PurchaselyV6Bridge.ensureInstalled().registerInterceptor(
-        PresentationActionKind.navigate,
-        (InterceptorInfo info, ActionPayload? payload) {
-          if (payload is NavigatePayload) {
-            debugPrint('v6 navigate interceptor — url=${payload.url} '
-                'title=${payload.title} contentId=${info.contentId}');
-          }
-          // Let the SDK continue handling the navigation.
-          return InterceptResult.notHandled;
-        },
-      );
-      setState(() => _status = 'Navigate interceptor registered.');
-    } catch (e) {
-      setState(() => _status = 'Interceptor registration failed: $e');
-    }
+  /// outbound URL. Currently a no-op placeholder pending the Dart-side
+  /// bridge dispatcher (the `v6/registerInterceptor` call lives there).
+  void _registerNavigateInterceptor() {
+    debugPrint('TODO: dispatch v6/registerInterceptor for navigate.');
+    setState(() => _status = 'Interceptor registration (placeholder)');
   }
 
   Widget _outcomeCard(PresentationOutcome outcome) {

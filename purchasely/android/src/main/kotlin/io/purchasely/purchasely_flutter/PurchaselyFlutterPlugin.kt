@@ -20,13 +20,18 @@ import android.util.Log
 import androidx.annotation.NonNull
 import androidx.fragment.app.FragmentActivity
 
+import io.purchasely.billing.Store
 import io.purchasely.ext.*
 import io.purchasely.ext.EventListener
 import io.purchasely.models.PLYPlan
+import io.purchasely.models.PLYPresentationPlan
 import io.purchasely.models.PLYProduct
 import kotlinx.coroutines.*
 import io.purchasely.ext.Purchasely
+import io.purchasely.models.PLYError
 import io.purchasely.views.presentation.PLYThemeMode
+import io.purchasely.views.presentation.models.PLYTransitionType
+import java.lang.ref.WeakReference
 import java.text.SimpleDateFormat
 import java.util.*
 import kotlin.collections.ArrayList
@@ -149,6 +154,10 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
             }
         })
 
+        flutterPluginBinding
+            .platformViewRegistry
+            .registerViewFactory(NativeViewFactory.VIEW_TYPE_ID, NativeViewFactory(flutterPluginBinding.binaryMessenger))
+
         // --- v6 bridge ---
         v6EventChannel = EventChannel(flutterPluginBinding.binaryMessenger, "purchasely/v6-events")
         val bridge = PurchaselyV6Bridge(
@@ -169,9 +178,78 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
         if (v6Bridge?.handle(call.method, v6Args, result) == true) return
 
         when(call.method) {
+            "start" -> {
+                call.argument<String>("apiKey")?.let { apiKey ->
+                    start(
+                        apiKey = apiKey,
+                        stores = call.argument<List<String>>("stores") ?: emptyList(),
+                        storeKit1 = call.argument<Boolean>("storeKit1") ?: false,
+                        userId = call.argument<String?>("userId"),
+                        logLevel = call.argument<Int>("logLevel") ?: 1,
+                        runningMode = call.argument<Int>("runningMode") ?: 3,
+                        result = result
+                    )
+                }
+            }
+            "close" -> {
+                close()
+                result.safeSuccess(true)
+            }
+            "setDefaultPresentationResultHandler" -> setDefaultPresentationResultHandler(result)
             "synchronize" -> {
                 synchronize()
                 result.safeSuccess(true)
+            }
+            "fetchPresentation" -> fetchPresentation(
+                call.argument<String>("placementVendorId"),
+                call.argument<String>("presentationVendorId"),
+                call.argument<String>("contentId"),
+                result)
+            "presentPresentation" -> presentPresentation(
+                call.argument<Map<String, Any>>("presentation"),
+                call.argument<Boolean>("isFullscreen") ?: false,
+                result)
+            "presentPresentationWithIdentifier" -> {
+                presentPresentationWithIdentifier(
+                    call.argument<String>("presentationVendorId"),
+                    call.argument<String>("contentId"),
+                    call.argument<Boolean>("isFullscreen")
+                )
+                presentationResult = result
+            }
+            "presentPresentationForPlacement" -> {
+                presentPresentationForPlacement(
+                    call.argument<String>("placementVendorId"),
+                    call.argument<String>("contentId"),
+                    call.argument<Boolean>("isFullscreen")
+                )
+                presentationResult = result
+            }
+            "presentProductWithIdentifier" -> {
+                val productId = call.argument<String>("productVendorId") ?: let {
+                    result.safeError("-1", "product vendor id must not be null", null)
+                    return
+                }
+                presentProductWithIdentifier(
+                    productId,
+                    call.argument<String>("presentationVendorId"),
+                    call.argument<String>("contentId"),
+                    call.argument<Boolean>("isFullscreen")
+                )
+                presentationResult = result
+            }
+            "presentPlanWithIdentifier" -> {
+                val planId = call.argument<String>("planVendorId") ?: let {
+                    result.safeError("-1", "plan vendor id must not be null", null)
+                    return
+                }
+                presentPlanWithIdentifier(
+                    planId,
+                    call.argument<String>("presentationVendorId"),
+                    call.argument<String>("contentId"),
+                    call.argument<Boolean>("isFullscreen")
+                )
+                presentationResult = result
             }
             "restoreAllProducts" -> restoreAllProducts(result)
             "silentRestoreAllProducts" -> restoreAllProducts(result)
@@ -213,6 +291,14 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
             }
             "userDidConsumeSubscriptionContent" -> {
                 Purchasely.userDidConsumeSubscriptionContent()
+                result.safeSuccess(true)
+            }
+            "clientPresentationDisplayed" -> {
+                clientPresentationDisplayed(call.argument<Map<String, Any>>("presentation"))
+                result.safeSuccess(true)
+            }
+            "clientPresentationClosed" -> {
+                clientPresentationClosed(call.argument<Map<String, Any>>("presentation"))
                 result.safeSuccess(true)
             }
             "productWithIdentifier" -> {
@@ -369,6 +455,23 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
                 clearBuiltInAttributes()
                 result.safeSuccess(true)
             }
+            "setPaywallActionInterceptor" -> setPaywallActionInterceptor(result)
+            "onProcessAction" -> {
+                onProcessAction(call.argument<Boolean>("processAction") ?: false)
+                result.safeSuccess(true)
+            }
+            "closePresentation" -> {
+                closePresentation()
+                result.safeSuccess(true)
+            }
+            "hidePresentation" -> {
+                hidePresentation()
+                result.safeSuccess(true)
+            }
+            "showPresentation" -> {
+                showPresentation()
+                result.safeSuccess(true)
+            }
             "setDynamicOffering" -> {
                 setDynamicOffering(
                     call.argument<String>("reference") ?: "",
@@ -404,6 +507,168 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
     }
 
     //region Purchasely
+    private fun start(
+        apiKey: String,
+        stores: List<String>,
+        storeKit1: Boolean,
+        userId: String?,
+        logLevel: Int,
+        runningMode: Int,
+        result: Result
+    ) {
+        Purchasely.Builder(context)
+            .apiKey(apiKey)
+            .stores(getStoresInstances(stores))
+            .logLevel(LogLevel.values()[logLevel])
+            .runningMode(when(runningMode) {
+                // v6 SDK collapses transaction-only / paywall-observer onto Observer.
+                0 -> PLYRunningMode.Full
+                1, 2 -> PLYRunningMode.Observer
+                else -> PLYRunningMode.Full
+            })
+            .userId(userId)
+            .build()
+
+        Purchasely.sdkBridgeVersion = "5.7.3"
+        Purchasely.appTechnology = PLYAppTechnology.FLUTTER
+
+        // v6 SDK uses a single-arg callback `(PLYError?) -> Unit`
+        Purchasely.start { error ->
+            if (error == null) {
+                result.safeSuccess(true)
+            } else {
+                result.safeError("0", error.message ?: "Purchasely SDK not configured", error)
+            }
+        }
+    }
+
+    private fun close() {
+        Purchasely.close()
+    }
+
+    private fun fetchPresentation(placementId: String?,
+                                  presentationId: String?,
+                                  contentId: String?,
+                                  result: Result) {
+
+        val properties = PLYPresentationProperties(
+            placementId = placementId,
+            presentationId = presentationId,
+            contentId = contentId)
+
+        Purchasely.fetchPresentation(
+            properties = properties
+        ) { presentation: PLYPresentation?, error: PLYError? ->
+            launch {
+                if (presentation != null) {
+                    presentationsLoaded.removeAll { it.id == presentation.id && it.placementId == presentation.placementId }
+                    presentationsLoaded.add(presentation)
+                    val map = presentation.toMap().mapValues {
+                        val value = it.value
+                        when(value) {
+                            is PLYPresentationType -> value.ordinal
+                            is PLYTransitionType -> value.ordinal
+                            else -> value
+                        }
+                    }
+                    val mutableMap = map.toMutableMap().apply {
+                        this["height"] = presentation.height
+                        this["metadata"] = presentation.metadata?.toMap()
+                        this["plans"] = (this["plans"] as List<PLYPresentationPlan>).map { it.toMap() }
+                    }
+                    result.safeSuccess(mutableMap)
+                }
+
+                if (error != null) result.safeError("467", error.message, error)
+            }
+        }
+    }
+
+    private fun presentPresentation(presentationMap: Map<String, Any>?,
+                                    isFullScreen: Boolean,
+                                    result: Result) {
+        if (presentationMap == null) {
+            result.safeError("-1", "presentation cannot be null", null)
+            return
+        }
+
+        if(presentationsLoaded.none { it.id == presentationMap["id"] }) {
+            result.safeError("-1", "presentation was not fetched", null)
+            return
+        }
+
+        val presentation = presentationsLoaded.lastOrNull {
+            it.id == presentationMap["id"]
+                    && it.placementId == presentationMap["placementId"]
+        }
+
+        if(presentation == null) {
+            result.safeError("468", "Presentation not found", NullPointerException("presentation not fond"))
+            return
+        }
+
+        presentationResult = result
+
+        activity?.let {
+            if (presentation.flowId != null) {
+                presentation.display(it) { result, plan ->
+                    sendPresentationResult(result, plan)
+                }
+            } else {
+                // Open legacy Activity for now if not a flow
+                val intent = PLYProductActivity.newIntent(it).apply {
+                    putExtra("presentation", presentation)
+                    putExtra("isFullScreen", isFullScreen)
+                }
+                it.startActivity(intent)
+            }
+        }
+    }
+
+    private fun presentPresentationWithIdentifier(presentationVendorId: String?,
+                                                  contentId: String?,
+                                                  isFullscreen: Boolean?) {
+        val intent = Intent(context, PLYProductActivity::class.java)
+        intent.putExtra("presentationId", presentationVendorId)
+        intent.putExtra("contentId", contentId)
+        intent.putExtra("isFullScreen", isFullscreen ?: false)
+        activity?.startActivity(intent)
+    }
+
+    private fun presentPresentationForPlacement(placementVendorId: String?,
+                                                contentId: String?,
+                                                isFullscreen: Boolean?) {
+        val intent = Intent(context, PLYProductActivity::class.java)
+        intent.putExtra("placementId", placementVendorId)
+        intent.putExtra("contentId", contentId)
+        intent.putExtra("isFullScreen", isFullscreen ?: false)
+        activity?.startActivity(intent)
+    }
+
+    private fun presentProductWithIdentifier(productVendorId: String,
+                                             presentationVendorId: String?,
+                                             contentId: String?,
+                                             isFullscreen: Boolean?) {
+        val intent = Intent(context, PLYProductActivity::class.java)
+        intent.putExtra("presentationId", presentationVendorId)
+        intent.putExtra("productId", productVendorId)
+        intent.putExtra("contentId", contentId)
+        intent.putExtra("isFullScreen", isFullscreen ?: false)
+        activity?.startActivity(intent)
+    }
+
+    private fun presentPlanWithIdentifier(planVendorId: String,
+                                          presentationVendorId: String?,
+                                          contentId: String?,
+                                          isFullscreen: Boolean?) {
+        val intent = Intent(context, PLYProductActivity::class.java)
+        intent.putExtra("presentationId", presentationVendorId)
+        intent.putExtra("planId", planVendorId)
+        intent.putExtra("contentId", contentId)
+        intent.putExtra("isFullScreen", isFullscreen ?: false)
+        activity?.startActivity(intent)
+    }
+
     private fun restoreAllProducts(result: Result) {
         Purchasely.restoreAllProducts(
             onSuccess = { plan ->
@@ -465,7 +730,14 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
     }
 
     private fun readyToOpenDeeplink(readyToOpenDeeplink: Boolean?) {
-        Purchasely.allowDeeplink = readyToOpenDeeplink ?: true
+        Purchasely.readyToOpenDeeplink = readyToOpenDeeplink ?: true
+    }
+
+    private fun setDefaultPresentationResultHandler(result: Result) {
+        defaultPresentationResult = result
+        Purchasely.setDefaultPresentationResultHandler { result2, plan ->
+            sendPresentationResult(result2, plan)
+        }
     }
 
     private fun synchronize() {
@@ -505,12 +777,7 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
             return
         }
         val uri = Uri.parse(deeplink)
-        val currentActivity = activity
-        if (currentActivity == null) {
-            result.safeSuccess(false)
-            return
-        }
-        result.safeSuccess(Purchasely.handleDeeplink(uri, currentActivity))
+        result.safeSuccess(Purchasely.isDeeplinkHandled(uri))
     }
 
     private fun displaySubscriptionCancellationInstruction() {
@@ -763,14 +1030,117 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
         }
     }
 
+    private fun clientPresentationDisplayed(presentationMap: Map<String, Any>?) {
+        if(presentationMap == null) {
+            PLYLogger.e("presentation cannot be null")
+            return
+        }
+
+        val presentation = presentationsLoaded.firstOrNull { it.id ==  presentationMap["id"]}
+
+        if(presentation != null) {
+            Purchasely.clientPresentationDisplayed(presentation)
+        }
+    }
+
+    private fun clientPresentationClosed(presentationMap: Map<String, Any>?) {
+        if(presentationMap == null) {
+            PLYLogger.e("presentation cannot be null")
+            return
+        }
+
+        val presentation = presentationsLoaded.firstOrNull { it.id ==  presentationMap["id"]}
+
+        if(presentation != null) {
+            Purchasely.clientPresentationClosed(presentation)
+            presentationsLoaded.removeAll { it.id == presentation.id }
+        }
+    }
+
+
+    private fun setPaywallActionInterceptor(result: Result) {
+        Purchasely.setPaywallActionsInterceptor { info, action, parameters, processAction ->
+            paywallActionHandler = processAction
+            paywallAction = action
+
+            val parametersForFlutter = hashMapOf<String, Any?>();
+
+            parametersForFlutter["title"] = parameters.title
+            parametersForFlutter["url"] = parameters.url?.toString()
+            parametersForFlutter["presentation"] = parameters.presentation
+            parametersForFlutter["placement"] = parameters.placement
+            parametersForFlutter["plan"] = transformPlanToMap(parameters.plan)
+            parametersForFlutter["offer"] = mapOf<String, String?>(
+                "vendorId" to parameters.offer?.vendorId,
+                "storeOfferId" to parameters.offer?.storeOfferId
+            )
+            parametersForFlutter["subscriptionOffer"] = parameters.subscriptionOffer?.toMap()
+            parametersForFlutter["closeReason"] = parameters?.closeReason?.name
+            parametersForFlutter["clientReferenceId"] = parameters?.clientReferenceId
+            parametersForFlutter["queryParameterKey"] = parameters?.queryParameterKey
+            parametersForFlutter["webCheckoutProvider"] = parameters?.webCheckoutProvider?.name
+
+            result.safeSuccess(mapOf(
+                Pair("info", mapOf(
+                    Pair("contentId", info?.contentId),
+                    Pair("presentationId", info?.presentationId),
+                    Pair("placementId", info?.placementId),
+                    Pair("abTestId", info?.abTestId),
+                    Pair("abTestVariantId", info?.abTestVariantId)
+                )),
+                Pair("action", when(action) {
+                    PLYPresentationAction.PURCHASE -> "purchase"
+                    PLYPresentationAction.CLOSE -> "close"
+                    PLYPresentationAction.CLOSE_ALL -> "close_all"
+                    PLYPresentationAction.LOGIN -> "login"
+                    PLYPresentationAction.NAVIGATE -> "navigate"
+                    PLYPresentationAction.RESTORE -> "restore"
+                    PLYPresentationAction.OPEN_PRESENTATION -> "open_presentation"
+                    PLYPresentationAction.PROMO_CODE -> "promo_code"
+                    PLYPresentationAction.OPEN_PLACEMENT -> "open_placement"
+                    PLYPresentationAction.OPEN_FLOW_STEP -> "open_flow_step"
+                    PLYPresentationAction.WEB_CHECKOUT -> "web_checkout"
+                }),
+                Pair("parameters", parametersForFlutter)
+            ))
+        }
+    }
+
+    private fun showPresentation() {
+        launch {
+            productActivity?.relaunch(activity)
+            withContext(Dispatchers.Default) { delay(500) }
+        }
+    }
+
+    private fun onProcessAction(processAction: Boolean) {
+        activity?.let {
+            it.runOnUiThread {
+                paywallActionHandler?.invoke(processAction)
+            }
+        }
+    }
+
+    private fun closePresentation() {
+        Purchasely.closeAllScreens()
+        productActivity = null
+    }
+
+    private fun hidePresentation() {
+        val flutterActivity = activity
+        val currentActivity = productActivity?.activity?.get() ?: flutterActivity
+        if(flutterActivity != null && currentActivity != null) {
+            flutterActivity.startActivity(Intent(currentActivity, flutterActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
+            })
+        }
+    }
+
     private suspend fun isEligibleForIntroOffer(planVendorId: String) : Boolean {
         return try {
             val plan = Purchasely.plan(planVendorId)
             if(plan != null) {
-                // v6 SDK scopes eligibility to a specific store offer id; resolve the
-                // plan's first promo offer to mirror the v5 intro-offer eligibility check.
-                val offerId = plan.promoOffers.firstOrNull()?.storeOfferId
-                if (offerId != null) plan.isEligibleToOffer(offerId) else false
+                plan.isEligibleToIntroOffer()
             } else {
                 Log.e("Purchasely", "plan $planVendorId not found")
                 false
@@ -826,6 +1196,27 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
 
     //endregion
 
+    private fun getStoresInstances(stores: List<String>?): ArrayList<Store> {
+        val result = ArrayList<Store>()
+        if (stores?.contains("Google") == true
+            && Package.getPackage("io.purchasely.google") != null) {
+            try {
+                result.add(Class.forName("io.purchasely.google.GoogleStore").newInstance() as Store)
+            } catch (e: Exception) {
+                Log.e("Purchasely", "Google Store not found :" + e.message, e)
+            }
+        }
+        if (stores?.contains("Huawei") == true
+            && Package.getPackage("io.purchasely.huawei") != null) {
+            try {
+                result.add(Class.forName("io.purchasely.huawei.HuaweiStore").newInstance() as Store)
+            } catch (e: Exception) {
+                Log.e("Purchasely", e.message, e)
+            }
+        }
+        return result
+    }
+
     override fun onAttachedToActivity(binding: ActivityPluginBinding) {
         activity = binding.activity
     }
@@ -844,6 +1235,70 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
 
     private val job = SupervisorJob()
     override val coroutineContext = job + Dispatchers.Main
+
+    class ProductActivity(
+        val presentation: PLYPresentation? = null,
+        val presentationId: String? = null,
+        val placementId: String? = null,
+        val productId: String? = null,
+        val planId: String? = null,
+        val contentId: String? = null,
+        val isFullScreen: Boolean = false,
+        val loadingBackgroundColor: String? = null,) {
+
+        var activity: WeakReference<Activity>? = null
+
+        fun relaunch(flutterActivity: Activity?) : Boolean {
+            if(flutterActivity == null) return false
+
+            val backgroundActivity = activity?.get()
+            return if(backgroundActivity != null
+                && !backgroundActivity.isFinishing) {
+                backgroundActivity.startActivity(
+                    Intent(backgroundActivity, backgroundActivity::class.java).apply {
+                        flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
+                    }
+                )
+                true
+            } else {
+                val intent = PLYProductActivity.newIntent(flutterActivity)
+                intent.putExtra("presentation", presentation)
+                intent.putExtra("presentationId", presentationId)
+                intent.putExtra("placementId", placementId)
+                intent.putExtra("productId", productId)
+                intent.putExtra("planId", planId)
+                intent.putExtra("contentId", contentId)
+                intent.putExtra("isFullScreen", isFullScreen)
+                intent.putExtra("background_color", loadingBackgroundColor)
+                flutterActivity.startActivity(intent)
+                return false
+            }
+        }
+    }
+
+    fun PLYPresentationPlan.toMap() : Map<String, String?> {
+        return mapOf(
+            Pair("planVendorId", planVendorId),
+            Pair("storeProductId", storeProductId),
+            Pair("basePlanId", basePlanId),
+            //Pair("offerId", offerId)
+        )
+    }
+
+    suspend fun PLYPresentationMetadata.toMap() : Map<String, Any> {
+        val metadata = mutableMapOf<String, Any>()
+        this.keys()?.forEach { key ->
+            val value = when (this.type(key)) {
+                kotlin.String::class.java.simpleName -> this.getString(key)
+                else -> this.get(key)
+            }
+            value?.let {
+                metadata.put(key, it)
+            }
+        }
+
+        return metadata
+    }
 
     private fun Result.safeSuccess(map: Map<String, Any?>) {
         try {
@@ -878,7 +1333,33 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
     }
 
     companion object {
+        var productActivity: ProductActivity? = null
+        var presentationResult: Result? = null
+        var defaultPresentationResult: Result? = null
+        var paywallActionHandler: PLYCompletionHandler? = null
+        var paywallAction: PLYPresentationAction? = null
         private lateinit var channel : MethodChannel
+
+        val presentationsLoaded = mutableListOf<PLYPresentation>()
+
+        fun sendPresentationResult(result: PLYProductViewResult, plan: PLYPlan?) {
+            val productViewResult = when(result) {
+                PLYProductViewResult.PURCHASED -> PLYProductViewResult.PURCHASED.ordinal
+                PLYProductViewResult.CANCELLED -> PLYProductViewResult.CANCELLED.ordinal
+                PLYProductViewResult.RESTORED -> PLYProductViewResult.RESTORED.ordinal
+            }
+
+            if(presentationResult != null) {
+                presentationResult?.success(
+                    mapOf(Pair("result", productViewResult), Pair("plan", transformPlanToMap(plan)))
+                )
+                presentationResult = null
+            } else if(defaultPresentationResult != null) {
+                defaultPresentationResult?.success(
+                    mapOf(Pair("result", productViewResult), Pair("plan", transformPlanToMap(plan)))
+                )
+            }
+        }
 
         private fun transformPlanToMap(plan: PLYPlan?): Map<String, Any?> {
             if(plan == null) return emptyMap()

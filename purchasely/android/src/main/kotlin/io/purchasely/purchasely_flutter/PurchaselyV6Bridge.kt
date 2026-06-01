@@ -17,7 +17,6 @@ import io.purchasely.ext.presentation.PLYPresentation
 import io.purchasely.ext.presentation.PLYPresentationAction
 import io.purchasely.ext.presentation.PLYPresentationBase
 import io.purchasely.ext.presentation.PLYPresentationOutcome
-import io.purchasely.ext.presentation.display
 import io.purchasely.ext.presentation.preload
 import io.purchasely.views.presentation.models.PLYTransition
 import io.purchasely.views.presentation.models.PLYTransitionType
@@ -384,7 +383,7 @@ internal class PurchaselyV6Bridge(
                     "planVendorId" to plan.planVendorId,
                     "storeProductId" to plan.storeProductId,
                     "basePlanId" to plan.basePlanId,
-                    "offerId" to plan.storeOfferId,
+                    "offerId" to plan.offerId,
                 )
             },
         )
