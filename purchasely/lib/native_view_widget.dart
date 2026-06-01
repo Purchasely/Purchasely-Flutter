@@ -14,16 +14,12 @@ import 'src/presentation_request.dart';
 /// `{ "requestId": <id> }` creation params. The native side resolves the
 /// preloaded presentation from that id and renders it inline.
 ///
-/// Lifecycle note: the embedded (inline) path renders the preloaded
-/// presentation in place; it does **not** drive the full
-/// presentation-events flow. The native inline view reports through a
-/// separate `native_view` channel that this widget does not currently
-/// surface, so the request's dismiss/outcome callbacks
-/// (`onPresented`, `onDismissed`, the `display()` outcome, …) are **not
-/// guaranteed** for an inline presentation — unlike a modal presentation.
-/// Use the inline widget only to render a presentation; rely on
-/// `display()` / `PresentationRequest` callbacks for lifecycle when you
-/// need the dismiss/outcome.
+/// Lifecycle: the embedded (inline) path surfaces its dismissal/outcome through
+/// the same `purchasely-presentation-events` channel as a full-screen
+/// presentation, keyed by `requestId`. When the inline presentation is
+/// dismissed, the native view emits the same `onDismissed` envelope (with the
+/// `display()`-style [PresentationOutcome]) as the modal path, so the request's
+/// [PresentationRequest.onDismissed] callback fires for the inline view too.
 class PLYPresentationView extends StatefulWidget {
   /// The presentation request to render inline. Build it with
   /// `PresentationBuilder.placement(...)...build()`.

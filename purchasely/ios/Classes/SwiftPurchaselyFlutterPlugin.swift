@@ -15,6 +15,11 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
     // invocationId -> SDK interceptor completion. Single-shot, removed on resolve.
     private static var pendingInterceptors: [String: (PLYInterceptResult) -> Void] = [:]
 
+    // The live plugin instance, so the inline NativeView can reach the shared
+    // `purchasely-presentation-events` sink and surface the same `onDismissed`
+    // envelope as the full-screen path.
+    private(set) static weak var shared: SwiftPurchaselyFlutterPlugin?
+
     let eventChannel: FlutterEventChannel
     let eventHandler: SwiftEventHandler
 
@@ -54,6 +59,27 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
         self.presentationChannel.setStreamHandler(self.presentationEventHandler)
 
         super.init()
+        SwiftPurchaselyFlutterPlugin.shared = self
+    }
+
+    /// Emits a presentation lifecycle envelope onto the shared
+    /// `purchasely-presentation-events` sink. Used by the inline NativeView so
+    /// the embedded path surfaces the same `{ event, requestId, outcome }`
+    /// envelopes as the full-screen path.
+    static func emitPresentationEvent(_ payload: [String: Any?]) {
+        shared?.presentationEventHandler.emit(payload)
+    }
+
+    /// Static accessor to the outcome serializer so the inline NativeView emits
+    /// the exact same `outcome` shape as the full-screen path.
+    static func outcomeMap(_ outcome: PLYPresentationOutcome,
+                           presentation: PLYPresentation?,
+                           error: Error?,
+                           requestId: String) -> [String: Any?] {
+        return shared?.outcomeToMap(outcome,
+                                    presentation: presentation,
+                                    error: error,
+                                    requestId: requestId) ?? [:]
     }
 
     public static func register(with registrar: FlutterPluginRegistrar) {

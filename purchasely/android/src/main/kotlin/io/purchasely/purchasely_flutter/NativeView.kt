@@ -4,15 +4,12 @@ import android.content.Context
 import android.util.Log
 import android.view.View
 import android.widget.FrameLayout
-import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.platform.PlatformView
-import io.purchasely.ext.presentation.PLYPresentationOutcome
 
 internal class NativeView(
     context: Context,
     id: Int,
     creationParams: Map<String?, Any?>?,
-    private val methodChannel: MethodChannel
 ) : PlatformView {
 
     private val layout: FrameLayout
@@ -31,30 +28,27 @@ internal class NativeView(
         val requestId = creationParams?.get("requestId") as? String
         val presentation = requestId?.let { PurchaselyFlutterPlugin.loadedPresentations[it] }
 
-        if (presentation != null) {
+        if (requestId != null && presentation != null) {
             Log.d("Purchasely", "Loaded Presentation found for requestId=$requestId")
 
             val presentationView = presentation.buildView(context) { outcome ->
-                methodChannel.invokeMethod("onPresentationResult", outcomeToMap(outcome))
+                // Surface the embedded outcome through the SAME presentation-events
+                // sink and envelope shape as the full-screen path, keyed by the
+                // request's `requestId`, so the Dart `onDismissed` callback (and the
+                // pending `display()` future) fire for the inline path too.
+                PurchaselyFlutterPlugin.loadedPresentations.remove(requestId)
+                PurchaselyFlutterPlugin.preparedRequests.remove(requestId)
+                PurchaselyFlutterPlugin.displayCallbacks.remove(requestId)
+                PurchaselyFlutterPlugin.emitPresentationEvent(
+                    PurchaselyFlutterPlugin.eventEnvelope("onDismissed", requestId).apply {
+                        put("outcome", PurchaselyFlutterPlugin.outcomeToMap(outcome))
+                    }
+                )
             }
             Log.d("Purchasely", "Presentation built successfully.")
             layout.addView(presentationView)
         } else {
             Log.e("Purchasely", "Loaded Presentation not found for requestId=$requestId; nothing to display inline.")
         }
-    }
-
-    private fun outcomeToMap(outcome: PLYPresentationOutcome): Map<String, Any?> {
-        return mapOf(
-            "purchaseResult" to outcome.purchaseResult?.name?.lowercase(),
-            "plan" to outcome.plan?.let { plan ->
-                mapOf(
-                    "vendorId" to plan.vendorId,
-                    "productId" to plan.getProductId(),
-                    "basePlanId" to plan.basePlanId,
-                )
-            },
-            "closeReason" to outcome.closeReason?.value,
-        )
     }
 }

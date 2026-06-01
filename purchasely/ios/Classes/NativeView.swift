@@ -7,14 +7,18 @@ import Purchasely
 class NativeView: NSObject, FlutterPlatformView {
     private var _containerView: NativeContainerView
     private var _controller: UIViewController?
+    private let _requestId: String?
+    // Guards against double-emitting onDismissed (the loaded presentation's
+    // onDismissed callback and the `.presentationClosed` event can both fire).
+    private var _didEmitDismissed = false
 
     init(
         frame: CGRect,
         viewIdentifier viewId: Int64,
-        arguments args: Any?,
-        channel: FlutterMethodChannel
+        arguments args: Any?
     ) {
         _containerView = NativeContainerView(frame: frame)
+        _requestId = (args as? [String: Any])?["requestId"] as? String
         super.init()
         Purchasely.setEventDelegate(self)
 
@@ -22,6 +26,17 @@ class NativeView: NSObject, FlutterPlatformView {
         // loaded (via `preload`) and is keyed by the Dart requestId.
         // Creation-param contract: `{ "requestId": <String> }`.
         self._controller = SwiftPurchaselyFlutterPlugin.presentationController(for: args)
+
+        // Surface the embedded outcome through the SAME presentation-events sink
+        // and envelope shape as the full-screen path, keyed by the request's
+        // `requestId`, so the Dart `onDismissed` callback (and the pending
+        // `display()` future) fire for the inline path too.
+        if let requestId = _requestId,
+           let presentation = SwiftPurchaselyFlutterPlugin.loadedPresentations[requestId] {
+            presentation.onDismissed = { [weak self] outcome in
+                self?.emitDismissed(requestId: requestId, outcome: outcome)
+            }
+        }
 
         if let controller = _controller {
             let childView = controller.view!
@@ -81,6 +96,23 @@ class NativeView: NSObject, FlutterPlatformView {
             return rootVC
         }
         return UIApplication.shared.delegate?.window??.rootViewController
+    }
+
+    /// Emits the `onDismissed` envelope once, mirroring the full-screen path,
+    /// and clears the request's static state so a re-display re-registers.
+    private func emitDismissed(requestId: String, outcome: PLYPresentationOutcome) {
+        guard !_didEmitDismissed else { return }
+        _didEmitDismissed = true
+        let presentation = SwiftPurchaselyFlutterPlugin.loadedPresentations[requestId]
+        SwiftPurchaselyFlutterPlugin.emitPresentationEvent([
+            "event": "onDismissed",
+            "requestId": requestId,
+            "outcome": SwiftPurchaselyFlutterPlugin.outcomeMap(
+                outcome, presentation: presentation, error: nil, requestId: requestId
+            ) as Any?,
+        ])
+        SwiftPurchaselyFlutterPlugin.loadedPresentations.removeValue(forKey: requestId)
+        SwiftPurchaselyFlutterPlugin.requests.removeValue(forKey: requestId)
     }
 
     private func cleanupController() {
@@ -174,7 +206,17 @@ extension NativeView: PLYEventDelegate {
     func eventTriggered(_ event: PLYEvent, properties: [String : Any]?) {
         if event == .presentationClosed {
             DispatchQueue.main.async { [weak self] in
-                self?.cleanupController()
+                guard let self = self else { return }
+                // Fallback: if the loaded presentation's `onDismissed` callback did
+                // not fire for the embedded controller, synthesise the dismissal so
+                // the Dart `onDismissed` still resolves. Idempotent via the guard.
+                if let requestId = self._requestId, !self._didEmitDismissed {
+                    self.emitDismissed(
+                        requestId: requestId,
+                        outcome: PLYPresentationOutcome(purchaseResult: .none, plan: nil)
+                    )
+                }
+                self.cleanupController()
             }
         }
     }

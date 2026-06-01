@@ -66,7 +66,9 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
     private var activity: Activity? = null
 
     private val mainHandler = Handler(Looper.getMainLooper())
-    private var presentationSink: EventChannel.EventSink? = null
+    private var presentationSink: EventChannel.EventSink?
+        get() = activePresentationSink
+        set(value) { activePresentationSink = value }
 
     override fun onDetachedFromEngine(@NonNull binding: FlutterPlugin.FlutterPluginBinding) {
         channel.setMethodCallHandler(null)
@@ -165,7 +167,7 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
 
         flutterPluginBinding
             .platformViewRegistry
-            .registerViewFactory(NativeViewFactory.VIEW_TYPE_ID, NativeViewFactory(flutterPluginBinding.binaryMessenger))
+            .registerViewFactory(NativeViewFactory.VIEW_TYPE_ID, NativeViewFactory())
 
         // Presentation/interceptor lifecycle events flow over a dedicated stream,
         // discriminated by the `event` key; each carries a `requestId` so Dart can route back.
@@ -701,68 +703,16 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
 
     //region Event channel sink
     private fun emit(event: Map<String, Any?>) {
-        mainHandler.post {
-            presentationSink?.success(event)
-        }
+        emitPresentationEvent(event)
     }
 
-    private fun eventEnvelope(event: String, requestId: String): MutableMap<String, Any?> {
-        return mutableMapOf<String, Any?>(
-            "event" to event,
-            "requestId" to requestId,
-        )
-    }
+    private fun eventEnvelope(event: String, requestId: String): MutableMap<String, Any?> =
+        Companion.eventEnvelope(event, requestId)
     //endregion
 
     //region Presentation serializers
-    private fun presentationToMap(p: PLYPresentationBase.Loaded): Map<String, Any?> {
-        return mapOf(
-            "screenId" to p.screenId,
-            "placementId" to p.placementId,
-            "contentId" to p.contentId,
-            "audienceId" to p.audienceId,
-            "abTestId" to p.abTestId,
-            "abTestVariantId" to p.abTestVariantId,
-            "campaignId" to p.campaignId,
-            "flowId" to p.flowId,
-            "language" to p.language,
-            "type" to p.type.ordinal,
-            "height" to p.height,
-            "plans" to p.plans.map { plan -> presentationPlanToMap(plan) },
-        )
-    }
-
-    private fun presentationPlanToMap(plan: PLYPresentationPlan): Map<String, Any?> {
-        return mapOf(
-            "planVendorId" to plan.planVendorId,
-            "storeProductId" to plan.storeProductId,
-            "basePlanId" to plan.basePlanId,
-            "offerId" to plan.storeOfferId,
-        )
-    }
-
-    private fun outcomeToMap(outcome: PLYPresentationOutcome): Map<String, Any?> {
-        return mapOf(
-            "presentation" to outcome.presentation?.let { presentationToMap(it) },
-            "purchaseResult" to outcome.purchaseResult?.name?.lowercase(),
-            "plan" to outcome.plan?.let { plan ->
-                mapOf(
-                    "vendorId" to plan.vendorId,
-                    "productId" to plan.getProductId(),
-                    "basePlanId" to plan.basePlanId,
-                )
-            },
-            "closeReason" to outcome.closeReason?.value,
-            "error" to outcome.error?.let { errorToMap(it) },
-        )
-    }
-
-    private fun errorToMap(error: PLYError): Map<String, Any?> {
-        return mapOf(
-            "code" to "PLYError",
-            "message" to error.message,
-        )
-    }
+    private fun outcomeToMap(outcome: PLYPresentationOutcome): Map<String, Any?> =
+        Companion.outcomeToMap(outcome)
 
     private fun errorToMap(error: Throwable): Map<String, Any?> {
         return mapOf(
@@ -1319,12 +1269,93 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
 
         private lateinit var channel : MethodChannel
 
+        // The live presentation-events sink shared by the full-screen path and the
+        // inline NativeView, plus a main-thread handler to post onto it. The inline
+        // view emits its onDismissed envelope through `emitPresentationEvent` so it
+        // is byte-for-byte identical to the full-screen path.
+        @Volatile
+        private var activePresentationSink: EventChannel.EventSink? = null
+        private val presentationHandler = Handler(Looper.getMainLooper())
+
         // Prepared/loaded presentations keyed by Dart requestId. They are retained after
         // dismissal so a Dart Presentation handle can be displayed again and so the inline
         // platform view can resolve a preloaded requestId. There is no native dispose API yet.
         val preparedRequests = ConcurrentHashMap<String, PLYPresentationBase.Prepared>()
         val loadedPresentations = ConcurrentHashMap<String, PLYPresentationBase.Loaded>()
         val displayCallbacks = ConcurrentHashMap<String, (PLYPresentationOutcome) -> Unit>()
+
+        /**
+         * Posts a presentation lifecycle envelope onto the shared
+         * `purchasely-presentation-events` sink. Used by the inline NativeView so
+         * the embedded path surfaces the same `{ event, requestId, outcome }`
+         * envelopes as the full-screen path.
+         */
+        fun emitPresentationEvent(event: Map<String, Any?>) {
+            presentationHandler.post {
+                activePresentationSink?.success(event)
+            }
+        }
+
+        /** Builds the base `{ event, requestId }` envelope shared by all callers. */
+        fun eventEnvelope(event: String, requestId: String): MutableMap<String, Any?> {
+            return mutableMapOf<String, Any?>(
+                "event" to event,
+                "requestId" to requestId,
+            )
+        }
+
+        /**
+         * Serializes a presentation outcome to the wire shape consumed by the Dart
+         * façade. Shared by the full-screen and inline paths so both are identical.
+         */
+        fun outcomeToMap(outcome: PLYPresentationOutcome): Map<String, Any?> {
+            return mapOf(
+                "presentation" to outcome.presentation?.let { presentationToMap(it) },
+                "purchaseResult" to outcome.purchaseResult?.name?.lowercase(),
+                "plan" to outcome.plan?.let { plan ->
+                    mapOf(
+                        "vendorId" to plan.vendorId,
+                        "productId" to plan.getProductId(),
+                        "basePlanId" to plan.basePlanId,
+                    )
+                },
+                "closeReason" to outcome.closeReason?.value,
+                "error" to outcome.error?.let { errorToMap(it) },
+            )
+        }
+
+        private fun presentationToMap(p: PLYPresentationBase.Loaded): Map<String, Any?> {
+            return mapOf(
+                "screenId" to p.screenId,
+                "placementId" to p.placementId,
+                "contentId" to p.contentId,
+                "audienceId" to p.audienceId,
+                "abTestId" to p.abTestId,
+                "abTestVariantId" to p.abTestVariantId,
+                "campaignId" to p.campaignId,
+                "flowId" to p.flowId,
+                "language" to p.language,
+                "type" to p.type.ordinal,
+                "height" to p.height,
+                "plans" to p.plans.map { plan -> presentationPlanToMap(plan) },
+            )
+        }
+
+        private fun presentationPlanToMap(plan: PLYPresentationPlan): Map<String, Any?> {
+            return mapOf(
+                "planVendorId" to plan.planVendorId,
+                "storeProductId" to plan.storeProductId,
+                "basePlanId" to plan.basePlanId,
+                "offerId" to plan.storeOfferId,
+            )
+        }
+
+        private fun errorToMap(error: PLYError): Map<String, Any?> {
+            return mapOf(
+                "code" to "PLYError",
+                "message" to error.message,
+            )
+        }
 
         // Pending interceptor invocations awaiting Dart resolution, keyed by the
         // invocation id (`ply_ic_<nanos>`) sent to Dart so `interceptorResolve`
