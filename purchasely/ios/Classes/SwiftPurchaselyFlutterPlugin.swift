@@ -219,19 +219,24 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
 
         var builder = Purchasely.apiKey(apiKey)
             .appTechnology(.flutter)
-            .sdkBridgeVersion("5.7.3")
 
-        if let userId = arguments["userId"] as? String, !userId.isEmpty {
-            builder = builder.appUserId(userId)
+        if let appUserId = arguments["appUserId"] as? String, !appUserId.isEmpty {
+            builder = builder.appUserId(appUserId)
         }
 
-        let runningMode = PLYRunningMode(rawValue: (arguments["runningMode"] as? Int) ?? PLYRunningMode.full.rawValue) ?? PLYRunningMode.full
+        let runningMode: PLYRunningMode = (arguments["runningMode"] as? String) == "full" ? .full : .observer
         builder = builder.runningMode(runningMode)
 
-        let logLevel = PLYLogger.PLYLogLevel(rawValue: (arguments["logLevel"] as? Int) ?? PLYLogger.PLYLogLevel.debug.rawValue) ?? .debug
+        let logLevel: PLYLogger.PLYLogLevel
+        switch arguments["logLevel"] as? String {
+        case "debug": logLevel = .debug
+        case "info": logLevel = .info
+        case "warn": logLevel = .warn
+        default: logLevel = .error
+        }
         builder = builder.logLevel(logLevel)
 
-        let storeKit1 = arguments["storeKit1"] as? Bool ?? false
+        let storeKit1 = (arguments["storekitVersion"] as? String) == "storeKit1"
         builder = builder.storekitSettings(storeKit1 ? .storeKit1 : .storeKit2)
 
         DispatchQueue.main.async {
@@ -305,6 +310,8 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
                 "requestId": requestId,
                 "outcome": self?.outcomeToMap(outcome, presentation: presentation, error: nil, requestId: requestId) as Any?,
             ])
+            SwiftPurchaselyFlutterPlugin.loadedPresentations.removeValue(forKey: requestId)
+            SwiftPurchaselyFlutterPlugin.requests.removeValue(forKey: requestId)
         }
 
         let request = builder.build()

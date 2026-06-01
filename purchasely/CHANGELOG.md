@@ -21,9 +21,10 @@
     programmatic control.
   - Inline (embedded) rendering uses the `PLYPresentationView` widget.
 - **Action interceptor.** Replaced by
-  `PurchaselyBridge.ensureInstalled().registerInterceptor(PresentationActionKind, handler)`
-  (plus `removeInterceptor` / `removeAllInterceptors`). The handler returns an
-  `InterceptResult` (`success` / `failed` / `notHandled`) — there is no more
+  `Purchasely.interceptAction(PresentationActionKind, handler)`
+  (plus `removeInterceptor` / `removeAllInterceptors`). The handler receives a
+  typed `ActionPayload` (e.g. `NavigatePayload`, `PurchasePayload`) and returns
+  an `InterceptResult` (`success` / `failed` / `notHandled`) — there is no more
   `onProcessAction`.
 - **Behaviour — running mode default.** The 6.0 native SDKs default to
   **Observer** mode (was Full). The builder mirrors this default

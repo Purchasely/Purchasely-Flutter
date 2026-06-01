@@ -357,5 +357,28 @@ void main() {
           calls.firstWhere((c) => c.method == 'registerInterceptor');
       expect((registerCall.arguments as Map)['kind'], 'navigate');
     });
+
+    test('start() forwards the exact wire contract the native side reads',
+        () async {
+      // Guards the MethodChannel `start` payload. This regressed before and
+      // was not caught because tests mocked start→true without asserting args.
+      final ok = await PurchaselyBuilder.apiKey('K')
+          .appUserId('U')
+          .runningMode(RunningMode.full)
+          .logLevel(LogLevel.warn)
+          .stores([PLYStore.google]).start();
+      expect(ok, isTrue);
+
+      final startCall = calls.firstWhere((c) => c.method == 'start');
+      final args = startCall.arguments as Map;
+      expect(args['apiKey'], 'K');
+      expect(args['appUserId'], 'U');
+      expect(args['runningMode'], 'full');
+      expect(args['logLevel'], 'warn');
+      expect(args['stores'], <String>['google']);
+      // The native side also reads these keys — they must be present.
+      expect(args.containsKey('allowCampaigns'), isTrue);
+      expect(args.containsKey('storekitVersion'), isTrue);
+    });
   });
 }

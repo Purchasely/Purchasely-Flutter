@@ -6,9 +6,13 @@
 //   3. Display it and surface the enriched 5-field `PresentationOutcome`
 //      (presentation, purchaseResult, plan, closeReason, error).
 //
-// Interceptor registration is exposed via the `Register interceptor` button —
-// see `registerNavigateInterceptor()` below. It uses the clean public API
-// `Purchasely.interceptAction(kind, handler)`.
+// Interceptor registration is exposed via the `Register interceptors` button —
+// see `registerInterceptors()` below. It uses the clean public API
+// `Purchasely.interceptAction(kind, handler)` and demonstrates two kinds:
+//   - a `navigate` interceptor that logs the outbound URL, and
+//   - a `purchase` interceptor that inspects the typed `PurchasePayload`
+//     (the selected plan) and returns `InterceptResult.notHandled` so the
+//     SDK keeps owning the purchase flow.
 
 import 'package:flutter/material.dart';
 import 'package:purchasely_flutter/purchasely_flutter.dart';
@@ -80,9 +84,17 @@ class _PresentationDemoScreenState extends State<PresentationDemoScreen> {
     }
   }
 
-  /// Register a typed `navigate` action interceptor that just logs the
-  /// outbound URL.
-  Future<void> _registerNavigateInterceptor() async {
+  /// Register two typed action interceptors via the public
+  /// `Purchasely.interceptAction(kind, handler)` API:
+  ///
+  ///   * `navigate` — logs the outbound URL from the typed [NavigatePayload].
+  ///   * `purchase` — inspects the typed [PurchasePayload] (the selected
+  ///     plan) and returns [InterceptResult.notHandled] so the SDK proceeds
+  ///     with its own purchase flow.
+  ///
+  /// Both handlers downcast the generic [ActionPayload] to the concrete
+  /// payload type, showing the typed-payload pattern.
+  Future<void> _registerInterceptors() async {
     await Purchasely.interceptAction(
       PresentationActionKind.navigate,
       (info, payload) {
@@ -92,7 +104,22 @@ class _PresentationDemoScreenState extends State<PresentationDemoScreen> {
         return InterceptResult.notHandled;
       },
     );
-    setState(() => _status = 'Navigate interceptor registered');
+
+    await Purchasely.interceptAction(
+      PresentationActionKind.purchase,
+      (info, payload) {
+        if (payload is PurchasePayload) {
+          // The typed payload exposes the selected plan (and any offer).
+          final planId = payload.plan['vendorId'] ?? payload.plan['id'];
+          debugPrint('Intercepted purchase of plan $planId — letting the SDK '
+              'proceed (notHandled)');
+        }
+        // Return notHandled so the SDK keeps owning the purchase flow.
+        return InterceptResult.notHandled;
+      },
+    );
+
+    setState(() => _status = 'Navigate + purchase interceptors registered');
   }
 
   Widget _outcomeCard(PresentationOutcome outcome) {
@@ -154,8 +181,8 @@ class _PresentationDemoScreenState extends State<PresentationDemoScreen> {
                     onPressed: _displayPresentation,
                     child: const Text('Display presentation')),
                 ElevatedButton(
-                    onPressed: _registerNavigateInterceptor,
-                    child: const Text('Register interceptor')),
+                    onPressed: _registerInterceptors,
+                    child: const Text('Register interceptors')),
               ],
             ),
             const SizedBox(height: 16),

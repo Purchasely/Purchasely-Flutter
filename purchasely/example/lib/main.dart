@@ -202,6 +202,21 @@ class _MyAppState extends State<MyApp> {
           return InterceptResult.notHandled;
         },
       );
+
+      // Register a typed `purchase` action interceptor: inspect the selected
+      // plan via the typed `PurchasePayload`, then return `notHandled` so the
+      // SDK keeps owning the purchase flow.
+      await Purchasely.interceptAction(
+        PresentationActionKind.purchase,
+        (info, payload) {
+          if (payload is PurchasePayload) {
+            final planId = payload.plan['vendorId'] ?? payload.plan['id'];
+            print('User wants to purchase plan $planId — letting the SDK '
+                'proceed');
+          }
+          return InterceptResult.notHandled;
+        },
+      );
     } catch (e) {
       print(e);
     }

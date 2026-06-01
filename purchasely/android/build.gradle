@@ -59,9 +59,9 @@ dependencies {
 
     api 'androidx.lifecycle:lifecycle-runtime-ktx:2.4.0'
 
-    // v6 native SDK — provides the new builder/interceptAction/PLYPresentationBase APIs
-    // wired by the v6 Flutter bridge (PurchaselyV6Bridge.kt). The v5 surface kept in
-    // PurchaselyFlutterPlugin.kt continues to compile against this version too.
+    // Purchasely 6.0 native SDK — provides the builder/interceptAction/PLYPresentationBase
+    // APIs wired by the single plugin (PurchaselyFlutterPlugin.kt), which compiles the
+    // whole surface against this version.
     api 'io.purchasely:core:6.0.0'
 
     // Test dependencies

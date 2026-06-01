@@ -446,25 +446,38 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
             result.safeError("-1", "apiKey must not be null", null)
             return
         }
-        val userId = a["userId"] as? String
-        val logLevel = (a["logLevel"] as? Number)?.toInt() ?: 1
-        val runningMode = (a["runningMode"] as? Number)?.toInt() ?: 3
+        val appUserId = a["appUserId"] as? String
         val stores = (a["stores"] as? List<*>)?.mapNotNull { it as? String } ?: emptyList()
 
-        Purchasely.Builder(context)
+        val logLevel = when (a["logLevel"] as? String) {
+            "debug" -> LogLevel.DEBUG
+            "info" -> LogLevel.INFO
+            "warn" -> LogLevel.WARN
+            else -> LogLevel.ERROR
+        }
+        val runningMode = when (a["runningMode"] as? String) {
+            "full" -> PLYRunningMode.Full
+            else -> PLYRunningMode.Observer
+        }
+        val allowCampaigns = a["allowCampaigns"] as? Boolean ?: true
+        val allowDeeplink = a["allowDeeplink"] as? Boolean
+
+        val builder = Purchasely.Builder(context)
             .apiKey(apiKey)
             .stores(getStoresInstances(stores))
-            .logLevel(LogLevel.values()[logLevel])
-            .runningMode(when(runningMode) {
-                // The native SDK collapses transaction-only / observer modes onto Observer.
-                0 -> PLYRunningMode.Full
-                1, 2 -> PLYRunningMode.Observer
-                else -> PLYRunningMode.Full
-            })
-            .userId(userId)
-            .build()
+            .logLevel(logLevel)
+            .runningMode(runningMode)
+            .allowCampaigns(allowCampaigns)
 
-        Purchasely.sdkBridgeVersion = "5.7.3"
+        if (allowDeeplink != null) {
+            builder.allowDeeplink(allowDeeplink)
+        }
+        if (!appUserId.isNullOrBlank()) {
+            builder.userId(appUserId)
+        }
+
+        builder.build()
+
         Purchasely.appTechnology = PLYAppTechnology.FLUTTER
 
         Purchasely.start { error ->
@@ -516,6 +529,8 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
             }
             onDismissed { outcome ->
                 displayCallbacks.remove(requestId)
+                loadedPresentations.remove(requestId)
+                preparedRequests.remove(requestId)
                 emit(eventEnvelope("onDismissed", requestId).apply {
                     put("outcome", outcomeToMap(outcome))
                 })
@@ -1211,7 +1226,7 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
 
     private fun getStoresInstances(stores: List<String>?): ArrayList<Store> {
         val result = ArrayList<Store>()
-        if (stores?.contains("Google") == true
+        if (stores?.contains("google") == true
             && Package.getPackage("io.purchasely.google") != null) {
             try {
                 result.add(Class.forName("io.purchasely.google.GoogleStore").newInstance() as Store)
@@ -1219,10 +1234,18 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
                 Log.e("Purchasely", "Google Store not found :" + e.message, e)
             }
         }
-        if (stores?.contains("Huawei") == true
+        if (stores?.contains("huawei") == true
             && Package.getPackage("io.purchasely.huawei") != null) {
             try {
                 result.add(Class.forName("io.purchasely.huawei.HuaweiStore").newInstance() as Store)
+            } catch (e: Exception) {
+                Log.e("Purchasely", e.message, e)
+            }
+        }
+        if (stores?.contains("amazon") == true
+            && Package.getPackage("io.purchasely.amazon") != null) {
+            try {
+                result.add(Class.forName("io.purchasely.amazon.AmazonStore").newInstance() as Store)
             } catch (e: Exception) {
                 Log.e("Purchasely", e.message, e)
             }

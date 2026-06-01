@@ -1,4 +1,4 @@
-This file provides the underlying native SDK versions that the React Native SDK relies on.
+This file provides the underlying native SDK versions that the Flutter SDK relies on.
 
 | Version | iOS version | Android version |
 |---------|-------------|-----------------|
@@ -50,3 +50,4 @@ This file provides the underlying native SDK versions that the React Native SDK 
 | 5.7.1   | 5.7.1       | 5.7.1           |
 | 5.7.2   | 5.7.2       | 5.7.3           |
 | 5.7.3   | 5.7.4       | 5.7.4           |
+| 6.0.0-beta.0 | 6.0.0 | 6.0.0 |
