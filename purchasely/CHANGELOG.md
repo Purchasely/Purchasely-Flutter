@@ -1,33 +1,43 @@
 ## 6.0.0-beta.0
 
-- **New cross-platform v6 API**. Adds a builder-based fluent API matching the
-  iOS and Android v6 SDKs:
-  - `PurchaselyBuilder.apiKey(...).runningMode(...).logLevel(...).start()`
-  - `PresentationBuilder.placement(id) / .screen(id) / .defaultSource()` →
-    `.contentId(...).onLoaded(...).onPresented(...).onCloseRequested(...).onDismissed(...).build()`
-  - `PresentationRequest.preload()` / `.display(transition)` — `display()`
-    resolves at **dismiss time** with the enriched 5-field `PresentationOutcome`
+- **Adapts the plugin to the Purchasely 6.0 native SDKs.** Only the paywall
+  surface changed: **starting the SDK**, **displaying / preloading / closing a
+  presentation**, and the **action interceptor**. Everything else on the
+  `Purchasely` class (purchases, restore, identity, catalog, subscriptions data,
+  user attributes, events, dynamic offerings, consent, config) keeps the same
+  names, signatures and behaviour. See `MIGRATION-v6.md` for the complete
+  old→new mapping.
+- **Start.** The SDK is now started with the fluent builder
+  `PurchaselyBuilder.apiKey(...).appUserId(...).runningMode(...).logLevel(...).allowDeeplink(...).allowCampaigns(...).stores([...]).storekitVersion(...).start()`.
+- **Presentation.** Build a request with `PresentationBuilder`
+  (`.placement(id)` / `.screen(id)` / `.defaultSource()`) plus
+  `.contentId(...).onLoaded(...).onPresented(...).onCloseRequested(...).onDismissed(...).build()`,
+  then drive its lifecycle:
+  - `PresentationRequest.preload()` fetches the screen without displaying it.
+  - `PresentationRequest.display([Transition])` shows it and resolves at
+    **dismiss time** with the 5-field `PresentationOutcome`
     (`presentation`, `purchaseResult`, `plan`, `closeReason`, `error`).
-  - `Purchasely.interceptAction(PresentationActionKind, handler)` — typed
-    action interceptors with `InterceptResult.success` / `.failed` /
-    `.notHandled`.
-- **Bridge contract (see `BRIDGE-CONTRACT.md`).** iOS workarounds:
-  - `onCloseRequested` is synthesised from iOS `onClose`.
-  - Enriched 5-field outcome synthesised from the 2-field iOS native outcome;
-    `closeReason` is `null` until the native fix lands.
-  - `display(...)` Future resolves at the `onDismissed` event, not at the
-    SDK's display completion handler.
-  - Error completions synthesise `onPresented(null, error)` + a dismissal
-    outcome so Dart callbacks fire uniformly across platforms.
+  - A loaded `Presentation` exposes `display()`, `close()` and `back()` for
+    programmatic control.
+  - Inline (embedded) rendering uses the `PLYPresentationView` widget.
+- **Action interceptor.** Replaced by
+  `PurchaselyBridge.ensureInstalled().registerInterceptor(PresentationActionKind, handler)`
+  (plus `removeInterceptor` / `removeAllInterceptors`). The handler returns an
+  `InterceptResult` (`success` / `failed` / `notHandled`) — there is no more
+  `onProcessAction`.
+- **Behaviour — running mode default.** The 6.0 native SDKs default to
+  **Observer** mode (was Full). The builder mirrors this default
+  (`RunningMode.observer`); pass `.runningMode(RunningMode.full)` to keep the
+  previous Full behaviour.
+- **Behaviour — `presentSubscriptions` is a no-op on Android.** The native
+  subscriptions screen was removed from the Android 6.0 SDK, so
+  `Purchasely.presentSubscriptions()` does nothing on Android. It still works on
+  iOS.
 - **Native SDK bump.**
   - iOS: `Purchasely 6.0.0` (was 5.7.4).
   - Android: `io.purchasely:core 6.0.0` (was 5.7.4).
-- **Breaking — running mode default.** The native v6 SDKs default to Observer
-  mode (was Full in v5). The v6 builder mirrors this; legacy callers passing
-  `PLYRunningMode.full` are unchanged.
-- The legacy v5 `Purchasely.*` static surface remains available during the
-  6.x beta line for incremental migration. New code should adopt the v6
-  builders.
+  - These versions may not be published on CocoaPods / Maven Central yet; local
+    builds resolve them via `mavenLocal()` (Android) and a development pod (iOS).
 
 ## 5.7.3
 - Updated iOS Purchasely SDK to 5.7.4.

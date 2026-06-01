@@ -4,22 +4,27 @@
 
 Purchasely is a solution to ease the integration and boost your In-App Purchase & Subscriptions on the App Store, Google Play Store and Huawei App Gallery.
 
+> **Upgrading to 6.0?** The paywall surface (start, display/preload/close, action
+> interceptor) moved to a fluent builder API; everything else on the `Purchasely`
+> class is unchanged. See [`MIGRATION-v6.md`](../MIGRATION-v6.md) for the complete
+> old→new mapping.
+
 ## Installation
 
 ```yaml
 dependencies:
-  purchasely_flutter: ^6.0.0-beta.0
+  purchasely_flutter: ^6.0.0
 ```
 
-## Usage (v6 — recommended)
+## Usage
 
 ```dart
 import 'package:purchasely_flutter/purchasely_flutter.dart';
 
 // 1. Start the SDK (fluent builder, `start()` returns once configured).
 await PurchaselyBuilder.apiKey('<YOUR_API_KEY>')
-    .runningMode(V6RunningMode.observer)
-    .logLevel(V6LogLevel.error)
+    .runningMode(RunningMode.observer)
+    .logLevel(LogLevel.error)
     .stores([PLYStore.google])
     .start();
 
@@ -52,38 +57,21 @@ switch (outcome.purchaseResult) {
 }
 ```
 
-## Migration to v6.x
+## Migration to 6.0
 
-The v6 release introduces a cross-platform fluent API matching the iOS and
-Android v6 SDKs:
+This release adapts the plugin to the Purchasely 6.0 native SDKs. Only the
+paywall surface changed; everything else on the `Purchasely` class is unchanged.
 
-| v5 (still available, deprecated) | v6 (recommended) |
+| Old (`Purchasely.*`) | New |
 |---|---|
-| `Purchasely.start(apiKey: ..., runningMode: PLYRunningMode.full)` | `PurchaselyBuilder.apiKey(...).runningMode(V6RunningMode.full).start()` |
-| `Purchasely.presentPresentationForPlacement(id, isFullscreen: true)` | `PresentationBuilder.placement(id).build().display(Transition.fullScreen())` |
+| `Purchasely.start(apiKey: ..., runningMode: PLYRunningMode.full)` | `PurchaselyBuilder.apiKey(...).runningMode(RunningMode.full).start()` |
+| `Purchasely.presentPresentationForPlacement(id, isFullscreen: true)` | `PresentationBuilder.placement(id).build().display(const Transition.fullScreen())` |
 | `Purchasely.fetchPresentation(...)` | `PresentationBuilder.placement(id).build().preload()` |
 | `result.result` (3-value enum), `result.plan` | `outcome.presentation`, `outcome.purchaseResult`, `outcome.plan`, `outcome.closeReason`, `outcome.error` |
-| `Purchasely.setPaywallActionInterceptor((info, action, parameters, processAction) { ... })` | `Purchasely.interceptAction(PresentationActionKind.purchase, (info, payload) async => InterceptResult.notHandled)` |
+| `Purchasely.setPaywallActionInterceptorCallback(...)` + `onProcessAction(bool)` | `PurchaselyBridge.ensureInstalled().registerInterceptor(PresentationActionKind.purchase, (info, payload) async => InterceptResult.notHandled)` |
 
-The legacy `Purchasely.*` static surface continues to work during the v6
-beta line for incremental migration. Both surfaces co-exist; you can adopt
-the new API screen by screen.
-
-## Usage (legacy v5)
-
-```dart
-bool configured = await Purchasely.start(
-    apiKey: '<YOUR_API_KEY>',
-    androidStores: ['Google, Huawei, Amazon'],
-    storeKit1: false,
-    logLevel: PLYLogLevel.error,
-    runningMode: PLYRunningMode.full,
-    userId: null,
-);
-
-var result = await Purchasely.presentPresentationForPlacement(
-    '<YOUR_PLACEMENT_ID>', isFullscreen: true);
-```
+See [`MIGRATION-v6.md`](../MIGRATION-v6.md) for the full old→new mapping and
+before/after examples.
 
 ## 🏁 Documentation
 A complete documentation is available on our website [https://docs.purchasely.com](https://docs.purchasely.com)
