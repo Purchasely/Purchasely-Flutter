@@ -69,7 +69,7 @@ Les SDK natifs 6.0 exposent désormais des callbacks succès/erreur sur
   disait le contraire). Le bridge le mappe désormais via `closeReason.rawDescription`
   (`button` / `back_system` / `programmatic`), au lieu de toujours envoyer `null`.
 
-### 2.3 Corrections de compilation Android (contre `io.purchasely:core:6.0.0-rc1`)
+### 2.3 Corrections de compilation Android (contre `io.purchasely:core:6.0.0-rc.1`)
 
 - Constructeur `PLYTransition` : l'ordre des paramètres a changé en v6
   (`type, width, height, heightPercentage, backgroundColors, dismissible`).
@@ -77,31 +77,41 @@ Les SDK natifs 6.0 exposent désormais des callbacks succès/erreur sur
   nommés avec le modèle moderne `PLYTransitionDimension(PLYDimensionType.PERCENTAGE, ratio)`
   pour `height`.
 
-### 2.4 Pin des versions natives → pré-release **rc1**
+### 2.4 Pin des versions natives → pré-release **`6.0.0-rc.1`** (publié, dépôts publics)
 
-Les pins étaient sur `6.0.0` (artefact non publié et **antérieur** à la source
-vérifiée — il manquait p.ex. la signature `synchronize(onSuccess, onError)`).
-Aligné sur le pré-release réellement disponible / publiable :
+Les pins étaient sur `6.0.0` (artefact antérieur à la source vérifiée — il
+manquait p.ex. `synchronize(onSuccess, onError)`). Version finale retenue :
+**`6.0.0-rc.1` sur les DEUX plateformes**, qui est **réellement publiée** —
+Android sur **Maven Central**, iOS sur le **CocoaPods trunk**. Conséquence :
+le projet builde depuis les dépôts publics, **`mavenLocal()` retiré** (Android)
+et **dev-pod retiré** (iOS) → le Podfile n'a plus de chemin absolu.
+
+> Attention au token exact : c'est `6.0.0-rc.1` (**avec point**) partout. Le
+> `6.0.0-rc1` (sans point) n'existe QUE dans un `~/.m2` local — il est 404 sur
+> Maven Central comme sur CocoaPods.
 
 | Fichier | Avant | Après |
 |---|---|---|
-| `purchasely/android/build.gradle` | `io.purchasely:core:6.0.0` | `io.purchasely:core:6.0.0-rc1` |
-| `purchasely_google/android/build.gradle` | `io.purchasely:google-play:6.0.0` | `…:6.0.0-rc1` |
-| `purchasely_android_player/android/build.gradle` | `io.purchasely:player:6.0.0` | `…:6.0.0-rc1` |
+| `purchasely/android/build.gradle` | `io.purchasely:core:6.0.0` | `io.purchasely:core:6.0.0-rc.1` |
+| `purchasely_google/android/build.gradle` | `io.purchasely:google-play:6.0.0` | `…:6.0.0-rc.1` |
+| `purchasely_android_player/android/build.gradle` | `io.purchasely:player:6.0.0` | `…:6.0.0-rc.1` |
 | `purchasely/ios/purchasely_flutter.podspec` | `Purchasely '6.0.0'` | `Purchasely '6.0.0-rc.1'` |
-| `purchasely/example/android/app/build.gradle` | `google-play:6.0.0`, `player:6.0.0` | `…:6.0.0-rc1` |
+| `purchasely/example/android/app/build.gradle` | `google-play:6.0.0`, `player:6.0.0` | `…:6.0.0-rc.1` |
+| `purchasely/example/android/build.gradle` | `mavenLocal()` présent | retiré (Maven Central suffit) |
+| `purchasely/example/ios/Podfile` | dev-pod `:path => '/Users/kevin/Purchasely/iOS'` | retiré (résout depuis le trunk) |
 
-> Note conventions : l'artefact Gradle est `6.0.0-rc1` (sans point), le tag/pod iOS
-> est `6.0.0-rc.1` (avec point, SemVer). C'est normal (conventions distinctes).
+> Même chaîne `6.0.0-rc.1` (avec point) sur les deux plateformes ; publiée sur
+> Maven Central (Android) et CocoaPods trunk (iOS). `mavenLocal()` et le dev-pod
+> iOS ne sont plus nécessaires.
 
 > ⚠️ **Piège Gradle (crash runtime trouvé par le test d'intégration).** L'`app/build.gradle`
 > de l'exemple pinnait `google-play:6.0.0` / `player:6.0.0`, qui remontaient
 > `core:6.0.0` transitivement. **Gradle classe `6.0.0` (release) au-dessus de
-> `6.0.0-rc1` (pré-release)** : le `core` était donc silencieusement remonté à
-> `6.0.0` au runtime alors que le plugin compilait contre `6.0.0-rc1` →
+> `6.0.0-rc.1` (pré-release)** : le `core` était donc silencieusement remonté à
+> `6.0.0` au runtime alors que le plugin compilait contre `6.0.0-rc.1` →
 > `java.lang.NoSuchMethodError` sur le constructeur `PLYTransition` v6
 > (signature `PLYTransitionDimension` absente du `6.0.0`). Corrigé en pinnant
-> aussi l'exemple sur `6.0.0-rc1`. **À retenir** : toutes les dépendances
+> aussi l'exemple sur `6.0.0-rc.1`. **À retenir** : toutes les dépendances
 > `io.purchasely:*` doivent pointer la MÊME version pré-release, sinon une seule
 > référence `6.0.0` perdue casse tout le runtime.
 
@@ -242,9 +252,9 @@ No-ops v6 (UI native supprimée) : `presentSubscriptions`,
 |---|---|---|
 | Dart analyze | `flutter analyze` | ✅ clean |
 | Dart tests | `flutter test` | ✅ (suite complète, dont nouveaux tests `synchronize`) |
-| Build Android | `flutter build apk --debug` (vs `io.purchasely:core:6.0.0-rc1` mavenLocal) | ✅ `app-debug.apk` |
+| Build Android | `flutter build apk --debug` (résout `6.0.0-rc.1` depuis **Maven Central**, sans mavenLocal) | ✅ `app-debug.apk` |
 | Tests unit Android | `./gradlew :purchasely_flutter:testDebugUnitTest` | ✅ BUILD SUCCESSFUL |
-| Build iOS | `xcodebuild -workspace Runner.xcworkspace -scheme Runner -sdk iphonesimulator build` (dev-pod `Purchasely 6.0.0-rc.1`) | ✅ BUILD SUCCEEDED |
+| Build iOS | `xcodebuild … build` (`Purchasely 6.0.0-rc.1` depuis le **CocoaPods trunk**, sans dev-pod) | ✅ BUILD SUCCEEDED |
 | Tests unit iOS | `xcodebuild test -only-testing:RunnerTests` (iPhone 17, iOS 26.5) | ✅ Executed 9 tests, 0 failures |
 | Smoke iOS (réel, iPhone 17) | `flutter run` | ✅ SDK démarré, `Anonymous Id`, `is eligible: true`, `Product found`, dynamic offerings — backend réel ; UI rendue |
 | Smoke Android (réel, Pixel_Tablet) | install APK + launch | ✅ `Initialization done`, `isSdkStarted=true`, `USER_LOGGED_IN userId=MY_USER_ID`, `Product found` — exemple Flutter, backend réel |
@@ -268,44 +278,47 @@ No-ops v6 (UI native supprimée) : `presentSubscriptions`,
 - `purchasely/android/.../PurchaselyFlutterPlugin.kt` — `synchronize` callbacks,
   `PLYTransition` (args nommés + `PLYTransitionDimension`), imports.
 - `purchasely/android/build.gradle`, `purchasely_google/android/build.gradle`,
-  `purchasely_android_player/android/build.gradle` — pin `6.0.0-rc1`.
+  `purchasely_android_player/android/build.gradle` — pin `6.0.0-rc.1`.
+- `purchasely/example/android/build.gradle` — `mavenLocal()` retiré.
+- `purchasely/example/android/app/build.gradle` — pin `6.0.0-rc.1`.
+- `purchasely/example/ios/Podfile` (+ `Podfile.lock`) — dev-pod retiré, résout
+  `Purchasely 6.0.0-rc.1` depuis le trunk (plus de chemin absolu → commitable).
 - `purchasely/test/platform_channel_test.dart` — tests `synchronize`.
 - `purchasely/android/.../PurchaselyFlutterPluginTest.kt` — test `synchronize`.
 - `purchasely/example/ios/RunnerTests/SwiftPurchaselyFlutterPluginTests.swift` — recréé.
 - `purchasely/example/lib/main.dart` — exemple `synchronize`.
 - `MIGRATION-v6.md`, `V6_MIGRATION_REPORT.md` — docs.
 
-**Éditions cross-repo non commitées (machine-locale, à NE PAS committer ici) :**
-- `/Users/kevin/Purchasely/iOS/Purchasely.podspec` : version bumpée `3.6.2` → `6.0.0-rc.1`
-  pour que le dev-pod local satisfasse la dépendance du plugin. À revert une fois le
-  pod 6.0 publié sur le trunk.
+**Édition cross-repo** : `/Users/kevin/Purchasely/iOS/Purchasely.podspec` avait été
+bumpé pour le dev-pod ; **revert à `3.6.2`** car le dev-pod n'est plus utilisé (résolution
+depuis le trunk).
 
 ---
 
 ## 7. Doutes / points à reviewer (À LIRE)
 
-1. **Version native à publier (le plus important).** J'ai pinné sur `6.0.0-rc1`
-   (Android) / `6.0.0-rc.1` (iOS) parce que c'est l'artefact réellement présent en
-   `mavenLocal` + la source iOS `develop`, et que c'est le pré-release publiable. Le
-   `6.0.0` précédent n'était ni publié ni à jour. **À confirmer** : quel est le nom
-   exact de l'artefact qui sera publié (Maven Central / CocoaPods trunk) ? Mettre à
-   jour les pins en conséquence avant merge/release. Tant que ce n'est pas publié, le
-   CI natif restera rouge (cf. blocage historique connu) — les builds locaux passent
-   via `mavenLocal()` + dev-pod.
+1. **Version native (RÉSOLU).** Pin = **`6.0.0-rc.1`** (avec point) sur les deux
+   plateformes, **réellement publié** : Android sur Maven Central
+   (`repo1.maven.org/.../io/purchasely/core/6.0.0-rc.1/` → HTTP 200), iOS sur le
+   CocoaPods trunk (`pod trunk info Purchasely` → `6.0.0-rc.1`, publié le 12/06/2026).
+   Le projet builde donc depuis les dépôts publics (mavenLocal + dev-pod retirés) →
+   le CI natif devrait passer. **Seul reste à trancher (release)** : `6.0.0` (GA) est
+   sur Maven Central mais **pas encore sur CocoaPods trunk** — donc `6.0.0-rc.1` est
+   la seule version cohérente cross-plateforme publiée aujourd'hui. Bumper vers
+   `6.0.0` quand le pod GA sortira.
 
 2. **Version du plugin Flutter.** Reste `6.0.0-beta.0` (pubspecs + `sdkBridgeVersion`
    Kotlin/Swift). Faut-il l'aligner (beta → rc) avec le pré-release natif ? Décision
    de release, non touchée pour ne pas élargir le scope.
 
-3. **Podspec iOS local.** Le build iOS dépend d'un dev-pod
-   `pod 'Purchasely', :path => '/Users/kevin/Purchasely/iOS'` + d'un bump de version
-   du podspec de ce repo (non commité). Tant que le pod 6.0 n'est pas sur le trunk,
-   c'est inévitable. Le Podfile de l'exemple est machine-spécifique (chemin absolu).
+3. **Podspec iOS local (RÉSOLU).** Le dev-pod `:path` a été retiré : iOS résout
+   `Purchasely 6.0.0-rc.1` depuis le trunk. Le Podfile n'a plus de chemin absolu et
+   est donc commité. (Le bump cross-repo du podspec iOS a été reverté.)
 
 4. **Cohérence des versions natives `io.purchasely:*` (vérifier au merge).** Le
    crash `PLYTransition` venait d'un `6.0.0` perdu dans l'exemple. Avant merge,
    `grep -rn "io.purchasely:.*6\.0\.0\b" *` pour s'assurer qu'aucune référence ne
-   pointe une autre version que `6.0.0-rc1`. Idem quand la version finale sortira.
+   pointe une autre version que `6.0.0-rc.1`. Idem quand la version finale sortira.
 
 5. **`signPromotionalOffer` côté Android.** Non géré dans le `when` du bridge Android
    (renvoie `notImplemented`) — comportement pré-existant (offres promo Apple = iOS).
@@ -330,6 +343,6 @@ No-ops v6 (UI native supprimée) : `presentSubscriptions`,
 - Créer `purchasely-ai-skill/references/flutter/migration-v6.md` (analogue
   Android/iOS) à partir de `MIGRATION-v6.md`.
 - `purchasely-ai-skill/references/sdk-versions.md` : Flutter passe de `5.7.3` à la
-  version v6 du plugin (cf. doute §2), natifs `6.0.0-rc1`.
+  version v6 du plugin (cf. doute §2), natifs `6.0.0-rc.1`.
 - Docs publiques (`../Documentation`) : guide d'intégration Flutter + guide de
   migration 5→6 Flutter, en miroir des guides Android/iOS.

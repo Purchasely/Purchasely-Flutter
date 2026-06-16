@@ -397,12 +397,11 @@ remains source-compatible; deeplinks add v6 names with deprecated aliases:
 > `userSubscriptions()` / `userSubscriptionsHistory()`.
 
 > **Native dependency.** This release targets the Purchasely 6.0 native SDKs,
-> pinned to the **`6.0.0-rc1`** pre-release (Android `io.purchasely:core`,
-> `google-play`, `player` at `6.0.0-rc1`; iOS `Purchasely` at `6.0.0-rc.1`).
-> These pre-release versions may not be published on CocoaPods trunk / Maven
-> Central yet; local builds resolve them via `mavenLocal()` (Android) and a
-> development pod pointing at the iOS SDK source (iOS). Update the pins to the
-> final published artifact before release.
+> pinned to the **`6.0.0-rc.1`** pre-release on both platforms
+> (Android `io.purchasely:core` / `google-play` / `player` `6.0.0-rc.1`;
+> iOS `Purchasely` `6.0.0-rc.1`). Both are published — Android on **Maven
+> Central**, iOS on the **CocoaPods trunk** — so the project builds from the
+> public repositories with no `mavenLocal()` and no development pod.
 
 ---
 
