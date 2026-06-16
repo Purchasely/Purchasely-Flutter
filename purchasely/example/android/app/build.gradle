@@ -66,6 +66,6 @@ dependencies {
     // Gradle ranks 6.0.0 (release) above 6.0.0-rc1 (pre-release), so a stray
     // 6.0.0 here would silently upgrade the transitive core to 6.0.0 and break
     // the v6 PLYTransition constructor at runtime (NoSuchMethodError).
-    implementation 'io.purchasely:google-play:6.0.0-rc1'
-    implementation 'io.purchasely:player:6.0.0-rc1'
+    implementation 'io.purchasely:google-play:6.0.0-rc.1'
+    implementation 'io.purchasely:player:6.0.0-rc.1'
 }
