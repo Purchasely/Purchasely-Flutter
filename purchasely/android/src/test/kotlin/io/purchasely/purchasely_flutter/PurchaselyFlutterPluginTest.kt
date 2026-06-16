@@ -148,6 +148,19 @@ class PurchaselyFlutterPluginTest {
     }
 
     @Test
+    fun `synchronize routes to the native callback and surfaces its result`() {
+        // The 6.0 native SDK resolves synchronize() through onSuccess/onError
+        // callbacks. With no store configured (fresh plugin, no Builder), the
+        // SDK invokes onError(PLYError.NoStoreConfigured) synchronously, which
+        // the bridge must surface as a result error rather than the old
+        // fire-and-forget result.success(true). This proves the callback is
+        // wired end-to-end without mocking the @JvmStatic SDK entry point.
+        plugin.onMethodCall(MethodCall("synchronize", null), mockResult)
+
+        verify { mockResult.error(eq("-1"), any(), any()) }
+    }
+
+    @Test
     fun `removed Android subscription UI methods are no-ops`() {
         plugin.onAttachedToEngine(mockFlutterPluginBinding)
 

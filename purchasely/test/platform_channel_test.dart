@@ -33,6 +33,34 @@ void main() {
 
         expect(methodCalls.first.method, 'synchronize');
       });
+
+      test('synchronize awaits the native callback (resolves on success)',
+          () async {
+        // The 6.0 native SDKs resolve synchronize() through a success/error
+        // callback. The Dart Future must complete (not hang) once native
+        // acknowledges. A timeout failure here would catch a regression to the
+        // old fire-and-forget bridge that never wired the callback.
+        await Purchasely.synchronize().timeout(const Duration(seconds: 1));
+        expect(methodCalls.last.method, 'synchronize');
+      });
+
+      test('synchronize rethrows a native failure as PlatformException',
+          () async {
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(channel, (MethodCall methodCall) async {
+          methodCalls.add(methodCall);
+          if (methodCall.method == 'synchronize') {
+            throw PlatformException(
+                code: '-1', message: 'Synchronization failed');
+          }
+          return _handleMethodCall(methodCall);
+        });
+
+        expect(
+          () => Purchasely.synchronize(),
+          throwsA(isA<PlatformException>()),
+        );
+      });
     });
 
     group('User Management', () {
