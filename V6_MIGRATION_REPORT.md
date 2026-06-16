@@ -1,0 +1,335 @@
+# Rapport de migration Flutter → Purchasely SDK natif 6.0
+
+> Session du 2026-06-15 sur la branche `feat/sdk-v6-migration`.
+> Ce document récapitule **tout ce qui a été fait** pour finaliser la migration
+> du plugin Flutter vers les SDK natifs Purchasely 6.0, et sert de source pour
+> mettre à jour `../Documentation` (docs publiques) et `../purchasely-ai-skill`
+> (références `flutter/`), comme cela a été fait pour Android et iOS.
+
+---
+
+## 1. Contexte et principe
+
+Le plugin Flutter Purchasely est un **bridge Dart ↔ natif** (MethodChannel /
+EventChannel) vers les SDK natifs iOS (`Purchasely`) et Android
+(`io.purchasely:core`). Cette migration **adapte le bridge aux SDK natifs 6.0**.
+
+Principe directeur (validé avec le demandeur) :
+
+- **Pas de nommage « v6 » dans l'API Dart.** Les nouvelles méthodes **remplacent**
+  l'existant. Quand il n'y a pas de nouvelle méthode native (ex. `setUserAttribute*`,
+  `synchronize`), on **laisse en l'état**.
+- Trois zones sont des breaking changes : **démarrage du SDK**, **affichage /
+  preload / fermeture d'une présentation**, et **l'action interceptor**. Le reste
+  de la surface `Purchasely.*` reste source-compatible. Les deeplinks prennent les
+  noms v6 (`allowDeeplink`, `handleDeeplink`) avec alias dépréciés.
+
+L'essentiel de la couche Dart, du bridge Android et du bridge iOS **existait déjà**
+sur la branche au début de la session (le modèle mental « iOS pas commencé » était
+obsolète — iOS était en réalité très avancé). Le travail de cette session a consisté
+à : **vérifier la compilation contre les vrais SDK natifs v6**, **corriger les
+divergences d'API**, **ajouter le callback à `synchronize`**, **compléter les tests**,
+et **valider sur simulateurs**.
+
+---
+
+## 2. Changements effectués cette session
+
+### 2.1 `synchronize()` — ajout du callback (Dart + Android + iOS)
+
+Les SDK natifs 6.0 exposent désormais des callbacks succès/erreur sur
+`synchronize()`. Le bridge a été câblé pour en profiter :
+
+- **Dart** (`lib/purchasely_flutter.dart`) : `synchronize()` garde sa signature
+  `Future<void>` mais **résout réellement à la fin de la synchronisation** et
+  **lève une `PlatformException` en cas d'échec** (au lieu du fire-and-forget).
+  Source-compatible pour le code qui faisait déjà `await`.
+- **Android** (`PurchaselyFlutterPlugin.kt`) : `synchronize(result)` appelle
+  `Purchasely.synchronize(onSuccess = { result.success(true) }, onError = { e -> result.error(...) })`
+  (signature native `synchronize(onSuccess: (PLYPlan?) -> Unit, onError: (PLYError?) -> Unit)`).
+  Avant, le bridge appelait `Purchasely.synchronize()` puis `result.success(true)`
+  immédiatement (sans attendre).
+- **iOS** (`SwiftPurchaselyFlutterPlugin.swift`) : les callbacks de
+  `Purchasely.synchronize(success:failure:)` étaient **commentés** (la `Future`
+  Dart ne se résolvait jamais → gel). Décommentés → `result(true)` / `result(error)`.
+
+### 2.2 Corrections de compilation iOS (contre le SDK natif `develop` / 6.0.0-rc.1)
+
+- `PLYPresentationBuilder.from(presentationId:)` **n'existe pas** en v6 →
+  remplacé par `PLYPresentationBuilder.from(screenId:)`.
+- `PLYPresentationOutcome(purchaseResult:plan:)` (init 2 args) **n'existe pas** →
+  remplacé par l'init 0-arg `PLYPresentationOutcome()` (présent dans
+  `SwiftPurchaselyFlutterPlugin.swift` et `NativeView.swift`).
+- `Purchasely.subscriptionsController()` **supprimé** en v6 → `presentSubscriptions`
+  devient un **no-op** sur iOS (comme Android), avec log. (Voir §2.5.)
+- Transitions `drawer`/`popin` : passage de l'API dépréciée
+  `.drawer(heightPercentage:dismissible:)` à `.drawer(height: .percentage(...), dismissible:)`
+  (et `popin(width:nil, height:.percentage(...), ...)`).
+- **Bonus** : iOS v6 expose maintenant `PLYPresentationOutcome.closeReason` (la doc
+  disait le contraire). Le bridge le mappe désormais via `closeReason.rawDescription`
+  (`button` / `back_system` / `programmatic`), au lieu de toujours envoyer `null`.
+
+### 2.3 Corrections de compilation Android (contre `io.purchasely:core:6.0.0-rc1`)
+
+- Constructeur `PLYTransition` : l'ordre des paramètres a changé en v6
+  (`type, width, height, heightPercentage, backgroundColors, dismissible`).
+  L'appel positionnel du bridge provoquait un type-mismatch → réécrit en arguments
+  nommés avec le modèle moderne `PLYTransitionDimension(PLYDimensionType.PERCENTAGE, ratio)`
+  pour `height`.
+
+### 2.4 Pin des versions natives → pré-release **rc1**
+
+Les pins étaient sur `6.0.0` (artefact non publié et **antérieur** à la source
+vérifiée — il manquait p.ex. la signature `synchronize(onSuccess, onError)`).
+Aligné sur le pré-release réellement disponible / publiable :
+
+| Fichier | Avant | Après |
+|---|---|---|
+| `purchasely/android/build.gradle` | `io.purchasely:core:6.0.0` | `io.purchasely:core:6.0.0-rc1` |
+| `purchasely_google/android/build.gradle` | `io.purchasely:google-play:6.0.0` | `…:6.0.0-rc1` |
+| `purchasely_android_player/android/build.gradle` | `io.purchasely:player:6.0.0` | `…:6.0.0-rc1` |
+| `purchasely/ios/purchasely_flutter.podspec` | `Purchasely '6.0.0'` | `Purchasely '6.0.0-rc.1'` |
+| `purchasely/example/android/app/build.gradle` | `google-play:6.0.0`, `player:6.0.0` | `…:6.0.0-rc1` |
+
+> Note conventions : l'artefact Gradle est `6.0.0-rc1` (sans point), le tag/pod iOS
+> est `6.0.0-rc.1` (avec point, SemVer). C'est normal (conventions distinctes).
+
+> ⚠️ **Piège Gradle (crash runtime trouvé par le test d'intégration).** L'`app/build.gradle`
+> de l'exemple pinnait `google-play:6.0.0` / `player:6.0.0`, qui remontaient
+> `core:6.0.0` transitivement. **Gradle classe `6.0.0` (release) au-dessus de
+> `6.0.0-rc1` (pré-release)** : le `core` était donc silencieusement remonté à
+> `6.0.0` au runtime alors que le plugin compilait contre `6.0.0-rc1` →
+> `java.lang.NoSuchMethodError` sur le constructeur `PLYTransition` v6
+> (signature `PLYTransitionDimension` absente du `6.0.0`). Corrigé en pinnant
+> aussi l'exemple sur `6.0.0-rc1`. **À retenir** : toutes les dépendances
+> `io.purchasely:*` doivent pointer la MÊME version pré-release, sinon une seule
+> référence `6.0.0` perdue casse tout le runtime.
+
+### 2.5 `presentSubscriptions` / `displaySubscriptionCancellationInstruction`
+
+Les écrans natifs d'abonnements et de désabonnement ont été retirés des SDK 6.0
+**sur les deux plateformes**. Ces deux méthodes sont désormais des **no-ops** sur
+Android **et** iOS. Reconstruire son propre écran via `userSubscriptions()` /
+`userSubscriptionsHistory()`.
+
+### 2.6 Tests ajoutés / mis à jour
+
+- **Dart** (`test/platform_channel_test.dart`) : 2 tests `synchronize` ajoutés —
+  résolution effective (await + timeout) et propagation d'erreur (`PlatformException`).
+- **Android** (`PurchaselyFlutterPluginTest.kt`) : test `synchronize` câblé bout en
+  bout sans mock du SDK `@JvmStatic` (chemin « no store » → `onError` → `result.error`).
+- **iOS** (`RunnerTests/SwiftPurchaselyFlutterPluginTests.swift`) : fichier **recréé**
+  (il avait été supprimé ; le `.pbxproj` le référençait encore → recâblé
+  automatiquement). 9 tests qui gardent la surface native v6 dont dépend le bridge
+  (init builder, factories `PLYPresentationBuilder`, `PLYPresentationOutcome` +
+  `closeReason`, enums interceptor/action, display modes).
+
+### 2.7 Exemple
+
+- `example/lib/main.dart` : `synchronize()` illustre la nouvelle sémantique
+  (`await` + `try/catch`).
+
+### 2.8 Documentation
+
+- `MIGRATION-v6.md` mis à jour (callback `synchronize`, parité `closeReason`,
+  `presentSubscriptions` no-op des deux côtés, pin natif rc1).
+- Ce rapport (`V6_MIGRATION_REPORT.md`).
+
+---
+
+## 3. API Dart v6 finale (référence pour `../Documentation` + `../purchasely-ai-skill`)
+
+### Initialisation
+
+```dart
+final bool configured = await PurchaselyBuilder.apiKey('<API_KEY>')
+    .appUserId('user_id')                        // optionnel
+    .runningMode(RunningMode.full)               // observer (défaut) | full
+    .logLevel(LogLevel.error)                    // debug | info | warn | error
+    .allowDeeplink(true)
+    .allowCampaigns(true)                        // optionnel
+    .stores([PLYStore.google])                   // Android : google | huawei | amazon
+    .storekitVersion(StorekitVersion.storeKit2)  // iOS : storeKit2 (défaut) | storeKit1
+    .start();
+```
+
+> **Le mode par défaut est `observer`** en v6. Passer `.runningMode(RunningMode.full)`
+> si Purchasely doit gérer/valider les achats.
+
+### Affichage d'une présentation
+
+```dart
+final outcome = await PresentationBuilder.placement('<PLACEMENT_ID>')
+    .contentId('content_id')        // optionnel
+    .onLoaded((p, err) {})          // optionnel
+    .onPresented((p, err) {})       // optionnel
+    .onCloseRequested(() {})        // optionnel
+    .onDismissed((o) {})            // optionnel
+    .build()
+    .display(const Transition.fullScreen()); // fullScreen | modal | push | …
+
+// PresentationOutcome (5 champs) :
+//   presentation, purchaseResult, plan, closeReason, error
+```
+
+Autres sources : `PresentationBuilder.screen('<SCREEN_ID>')`,
+`PresentationBuilder.defaultSource()`. Cycle de vie :
+`request.preload()` → `Presentation` (avec `.display()`, `.close()`, `.back()`).
+
+### Action interceptor
+
+```dart
+await Purchasely.interceptAction(PresentationActionKind.purchase, (info, payload) async {
+  if (payload is PurchasePayload) { /* … */ }
+  return InterceptResult.notHandled; // success | failed | notHandled
+});
+await Purchasely.removeInterceptor(PresentationActionKind.purchase);
+await Purchasely.removeAllInterceptors();
+```
+
+Kinds : `close, closeAll, login, navigate, purchase, restore, openPresentation,
+openPlacement, promoCode, webCheckout`. Payloads typés : `NavigatePayload`,
+`PurchasePayload`, `ClosePayload`, `CloseAllPayload`, `OpenPresentationPayload`,
+`OpenPlacementPayload`, `WebCheckoutPayload`.
+
+### Inline (embarqué)
+
+```dart
+final request = PresentationBuilder.placement('inline').onDismissed((o) {}).build();
+PLYPresentationView(request: request); // dans le widget tree
+```
+
+### Synchronize (nouveau comportement)
+
+```dart
+try {
+  await Purchasely.synchronize(); // résout à la fin ; lève en cas d'échec
+} catch (e) { /* PlatformException */ }
+```
+
+### Inchangé (source-compatible)
+
+`purchaseWithPlanVendorId`, `signPromotionalOffer`, `restoreAllProducts`,
+`silentRestoreAllProducts`, `userLogin`/`userLogout`, `isAnonymous`,
+`anonymousUserId`, `allProducts`, `productWithIdentifier`, `planWithIdentifier`,
+`isEligibleForIntroOffer`, `userSubscriptions`/`userSubscriptionsHistory`,
+`setUserAttribute*` (+ increment/decrement/clear), `listenToEvents`/`listenToPurchases`,
+`setDynamicOffering`/`getDynamicOfferings`/…, `revokeDataProcessingConsent`,
+`setLanguage`, `setThemeMode`, `setLogLevel`, `setDebugMode`,
+`allowDeeplink`/`handleDeeplink` (+ alias dépréciés `readyToOpenDeeplink`/`isDeeplinkHandled`).
+
+No-ops v6 (UI native supprimée) : `presentSubscriptions`,
+`displaySubscriptionCancellationInstruction`.
+
+---
+
+## 4. Contrat de canal (Dart ↔ natif)
+
+- **MethodChannel `purchasely`** : `start`, `preload`, `display`, `close`, `back`,
+  `registerInterceptor`, `removeInterceptor`, `removeAllInterceptors`,
+  `interceptorResolve`, `synchronize`, + toute la surface conservée.
+- **EventChannel `purchasely-presentation-events`** : `onLoaded`, `onPresented`,
+  `onCloseRequested`, `onDismissed`, `interceptorTriggered` (chaque enveloppe porte
+  un `requestId`).
+- EventChannels existants : `purchasely-events`, `purchasely-purchases`,
+  `purchasely-user-attributes`.
+
+---
+
+## 5. Vérifications exécutées (preuves)
+
+| Vérification | Commande | Résultat |
+|---|---|---|
+| Dart analyze | `flutter analyze` | ✅ clean |
+| Dart tests | `flutter test` | ✅ (suite complète, dont nouveaux tests `synchronize`) |
+| Build Android | `flutter build apk --debug` (vs `io.purchasely:core:6.0.0-rc1` mavenLocal) | ✅ `app-debug.apk` |
+| Tests unit Android | `./gradlew :purchasely_flutter:testDebugUnitTest` | ✅ BUILD SUCCESSFUL |
+| Build iOS | `xcodebuild -workspace Runner.xcworkspace -scheme Runner -sdk iphonesimulator build` (dev-pod `Purchasely 6.0.0-rc.1`) | ✅ BUILD SUCCEEDED |
+| Tests unit iOS | `xcodebuild test -only-testing:RunnerTests` (iPhone 17, iOS 26.5) | ✅ Executed 9 tests, 0 failures |
+| Smoke iOS (réel, iPhone 17) | `flutter run` | ✅ SDK démarré, `Anonymous Id`, `is eligible: true`, `Product found`, dynamic offerings — backend réel ; UI rendue |
+| Smoke Android (réel, Pixel_Tablet) | install APK + launch | ✅ `Initialization done`, `isSdkStarted=true`, `USER_LOGGED_IN userId=MY_USER_ID`, `Product found` — exemple Flutter, backend réel |
+| **Présentation v6 de bout en bout (Android)** | tap « Display presentation » (placement `STRIPE`) | ✅ `PRESENTATION_LOADED` (type NORMAL) → `PRESENTATION_VIEWED` → **paywall `stripe_test` affiché plein écran** (0 crash) |
+
+> Le run Flutter Android a d'abord buté sur `INSTALL_FAILED_INSUFFICIENT_STORAGE`
+> (1er émulateur saturé par des apps utilisateur) puis a été finalisé sur le
+> Pixel_Tablet. Le test d'affichage a révélé et permis de corriger le crash
+> `PLYTransition` (conflit de version, cf. §2.4).
+
+---
+
+## 6. Fichiers modifiés (cette session)
+
+- `purchasely/lib/purchasely_flutter.dart` — doc + sémantique `synchronize`.
+- `purchasely/ios/Classes/SwiftPurchaselyFlutterPlugin.swift` — `from(screenId:)`,
+  `PLYPresentationOutcome()`, `synchronize` callbacks, `presentSubscriptions` no-op,
+  mapping `closeReason`, transitions modernes.
+- `purchasely/ios/Classes/NativeView.swift` — `PLYPresentationOutcome()`.
+- `purchasely/ios/purchasely_flutter.podspec` — pin `Purchasely 6.0.0-rc.1`.
+- `purchasely/android/.../PurchaselyFlutterPlugin.kt` — `synchronize` callbacks,
+  `PLYTransition` (args nommés + `PLYTransitionDimension`), imports.
+- `purchasely/android/build.gradle`, `purchasely_google/android/build.gradle`,
+  `purchasely_android_player/android/build.gradle` — pin `6.0.0-rc1`.
+- `purchasely/test/platform_channel_test.dart` — tests `synchronize`.
+- `purchasely/android/.../PurchaselyFlutterPluginTest.kt` — test `synchronize`.
+- `purchasely/example/ios/RunnerTests/SwiftPurchaselyFlutterPluginTests.swift` — recréé.
+- `purchasely/example/lib/main.dart` — exemple `synchronize`.
+- `MIGRATION-v6.md`, `V6_MIGRATION_REPORT.md` — docs.
+
+**Éditions cross-repo non commitées (machine-locale, à NE PAS committer ici) :**
+- `/Users/kevin/Purchasely/iOS/Purchasely.podspec` : version bumpée `3.6.2` → `6.0.0-rc.1`
+  pour que le dev-pod local satisfasse la dépendance du plugin. À revert une fois le
+  pod 6.0 publié sur le trunk.
+
+---
+
+## 7. Doutes / points à reviewer (À LIRE)
+
+1. **Version native à publier (le plus important).** J'ai pinné sur `6.0.0-rc1`
+   (Android) / `6.0.0-rc.1` (iOS) parce que c'est l'artefact réellement présent en
+   `mavenLocal` + la source iOS `develop`, et que c'est le pré-release publiable. Le
+   `6.0.0` précédent n'était ni publié ni à jour. **À confirmer** : quel est le nom
+   exact de l'artefact qui sera publié (Maven Central / CocoaPods trunk) ? Mettre à
+   jour les pins en conséquence avant merge/release. Tant que ce n'est pas publié, le
+   CI natif restera rouge (cf. blocage historique connu) — les builds locaux passent
+   via `mavenLocal()` + dev-pod.
+
+2. **Version du plugin Flutter.** Reste `6.0.0-beta.0` (pubspecs + `sdkBridgeVersion`
+   Kotlin/Swift). Faut-il l'aligner (beta → rc) avec le pré-release natif ? Décision
+   de release, non touchée pour ne pas élargir le scope.
+
+3. **Podspec iOS local.** Le build iOS dépend d'un dev-pod
+   `pod 'Purchasely', :path => '/Users/kevin/Purchasely/iOS'` + d'un bump de version
+   du podspec de ce repo (non commité). Tant que le pod 6.0 n'est pas sur le trunk,
+   c'est inévitable. Le Podfile de l'exemple est machine-spécifique (chemin absolu).
+
+4. **Cohérence des versions natives `io.purchasely:*` (vérifier au merge).** Le
+   crash `PLYTransition` venait d'un `6.0.0` perdu dans l'exemple. Avant merge,
+   `grep -rn "io.purchasely:.*6\.0\.0\b" *` pour s'assurer qu'aucune référence ne
+   pointe une autre version que `6.0.0-rc1`. Idem quand la version finale sortira.
+
+5. **`signPromotionalOffer` côté Android.** Non géré dans le `when` du bridge Android
+   (renvoie `notImplemented`) — comportement pré-existant (offres promo Apple = iOS).
+   Pas dans le scope de la migration, mais à confirmer si une parité est attendue.
+
+6. **`contentId` de présentation chargée sur iOS.** Toujours `null` côté iOS
+   (`PLYPresentation` ne l'expose pas en natif). Android le renvoie. Documenté.
+
+7. **Warning iOS résiduel.** `setThemeMode` est déprécié côté natif (« removed in
+   v7.0 »), mais conservé car méthode v5 toujours fonctionnelle. À remplacer par le
+   modifier `.themeMode()` du builder lors d'une future passe.
+
+---
+
+## 8. Pour mettre à jour `../Documentation` et `../purchasely-ai-skill`
+
+- `purchasely-ai-skill/references/flutter/integration.md` : encore en **v5**
+  (`Purchasely.start(...)`, `fetchPresentation`/`presentPresentation`,
+  `setPaywallActionInterceptorCallback` + `onProcessAction`). À remplacer par l'API
+  v6 (§3) : `PurchaselyBuilder`, `PresentationBuilder`/`PresentationRequest`,
+  `interceptAction`, `PLYPresentationView`, `synchronize` awaitable.
+- Créer `purchasely-ai-skill/references/flutter/migration-v6.md` (analogue
+  Android/iOS) à partir de `MIGRATION-v6.md`.
+- `purchasely-ai-skill/references/sdk-versions.md` : Flutter passe de `5.7.3` à la
+  version v6 du plugin (cf. doute §2), natifs `6.0.0-rc1`.
+- Docs publiques (`../Documentation`) : guide d'intégration Flutter + guide de
+  migration 5→6 Flutter, en miroir des guides Android/iOS.

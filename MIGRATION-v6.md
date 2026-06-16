@@ -170,10 +170,13 @@ if (outcome.error != null) {
 (`purchased` / `cancelled` / `restored`) and is `null` when the user dismissed
 the screen without a purchase action.
 
-> **iOS limitation in native 6.0.** The iOS SDK does not currently expose
-> `closeReason` on `PLYPresentationOutcome`, nor a loaded presentation
-> `contentId` on `PLYPresentation`. Flutter reports these fields as `null` on
-> iOS; Android 6.0 reports the native values.
+> **iOS / Android `closeReason` parity.** Both native 6.0 SDKs now expose
+> `closeReason` on the outcome, and Flutter surfaces it on both platforms
+> (`button` / `backSystem` / `programmatic`). iOS maps its
+> `interactiveDismiss` (swipe-down / nav-pop) to `backSystem` to stay aligned
+> with Android's `BACK_SYSTEM`. The only field still iOS-`null` is the loaded
+> presentation `contentId` (`PLYPresentation` does not expose it on iOS);
+> Android 6.0 reports it.
 
 > **Plan offer fields.** Android 6.0 renamed introductory-price helpers to
 > offer-price helpers. Flutter now exposes the v6 names (`hasOfferPrice`,
@@ -375,19 +378,31 @@ remains source-compatible; deeplinks add v6 names with deprecated aliases:
   `synchronize`, `allowDeeplink`, `handleDeeplink`, `setDebugMode`.
   (`readyToOpenDeeplink` / `isDeeplinkHandled` remain deprecated aliases.)
 
-> **Removed Android subscription/cancellation UI.** The native subscriptions
-> screen and cancellation survey UI were removed from the Android 6.0 SDK, so
-> `Purchasely.presentSubscriptions()` and
-> `Purchasely.displaySubscriptionCancellationInstruction()` are no-ops on
-> Android. `presentSubscriptions()` still works on iOS; the cancellation
-> instruction helper is a no-op on iOS too. Build your own subscriptions screen
-> with `userSubscriptions()` / `userSubscriptionsHistory()` if you need
-> cross-platform parity.
+> **`synchronize()` now reports completion.** The 6.0 native SDKs expose
+> success/error callbacks on `synchronize()` (Android
+> `synchronize(onSuccess, onError)`, iOS `synchronize(success:failure:)`).
+> The Dart `Purchasely.synchronize()` keeps its `Future<void>` signature but
+> now **resolves when the synchronization actually completes** and **throws a
+> `PlatformException` on failure**, instead of the previous fire-and-forget
+> behaviour. `await` it (and optionally `try/catch`) before chaining a
+> follow-up presentation that targets subscribers. No call-site change is
+> required for code that already `await`ed it.
 
-> **Native dependency.** This release targets the Purchasely 6.0 native SDKs
-> (iOS `Purchasely 6.0.0`, Android `io.purchasely:core 6.0.0`). These versions
-> may not be published on CocoaPods / Maven Central yet; local builds resolve
-> them via `mavenLocal()` (Android) and a development pod (iOS).
+> **Removed subscription/cancellation UI (both platforms).** The native
+> subscriptions screen and cancellation survey UI were removed from the 6.0
+> SDKs, so `Purchasely.presentSubscriptions()` and
+> `Purchasely.displaySubscriptionCancellationInstruction()` are now **no-ops on
+> both Android and iOS** (the iOS `subscriptionsController()` entry point no
+> longer exists in native 6.0). Build your own subscriptions screen with
+> `userSubscriptions()` / `userSubscriptionsHistory()`.
+
+> **Native dependency.** This release targets the Purchasely 6.0 native SDKs,
+> pinned to the **`6.0.0-rc1`** pre-release (Android `io.purchasely:core`,
+> `google-play`, `player` at `6.0.0-rc1`; iOS `Purchasely` at `6.0.0-rc.1`).
+> These pre-release versions may not be published on CocoaPods trunk / Maven
+> Central yet; local builds resolve them via `mavenLocal()` (Android) and a
+> development pod pointing at the iOS SDK source (iOS). Update the pins to the
+> final published artifact before release.
 
 ---
 
