@@ -1,7 +1,7 @@
 PODS:
   - Flutter (1.0.0)
   - Purchasely (6.0.0-rc.1)
-  - purchasely_flutter (6.0.0-beta.0):
+  - purchasely_flutter (6.0.0-rc.1):
     - Flutter
     - Purchasely (= 6.0.0-rc.1)
 
@@ -22,7 +22,7 @@ EXTERNAL SOURCES:
 SPEC CHECKSUMS:
   Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
   Purchasely: 14515380d041382c57f289517ae0c92d77e2c5af
-  purchasely_flutter: 266a9b700fb4c9ab4e9ba063a6c212c3314cf334
+  purchasely_flutter: 8c8afdca3a7947237c8de8cb335cc00030b52803
 
 PODFILE CHECKSUM: a6de5c5f685b37107148dc7191f9be5864b9359e
 

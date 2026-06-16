@@ -1,7 +1,7 @@
-## 6.0.0-beta.0
-- Updated Android Purchasely Player SDK to 6.0.0.
-- Aligns the extension package version with `purchasely_flutter` 6.0.0-beta.0.
-- `io.purchasely:player:6.0.0` may not be published on Maven Central yet; local builds resolve it via `mavenLocal()` until publication.
+## 6.0.0-rc.1
+- Updated Android Purchasely Player SDK to 6.0.0-rc.1.
+- Aligns the extension package version with `purchasely_flutter` 6.0.0-rc.1.
+- `io.purchasely:player:6.0.0-rc.1` is published on Maven Central; the SDK resolves it from the public repository.
 
 ## 5.7.3
 - Updated Android Purchasely Player SDK to 5.7.4.

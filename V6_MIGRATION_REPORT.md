@@ -307,9 +307,10 @@ depuis le trunk).
    la seule version cohérente cross-plateforme publiée aujourd'hui. Bumper vers
    `6.0.0` quand le pod GA sortira.
 
-2. **Version du plugin Flutter.** Reste `6.0.0-beta.0` (pubspecs + `sdkBridgeVersion`
-   Kotlin/Swift). Faut-il l'aligner (beta → rc) avec le pré-release natif ? Décision
-   de release, non touchée pour ne pas élargir le scope.
+2. **Version du plugin Flutter (RÉSOLU).** Alignée sur le pré-release natif :
+   `6.0.0-rc.1` (pubspecs des 3 packages, podspec, `sdkBridgeVersion` Kotlin/Swift,
+   CHANGELOGs, VERSIONS.md, READMEs, `sdk_public_doc.md`). Bumper vers `6.0.0` en
+   même temps que les natifs au GA.
 
 3. **Podspec iOS local (RÉSOLU).** Le dev-pod `:path` a été retiré : iOS résout
    `Purchasely 6.0.0-rc.1` depuis le trunk. Le Podfile n'a plus de chemin absolu et
@@ -342,7 +343,7 @@ depuis le trunk).
   `interceptAction`, `PLYPresentationView`, `synchronize` awaitable.
 - Créer `purchasely-ai-skill/references/flutter/migration-v6.md` (analogue
   Android/iOS) à partir de `MIGRATION-v6.md`.
-- `purchasely-ai-skill/references/sdk-versions.md` : Flutter passe de `5.7.3` à la
-  version v6 du plugin (cf. doute §2), natifs `6.0.0-rc.1`.
+- `purchasely-ai-skill/references/sdk-versions.md` : Flutter passe de `5.7.3` à
+  `6.0.0-rc.1` (plugin), natifs `6.0.0-rc.1`.
 - Docs publiques (`../Documentation`) : guide d'intégration Flutter + guide de
   migration 5→6 Flutter, en miroir des guides Android/iOS.

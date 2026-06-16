@@ -255,7 +255,7 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
 
         var builder = Purchasely.apiKey(apiKey)
             .appTechnology(.flutter)
-            .sdkBridgeVersion("6.0.0-beta.0")
+            .sdkBridgeVersion("6.0.0-rc.1")
 
         if let userId = (arguments["appUserId"] as? String) ?? (arguments["userId"] as? String), !userId.isEmpty {
             builder = builder.appUserId(userId)

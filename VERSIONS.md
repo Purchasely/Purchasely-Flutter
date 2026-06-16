@@ -2,7 +2,7 @@ This file provides the underlying native SDK versions that the Flutter SDK relie
 
 | Version | iOS version | Android version |
 |---------|-------------|-----------------|
-| 6.0.0-beta.0 | 6.0.0 | 6.0.0 |
+| 6.0.0-rc.1 | 6.0.0-rc.1 | 6.0.0-rc.1 |
 | 4.0.0   | 4.0.0       | 4.0.0           |
 | 4.0.1   | 4.0.1       | 4.0.0           |
 | 4.0.2   | 4.0.3       | 4.0.0           |
@@ -51,4 +51,4 @@ This file provides the underlying native SDK versions that the Flutter SDK relie
 | 5.7.1   | 5.7.1       | 5.7.1           |
 | 5.7.2   | 5.7.2       | 5.7.3           |
 | 5.7.3   | 5.7.4       | 5.7.4           |
-| 6.0.0-beta.0 | 6.0.0 | 6.0.0 |
+| 6.0.0-rc.1 | 6.0.0-rc.1 | 6.0.0-rc.1 |

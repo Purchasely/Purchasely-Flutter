@@ -1,7 +1,7 @@
 # Migrating to the Purchasely 6.0 native SDK (Flutter)
 
 This release **adapts the Purchasely Flutter plugin to the Purchasely 6.0 native
-SDKs** (iOS `Purchasely 6.0.0`, Android `io.purchasely:core 6.0.0`). Unlike the
+SDKs** (iOS `Purchasely 6.0.0-rc.1`, Android `io.purchasely:core 6.0.0-rc.1`). Unlike the
 React Native migration, there is **no "v6" naming in the Dart API** — the public
 symbols keep their plain names (`PurchaselyBuilder`, `PresentationBuilder`,
 `PresentationOutcome`, `Transition`, …).

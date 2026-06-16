@@ -4,7 +4,7 @@
 #
 Pod::Spec.new do |s|
   s.name             = 'purchasely_flutter'
-  s.version          = '6.0.0-beta.0'
+  s.version          = '6.0.0-rc.1'
   s.summary          = 'Flutter Plugin for Purchasely SDK'
   s.description      = <<-DESC
 Flutter Plugin for Purchasely SDK

@@ -13,7 +13,7 @@ Purchasely is a solution to ease the integration and boost your In-App Purchase 
 
 ```yaml
 dependencies:
-  purchasely_flutter: 6.0.0-beta.0
+  purchasely_flutter: 6.0.0-rc.1
 ```
 
 ## Usage

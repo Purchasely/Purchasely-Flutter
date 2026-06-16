@@ -1,4 +1,4 @@
-## 6.0.0-beta.0
+## 6.0.0-rc.1
 
 - **Adapts the plugin to the Purchasely 6.0 native SDKs.** The breaking changes
   are limited to the paywall surface: **starting the SDK**, **displaying /
@@ -36,10 +36,11 @@
   Android. `presentSubscriptions()` still works on iOS; the cancellation
   instruction helper is a no-op on iOS too.
 - **Native SDK bump.**
-  - iOS: `Purchasely 6.0.0` (was 5.7.4).
-  - Android: `io.purchasely:core 6.0.0` (was 5.7.4).
-  - These versions may not be published on CocoaPods / Maven Central yet; local
-    builds resolve them via `mavenLocal()` (Android) and a development pod (iOS).
+  - iOS: `Purchasely 6.0.0-rc.1` (was 5.7.4).
+  - Android: `io.purchasely:core 6.0.0-rc.1` (was 5.7.4).
+  - Both pre-releases are published on public repositories — Android on Maven
+    Central, iOS on the CocoaPods trunk — so the SDK resolves them with no
+    `mavenLocal()` and no development pod.
 
 ## 5.7.3
 - Updated iOS Purchasely SDK to 5.7.4.
