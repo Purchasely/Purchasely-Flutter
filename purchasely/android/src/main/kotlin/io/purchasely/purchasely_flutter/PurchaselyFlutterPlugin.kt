@@ -38,7 +38,9 @@ import kotlinx.coroutines.*
 import io.purchasely.ext.Purchasely
 import io.purchasely.models.PLYError
 import io.purchasely.views.presentation.PLYThemeMode
+import io.purchasely.views.presentation.models.PLYDimensionType
 import io.purchasely.views.presentation.models.PLYTransition
+import io.purchasely.views.presentation.models.PLYTransitionDimension
 import io.purchasely.views.presentation.models.PLYTransitionType
 import java.text.SimpleDateFormat
 import java.util.*
@@ -204,10 +206,7 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
             "interceptorResolve" -> interceptorResolve(args, result)
 
             // --- kept v5 surface ---
-            "synchronize" -> {
-                synchronize()
-                result.safeSuccess(true)
-            }
+            "synchronize" -> synchronize(result)
             "restoreAllProducts" -> restoreAllProducts(result)
             "silentRestoreAllProducts" -> silentRestoreAllProducts(result)
             "getAnonymousUserId" -> result.safeSuccess(getAnonymousUserId())
@@ -780,7 +779,13 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
         }
         val heightPercentage = (map["heightPercentage"] as? Number)?.toFloat()
         val dismissible = map["dismissible"] as? Boolean ?: true
-        return PLYTransition(type, heightPercentage, null, dismissible)
+        // v6 models drawer/popin height as a PLYTransitionDimension; map the
+        // Dart `heightPercentage` (0..1) to a PERCENTAGE dimension. The legacy
+        // `heightPercentage` constructor arg is deprecated.
+        val height = heightPercentage?.let {
+            PLYTransitionDimension(PLYDimensionType.PERCENTAGE, it)
+        }
+        return PLYTransition(type = type, height = height, dismissible = dismissible)
     }
 
     private fun tryParseHexColor(hex: String): Int? {
@@ -872,8 +877,17 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
         Purchasely.allowDeeplink = allowDeeplink ?: true
     }
 
-    private fun synchronize() {
-        Purchasely.synchronize()
+    private fun synchronize(result: Result) {
+        // v6 exposes onSuccess/onError callbacks on synchronize(). The Dart
+        // `Purchasely.synchronize()` Future now resolves once the receipt
+        // synchronisation completes (and errors via PlatformException) instead
+        // of the old fire-and-forget behaviour.
+        Purchasely.synchronize(
+            onSuccess = { result.safeSuccess(true) },
+            onError = { error ->
+                result.safeError("-1", error?.message ?: "Synchronization failed", error)
+            }
+        )
     }
 
     private suspend fun productWithIdentifier(vendorId: String?) : PLYProduct? {

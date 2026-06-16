@@ -135,6 +135,14 @@ class Purchasely {
     return restored;
   }
 
+  /// Forces a synchronization of the user's purchases with the Purchasely
+  /// servers.
+  ///
+  /// Since the 6.0 native SDKs expose success/error callbacks on
+  /// `synchronize()`, the returned [Future] now resolves once the
+  /// synchronization actually completes and throws a [PlatformException] if it
+  /// failed — instead of the previous fire-and-forget behaviour. `await` it
+  /// before chaining a follow-up presentation that targets subscribers.
   static Future<void> synchronize() async {
     return await _channel.invokeMethod('synchronize');
   }

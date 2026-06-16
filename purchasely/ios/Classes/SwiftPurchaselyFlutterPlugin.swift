@@ -300,7 +300,7 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             case "placementId":
                 return id.map { PLYPresentationBuilder.from(placementId: $0) } ?? .default()
             case "screenId":
-                return id.map { PLYPresentationBuilder.from(presentationId: $0) } ?? .default()
+                return id.map { PLYPresentationBuilder.from(screenId: $0) } ?? .default()
             default:
                 return .default()
             }
@@ -411,7 +411,7 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
                 ])
                 // Also synthesise onDismissed with the error outcome.
                 let outcome = self.outcomeToMap(
-                    PLYPresentationOutcome(purchaseResult: .none, plan: nil),
+                    PLYPresentationOutcome(),
                     presentation: nil,
                     error: error,
                     requestId: requestId
@@ -590,12 +590,22 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             ]
         }
 
+        // iOS v6 exposes `closeReason` on PLYPresentationOutcome. Its
+        // `rawDescription` matches Android's wire strings
+        // ("button" / "back_system" / "programmatic"); ".none" means no close
+        // happened (e.g. a purchase/restore outcome) → send null.
+        let closeReason: String? = {
+            switch outcome.closeReason {
+            case .none: return nil
+            default:    return outcome.closeReason.rawDescription
+            }
+        }()
+
         return [
             "presentation": presentation.map { presentationToMap($0, requestId: requestId) } as Any?,
             "purchaseResult": purchaseResult,
             "plan": planMap as Any?,
-            // iOS SDK doesn't surface closeReason yet.
-            "closeReason": nil as Any?,
+            "closeReason": closeReason as Any?,
             "error": error.map { Self.errorToMap($0) } as Any?,
         ]
     }
@@ -666,8 +676,11 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
         case "fullScreen":    return .fullScreen
         case "push":          return .push
         case "modal":         return .modal
-        case "drawer":        return .drawer(heightPercentage: heightPercentage ?? 0.5, dismissible: dismissible)
-        case "popin":         return .popin(heightPercentage: heightPercentage ?? 0.5, dismissible: dismissible)
+        // v6 models drawer/popin height as a PLYDimension; map the Dart
+        // `heightPercentage` (0..1) to a `.percentage` dimension. The legacy
+        // `heightPercentage:` factories are deprecated (removed in v7.0).
+        case "drawer":        return .drawer(height: .percentage(Float(heightPercentage ?? 0.5)), dismissible: dismissible)
+        case "popin":         return .popin(width: nil, height: .percentage(Float(heightPercentage ?? 0.5)), dismissible: dismissible)
         case "inlinePaywall": return .inlinePaywall
         default: return nil
         }
@@ -733,10 +746,13 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
 
     private func synchronize(_ result: @escaping FlutterResult) {
         DispatchQueue.main.async {
+            // v6 exposes success/failure callbacks on synchronize(). The Dart
+            // `Purchasely.synchronize()` Future now resolves on success and throws
+            // (PlatformException) on failure, instead of the old fire-and-forget.
             Purchasely.synchronize {
-                //result(true)
+                result(true)
             } failure: { error in
-                //result(FlutterError.error(code: "-1", message: "Synchronization failed", error: error))
+                result(FlutterError.error(code: "-1", message: "Synchronization failed", error: error))
             }
         }
     }
@@ -901,17 +917,12 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
     }
 
     private func presentSubscriptions(result: @escaping FlutterResult) {
-        if let controller = Purchasely.subscriptionsController() {
-            let navCtrl = UINavigationController.init(rootViewController: controller)
-            navCtrl.navigationBar.topItem?.leftBarButtonItem = UIBarButtonItem(barButtonSystemItem: .done, target: navCtrl, action: #selector(UIViewController.close))
-
-            DispatchQueue.main.async {
-                Purchasely.showController(navCtrl, type: .subscriptionList)
-                result(true)
-            }
-        } else {
-            result(true)
-        }
+        // The native iOS v6 SDK removed the built-in subscriptions screen
+        // (`subscriptionsController()` no longer exists), matching Android.
+        // Build your own screen from `userSubscriptions()` /
+        // `userSubscriptionsHistory()` if you need a cross-platform list.
+        print("Purchasely", "presentSubscriptions is no longer supported by the iOS v6 SDK")
+        result(true)
     }
 
     private func setThemeMode(arguments: [String: Any]?) {

@@ -213,7 +213,7 @@ extension NativeView: PLYEventDelegate {
                 if let requestId = self._requestId, !self._didEmitDismissed {
                     self.emitDismissed(
                         requestId: requestId,
-                        outcome: PLYPresentationOutcome(purchaseResult: .none, plan: nil)
+                        outcome: PLYPresentationOutcome()
                     )
                 }
                 self.cleanupController()
