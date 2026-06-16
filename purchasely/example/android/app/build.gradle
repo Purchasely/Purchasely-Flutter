@@ -42,7 +42,7 @@ android {
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId "com.purchasely.demo"
-        minSdkVersion 23
+        minSdkVersion flutter.minSdkVersion
         targetSdkVersion 34
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
@@ -62,6 +62,10 @@ flutter {
 }
 
 dependencies {
-    implementation 'io.purchasely:google-play:6.0.0'
-    implementation 'io.purchasely:player:6.0.0'
+    // Pin to the same pre-release as the plugin (purchasely/android/build.gradle).
+    // Gradle ranks 6.0.0 (release) above 6.0.0-rc1 (pre-release), so a stray
+    // 6.0.0 here would silently upgrade the transitive core to 6.0.0 and break
+    // the v6 PLYTransition constructor at runtime (NoSuchMethodError).
+    implementation 'io.purchasely:google-play:6.0.0-rc1'
+    implementation 'io.purchasely:player:6.0.0-rc1'
 }
