@@ -369,8 +369,15 @@ class _MyAppState extends State<MyApp> {
   }
 
   Future<void> synchronize() async {
-    Purchasely.synchronize();
-    print('synchronization with Purchasely');
+    // Since the 6.0 native SDKs expose success/error callbacks on
+    // synchronize(), the Dart Future now resolves once the sync completes and
+    // throws on failure — so it can be awaited and wrapped in try/catch.
+    try {
+      await Purchasely.synchronize();
+      print('synchronization with Purchasely succeeded');
+    } catch (e) {
+      print('synchronization with Purchasely failed: $e');
+    }
   }
 
   @override
