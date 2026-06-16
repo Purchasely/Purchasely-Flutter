@@ -753,14 +753,13 @@ await Purchasely.interceptAction(
 
 ### Native Subscriptions Screen
 
-> **Removed Android subscription/cancellation UI.** The native subscriptions
-> screen and cancellation survey UI were removed from the Android 6.0 SDK, so
-> `Purchasely.presentSubscriptions()` and
-> `Purchasely.displaySubscriptionCancellationInstruction()` are no-ops on
-> Android. `presentSubscriptions()` still works on iOS; the cancellation
-> instruction helper is a no-op on iOS too. Build your own UI with
-> `userSubscriptions()` / `userSubscriptionsHistory()` if you need
-> cross-platform parity.
+> **Removed (BREAKING): `presentSubscriptions()`.** The native subscriptions
+> screen was removed from the 6.0 SDKs on both platforms, so
+> `Purchasely.presentSubscriptions()` has been **removed** from the SDK — the
+> method no longer exists. Build your own UI with `userSubscriptions()` /
+> `userSubscriptionsHistory()`. The cancellation survey UI was also removed, so
+> `Purchasely.displaySubscriptionCancellationInstruction()` is a no-op on both
+> platforms.
 
 ### iOS Presentation Fields
 

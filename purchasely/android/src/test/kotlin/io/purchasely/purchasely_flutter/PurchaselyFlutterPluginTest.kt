@@ -161,12 +161,11 @@ class PurchaselyFlutterPluginTest {
     }
 
     @Test
-    fun `removed Android subscription UI methods are no-ops`() {
+    fun `removed Android subscription cancellation UI is a no-op`() {
         plugin.onAttachedToEngine(mockFlutterPluginBinding)
 
-        plugin.onMethodCall(MethodCall("presentSubscriptions", null), mockResult)
         plugin.onMethodCall(MethodCall("displaySubscriptionCancellationInstruction", null), mockResult)
 
-        verify(exactly = 2) { mockResult.success(true) }
+        verify(exactly = 1) { mockResult.success(true) }
     }
 }

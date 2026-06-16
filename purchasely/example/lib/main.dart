@@ -314,15 +314,6 @@ class _MyAppState extends State<MyApp> {
     );
   }
 
-  Future<void> displaySubscriptions() async {
-    try {
-      // iOS only in native v6; Android removed this built-in UI.
-      Purchasely.presentSubscriptions();
-    } catch (e) {
-      print(e);
-    }
-  }
-
   Future<void> purchase() async {
     try {
       Map<dynamic, dynamic> plan = await Purchasely.purchaseWithPlanVendorId(
@@ -453,15 +444,6 @@ class _MyAppState extends State<MyApp> {
                 signPromotionalOffer();
               },
               child: const Text('Sign promotional offer'),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.only(left: 20.0, right: 30.0),
-              ),
-              onPressed: () {
-                displaySubscriptions();
-              },
-              child: const Text('Display subscriptions'),
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(

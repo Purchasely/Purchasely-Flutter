@@ -1713,11 +1713,6 @@ void main() {
       expect(methodCalls.first.method, 'userLogout');
     });
 
-    test('presentSubscriptions calls native method', () async {
-      await Purchasely.presentSubscriptions();
-      expect(methodCalls.first.method, 'presentSubscriptions');
-    });
-
     test('displaySubscriptionCancellationInstruction calls native method',
         () async {
       await Purchasely.displaySubscriptionCancellationInstruction();

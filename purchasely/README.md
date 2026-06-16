@@ -76,12 +76,13 @@ before/after examples.
 
 ### Platform limitations in this beta
 
-- Android v6 removed the built-in subscriptions list and cancellation survey UI:
-  `Purchasely.presentSubscriptions()` and
-  `Purchasely.displaySubscriptionCancellationInstruction()` are no-ops on
-  Android. Build your own UI with `userSubscriptions()` /
-  `userSubscriptionsHistory()` if you need cross-platform subscription
-  management.
+- **Removed (BREAKING): `presentSubscriptions()`.** The 6.0 native SDKs removed
+  the built-in subscriptions list on both Android and iOS, so
+  `Purchasely.presentSubscriptions()` no longer exists. Build your own UI with
+  `userSubscriptions()` / `userSubscriptionsHistory()`.
+- The cancellation survey UI was also removed, so
+  `Purchasely.displaySubscriptionCancellationInstruction()` is a no-op on both
+  platforms.
 - iOS v6 currently does not expose `closeReason` or a loaded presentation
   `contentId` on `PLYPresentation`; Flutter reports those fields as `null` on
   iOS instead of inventing values.

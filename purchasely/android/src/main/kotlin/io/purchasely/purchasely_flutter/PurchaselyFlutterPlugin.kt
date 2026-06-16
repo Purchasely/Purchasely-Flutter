@@ -302,11 +302,6 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
             "isDeeplinkHandled" -> handleDeeplink(call.argument<String>("deeplink"), result)
             "userSubscriptions" -> launch { userSubscriptions(result) }
             "userSubscriptionsHistory" -> launch { userSubscriptionsHistory(result) }
-            "presentSubscriptions" -> {
-                // The native SDK no longer exposes a subscriptions screen; no-op.
-                Log.w("Purchasely", "presentSubscriptions is no longer supported by the Android v6 SDK")
-                result.safeSuccess(true)
-            }
             "setThemeMode" -> {
                 setThemeMode(call.argument<Int>("mode"))
                 result.safeSuccess(true)

@@ -61,7 +61,7 @@ Les SDK natifs 6.0 exposent désormais des callbacks succès/erreur sur
   remplacé par l'init 0-arg `PLYPresentationOutcome()` (présent dans
   `SwiftPurchaselyFlutterPlugin.swift` et `NativeView.swift`).
 - `Purchasely.subscriptionsController()` **supprimé** en v6 → `presentSubscriptions`
-  devient un **no-op** sur iOS (comme Android), avec log. (Voir §2.5.)
+  a été **entièrement retiré** du SDK Flutter (alignement React Native). (Voir §2.5.)
 - Transitions `drawer`/`popin` : passage de l'API dépréciée
   `.drawer(heightPercentage:dismissible:)` à `.drawer(height: .percentage(...), dismissible:)`
   (et `popin(width:nil, height:.percentage(...), ...)`).
@@ -115,12 +115,15 @@ et **dev-pod retiré** (iOS) → le Podfile n'a plus de chemin absolu.
 > `io.purchasely:*` doivent pointer la MÊME version pré-release, sinon une seule
 > référence `6.0.0` perdue casse tout le runtime.
 
-### 2.5 `presentSubscriptions` / `displaySubscriptionCancellationInstruction`
+### 2.5 `presentSubscriptions` (retiré) / `displaySubscriptionCancellationInstruction`
 
 Les écrans natifs d'abonnements et de désabonnement ont été retirés des SDK 6.0
-**sur les deux plateformes**. Ces deux méthodes sont désormais des **no-ops** sur
-Android **et** iOS. Reconstruire son propre écran via `userSubscriptions()` /
-`userSubscriptionsHistory()`.
+**sur les deux plateformes**. `presentSubscriptions` a donc été **entièrement
+supprimé** du SDK Flutter (Dart + iOS + Android + tests + docs), pour s'aligner
+sur le SDK React Native — **BREAKING CHANGE** sans remplacement : reconstruire son
+propre écran via `userSubscriptions()` / `userSubscriptionsHistory()`.
+`displaySubscriptionCancellationInstruction` est conservé pour la compatibilité
+source mais reste un **no-op** sur Android **et** iOS.
 
 ### 2.6 Tests ajoutés / mis à jour
 
@@ -142,7 +145,7 @@ Android **et** iOS. Reconstruire son propre écran via `userSubscriptions()` /
 ### 2.8 Documentation
 
 - `MIGRATION-v6.md` mis à jour (callback `synchronize`, parité `closeReason`,
-  `presentSubscriptions` no-op des deux côtés, pin natif rc1).
+  `presentSubscriptions` retiré des deux côtés, pin natif rc1).
 - Ce rapport (`V6_MIGRATION_REPORT.md`).
 
 ---
@@ -228,8 +231,8 @@ try {
 `setLanguage`, `setThemeMode`, `setLogLevel`, `setDebugMode`,
 `allowDeeplink`/`handleDeeplink` (+ alias dépréciés `readyToOpenDeeplink`/`isDeeplinkHandled`).
 
-No-ops v6 (UI native supprimée) : `presentSubscriptions`,
-`displaySubscriptionCancellationInstruction`.
+No-op v6 (UI native supprimée) : `displaySubscriptionCancellationInstruction`.
+(`presentSubscriptions` a été **retiré** — cf. §2.5.)
 
 ---
 
@@ -271,7 +274,7 @@ No-ops v6 (UI native supprimée) : `presentSubscriptions`,
 
 - `purchasely/lib/purchasely_flutter.dart` — doc + sémantique `synchronize`.
 - `purchasely/ios/Classes/SwiftPurchaselyFlutterPlugin.swift` — `from(screenId:)`,
-  `PLYPresentationOutcome()`, `synchronize` callbacks, `presentSubscriptions` no-op,
+  `PLYPresentationOutcome()`, `synchronize` callbacks, `presentSubscriptions` retiré,
   mapping `closeReason`, transitions modernes.
 - `purchasely/ios/Classes/NativeView.swift` — `PLYPresentationOutcome()`.
 - `purchasely/ios/purchasely_flutter.podspec` — pin `Purchasely 6.0.0-rc.1`.

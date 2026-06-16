@@ -170,8 +170,6 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             userSubscriptions(result)
         case "userSubscriptionsHistory":
             userSubscriptionsHistory(result)
-        case "presentSubscriptions":
-            presentSubscriptions(result: result)
         case "setThemeMode":
             setThemeMode(arguments: arguments)
         case "setAttribute":
@@ -914,15 +912,6 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
                 result(FlutterError.error(code:"-1", message:"failed to fetch user subscriptions history", error: error))
             }
         }
-    }
-
-    private func presentSubscriptions(result: @escaping FlutterResult) {
-        // The native iOS v6 SDK removed the built-in subscriptions screen
-        // (`subscriptionsController()` no longer exists), matching Android.
-        // Build your own screen from `userSubscriptions()` /
-        // `userSubscriptionsHistory()` if you need a cross-platform list.
-        print("Purchasely", "presentSubscriptions is no longer supported by the iOS v6 SDK")
-        result(true)
     }
 
     private func setThemeMode(arguments: [String: Any]?) {

@@ -29,12 +29,16 @@
   **Observer** mode (was Full). The builder mirrors this default
   (`RunningMode.observer`); pass `.runningMode(RunningMode.full)` to keep the
   previous Full behaviour.
-- **Behaviour — removed Android subscription/cancellation UI.** The native
-  subscriptions screen and cancellation survey UI were removed from the Android
-  6.0 SDK, so `Purchasely.presentSubscriptions()` and
-  `Purchasely.displaySubscriptionCancellationInstruction()` are no-ops on
-  Android. `presentSubscriptions()` still works on iOS; the cancellation
-  instruction helper is a no-op on iOS too.
+- **BREAKING — removed `presentSubscriptions()`.** The native subscriptions
+  screen was removed from the 6.0 SDKs (both Android and iOS — the iOS
+  `subscriptionsController()` entry point no longer exists), so
+  `Purchasely.presentSubscriptions()` has been **removed entirely** from the
+  Flutter API on every layer (Dart, iOS, Android). It is no longer a no-op — the
+  method no longer exists. Build your own subscriptions screen from
+  `userSubscriptions()` / `userSubscriptionsHistory()`.
+- **Behaviour — `displaySubscriptionCancellationInstruction()` is a no-op.** The
+  cancellation survey UI was removed from the 6.0 SDKs, so this method is a no-op
+  on both Android and iOS (kept for source compatibility).
 - **Native SDK bump.**
   - iOS: `Purchasely 6.0.0-rc.1` (was 5.7.4).
   - Android: `io.purchasely:core 6.0.0-rc.1` (was 5.7.4).

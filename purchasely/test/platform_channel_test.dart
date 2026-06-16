@@ -157,12 +157,6 @@ void main() {
         expect(history.first.cumulatedRevenuesInUSD, 29.97);
       });
 
-      test('presentSubscriptions sends method call to native', () async {
-        await Purchasely.presentSubscriptions();
-
-        expect(methodCalls.first.method, 'presentSubscriptions');
-      });
-
       test('displaySubscriptionCancellationInstruction sends method call',
           () async {
         await Purchasely.displaySubscriptionCancellationInstruction();
@@ -771,8 +765,6 @@ dynamic _handleMethodCall(MethodCall methodCall) {
           'subscriptionDurationInMonths': 3,
         }
       ];
-    case 'presentSubscriptions':
-      return null;
     case 'displaySubscriptionCancellationInstruction':
       return null;
     case 'userDidConsumeSubscriptionContent':

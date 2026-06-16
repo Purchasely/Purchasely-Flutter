@@ -361,8 +361,8 @@ remains source-compatible; deeplinks add v6 names with deprecated aliases:
 - **Catalog**: `allProducts`, `productWithIdentifier`, `planWithIdentifier`,
   `isEligibleForIntroOffer`.
 - **Subscriptions data**: `userSubscriptions`, `userSubscriptionsHistory`,
-  `presentSubscriptions` (see callout below),
-  `displaySubscriptionCancellationInstruction` (with platform limitations below).
+  `displaySubscriptionCancellationInstruction` (no-op on both platforms — see
+  callout below). Note: `presentSubscriptions()` was **removed** (see callout).
 - **User attributes**: `setUserAttributeWithString` / `WithInt` / `WithDouble` /
   `WithBoolean` / `WithDate` / `WithStringArray` / `WithIntArray` /
   `WithDoubleArray` / `WithBooleanArray`, `incrementUserAttribute`,
@@ -388,13 +388,18 @@ remains source-compatible; deeplinks add v6 names with deprecated aliases:
 > follow-up presentation that targets subscribers. No call-site change is
 > required for code that already `await`ed it.
 
-> **Removed subscription/cancellation UI (both platforms).** The native
-> subscriptions screen and cancellation survey UI were removed from the 6.0
-> SDKs, so `Purchasely.presentSubscriptions()` and
-> `Purchasely.displaySubscriptionCancellationInstruction()` are now **no-ops on
-> both Android and iOS** (the iOS `subscriptionsController()` entry point no
-> longer exists in native 6.0). Build your own subscriptions screen with
+> **Removed `presentSubscriptions()` (BREAKING).** The native subscriptions
+> screen was removed from the 6.0 SDKs on both platforms (the iOS
+> `subscriptionsController()` entry point no longer exists in native 6.0, and
+> Android dropped its built-in screen). `Purchasely.presentSubscriptions()` has
+> therefore been **removed entirely** from the Flutter API on every layer (Dart,
+> iOS, Android) — it is no longer a no-op, the method no longer exists. There is
+> no drop-in replacement: build your own subscriptions screen with
 > `userSubscriptions()` / `userSubscriptionsHistory()`.
+>
+> The cancellation survey UI was likewise removed, so
+> `Purchasely.displaySubscriptionCancellationInstruction()` is kept for source
+> compatibility but is a **no-op on both Android and iOS**.
 
 > **Native dependency.** This release targets the Purchasely 6.0 native SDKs,
 > pinned to the **`6.0.0-rc.1`** pre-release on both platforms

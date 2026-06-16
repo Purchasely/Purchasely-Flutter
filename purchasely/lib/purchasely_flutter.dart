@@ -233,10 +233,6 @@ class Purchasely {
     return products;
   }
 
-  static Future<void> presentSubscriptions() async {
-    await _channel.invokeMethod('presentSubscriptions');
-  }
-
   static Future<void> displaySubscriptionCancellationInstruction() async {
     await _channel.invokeMethod('displaySubscriptionCancellationInstruction');
   }
