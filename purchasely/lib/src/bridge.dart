@@ -98,6 +98,11 @@ class PurchaselyBridge {
   final Map<String, ActionInterceptorHandler> _interceptors =
       <String, ActionInterceptorHandler>{};
 
+  /// Global dismiss handler for SDK-owned presentations (campaigns,
+  /// deeplinks, promoted in-app purchases).
+  void Function(PresentationOutcome outcome)?
+      _defaultPresentationDismissHandler;
+
   void _listenEvents() {
     _eventSub?.cancel();
     _eventSub = _events.receiveBroadcastStream().listen(
@@ -116,6 +121,7 @@ class PurchaselyBridge {
     _eventSub = null;
     _entries.clear();
     _interceptors.clear();
+    _defaultPresentationDismissHandler = null;
   }
 
   // --- MethodChannel calls -------------------------------------------------
@@ -256,6 +262,13 @@ class PurchaselyBridge {
     await _method.invokeMethod<dynamic>('removeAllInterceptors');
   }
 
+  Future<void> setDefaultPresentationDismissHandler(
+    void Function(PresentationOutcome outcome) handler,
+  ) async {
+    await _method.invokeMethod<dynamic>('setDefaultPresentationDismissHandler');
+    _defaultPresentationDismissHandler = handler;
+  }
+
   Future<void> _resolveInterceptor(
       String invocationId, InterceptResult result) async {
     await _method.invokeMethod<dynamic>(
@@ -286,6 +299,9 @@ class PurchaselyBridge {
         break;
       case 'onDismissed':
         _handleOnDismissed(requestId, envelope);
+        break;
+      case 'onDefaultPresentationDismissed':
+        _handleOnDefaultPresentationDismissed(envelope);
         break;
       case 'interceptorTriggered':
         _handleInterceptorTriggered(envelope);
@@ -363,6 +379,12 @@ class PurchaselyBridge {
     // Once dismissed, drop the entry. A subsequent re-display() re-registers
     // through `_displayPresentation`.
     _entries.remove(requestId);
+  }
+
+  void _handleOnDefaultPresentationDismissed(Map<dynamic, dynamic> envelope) {
+    final handler = _defaultPresentationDismissHandler;
+    if (handler == null) return;
+    handler(_outcomeFromMap(envelope['outcome']));
   }
 
   void _handleInterceptorTriggered(Map<dynamic, dynamic> envelope) {

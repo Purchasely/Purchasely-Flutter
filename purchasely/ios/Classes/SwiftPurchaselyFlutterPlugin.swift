@@ -140,11 +140,12 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             let parameter = arguments?["allowDeeplink"] as? Bool
             allowDeeplink(allowDeeplink: parameter)
             result(true)
-        case "readyToOpenDeeplink":
-            // Deprecated Flutter v5 alias kept for source compatibility.
-            let parameter = arguments?["readyToOpenDeeplink"] as? Bool
-            allowDeeplink(allowDeeplink: parameter)
+        case "allowCampaigns":
+            let parameter = arguments?["allowCampaigns"] as? Bool
+            allowCampaigns(allowCampaigns: parameter)
             result(true)
+        case "setDefaultPresentationDismissHandler":
+            setDefaultPresentationDismissHandler(result: result)
         case "setLogLevel":
             let parameter = (arguments?["logLevel"] as? Int) ?? PLYLogger.PLYLogLevel.debug.rawValue
             let logLevel = PLYLogger.PLYLogLevel(rawValue: parameter) ?? PLYLogger.PLYLogLevel.debug
@@ -161,9 +162,6 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
         case "purchaseWithPlanVendorId":
             purchaseWithPlanVendorId(arguments: arguments, result: result)
         case "handleDeeplink":
-            let parameter = arguments?["deeplink"] as? String
-            handleDeeplink(parameter, result: result)
-        case "isDeeplinkHandled":
             let parameter = arguments?["deeplink"] as? String
             handleDeeplink(parameter, result: result)
         case "userSubscriptions":
@@ -589,18 +587,21 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
         }
 
         // iOS v6 exposes `closeReason` on PLYPresentationOutcome. Its
-        // `rawDescription` matches Android's wire strings
-        // ("button" / "back_system" / "programmatic"); ".none" means no close
-        // happened (e.g. a purchase/restore outcome) → send null.
+        // `rawDescription` matches Android's wire strings where applicable;
+        // interactive dismiss stays distinguishable for parity with native iOS.
+        // `.none` means no close happened (e.g. a purchase/restore outcome) → send null.
         let closeReason: String? = {
             switch outcome.closeReason {
             case .none: return nil
+            case .interactiveDismiss: return "interactiveDismiss"
             default:    return outcome.closeReason.rawDescription
             }
         }()
 
+        let outcomePresentation = outcome.presentation ?? presentation
+
         return [
-            "presentation": presentation.map { presentationToMap($0, requestId: requestId) } as Any?,
+            "presentation": outcomePresentation.map { presentationToMap($0, requestId: requestId) } as Any?,
             "purchaseResult": purchaseResult,
             "plan": planMap as Any?,
             "closeReason": closeReason as Any?,
@@ -784,6 +785,28 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
 
     private func allowDeeplink(allowDeeplink: Bool?) {
         Purchasely.allowDeeplink(allowDeeplink ?? true)
+    }
+
+    private func allowCampaigns(allowCampaigns: Bool?) {
+        Purchasely.allowCampaigns(allowCampaigns ?? true)
+    }
+
+    private func setDefaultPresentationDismissHandler(result: @escaping FlutterResult) {
+        DispatchQueue.main.async { [weak self] in
+            Purchasely.setDefaultPresentationDismissHandler { [weak self] outcome in
+                guard let self = self else { return }
+                self.presentationEventHandler.emit([
+                    "event": "onDefaultPresentationDismissed",
+                    "outcome": self.outcomeToMap(
+                        outcome,
+                        presentation: nil,
+                        error: nil,
+                        requestId: ""
+                    ),
+                ])
+            }
+            result(true)
+        }
     }
 
     private func productWithIdentifier(arguments: [String: Any]?, result: @escaping FlutterResult) {

@@ -110,7 +110,7 @@ class _PresentationDemoScreenState extends State<PresentationDemoScreen> {
       (info, payload) {
         if (payload is PurchasePayload) {
           // The typed payload exposes the selected plan (and any offer).
-          final planId = payload.plan['vendorId'] ?? payload.plan['id'];
+          final planId = payload.plan.vendorId ?? payload.plan.productId;
           debugPrint('Intercepted purchase of plan $planId — letting the SDK '
               'proceed (notHandled)');
         }

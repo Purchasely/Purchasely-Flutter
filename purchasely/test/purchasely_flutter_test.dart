@@ -230,17 +230,6 @@ void main() {
           methodCalls.first.arguments['deeplink'], 'https://example.com/deep');
     });
 
-    test('deprecated isDeeplinkHandled alias bridges to handleDeeplink',
-        () async {
-      // ignore: deprecated_member_use_from_same_package
-      final result =
-          await Purchasely.isDeeplinkHandled('https://example.com/deep');
-      expect(result, true);
-      expect(methodCalls.first.method, 'handleDeeplink');
-      expect(
-          methodCalls.first.arguments['deeplink'], 'https://example.com/deep');
-    });
-
     test('productWithIdentifier returns correct product', () async {
       final product = await Purchasely.productWithIdentifier('vendor-123');
 
@@ -479,15 +468,6 @@ void main() {
       expect(methodCalls.first.arguments['allowDeeplink'], true);
     });
 
-    test('deprecated readyToOpenDeeplink alias bridges to allowDeeplink',
-        () async {
-      // ignore: deprecated_member_use_from_same_package
-      await Purchasely.readyToOpenDeeplink(true);
-
-      expect(methodCalls.first.method, 'allowDeeplink');
-      expect(methodCalls.first.arguments['allowDeeplink'], true);
-    });
-
     test('setDebugMode calls native method correctly', () async {
       await Purchasely.setDebugMode(true);
 
@@ -530,6 +510,7 @@ void main() {
       final planMap = {
         'vendorId': 'vendor-123',
         'productId': 'product-123',
+        'basePlanId': 'base-plan-123',
         'name': 'Test Plan',
         'type': 2,
         'amount': 9.99,
@@ -551,6 +532,7 @@ void main() {
       expect(plan, isNotNull);
       expect(plan!.vendorId, 'vendor-123');
       expect(plan.productId, 'product-123');
+      expect(plan.basePlanId, 'base-plan-123');
       expect(plan.name, 'Test Plan');
       expect(plan.type, PLYPlanType.autoRenewingSubscription);
       expect(plan.amount, 9.99);
@@ -637,7 +619,8 @@ void main() {
     test('transformToPLYPromoOffer returns correct offer', () {
       final offerMap = {
         'vendorId': 'offer-vendor-123',
-        'storeOfferId': 'store-offer-123'
+        'storeOfferId': 'store-offer-123',
+        'publicId': 'public-offer-123',
       };
 
       final offer = Purchasely.transformToPLYPromoOffer(offerMap);
@@ -645,6 +628,7 @@ void main() {
       expect(offer, isNotNull);
       expect(offer!.vendorId, 'offer-vendor-123');
       expect(offer.storeOfferId, 'store-offer-123');
+      expect(offer.publicId, 'public-offer-123');
     });
 
     test('transformToPLYSubscription returns null for empty map', () {
@@ -899,10 +883,12 @@ void main() {
 
     group('PLYPromoOffer', () {
       test('creates instance with properties', () {
-        final offer = PLYPromoOffer('vendor-123', 'store-offer-123');
+        final offer =
+            PLYPromoOffer('vendor-123', 'store-offer-123', 'public-offer-123');
 
         expect(offer.vendorId, 'vendor-123');
         expect(offer.storeOfferId, 'store-offer-123');
+        expect(offer.publicId, 'public-offer-123');
       });
     });
 
@@ -1905,6 +1891,13 @@ void main() {
       expect(startCall.arguments['allowCampaigns'], false);
       expect(startCall.arguments['stores'], ['google', 'huawei', 'amazon']);
       expect(startCall.arguments['storekitVersion'], 'storeKit1');
+    });
+
+    test('runtime allowCampaigns forwards the campaign gate', () async {
+      await Purchasely.allowCampaigns(false);
+
+      final call = methodCalls.firstWhere((c) => c.method == 'allowCampaigns');
+      expect(call.arguments['allowCampaigns'], false);
     });
   });
 }

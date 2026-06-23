@@ -4,7 +4,7 @@
   are limited to the paywall surface: **starting the SDK**, **displaying /
   preloading / closing a presentation**, and the **action interceptor**. Other
   `Purchasely` APIs remain source-compatible; deeplinks now expose the v6 names
-  (`allowDeeplink`, `handleDeeplink`) with deprecated v5 aliases. See
+  (`allowDeeplink`, `handleDeeplink`) and removes the old v5 aliases. See
   `MIGRATION-v6.md` for the complete old→new mapping.
 - **Start.** The SDK is now started with the fluent builder
   `PurchaselyBuilder.apiKey(...).appUserId(...).runningMode(...).logLevel(...).allowDeeplink(...).allowCampaigns(...).stores([...]).storekitVersion(...).start()`.
@@ -24,7 +24,8 @@
   `removeInterceptor` / `removeAllInterceptors`). The handler receives a typed
   `ActionPayload` (e.g. `NavigatePayload`, `PurchasePayload`) and returns an
   `InterceptResult` (`success` / `failed` / `notHandled`) — there is no more
-  `onProcessAction`.
+  `onProcessAction`. `PurchasePayload` exposes real objects (`PLYPlan`,
+  `PLYSubscriptionOffer?`, `PLYPromoOffer?`) instead of raw maps.
 - **Behaviour — running mode default.** The 6.0 native SDKs default to
   **Observer** mode (was Full). The builder mirrors this default
   (`RunningMode.observer`); pass `.runningMode(RunningMode.full)` to keep the

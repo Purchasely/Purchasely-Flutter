@@ -9,7 +9,7 @@ enum PurchaseResult { purchased, cancelled, restored }
 ///
 /// Mutually exclusive with [PresentationOutcome.error] — when [error] is non
 /// null, [closeReason] is `null`.
-enum CloseReason { button, backSystem, programmatic }
+enum CloseReason { button, interactiveDismiss, backSystem, programmatic }
 
 /// Error returned by the native SDK when a presentation could not be displayed.
 class PresentationError implements Exception {
@@ -83,6 +83,9 @@ CloseReason? closeReasonFromString(String? value) {
   switch (value) {
     case 'button':
       return CloseReason.button;
+    case 'interactiveDismiss':
+    case 'interactive_dismiss':
+      return CloseReason.interactiveDismiss;
     case 'backSystem':
     case 'back_system':
       return CloseReason.backSystem;

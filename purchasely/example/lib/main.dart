@@ -38,13 +38,12 @@ class _MyAppState extends State<MyApp> {
         inspect(event);
       });*/
 
-      bool configured = await PurchaselyBuilder.apiKey(
-        'fcb39be4-2ba4-4db7-bde3-2a5a1e20745d',
-      )
-          .runningMode(RunningMode.full)
-          .logLevel(LogLevel.debug)
-          .allowDeeplink(true)
-          .stores([PLYStore.google]).start();
+      bool configured =
+          await PurchaselyBuilder.apiKey('fcb39be4-2ba4-4db7-bde3-2a5a1e20745d')
+              .runningMode(RunningMode.full)
+              .logLevel(LogLevel.debug)
+              .allowDeeplink(true)
+              .stores([PLYStore.google]).start();
 
       if (!configured) {
         print('Purchasely SDK not configured');
@@ -211,7 +210,7 @@ class _MyAppState extends State<MyApp> {
         PresentationActionKind.purchase,
         (info, payload) {
           if (payload is PurchasePayload) {
-            final planId = payload.plan['vendorId'] ?? payload.plan['id'];
+            final planId = payload.plan.vendorId ?? payload.plan.productId;
             print('User wants to purchase plan $planId — letting the SDK '
                 'proceed');
           }

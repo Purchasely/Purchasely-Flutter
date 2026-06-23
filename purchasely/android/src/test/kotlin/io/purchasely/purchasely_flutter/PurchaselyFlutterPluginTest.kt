@@ -139,12 +139,12 @@ class PurchaselyFlutterPluginTest {
     }
 
     @Test
-    fun `deprecated isDeeplinkHandled routes through deeplink validation`() {
+    fun `removed isDeeplinkHandled alias is not implemented`() {
         plugin.onAttachedToEngine(mockFlutterPluginBinding)
 
         plugin.onMethodCall(MethodCall("isDeeplinkHandled", mapOf<String, Any?>()), mockResult)
 
-        verify { mockResult.error("-1", "Deeplink must not be null", null) }
+        verify { mockResult.notImplemented() }
     }
 
     @Test

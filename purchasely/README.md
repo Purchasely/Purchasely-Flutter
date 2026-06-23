@@ -6,7 +6,7 @@ Purchasely is a solution to ease the integration and boost your In-App Purchase 
 
 > **Upgrading to 6.0?** The paywall surface (start, display/preload/close, action
 > interceptor) moved to a fluent builder API; other `Purchasely` APIs remain
-> source-compatible (deeplinks use v6 names with deprecated aliases). See
+> source-compatible (deeplinks use v6 names). See
 > [`MIGRATION-v6.md`](../MIGRATION-v6.md) for the complete old→new mapping.
 
 ## Installation

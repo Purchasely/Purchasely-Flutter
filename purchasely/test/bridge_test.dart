@@ -61,6 +61,7 @@ void main() {
             case 'removeInterceptor':
             case 'removeAllInterceptors':
             case 'interceptorResolve':
+            case 'setDefaultPresentationDismissHandler':
               return true;
             case 'start':
               return true;
@@ -236,6 +237,44 @@ void main() {
       expect(outcome.closeReason, isNull);
     });
 
+    test('default presentation dismiss handler receives rich outcome',
+        () async {
+      PresentationOutcome? captured;
+
+      await Purchasely.setDefaultPresentationDismissHandler((outcome) {
+        captured = outcome;
+      });
+
+      final registerCall = calls.firstWhere(
+          (c) => c.method == 'setDefaultPresentationDismissHandler');
+      expect(registerCall.arguments, isNull);
+
+      await emitEvent(<String, Object?>{
+        'event': 'onDefaultPresentationDismissed',
+        'outcome': <String, Object?>{
+          'purchaseResult': 'restored',
+          'closeReason': 'interactiveDismiss',
+          'plan': <String, Object?>{'vendorId': 'monthly'},
+          'presentation': <String, Object?>{
+            'screenId': 'campaign_screen',
+            'placementId': 'campaign_placement',
+            'campaignId': 'cmp_123',
+            'height': 720,
+            'type': 0,
+            'plans': <Map<String, Object?>>[],
+          },
+        },
+      });
+
+      expect(captured, isNotNull);
+      expect(captured!.purchaseResult, PurchaseResult.restored);
+      expect(captured!.closeReason, CloseReason.interactiveDismiss);
+      expect(captured!.plan?['vendorId'], 'monthly');
+      expect(captured!.presentation, isNotNull);
+      expect(captured!.presentation!.screenId, 'campaign_screen');
+      expect(captured!.presentation!.campaignId, 'cmp_123');
+    });
+
     test('re-display() after dismiss resolves the second future', () async {
       // Regression: after a dismiss the request entry is dropped, so a second
       // display() on the same Presentation handle must re-register the entry —
@@ -311,9 +350,22 @@ void main() {
         'kind': 'purchase',
         'info': <String, Object?>{'contentId': 'c1'},
         'payload': <String, Object?>{
-          'plan': <String, Object?>{'vendorId': 'monthly'},
-          'subscriptionOffer': <String, Object?>{'offerId': 'intro'},
-          'offer': <String, Object?>{'vendorId': 'promo'},
+          'plan': <String, Object?>{
+            'vendorId': 'monthly',
+            'productId': 'monthly-product',
+            'basePlanId': 'monthly-base',
+          },
+          'subscriptionOffer': <String, Object?>{
+            'subscriptionId': 'monthly-subscription',
+            'basePlanId': 'monthly-base',
+            'offerToken': 'intro-token',
+            'offerId': 'intro',
+          },
+          'offer': <String, Object?>{
+            'vendorId': 'promo',
+            'storeOfferId': 'store-promo',
+            'publicId': 'public-promo',
+          },
         },
       });
 
@@ -325,8 +377,30 @@ void main() {
       expect(capturedInfo!.contentId, 'c1');
       expect(capturedPayload, isA<PurchasePayload>());
       final purchase = capturedPayload as PurchasePayload;
-      expect(purchase.subscriptionOffer?['offerId'], 'intro');
-      expect(purchase.offer?['vendorId'], 'promo');
+      expect(
+        purchase.plan,
+        isA<PLYPlan>()
+            .having((plan) => plan.vendorId, 'vendorId', 'monthly')
+            .having((plan) => plan.productId, 'productId', 'monthly-product')
+            .having((plan) => plan.basePlanId, 'basePlanId', 'monthly-base'),
+      );
+      expect(
+        purchase.subscriptionOffer,
+        isA<PLYSubscriptionOffer>()
+            .having((offer) => offer.subscriptionId, 'subscriptionId',
+                'monthly-subscription')
+            .having((offer) => offer.basePlanId, 'basePlanId', 'monthly-base')
+            .having((offer) => offer.offerToken, 'offerToken', 'intro-token')
+            .having((offer) => offer.offerId, 'offerId', 'intro'),
+      );
+      expect(
+        purchase.offer,
+        isA<PLYPromoOffer>()
+            .having((offer) => offer.vendorId, 'vendorId', 'promo')
+            .having(
+                (offer) => offer.storeOfferId, 'storeOfferId', 'store-promo')
+            .having((offer) => offer.publicId, 'publicId', 'public-promo'),
+      );
 
       // The bridge must have posted the result back via interceptorResolve.
       final resolveCall =

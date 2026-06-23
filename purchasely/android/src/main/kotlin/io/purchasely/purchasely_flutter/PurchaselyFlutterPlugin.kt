@@ -241,11 +241,11 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
                 allowDeeplink(call.argument<Boolean>("allowDeeplink"))
                 result.safeSuccess(true)
             }
-            "readyToOpenDeeplink" -> {
-                // Deprecated Flutter v5 alias kept for source compatibility.
-                allowDeeplink(call.argument<Boolean>("readyToOpenDeeplink"))
+            "allowCampaigns" -> {
+                allowCampaigns(call.argument<Boolean>("allowCampaigns"))
                 result.safeSuccess(true)
             }
+            "setDefaultPresentationDismissHandler" -> setDefaultPresentationDismissHandler(result)
             "setLanguage" -> {
                 setLanguage(call.argument<String>("language"))
                 result.safeSuccess(true)
@@ -299,7 +299,6 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
                 result.safeSuccess(true)
             }
             "handleDeeplink" -> handleDeeplink(call.argument<String>("deeplink"), result)
-            "isDeeplinkHandled" -> handleDeeplink(call.argument<String>("deeplink"), result)
             "userSubscriptions" -> launch { userSubscriptions(result) }
             "userSubscriptionsHistory" -> launch { userSubscriptionsHistory(result) }
             "setThemeMode" -> {
@@ -622,6 +621,17 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
     }
     //endregion
 
+    //region Default presentation dismiss handler
+    private fun setDefaultPresentationDismissHandler(result: Result) {
+        Purchasely.setDefaultPresentationDismissHandler { outcome: PLYPresentationOutcome ->
+            emit(eventEnvelope("onDefaultPresentationDismissed", "").apply {
+                put("outcome", outcomeToMap(outcome))
+            })
+        }
+        result.safeSuccess(true)
+    }
+    //endregion
+
     //region Action interceptor
     private fun registerInterceptor(args: Map<String, Any?>?, result: Result) {
         val kindWire = args?.get("kind") as? String
@@ -870,6 +880,10 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
 
     private fun allowDeeplink(allowDeeplink: Boolean?) {
         Purchasely.allowDeeplink = allowDeeplink ?: true
+    }
+
+    private fun allowCampaigns(allowCampaigns: Boolean?) {
+        Purchasely.allowCampaigns = allowCampaigns ?: true
     }
 
     private fun synchronize(result: Result) {

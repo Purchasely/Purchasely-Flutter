@@ -10,8 +10,8 @@ Three areas are breaking changes: **starting the SDK**, **displaying / preloadin
 closing a presentation**, and the **action interceptor**. Everything else on the
 `Purchasely` class — purchases, restore, identity, catalog, subscriptions, user
 attributes, events, dynamic offerings, consent and config — remains
-source-compatible. Deeplinks also get the v6 names (`allowDeeplink`,
-`handleDeeplink`) while the old v5 names remain as deprecated aliases.
+source-compatible except for removed v5 aliases. Deeplinks use the v6 names
+(`allowDeeplink`, `handleDeeplink`).
 
 A paywall is now called a **Presentation** (or *Screen*).
 
@@ -43,7 +43,7 @@ A paywall is now called a **Presentation** (or *Screen*).
   `handler` returns an `InterceptResult` (`success` / `failed` / `notHandled`).
 - Inline rendering uses the `PLYPresentationView` widget.
 - Other `Purchasely.*` methods remain source-compatible; deeplinks use the v6
-  names with deprecated v5 aliases — see [What's unchanged](#whats-unchanged).
+  names — see [What's unchanged](#whats-unchanged).
 
 ---
 
@@ -65,13 +65,13 @@ been removed in favour of the builder API.
 | `Purchasely.closePresentation()` / `hidePresentation()` / `close()` | `presentation.close()` (on the loaded `Presentation`) |
 | `Purchasely.showPresentation()` | `presentation.display()` (on the loaded `Presentation`) |
 | `Purchasely.clientPresentationDisplayed(...)` / `clientPresentationClosed(...)` | handled via the `PresentationRequest` lifecycle (`preload` → inspect `PresentationType.client` → render your own UI) |
-| `Purchasely.setDefaultPresentationResultHandler(cb)` / `setDefaultPresentationResultCallback(cb)` | `PresentationBuilder.defaultSource().onDismissed((outcome) => …).build().display()` |
+| `Purchasely.setDefaultPresentationResultHandler(cb)` / `setDefaultPresentationResultCallback(cb)` | `Purchasely.setDefaultPresentationDismissHandler((outcome) => …)` — receives `PresentationOutcome` (`presentation`, `purchaseResult`, `plan`, `closeReason`, `error`) |
 | `Purchasely.setPaywallActionInterceptorCallback(cb)` + `Purchasely.onProcessAction(bool)` | `Purchasely.interceptAction(kind, handler)` — handler returns `InterceptResult.success` / `.failed` / `.notHandled` (no more `onProcessAction`) |
 
 > **Reminder.** Everything *not* in this table — purchases, restore, login,
 > attributes, subscriptions, products, events, offerings, consent and config —
 > keeps source-compatible `Purchasely.*` signatures. Deeplinks use the v6 names
-> documented below with deprecated aliases for the old names.
+> documented below.
 
 ---
 
@@ -91,7 +91,7 @@ bool configured = await Purchasely.start(
   userId: 'user_id',
 );
 
-Purchasely.readyToOpenDeeplink(true);
+Purchasely.readyToOpenDeeplink(true); // removed in v6; use allowDeeplink
 ```
 
 ### After
@@ -118,7 +118,7 @@ final bool configured = await PurchaselyBuilder.apiKey('<YOUR_API_KEY>')
 
 > **`allowDeeplink` replaces the old v5 name.** Allowing deeplinks can be set on
 > the builder or toggled later with `Purchasely.allowDeeplink(bool)`.
-> `readyToOpenDeeplink` remains only as a deprecated compatibility alias.
+> `readyToOpenDeeplink` was removed from the Flutter v6 API.
 
 ---
 
@@ -275,7 +275,7 @@ await Purchasely.interceptAction(
   PresentationActionKind.purchase,
   (info, payload) async {
     if (payload is PurchasePayload) {
-      final ok = await MyPurchaseSystem.purchase(payload.plan['productId']);
+      final ok = await MyPurchaseSystem.purchase(payload.plan.productId);
       return ok ? InterceptResult.success : InterceptResult.failed;
     }
     return InterceptResult.notHandled;
@@ -307,20 +307,26 @@ payload-less kinds (`login`, `restore`, `promoCode`) carry no extra fields.
 
 ---
 
-## Deeplinks & default result handler
+## Deeplinks, campaigns & default dismiss handler
 
 ```dart
-// Allow deeplinks at start:
-await PurchaselyBuilder.apiKey('<YOUR_API_KEY>').allowDeeplink(true).start();
+// Allow deeplinks and campaigns at start:
+await PurchaselyBuilder.apiKey('<YOUR_API_KEY>')
+    .allowDeeplink(true)
+    .allowCampaigns(true)
+    .start();
 
-// Default result handler (replaces setDefaultPresentationResultHandler) — attach
-// onDismissed to a default-source request:
-PresentationBuilder.defaultSource()
-    .onDismissed((outcome) {
-      print('Deeplink presentation dismissed: ${outcome.purchaseResult} / ${outcome.closeReason}');
-    })
-    .build()
-    .display();
+// These runtime gates are independent.
+await Purchasely.allowDeeplink(true);
+await Purchasely.allowCampaigns(false);
+
+// Default dismiss handler (renamed from setDefaultPresentationResultHandler).
+// Used for presentations opened by the SDK itself: campaigns, deeplinks,
+// promoted in-app purchases.
+await Purchasely.setDefaultPresentationDismissHandler((outcome) {
+  print('SDK presentation dismissed: ${outcome.presentation?.screenId} / '
+      '${outcome.purchaseResult} / ${outcome.closeReason}');
+});
 
 // v6 deeplink handler:
 final handled = await Purchasely.handleDeeplink('app://ply/presentations/');
@@ -352,7 +358,7 @@ PLYPresentationView(request: request);
 
 Only the **paywall surface** (start, display / preload / close / back, and the
 action interceptor) has breaking API changes. Every other `Purchasely.*` method
-remains source-compatible; deeplinks add v6 names with deprecated aliases:
+remains source-compatible except for removed v5 aliases; deeplinks use v6 names:
 
 - **Purchases**: `purchaseWithPlanVendorId`, `signPromotionalOffer`.
 - **Restore**: `restoreAllProducts`, `silentRestoreAllProducts`,
@@ -375,8 +381,8 @@ remains source-compatible; deeplinks add v6 names with deprecated aliases:
   `removeDynamicOffering`, `clearDynamicOfferings`.
 - **Consent**: `revokeDataProcessingConsent`.
 - **Config / misc**: `setLanguage`, `setThemeMode`, `setLogLevel`,
-  `synchronize`, `allowDeeplink`, `handleDeeplink`, `setDebugMode`.
-  (`readyToOpenDeeplink` / `isDeeplinkHandled` remain deprecated aliases.)
+  `synchronize`, `allowDeeplink`, `allowCampaigns`, `handleDeeplink`,
+  `setDebugMode`. (`readyToOpenDeeplink` / `isDeeplinkHandled` were removed.)
 
 > **`synchronize()` now reports completion.** The 6.0 native SDKs expose
 > success/error callbacks on `synchronize()` (Android

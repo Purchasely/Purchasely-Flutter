@@ -61,6 +61,13 @@ void main() {
           throwsA(isA<PlatformException>()),
         );
       });
+
+      test('allowCampaigns sends runtime campaign gate to native', () async {
+        await Purchasely.allowCampaigns(false);
+
+        expect(methodCalls.first.method, 'allowCampaigns');
+        expect(methodCalls.first.arguments['allowCampaigns'], false);
+      });
     });
 
     group('User Management', () {
@@ -369,19 +376,6 @@ void main() {
 
         expect(methodCalls.first.method, 'allowDeeplink');
         expect(methodCalls.first.arguments['allowDeeplink'], true);
-      });
-
-      test('deprecated deeplink aliases still bridge to v6 methods', () async {
-        // ignore: deprecated_member_use_from_same_package
-        await Purchasely.readyToOpenDeeplink(false);
-        // ignore: deprecated_member_use_from_same_package
-        final handled = await Purchasely.isDeeplinkHandled('app://premium');
-
-        expect(methodCalls[0].method, 'allowDeeplink');
-        expect(methodCalls[0].arguments['allowDeeplink'], false);
-        expect(methodCalls[1].method, 'handleDeeplink');
-        expect(methodCalls[1].arguments['deeplink'], 'app://premium');
-        expect(handled, true);
       });
     });
 
@@ -711,6 +705,7 @@ dynamic _handleMethodCall(MethodCall methodCall) {
     case 'setThemeMode':
       return null;
     case 'allowDeeplink':
+    case 'allowCampaigns':
       return null;
     case 'handleDeeplink':
       return true;

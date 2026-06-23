@@ -6,6 +6,9 @@ import 'package:flutter/services.dart';
 import 'src/action_interceptor.dart'
     show PresentationActionKind, ActionInterceptorHandler;
 import 'src/bridge.dart' show PurchaselyBridge;
+import 'src/ply_models.dart';
+import 'src/ply_transformers.dart';
+import 'src/presentation_outcome.dart' show PresentationOutcome;
 
 // --- Purchasely SDK cross-platform API ---
 //
@@ -18,6 +21,7 @@ import 'src/bridge.dart' show PurchaselyBridge;
 // ActionInterceptor…).
 export 'src/action_interceptor.dart';
 export 'src/bridge.dart' show PurchaselyBridge;
+export 'src/ply_models.dart';
 export 'src/presentation.dart';
 export 'src/presentation_builder.dart';
 export 'src/presentation_outcome.dart';
@@ -57,6 +61,18 @@ class Purchasely {
   /// Removes all registered action interceptors.
   static Future<void> removeAllInterceptors() =>
       PurchaselyBridge.ensureInstalled().removeAllInterceptors();
+
+  /// Registers the global dismiss handler for presentations opened by the SDK
+  /// itself (campaigns, deeplinks, promoted in-app purchases).
+  ///
+  /// The handler receives the rich v6 [PresentationOutcome], including the
+  /// [PresentationOutcome.presentation] field so the app can identify which
+  /// campaign/deeplink presentation was closed.
+  static Future<void> setDefaultPresentationDismissHandler(
+    void Function(PresentationOutcome outcome) handler,
+  ) =>
+      PurchaselyBridge.ensureInstalled()
+          .setDefaultPresentationDismissHandler(handler);
 
   /// Removes the user attribute listener
   static void clearUserAttributeListener() {
@@ -173,10 +189,14 @@ class Purchasely {
         'allowDeeplink', <String, dynamic>{'allowDeeplink': allowDeeplink});
   }
 
-  @Deprecated(
-      'Use allowDeeplink instead. This v5 alias will be removed in a future major version.')
-  static Future<void> readyToOpenDeeplink(bool readyToOpenDeeplink) async {
-    await allowDeeplink(readyToOpenDeeplink);
+  /// Allows or defers automatic campaign presentation display at runtime.
+  ///
+  /// This flag is independent from [allowDeeplink]. It defaults to `true` in
+  /// the native SDKs; pass `false` during startup/onboarding to queue
+  /// campaigns, then `true` when your app is ready to display them.
+  static Future<void> allowCampaigns(bool allowCampaigns) async {
+    await _channel.invokeMethod(
+        'allowCampaigns', <String, dynamic>{'allowCampaigns': allowCampaigns});
   }
 
   static Future<void> setLanguage(String language) async {
@@ -305,12 +325,6 @@ class Purchasely {
   static Future<bool> handleDeeplink(String deepLink) async {
     return await _channel.invokeMethod(
         'handleDeeplink', <String, dynamic>{'deeplink': deepLink});
-  }
-
-  @Deprecated(
-      'Use handleDeeplink instead. This v5 alias will be removed in a future major version.')
-  static Future<bool> isDeeplinkHandled(String deepLink) async {
-    return await handleDeeplink(deepLink);
   }
 
   static void listenToEvents(Function(PLYEvent) block) {
@@ -575,81 +589,15 @@ class Purchasely {
 
   // -- Private Methods --
 
-  static PLYPlan? transformToPLYPlan(Map<dynamic, dynamic> plan) {
-    if (plan.isEmpty) return null;
+  static PLYPlan? transformToPLYPlan(Map<dynamic, dynamic> plan) =>
+      plyPlanFromMap(plan);
 
-    final offerPrice = plan['offerPrice'] ?? plan['introPrice'];
-    final offerAmount = plan['offerAmount'] ?? plan['introAmount'];
-    final offerDuration = plan['offerDuration'] ?? plan['introDuration'];
-    final offerPeriod = plan['offerPeriod'] ?? plan['introPeriod'];
-    final hasOfferPrice = plan['hasOfferPrice'] ?? plan['hasIntroductoryPrice'];
-
-    return PLYPlan(
-      plan['vendorId'],
-      plan['productId'],
-      plan['name'],
-      _mapPlanType(plan['type']),
-      plan['amount'],
-      plan['localizedAmount'],
-      plan['currencyCode'],
-      plan['currencySymbol'],
-      plan['price'],
-      plan['period'],
-      hasOfferPrice,
-      offerPrice,
-      offerAmount,
-      offerDuration,
-      offerPeriod,
-      plan['hasFreeTrial'],
-      hasOfferPrice,
-      offerPrice,
-      offerAmount,
-      offerDuration,
-      offerPeriod,
-    );
-  }
-
-  static PLYPlanType _mapPlanType(dynamic rawType) {
-    if (rawType is int && rawType >= 0 && rawType < PLYPlanType.values.length) {
-      return PLYPlanType.values[rawType];
-    }
-    if (rawType is String) {
-      switch (rawType) {
-        case 'CONSUMABLE':
-          return PLYPlanType.consumable;
-        case 'NON_CONSUMABLE':
-          return PLYPlanType.nonConsumable;
-        case 'RENEWING_SUBSCRIPTION':
-          return PLYPlanType.autoRenewingSubscription;
-        case 'NON_RENEWING_SUBSCRIPTION':
-          return PLYPlanType.nonRenewingSubscription;
-        default:
-          return PLYPlanType.unknown;
-      }
-    }
-    return PLYPlanType.unknown;
-  }
-
-  static PLYPromoOffer? transformToPLYPromoOffer(Map<dynamic, dynamic> offer) {
-    if (offer.isEmpty) return null;
-
-    return PLYPromoOffer(
-      offer['vendorId'],
-      offer['storeOfferId'],
-    );
-  }
+  static PLYPromoOffer? transformToPLYPromoOffer(Map<dynamic, dynamic> offer) =>
+      plyPromoOfferFromMap(offer);
 
   static PLYSubscriptionOffer? transformToPLYSubscription(
-      Map<dynamic, dynamic> subscriptionOffer) {
-    if (subscriptionOffer.isEmpty) return null;
-
-    return PLYSubscriptionOffer(
-      subscriptionOffer['subscriptionId'],
-      subscriptionOffer['basePlanId'],
-      subscriptionOffer['offerToken'],
-      subscriptionOffer['offerId'],
-    );
-  }
+          Map<dynamic, dynamic> subscriptionOffer) =>
+      plySubscriptionOfferFromMap(subscriptionOffer);
 
   static List<PLYDynamicOffering> transformToDynamicOfferings(
       List<Map<dynamic, dynamic>>? offerings) {
@@ -849,14 +797,6 @@ enum PLYSubscriptionSource {
   none
 }
 
-enum PLYPlanType {
-  consumable,
-  nonConsumable,
-  autoRenewingSubscription,
-  nonRenewingSubscription,
-  unknown
-}
-
 enum PLYEventName {
   APP_INSTALLED,
   APP_CONFIGURED,
@@ -926,76 +866,6 @@ enum PLYUserAttributeType {
 }
 
 // -- CLASSES --
-
-class PLYPlan {
-  String? vendorId;
-  String? productId;
-  String? name;
-  PLYPlanType type;
-  double? amount;
-  String? localizedAmount;
-  String? currencyCode;
-  String? currencySymbol;
-  String? price;
-  String? period;
-  bool? hasIntroductoryPrice;
-  String? introPrice;
-  double? introAmount;
-  String? introDuration;
-  String? introPeriod;
-  bool? hasFreeTrial;
-  bool? hasOfferPrice;
-  String? offerPrice;
-  double? offerAmount;
-  String? offerDuration;
-  String? offerPeriod;
-
-  PLYPlan(
-      this.vendorId,
-      this.productId,
-      this.name,
-      this.type,
-      this.amount,
-      this.localizedAmount,
-      this.currencyCode,
-      this.currencySymbol,
-      this.price,
-      this.period,
-      this.hasIntroductoryPrice,
-      this.introPrice,
-      this.introAmount,
-      this.introDuration,
-      this.introPeriod,
-      this.hasFreeTrial,
-      [this.hasOfferPrice,
-      this.offerPrice,
-      this.offerAmount,
-      this.offerDuration,
-      this.offerPeriod]) {
-    hasOfferPrice ??= hasIntroductoryPrice;
-    offerPrice ??= introPrice;
-    offerAmount ??= introAmount;
-    offerDuration ??= introDuration;
-    offerPeriod ??= introPeriod;
-  }
-}
-
-class PLYPromoOffer {
-  String? vendorId;
-  String? storeOfferId;
-
-  PLYPromoOffer(this.vendorId, this.storeOfferId);
-}
-
-class PLYSubscriptionOffer {
-  String subscriptionId;
-  String? basePlanId;
-  String? offerToken;
-  String? offerId;
-
-  PLYSubscriptionOffer(
-      this.subscriptionId, this.basePlanId, this.offerToken, this.offerId);
-}
 
 class PLYProduct {
   String name;

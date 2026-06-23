@@ -8,6 +8,8 @@
 
 import 'dart:async';
 
+import 'ply_models.dart';
+import 'ply_transformers.dart';
 import 'presentation.dart';
 
 /// Kind of action triggered from a presentation.
@@ -129,9 +131,9 @@ class NavigatePayload extends ActionPayload {
 }
 
 class PurchasePayload extends ActionPayload {
-  final Map<String, dynamic> plan;
-  final Map<String, dynamic>? subscriptionOffer;
-  final Map<String, dynamic>? offer;
+  final PLYPlan plan;
+  final PLYSubscriptionOffer? subscriptionOffer;
+  final PLYPromoOffer? offer;
   const PurchasePayload({
     required this.plan,
     this.subscriptionOffer,
@@ -197,10 +199,8 @@ ActionPayload? actionPayloadFromMap(
     PresentationActionKind kind, Map<dynamic, dynamic>? rawParameters) {
   final parameters = rawParameters ?? const {};
 
-  Map<String, dynamic>? _stringMap(Object? value) {
-    if (value is Map) {
-      return value.map((k, v) => MapEntry(k.toString(), v));
-    }
+  Map<dynamic, dynamic>? _map(Object? value) {
+    if (value is Map) return value;
     return null;
   }
 
@@ -213,12 +213,13 @@ ActionPayload? actionPayloadFromMap(
         title: parameters['title'] as String?,
       );
     case PresentationActionKind.purchase:
-      final plan = _stringMap(parameters['plan']);
+      final plan = plyPlanFromMap(_map(parameters['plan']));
       if (plan == null) return null;
       return PurchasePayload(
         plan: plan,
-        subscriptionOffer: _stringMap(parameters['subscriptionOffer']),
-        offer: _stringMap(parameters['offer']),
+        subscriptionOffer:
+            plySubscriptionOfferFromMap(_map(parameters['subscriptionOffer'])),
+        offer: plyPromoOfferFromMap(_map(parameters['offer'])),
       );
     case PresentationActionKind.close:
       return ClosePayload(
