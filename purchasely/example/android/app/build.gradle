@@ -62,10 +62,7 @@ flutter {
 }
 
 dependencies {
-    // Pin to the same pre-release as the plugin (purchasely/android/build.gradle).
-    // Gradle ranks 6.0.0 (release) above 6.0.0-rc1 (pre-release), so a stray
-    // 6.0.0 here would silently upgrade the transitive core to 6.0.0 and break
-    // the v6 PLYTransition constructor at runtime (NoSuchMethodError).
-    implementation 'io.purchasely:google-play:6.0.0-rc.1'
-    implementation 'io.purchasely:player:6.0.0-rc.1'
+    // Pin to the same mavenLocal pre-release as the plugin (purchasely/android/build.gradle).
+    implementation 'io.purchasely:google-play:6.0.0-beta.12'
+    implementation 'io.purchasely:player:6.0.0-beta.12'
 }

@@ -62,7 +62,7 @@ dependencies {
     // Purchasely 6.0 native SDK — provides the builder/interceptAction/PLYPresentationBase
     // APIs wired by the single plugin (PurchaselyFlutterPlugin.kt), which compiles the
     // whole surface against this version.
-    api 'io.purchasely:core:6.0.0-rc.1'
+    api 'io.purchasely:core:6.0.0-beta.12'
 
     // Test dependencies
     testImplementation 'junit:junit:4.13.2'
