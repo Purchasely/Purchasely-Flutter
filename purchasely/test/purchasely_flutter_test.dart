@@ -1838,7 +1838,7 @@ void main() {
     });
   });
 
-  group('PLYPurchaselyBuilder.start', () {
+  group('PurchaselyBuilder.start', () {
     late MethodChannel channel;
     final List<MethodCall> methodCalls = [];
 

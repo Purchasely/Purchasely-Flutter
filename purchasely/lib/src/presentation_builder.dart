@@ -127,7 +127,7 @@ class PLYPresentationBuilder {
   /// generated for the bridge to route events back.
   PLYPresentationRequest build() {
     // Lazy install of the dispatcher so any presentation entry point
-    // initialises it, not just PLYPurchaselyBuilder.start().
+    // initialises it, not just PurchaselyBuilder.start().
     PurchaselyBridge.ensureInstalled();
     return PLYPresentationRequest(
       requestId: _nextRequestId(),

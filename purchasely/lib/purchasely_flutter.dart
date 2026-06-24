@@ -9,7 +9,7 @@ import 'src/bridge.dart' show PurchaselyBridge;
 import 'src/ply_models.dart';
 import 'src/ply_transformers.dart';
 import 'src/presentation_outcome.dart' show PLYPresentationOutcome;
-import 'src/purchasely_builder.dart' show PLYLogLevel, PLYPurchaselyBuilder;
+import 'src/purchasely_builder.dart' show PLYLogLevel, PurchaselyBuilder;
 
 // --- Purchasely SDK cross-platform API ---
 //
@@ -17,7 +17,7 @@ import 'src/purchasely_builder.dart' show PLYLogLevel, PLYPurchaselyBuilder;
 // callers can `import 'package:purchasely_flutter/purchasely_flutter.dart';`
 // and get both the static `Purchasely` class below (purchases, restore,
 // login/logout, attributes, products/plans, subscriptions, events, offerings,
-// consent, config) and the builder-based presentation API (`PLYPurchaselyBuilder`,
+// consent, config) and the builder-based presentation API (`PurchaselyBuilder`,
 // `PLYPresentationBuilder`, `PLYPresentation`, `PLYPresentationOutcome`, `PLYTransition`,
 // ActionInterceptor…).
 export 'src/action_interceptor.dart';
@@ -53,8 +53,8 @@ class Purchasely {
   ///     .stores([PLYStore.google])
   ///     .start();
   /// ```
-  static PLYPurchaselyBuilder apiKey(String key) =>
-      PLYPurchaselyBuilder.apiKey(key);
+  static PurchaselyBuilder apiKey(String key) =>
+      PurchaselyBuilder.apiKey(key);
 
   // --- Action interceptor ---
 

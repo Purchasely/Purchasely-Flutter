@@ -21,9 +21,9 @@ enum PLYStorekitVersion { storeKit1, storeKit2 }
 enum PLYStore { google, huawei, amazon }
 
 /// Fluent builder for `Purchasely.start()`. Begin the chain with
-/// `PLYPurchaselyBuilder.apiKey('…')`, then chain modifiers, then call
+/// `PurchaselyBuilder.apiKey('…')`, then chain modifiers, then call
 /// `.start()`.
-class PLYPurchaselyBuilder {
+class PurchaselyBuilder {
   final String _apiKey;
   String? _appUserId;
   PLYRunningMode _runningMode;
@@ -35,7 +35,7 @@ class PLYPurchaselyBuilder {
   // iOS only
   PLYStorekitVersion _storekitVersion;
 
-  PLYPurchaselyBuilder._(this._apiKey,
+  PurchaselyBuilder._(this._apiKey,
       {String? appUserId,
       PLYRunningMode runningMode = PLYRunningMode.observer,
       PLYLogLevel logLevel = PLYLogLevel.error,
@@ -51,45 +51,45 @@ class PLYPurchaselyBuilder {
         _stores = List.of(stores),
         _storekitVersion = storekitVersion;
 
-  static PLYPurchaselyBuilder apiKey(String key) => PLYPurchaselyBuilder._(key);
+  static PurchaselyBuilder apiKey(String key) => PurchaselyBuilder._(key);
 
-  PLYPurchaselyBuilder appUserId(String? id) {
+  PurchaselyBuilder appUserId(String? id) {
     _appUserId = id;
     return this;
   }
 
-  PLYPurchaselyBuilder runningMode(PLYRunningMode mode) {
+  PurchaselyBuilder runningMode(PLYRunningMode mode) {
     _runningMode = mode;
     return this;
   }
 
-  PLYPurchaselyBuilder logLevel(PLYLogLevel level) {
+  PurchaselyBuilder logLevel(PLYLogLevel level) {
     _logLevel = level;
     return this;
   }
 
   /// Whether the SDK is allowed to open deeplinks.
-  PLYPurchaselyBuilder allowDeeplink(bool allow) {
+  PurchaselyBuilder allowDeeplink(bool allow) {
     _allowDeeplink = allow;
     return this;
   }
 
   /// Whether the SDK is allowed to display campaign-driven presentations.
   /// Omit this modifier to keep each native SDK's default/backend-configured value.
-  PLYPurchaselyBuilder allowCampaigns(bool allow) {
+  PurchaselyBuilder allowCampaigns(bool allow) {
     _allowCampaigns = allow;
     return this;
   }
 
   /// Android-only: stores the SDK is allowed to use (priority order). On iOS
   /// this modifier is a no-op.
-  PLYPurchaselyBuilder stores(List<PLYStore> stores) {
+  PurchaselyBuilder stores(List<PLYStore> stores) {
     _stores = List.of(stores);
     return this;
   }
 
   /// iOS-only: StoreKit version to use. On Android this modifier is a no-op.
-  PLYPurchaselyBuilder storekitVersion(PLYStorekitVersion version) {
+  PurchaselyBuilder storekitVersion(PLYStorekitVersion version) {
     _storekitVersion = version;
     return this;
   }
