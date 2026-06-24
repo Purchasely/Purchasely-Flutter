@@ -122,7 +122,8 @@ void main() {
       );
 
       // Renamed in v6: must reach the native side without error.
-      await Purchasely.removeActionInterceptor(PLYPresentationActionKind.purchase);
+      await Purchasely.removeActionInterceptor(
+          PLYPresentationActionKind.purchase);
       await Purchasely.removeAllActionInterceptors();
       // Reaching here means all four bridge round-trips succeeded.
       expect(true, isTrue);

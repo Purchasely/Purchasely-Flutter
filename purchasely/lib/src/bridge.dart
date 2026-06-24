@@ -428,7 +428,8 @@ class PurchaselyBridge {
     );
   }
 
-  PLYPresentation _presentationFromRaw(dynamic raw, PLYPresentationRequest request) {
+  PLYPresentation _presentationFromRaw(
+      dynamic raw, PLYPresentationRequest request) {
     final map = <dynamic, dynamic>{};
     if (raw is Map) map.addAll(raw);
     map['requestId'] = request.requestId;
@@ -506,10 +507,12 @@ class _BridgePresentationActions extends PLYPresentationActions {
       _bridge._displayPresentation(presentation, transition);
 
   @override
-  Future<void> close(PLYPresentation presentation) => _bridge._close(presentation);
+  Future<void> close(PLYPresentation presentation) =>
+      _bridge._close(presentation);
 
   @override
-  Future<void> back(PLYPresentation presentation) => _bridge._back(presentation);
+  Future<void> back(PLYPresentation presentation) =>
+      _bridge._back(presentation);
 }
 
 class _BridgePresentationRequestActions extends PLYPresentationRequestActions {

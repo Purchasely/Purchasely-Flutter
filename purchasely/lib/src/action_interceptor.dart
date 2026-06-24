@@ -108,8 +108,9 @@ class PLYInterceptorInfo {
     final presentationMap = map['presentation'];
     return PLYInterceptorInfo(
       contentId: map['contentId'] as String?,
-      presentation:
-          presentationMap is Map ? PLYPresentation.fromMap(presentationMap) : null,
+      presentation: presentationMap is Map
+          ? PLYPresentation.fromMap(presentationMap)
+          : null,
     );
   }
 }
@@ -161,7 +162,8 @@ class PLYOpenPresentationPayload extends PLYActionPayload {
   final String presentationId;
   const PLYOpenPresentationPayload({required this.presentationId});
   @override
-  PLYPresentationActionKind get kind => PLYPresentationActionKind.openPresentation;
+  PLYPresentationActionKind get kind =>
+      PLYPresentationActionKind.openPresentation;
 }
 
 class PLYOpenPlacementPayload extends PLYActionPayload {

@@ -45,7 +45,8 @@ class PLYPresentationBuilder {
   bool? _displayCloseButton;
   bool? _displayBackButton;
 
-  void Function(PLYPresentation presentation, PLYPresentationError? error)? _onLoaded;
+  void Function(PLYPresentation presentation, PLYPresentationError? error)?
+      _onLoaded;
   void Function(PLYPresentation? presentation, PLYPresentationError? error)?
       _onPresented;
   void Function()? _onCloseRequested;

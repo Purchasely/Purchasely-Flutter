@@ -71,10 +71,10 @@ class PLYPresentationRequest {
   /// Builder-seeded handlers. The bridge wires them to the native callback
   /// events. They are copied onto the loaded [PLYPresentation] once preload
   /// completes so the host app can also reassign them post-preload.
-  final void Function(PLYPresentation presentation, PLYPresentationError? error)?
-      onLoaded;
-  final void Function(PLYPresentation? presentation, PLYPresentationError? error)?
-      onPresented;
+  final void Function(
+      PLYPresentation presentation, PLYPresentationError? error)? onLoaded;
+  final void Function(
+      PLYPresentation? presentation, PLYPresentationError? error)? onPresented;
   final void Function()? onCloseRequested;
   final void Function(PLYPresentationOutcome outcome)? onDismissed;
 
