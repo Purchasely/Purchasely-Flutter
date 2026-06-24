@@ -62,7 +62,7 @@ flutter {
 }
 
 dependencies {
-    // Pin to the same mavenLocal pre-release as the plugin (purchasely/android/build.gradle).
-    implementation 'io.purchasely:google-play:6.0.0-beta.12'
-    implementation 'io.purchasely:player:6.0.0-beta.12'
+    // Pin to the same native SDK version as the plugin (purchasely/android/build.gradle).
+    implementation 'io.purchasely:google-play:6.0.0-rc.2'
+    implementation 'io.purchasely:player:6.0.0-rc.2'
 }
