@@ -14,8 +14,9 @@ on:
   workflow_dispatch:
   schedule:
     - cron: "0 3 * * *"
-  # TEMP: verify the workflow runs on the feature branch (workflow_dispatch is only
-  # dispatchable once on the default branch). Removed right after the verification run.
+  # TEMP: one-shot verification that the workflow runs green on rc.2 from the
+  # feature branch (workflow_dispatch only dispatches once on the default branch).
+  # Removed right after the verification run.
   push:
     branches: [feat/sdk-v6-migration]
     paths: [".github/workflows/e2e-android.yml"]
@@ -55,27 +56,8 @@ jobs:
           cache: true
 
       # The native Purchasely Android SDK (io.purchasely:core / google-play / player)
-      # is a PRE-RELEASE not yet on Maven Central — the plugin resolves it from
-      # mavenLocal (purchasely/android/build.gradle). A CI runner's mavenLocal is
-      # empty, so we prime it from the private SDK sources. This requires a repo
-      # secret PURCHASELY_ANDROID_SOURCES_TOKEN (read access to
-      # Purchasely/Purchasely-Android-Sources), and the published version MUST match
-      # the pin in purchasely/android/build.gradle. Without it (or Maven Central
-      # publication) the Gradle build cannot resolve io.purchasely:* — the same
-      # blocker as the Android jobs in ci.yml.
-      - name: Prime native SDK into mavenLocal
-        env:
-          SOURCES_TOKEN: ${{ secrets.PURCHASELY_ANDROID_SOURCES_TOKEN }}
-        run: |
-          if [ -z "$SOURCES_TOKEN" ]; then
-            echo "::warning::PURCHASELY_ANDROID_SOURCES_TOKEN not set — native SDK not primed into mavenLocal; the Gradle build will fail to resolve io.purchasely:* until the SDK is published or this secret is configured (known blocker, see PR #120)."
-            exit 0
-          fi
-          git clone --depth 1 \
-            "https://x-access-token:${SOURCES_TOKEN}@github.com/Purchasely/Purchasely-Android-Sources.git" \
-            /tmp/ply-android
-          cd /tmp/ply-android
-          ./gradlew publishToMavenLocal --no-daemon
+      # 6.0.0-rc.2 is published to Maven Central, so Gradle resolves it directly —
+      # no mavenLocal priming needed.
 
       - name: Install Flutter deps (purchasely)
         working-directory: purchasely
