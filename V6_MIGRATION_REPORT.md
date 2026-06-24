@@ -173,7 +173,6 @@ pour tout code existant.
 
    | Ancien | Nouveau |
    |---|---|
-   | `PLYPurchaselyBuilder` | `PurchaselyBuilder` — entry point via `Purchasely.apiKey(…)` |
    | `PresentationBuilder` | `PLYPresentationBuilder` |
    | `PresentationRequest` | `PLYPresentationRequest` |
    | `Presentation` | `PLYPresentation` |
@@ -432,7 +431,7 @@ depuis le trunk).
 - `purchasely-ai-skill/references/flutter/integration.md` : encore en **v5**
   (`Purchasely.start(...)`, `fetchPresentation`/`presentPresentation`,
   `setPaywallActionInterceptorCallback` + `onProcessAction`). À remplacer par
-  l'API v6 (§3) : `PurchaselyBuilder`, `PLYPresentationBuilder` /
+  l'API v6 (§3) : `Purchasely.apiKey(…)`, `PLYPresentationBuilder` /
   `PLYPresentationRequest`, `Purchasely.interceptAction`, `PLYPresentationView`,
   `synchronize` awaitable. **Tous les types doivent porter le préfixe `PLY`**
   (cf. §2.9 — BREAKING depuis le 2026-06-24).

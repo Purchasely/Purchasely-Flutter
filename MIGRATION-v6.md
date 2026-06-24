@@ -32,7 +32,6 @@ usages.
 
 | Old name | New name |
 |---|---|
-| `PLYPurchaselyBuilder` | `PurchaselyBuilder` — now accessed via `Purchasely.apiKey(…)` |
 | `PresentationBuilder` | `PLYPresentationBuilder` |
 | `PresentationRequest` | `PLYPresentationRequest` |
 | `Presentation` | `PLYPresentation` |
