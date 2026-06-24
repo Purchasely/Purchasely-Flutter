@@ -148,13 +148,7 @@ source mais reste un **no-op** sur Android **et** iOS.
   `presentSubscriptions` retiré des deux côtés, pin natif rc1).
 - Ce rapport (`V6_MIGRATION_REPORT.md`).
 
-### 2.9 Renommage PLY de tous les types publics — session 2026-06-24
-
-**Contexte.** La convention native iOS/Android est de préfixer tous les types
-publics du SDK avec `PLY`. Le bridge Dart utilisait des noms sans préfixe pour
-la plupart des types (ex. `Transition`, `PresentationBuilder`, `RunningMode`).
-Ce lot de changements aligne le SDK Flutter sur cette convention — BREAKING
-pour tout code existant.
+### 2.9 Finalisation API publique Dart — session 2026-06-24
 
 **Ce qui a été fait :**
 
@@ -167,44 +161,24 @@ pour tout code existant.
    `lib/src/presentation.dart`) : permet de chaîner directement
    `.preload().display(transition)` sans `await` intermédiaire.
 
-3. **Renommage de tous les types publics** sans préfixe `PLY` vers `PLY*`
-   dans l'ensemble des fichiers Dart du plugin (src/, example/, tests/,
-   integration_test/) :
+3. **Renames v5 → v6** (types supprimés ou renommés par rapport à la v5 de main) :
 
-   | Ancien | Nouveau |
+   | Ancien (v5) | Nouveau (v6) |
    |---|---|
-   | `PresentationBuilder` | `PLYPresentationBuilder` |
-   | `PresentationRequest` | `PLYPresentationRequest` |
-   | `Presentation` | `PLYPresentation` |
-   | `PresentationType` | `PLYPresentationType` |
-   | `PresentationPlan` | `PLYPresentationPlan` |
-   | `PresentationError` | `PLYPresentationError` |
-   | `PresentationSource` / `PresentationSourceKind` | `PLYPresentationSource` / `PLYPresentationSourceKind` |
-   | `PresentationActions` / `PresentationRequestActions` | `PLYPresentationActions` / `PLYPresentationRequestActions` |
-   | `PresentationActionKind` | `PLYPresentationActionKind` |
-   | `PurchaseResult` | `PLYPurchaseResult` |
-   | `CloseReason` | `PLYCloseReason` |
-   | `RunningMode` | `PLYRunningMode` |
-   | `LogLevel` | `PLYLogLevel` |
-   | `StorekitVersion` | `PLYStorekitVersion` |
-   | `Transition` | `PLYTransition` |
-   | `TransitionType` | `PLYTransitionType` |
-   | `TransitionColors` | `PLYTransitionColors` |
-   | `InterceptResult` | `PLYInterceptResult` |
-   | `InterceptorInfo` | `PLYInterceptorInfo` |
-   | `ActionPayload` / `ActionInterceptorHandler` | `PLYActionPayload` / `PLYActionInterceptorHandler` |
-   | `*Payload` (7 classes) | `PLY*Payload` |
+   | `PresentPresentationResult` | `PLYPresentationOutcome` |
+   | `PLYPaywallAction` | `PLYPresentationActionKind` |
+   | `PLYPaywallInfo` | `PLYInterceptorInfo` |
+   | `PLYPaywallActionParameters` | `PLYActionPayload` (+ sous-classes `PLY*Payload`) |
+   | `PaywallActionInterceptorResult` | handler splité en `(PLYInterceptorInfo, PLYActionPayload?, PLYActionInterceptorHandler)` |
 
-4. **Suppression des doublons morts** dans `purchasely_flutter.dart` : les
-   anciennes définitions `PLYLogLevel`, `PLYRunningMode` (v5, 4 valeurs),
-   `PLYPurchaseResult`, `PLYPresentationType`, et la classe `PLYPresentationPlan`
-   (constructeur positionnel) ont été retirées — remplacées par les types
-   canoniques des fichiers `src/`.
-
-5. **`PLYRunningMode` simplifié** : l'ancienne version avait 4 valeurs
+4. **`PLYRunningMode` simplifié** : l'ancienne version avait 4 valeurs
    (`transactionOnly`, `observer`, `paywallObserver`, `full`). La nouvelle n'en
    a que 2 : `observer` (index 0, défaut) et `full` (index 1). Tout code sur
    `transactionOnly` / `paywallObserver` doit être supprimé.
+
+5. **`Purchasely.apiKey(…)` comme point d'entrée SDK** : l'init se fait via
+   `Purchasely.apiKey('<key>').runningMode(…).start()` — le `PurchaselyBuilder`
+   interne n'est pas référencé directement par l'utilisateur.
 
 6. **Tests mis à jour** : `platform_channel_test.dart`, `purchasely_flutter_test.dart`,
    `bridge_test.dart`, `native_view_widget_test.dart`, `transition_test.dart`,

@@ -24,42 +24,17 @@ A paywall is now called a **Presentation** (or *Screen*).
 
 ## Changelog
 
-### 2026-06-24 — PLY prefix on all public types (BREAKING)
+### Breaking type renames (v5 → v6)
 
-Every public Dart type now carries the `PLY` prefix to align with the iOS/Android
-naming convention. This is a **source-breaking rename** — update all imports and
-usages.
+These v5 types have been renamed or restructured. Update all usages.
 
-| Old name | New name |
+| Old (v5) | New (v6) |
 |---|---|
-| `PresentationBuilder` | `PLYPresentationBuilder` |
-| `PresentationRequest` | `PLYPresentationRequest` |
-| `Presentation` | `PLYPresentation` |
-| `PresentationType` | `PLYPresentationType` |
-| `PresentationPlan` | `PLYPresentationPlan` |
-| `PresentationError` | `PLYPresentationError` |
-| `PresentationSource` | `PLYPresentationSource` |
-| `PresentationSourceKind` | `PLYPresentationSourceKind` |
-| `PresentationActionKind` | `PLYPresentationActionKind` |
-| `PurchaseResult` | `PLYPurchaseResult` |
-| `CloseReason` | `PLYCloseReason` |
-| `RunningMode` | `PLYRunningMode` |
-| `LogLevel` | `PLYLogLevel` |
-| `StorekitVersion` | `PLYStorekitVersion` |
-| `Transition` | `PLYTransition` |
-| `TransitionType` | `PLYTransitionType` |
-| `TransitionColors` | `PLYTransitionColors` |
-| `InterceptResult` | `PLYInterceptResult` |
-| `InterceptorInfo` | `PLYInterceptorInfo` |
-| `ActionPayload` | `PLYActionPayload` |
-| `ActionInterceptorHandler` | `PLYActionInterceptorHandler` |
-| `NavigatePayload` | `PLYNavigatePayload` |
-| `PurchasePayload` | `PLYPurchasePayload` |
-| `ClosePayload` | `PLYClosePayload` |
-| `CloseAllPayload` | `PLYCloseAllPayload` |
-| `OpenPresentationPayload` | `PLYOpenPresentationPayload` |
-| `OpenPlacementPayload` | `PLYOpenPlacementPayload` |
-| `WebCheckoutPayload` | `PLYWebCheckoutPayload` |
+| `PresentPresentationResult` | `PLYPresentationOutcome` |
+| `PLYPaywallAction` | `PLYPresentationActionKind` |
+| `PLYPaywallInfo` | `PLYInterceptorInfo` |
+| `PLYPaywallActionParameters` | `PLYActionPayload` (+ typed `PLY*Payload` subclasses) |
+| `PaywallActionInterceptorResult` | callback split into `(PLYInterceptorInfo, PLYActionPayload?, PLYActionInterceptorHandler)` — see [Action interceptor](#action-interceptor) |
 
 **`PLYRunningMode` values changed.** The old (v5-era) `PLYRunningMode` had four
 values: `transactionOnly`, `observer`, `paywallObserver`, `full`. The new enum
