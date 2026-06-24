@@ -14,16 +14,6 @@ on:
   workflow_dispatch:
   schedule:
     - cron: "0 3 * * *"
-  # TEMP: verification that the workflow runs green on rc.2 from the feature branch
-  # (workflow_dispatch only dispatches once on the default branch). Re-fires when the
-  # workflow or the Android build inputs change. Removed after the verification run.
-  push:
-    branches: [feat/sdk-v6-migration]
-    paths:
-      - ".github/workflows/e2e-android.yml"
-      - "purchasely/android/**"
-      - "purchasely/example/android/**"
-      - "purchasely/example/integration_test/**"
 
 concurrency:
   group: e2e-android-${{ github.ref }}
