@@ -148,6 +148,73 @@ source mais reste un **no-op** sur Android **et** iOS.
   `presentSubscriptions` retiré des deux côtés, pin natif rc1).
 - Ce rapport (`V6_MIGRATION_REPORT.md`).
 
+### 2.9 Renommage PLY de tous les types publics — session 2026-06-24
+
+**Contexte.** La convention native iOS/Android est de préfixer tous les types
+publics du SDK avec `PLY`. Le bridge Dart utilisait des noms sans préfixe pour
+la plupart des types (ex. `Transition`, `PresentationBuilder`, `RunningMode`).
+Ce lot de changements aligne le SDK Flutter sur cette convention — BREAKING
+pour tout code existant.
+
+**Ce qui a été fait :**
+
+1. **Ajout des constructeurs nommés `PLYTransition.drawer()` et `.popin()`**
+   (dans `lib/src/transition.dart`), symétriques de `.modal()` et `.fullScreen()`
+   déjà existants. Paramètres : `height`, `width`, `dismissible`,
+   `backgroundColors` (tous optionnels).
+
+2. **Extension `Future<PLYPresentation>.display()`** (dans
+   `lib/src/presentation.dart`) : permet de chaîner directement
+   `.preload().display(transition)` sans `await` intermédiaire.
+
+3. **Renommage de tous les types publics** sans préfixe `PLY` vers `PLY*`
+   dans l'ensemble des fichiers Dart du plugin (src/, example/, tests/,
+   integration_test/) :
+
+   | Ancien | Nouveau |
+   |---|---|
+   | `PurchaselyBuilder` | `PLYPurchaselyBuilder` |
+   | `PresentationBuilder` | `PLYPresentationBuilder` |
+   | `PresentationRequest` | `PLYPresentationRequest` |
+   | `Presentation` | `PLYPresentation` |
+   | `PresentationType` | `PLYPresentationType` |
+   | `PresentationPlan` | `PLYPresentationPlan` |
+   | `PresentationError` | `PLYPresentationError` |
+   | `PresentationSource` / `PresentationSourceKind` | `PLYPresentationSource` / `PLYPresentationSourceKind` |
+   | `PresentationActions` / `PresentationRequestActions` | `PLYPresentationActions` / `PLYPresentationRequestActions` |
+   | `PresentationActionKind` | `PLYPresentationActionKind` |
+   | `PurchaseResult` | `PLYPurchaseResult` |
+   | `CloseReason` | `PLYCloseReason` |
+   | `RunningMode` | `PLYRunningMode` |
+   | `LogLevel` | `PLYLogLevel` |
+   | `StorekitVersion` | `PLYStorekitVersion` |
+   | `Transition` | `PLYTransition` |
+   | `TransitionType` | `PLYTransitionType` |
+   | `TransitionColors` | `PLYTransitionColors` |
+   | `InterceptResult` | `PLYInterceptResult` |
+   | `InterceptorInfo` | `PLYInterceptorInfo` |
+   | `ActionPayload` / `ActionInterceptorHandler` | `PLYActionPayload` / `PLYActionInterceptorHandler` |
+   | `*Payload` (7 classes) | `PLY*Payload` |
+
+4. **Suppression des doublons morts** dans `purchasely_flutter.dart` : les
+   anciennes définitions `PLYLogLevel`, `PLYRunningMode` (v5, 4 valeurs),
+   `PLYPurchaseResult`, `PLYPresentationType`, et la classe `PLYPresentationPlan`
+   (constructeur positionnel) ont été retirées — remplacées par les types
+   canoniques des fichiers `src/`.
+
+5. **`PLYRunningMode` simplifié** : l'ancienne version avait 4 valeurs
+   (`transactionOnly`, `observer`, `paywallObserver`, `full`). La nouvelle n'en
+   a que 2 : `observer` (index 0, défaut) et `full` (index 1). Tout code sur
+   `transactionOnly` / `paywallObserver` doit être supprimé.
+
+6. **Tests mis à jour** : `platform_channel_test.dart`, `purchasely_flutter_test.dart`,
+   `bridge_test.dart`, `native_view_widget_test.dart`, `transition_test.dart`,
+   `dart_android_bridge_test.dart`, `default_dismiss_handler_test.dart`,
+   `interceptor_trigger_test.dart` — tous les types renommés, les assertions
+   sur les valeurs obsolètes de `PLYRunningMode` corrigées.
+
+**Résultat** : `flutter analyze` → 0 erreur, `flutter test` → 225 tests ✅.
+
 ---
 
 ## 3. API Dart v6 finale (référence pour `../Documentation` + `../purchasely-ai-skill`)
@@ -155,60 +222,83 @@ source mais reste un **no-op** sur Android **et** iOS.
 ### Initialisation
 
 ```dart
-final bool configured = await PurchaselyBuilder.apiKey('<API_KEY>')
-    .appUserId('user_id')                        // optionnel
-    .runningMode(RunningMode.full)               // observer (défaut) | full
-    .logLevel(LogLevel.error)                    // debug | info | warn | error
+final bool configured = await PLYPurchaselyBuilder.apiKey('<API_KEY>')
+    .appUserId('user_id')                          // optionnel
+    .runningMode(PLYRunningMode.full)              // observer (défaut) | full
+    .logLevel(PLYLogLevel.error)                   // debug | info | warn | error
     .allowDeeplink(true)
-    .allowCampaigns(true)                        // optionnel
-    .stores([PLYStore.google])                   // Android : google | huawei | amazon
-    .storekitVersion(StorekitVersion.storeKit2)  // iOS : storeKit2 (défaut) | storeKit1
+    .allowCampaigns(true)                          // optionnel
+    .stores([PLYStore.google])                     // Android : google | huawei | amazon
+    .storekitVersion(PLYStorekitVersion.storeKit2) // iOS : storeKit2 (défaut) | storeKit1
     .start();
 ```
 
-> **Le mode par défaut est `observer`** en v6. Passer `.runningMode(RunningMode.full)`
+> **Le mode par défaut est `observer`** en v6. Passer `.runningMode(PLYRunningMode.full)`
 > si Purchasely doit gérer/valider les achats.
 
 ### Affichage d'une présentation
 
 ```dart
-final outcome = await PresentationBuilder.placement('<PLACEMENT_ID>')
+final outcome = await PLYPresentationBuilder.placement('<PLACEMENT_ID>')
     .contentId('content_id')        // optionnel
     .onLoaded((p, err) {})          // optionnel
     .onPresented((p, err) {})       // optionnel
     .onCloseRequested(() {})        // optionnel
     .onDismissed((o) {})            // optionnel
     .build()
-    .display(const Transition.fullScreen()); // fullScreen | modal | push | …
+    .display(const PLYTransition.fullScreen()); // fullScreen | modal | push | drawer | popin
 
 // PLYPresentationOutcome (5 champs) :
 //   presentation, purchaseResult, plan (PLYPlan?), closeReason, error
 ```
 
-Autres sources : `PresentationBuilder.screen('<SCREEN_ID>')`,
-`PresentationBuilder.defaultSource()`. Cycle de vie :
-`request.preload()` → `Presentation` (avec `.display()`, `.close()`, `.back()`).
+Autres sources : `PLYPresentationBuilder.screen('<SCREEN_ID>')`,
+`PLYPresentationBuilder.defaultSource()`. Cycle de vie :
+`request.preload()` → `PLYPresentation` (avec `.display()`, `.close()`, `.back()`).
+
+Pattern chaîné (preload + display en une expression) :
+
+```dart
+final outcome = await PLYPresentationBuilder.placement('<PLACEMENT_ID>')
+    .build()
+    .preload()
+    .display(const PLYTransition.drawer(height: PLYTransitionDimension.percentage(0.5)));
+```
+
+### Transitions dimensionnées
+
+Constructeurs nommés disponibles sur `PLYTransition` :
+
+| Constructeur | Description |
+|---|---|
+| `PLYTransition.fullScreen()` | Plein écran |
+| `PLYTransition.modal({bool? dismissible})` | Modal sheet |
+| `PLYTransition.push()` | Push / navigation |
+| `PLYTransition.drawer({PLYTransitionDimension? height, bool? dismissible, PLYTransitionColors? backgroundColors})` | Drawer bas |
+| `PLYTransition.popin({PLYTransitionDimension? width, PLYTransitionDimension? height, …})` | Pop-in flottant |
+
+`PLYTransitionDimension` : `.pixel(value)` ou `.percentage(value)` (0.0–1.0).
 
 ### Action interceptor
 
 ```dart
-await Purchasely.interceptAction(PresentationActionKind.purchase, (info, payload) async {
-  if (payload is PurchasePayload) { /* … */ }
-  return InterceptResult.notHandled; // success | failed | notHandled
+await Purchasely.interceptAction(PLYPresentationActionKind.purchase, (info, payload) async {
+  if (payload is PLYPurchasePayload) { /* … */ }
+  return PLYInterceptResult.notHandled; // success | failed | notHandled
 });
-await Purchasely.removeActionInterceptor(PresentationActionKind.purchase);
+await Purchasely.removeActionInterceptor(PLYPresentationActionKind.purchase);
 await Purchasely.removeAllActionInterceptors();
 ```
 
 Kinds : `close, closeAll, login, navigate, purchase, restore, openPresentation,
-openPlacement, promoCode, webCheckout`. Payloads typés : `NavigatePayload`,
-`PurchasePayload`, `ClosePayload`, `CloseAllPayload`, `OpenPresentationPayload`,
-`OpenPlacementPayload`, `WebCheckoutPayload`.
+openPlacement, promoCode, webCheckout`. Payloads typés : `PLYNavigatePayload`,
+`PLYPurchasePayload`, `PLYClosePayload`, `PLYCloseAllPayload`,
+`PLYOpenPresentationPayload`, `PLYOpenPlacementPayload`, `PLYWebCheckoutPayload`.
 
 ### Inline (embarqué)
 
 ```dart
-final request = PresentationBuilder.placement('inline').onDismissed((o) {}).build();
+final request = PLYPresentationBuilder.placement('inline').onDismissed((o) {}).build();
 PLYPresentationView(request: request); // dans le widget tree
 ```
 
@@ -341,12 +431,15 @@ depuis le trunk).
 
 - `purchasely-ai-skill/references/flutter/integration.md` : encore en **v5**
   (`Purchasely.start(...)`, `fetchPresentation`/`presentPresentation`,
-  `setPaywallActionInterceptorCallback` + `onProcessAction`). À remplacer par l'API
-  v6 (§3) : `PurchaselyBuilder`, `PresentationBuilder`/`PresentationRequest`,
-  `interceptAction`, `PLYPresentationView`, `synchronize` awaitable.
+  `setPaywallActionInterceptorCallback` + `onProcessAction`). À remplacer par
+  l'API v6 (§3) : `PLYPurchaselyBuilder`, `PLYPresentationBuilder` /
+  `PLYPresentationRequest`, `Purchasely.interceptAction`, `PLYPresentationView`,
+  `synchronize` awaitable. **Tous les types doivent porter le préfixe `PLY`**
+  (cf. §2.9 — BREAKING depuis le 2026-06-24).
 - Créer `purchasely-ai-skill/references/flutter/migration-v6.md` (analogue
-  Android/iOS) à partir de `MIGRATION-v6.md`.
+  Android/iOS) à partir de `MIGRATION-v6.md` (déjà à jour avec les noms PLY).
 - `purchasely-ai-skill/references/sdk-versions.md` : Flutter passe de `5.7.3` à
   `6.0.0-rc.1` (plugin), natifs `6.0.0-rc.1`.
 - Docs publiques (`../Documentation`) : guide d'intégration Flutter + guide de
-  migration 5→6 Flutter, en miroir des guides Android/iOS.
+  migration 5→6 Flutter, en miroir des guides Android/iOS. Utiliser les noms
+  PLY-préfixés de §3 et `MIGRATION-v6.md`.
