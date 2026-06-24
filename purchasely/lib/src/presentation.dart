@@ -56,7 +56,7 @@ abstract class PresentationActions {
   /// Singleton wired up by `bridge.dart` once the package is initialised.
   static PresentationActions instance = _UninitialisedActions();
 
-  Future<PresentationOutcome> display(
+  Future<PLYPresentationOutcome> display(
       Presentation presentation, Transition? transition);
   Future<void> close(Presentation presentation);
   Future<void> back(Presentation presentation);
@@ -67,7 +67,7 @@ class _UninitialisedActions extends PresentationActions {
       'Purchasely bridge not initialised — call any presentation entry point first.');
 
   @override
-  Future<PresentationOutcome> display(_, __) => throw _err();
+  Future<PLYPresentationOutcome> display(_, __) => throw _err();
   @override
   Future<void> close(_) => throw _err();
   @override
@@ -75,7 +75,7 @@ class _UninitialisedActions extends PresentationActions {
 }
 
 /// A loaded presentation. Returned from `PresentationRequest.preload()` and
-/// embedded in [PresentationOutcome.presentation] at dismiss time.
+/// embedded in [PLYPresentationOutcome.presentation] at dismiss time.
 ///
 /// Callbacks ([onPresented], [onCloseRequested], [onDismissed]) are mutable
 /// so the host app can reassign them between preload and display.
@@ -113,7 +113,7 @@ class Presentation {
 
   /// Optional dismiss handler — fires when the presentation is fully
   /// dismissed (whatever the reason). Receives the full outcome.
-  void Function(PresentationOutcome outcome)? onDismissed;
+  void Function(PLYPresentationOutcome outcome)? onDismissed;
 
   Presentation({
     required this.requestId,
@@ -212,7 +212,7 @@ class Presentation {
   /// Re-display the presentation (matches `display()` on the native SDKs).
   ///
   /// The returned future completes at dismiss time with the final outcome.
-  Future<PresentationOutcome> display([Transition? transition]) =>
+  Future<PLYPresentationOutcome> display([Transition? transition]) =>
       PresentationActions.instance.display(this, transition);
 
   /// Close the presentation programmatically (matches `close()` on Android).

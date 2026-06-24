@@ -40,8 +40,10 @@ void main() {
         // callback. The Dart Future must complete (not hang) once native
         // acknowledges. A timeout failure here would catch a regression to the
         // old fire-and-forget bridge that never wired the callback.
-        await Purchasely.synchronize().timeout(const Duration(seconds: 1));
+        final ok =
+            await Purchasely.synchronize().timeout(const Duration(seconds: 1));
         expect(methodCalls.last.method, 'synchronize');
+        expect(ok, isTrue);
       });
 
       test('synchronize rethrows a native failure as PlatformException',
@@ -689,7 +691,8 @@ void main() {
 dynamic _handleMethodCall(MethodCall methodCall) {
   switch (methodCall.method) {
     case 'synchronize':
-      return null;
+      // Native resolves synchronize() success with `true`.
+      return true;
     case 'getAnonymousUserId':
       return 'anonymous-user-123';
     case 'userLogin':

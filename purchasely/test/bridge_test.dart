@@ -205,8 +205,48 @@ void main() {
       expect(outcome.purchaseResult, PurchaseResult.purchased);
       expect(outcome.closeReason, CloseReason.button);
       expect(outcome.error, isNull);
-      expect(outcome.plan, isNotNull);
+      expect(outcome.plan, isA<PLYPlan>());
+      expect(outcome.plan!.vendorId, 'monthly');
       expect(outcome.presentation, isNotNull);
+    });
+
+    test('display() outcome plan is a fully-typed PLYPlan', () async {
+      final request = PresentationBuilder.placement('home').build();
+      await request.preload();
+      calls.clear();
+
+      // ignore: unawaited_futures
+      final futureOutcome = request.display(const Transition.modal());
+      await Future<void>.delayed(Duration.zero);
+
+      await emitEvent(<String, Object?>{
+        'event': 'onDismissed',
+        'requestId': request.requestId,
+        'outcome': <String, Object?>{
+          'purchaseResult': 'purchased',
+          'closeReason': null,
+          'plan': <String, Object?>{
+            'vendorId': 'yearly',
+            'productId': 'yearly-product',
+            'basePlanId': 'yearly-base',
+            'amount': 59.99,
+            'currencyCode': 'USD',
+            'hasFreeTrial': true,
+          },
+        },
+      });
+
+      final outcome = await futureOutcome;
+      expect(
+        outcome.plan,
+        isA<PLYPlan>()
+            .having((p) => p.vendorId, 'vendorId', 'yearly')
+            .having((p) => p.productId, 'productId', 'yearly-product')
+            .having((p) => p.basePlanId, 'basePlanId', 'yearly-base')
+            .having((p) => p.amount, 'amount', 59.99)
+            .having((p) => p.currencyCode, 'currencyCode', 'USD')
+            .having((p) => p.hasFreeTrial, 'hasFreeTrial', true),
+      );
     });
 
     test('display() outcome carries error and null closeReason on failure',
@@ -239,7 +279,7 @@ void main() {
 
     test('default presentation dismiss handler receives rich outcome',
         () async {
-      PresentationOutcome? captured;
+      PLYPresentationOutcome? captured;
 
       await Purchasely.setDefaultPresentationDismissHandler((outcome) {
         captured = outcome;
@@ -253,7 +293,9 @@ void main() {
         'event': 'onDefaultPresentationDismissed',
         'outcome': <String, Object?>{
           'purchaseResult': 'restored',
-          'closeReason': 'interactiveDismiss',
+          // iOS serializes interactiveDismiss as "back_system" (rawDescription);
+          // Android sends BACK_SYSTEM.value == "back_system".
+          'closeReason': 'back_system',
           'plan': <String, Object?>{'vendorId': 'monthly'},
           'presentation': <String, Object?>{
             'screenId': 'campaign_screen',
@@ -268,8 +310,8 @@ void main() {
 
       expect(captured, isNotNull);
       expect(captured!.purchaseResult, PurchaseResult.restored);
-      expect(captured!.closeReason, CloseReason.interactiveDismiss);
-      expect(captured!.plan?['vendorId'], 'monthly');
+      expect(captured!.closeReason, CloseReason.backSystem);
+      expect(captured!.plan?.vendorId, 'monthly');
       expect(captured!.presentation, isNotNull);
       expect(captured!.presentation!.screenId, 'campaign_screen');
       expect(captured!.presentation!.campaignId, 'cmp_123');
@@ -410,7 +452,8 @@ void main() {
       expect(args['result'], 'success');
     });
 
-    test('removeInterceptor unregisters the kind on the native side', () async {
+    test('removeActionInterceptor unregisters the kind on the native side',
+        () async {
       await PurchaselyBridge.ensureInstalled().registerInterceptor(
         PresentationActionKind.login,
         (_, __) async => InterceptResult.success,
@@ -418,11 +461,28 @@ void main() {
       calls.clear();
 
       await PurchaselyBridge.ensureInstalled()
-          .removeInterceptor(PresentationActionKind.login);
+          .removeActionInterceptor(PresentationActionKind.login);
 
+      // Wire verb stays `removeInterceptor` (native dispatch unchanged).
       final removeCall =
           calls.firstWhere((c) => c.method == 'removeInterceptor');
       expect((removeCall.arguments as Map)['kind'], 'login');
+    });
+
+    test('removeAllActionInterceptors clears all on the native side', () async {
+      await PurchaselyBridge.ensureInstalled().registerInterceptor(
+        PresentationActionKind.purchase,
+        (_, __) async => InterceptResult.success,
+      );
+      calls.clear();
+
+      await PurchaselyBridge.ensureInstalled().removeAllActionInterceptors();
+
+      // Wire verb stays `removeAllInterceptors` (native dispatch unchanged).
+      expect(
+        calls.where((c) => c.method == 'removeAllInterceptors'),
+        hasLength(1),
+      );
     });
 
     test('Purchasely.interceptAction registers via the same channel call',

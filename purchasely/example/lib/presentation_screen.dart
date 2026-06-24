@@ -18,7 +18,7 @@ class PresentationScreen extends StatelessWidget {
     String placementId, {
     Key? key,
     String? contentId,
-    void Function(PresentationOutcome outcome)? onDismissed,
+    void Function(PLYPresentationOutcome outcome)? onDismissed,
   }) {
     final request = PresentationBuilder.placement(placementId)
         .contentId(contentId)

@@ -18,7 +18,7 @@ import 'src/presentation_request.dart';
 /// the same `purchasely-presentation-events` channel as a full-screen
 /// presentation, keyed by `requestId`. When the inline presentation is
 /// dismissed, the native view emits the same `onDismissed` envelope (with the
-/// `display()`-style [PresentationOutcome]) as the modal path, so the request's
+/// `display()`-style [PLYPresentationOutcome]) as the modal path, so the request's
 /// [PresentationRequest.onDismissed] callback fires for the inline view too.
 class PLYPresentationView extends StatefulWidget {
   /// The presentation request to render inline. Build it with

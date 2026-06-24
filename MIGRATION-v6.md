@@ -4,7 +4,7 @@ This release **adapts the Purchasely Flutter plugin to the Purchasely 6.0 native
 SDKs** (iOS `Purchasely 6.0.0-rc.1`, Android `io.purchasely:core 6.0.0-rc.1`). Unlike the
 React Native migration, there is **no "v6" naming in the Dart API** — the public
 symbols keep their plain names (`PurchaselyBuilder`, `PresentationBuilder`,
-`PresentationOutcome`, `Transition`, …).
+`PLYPresentationOutcome`, `Transition`, …).
 
 Three areas are breaking changes: **starting the SDK**, **displaying / preloading /
 closing a presentation**, and the **action interceptor**. Everything else on the
@@ -34,7 +34,7 @@ A paywall is now called a **Presentation** (or *Screen*).
   a **`PresentationRequest`** with a lifecycle (`preload()`,
   `display([transition])`).
 - `display([Transition])` resolves at **dismiss** with a 5-field
-  **`PresentationOutcome`** (`presentation`, `purchaseResult`, `plan`,
+  **`PLYPresentationOutcome`** (`presentation`, `purchaseResult`, `plan`,
   `closeReason`, `error`).
 - A loaded `Presentation` exposes `display()`, `close()` and `back()` for
   programmatic control.
@@ -65,7 +65,7 @@ been removed in favour of the builder API.
 | `Purchasely.closePresentation()` / `hidePresentation()` / `close()` | `presentation.close()` (on the loaded `Presentation`) |
 | `Purchasely.showPresentation()` | `presentation.display()` (on the loaded `Presentation`) |
 | `Purchasely.clientPresentationDisplayed(...)` / `clientPresentationClosed(...)` | handled via the `PresentationRequest` lifecycle (`preload` → inspect `PresentationType.client` → render your own UI) |
-| `Purchasely.setDefaultPresentationResultHandler(cb)` / `setDefaultPresentationResultCallback(cb)` | `Purchasely.setDefaultPresentationDismissHandler((outcome) => …)` — receives `PresentationOutcome` (`presentation`, `purchaseResult`, `plan`, `closeReason`, `error`) |
+| `Purchasely.setDefaultPresentationResultHandler(cb)` / `setDefaultPresentationResultCallback(cb)` | `Purchasely.setDefaultPresentationDismissHandler((outcome) => …)` — receives `PLYPresentationOutcome` (`presentation`, `purchaseResult`, `plan`, `closeReason`, `error`) |
 | `Purchasely.setPaywallActionInterceptorCallback(cb)` + `Purchasely.onProcessAction(bool)` | `Purchasely.interceptAction(kind, handler)` — handler returns `InterceptResult.success` / `.failed` / `.notHandled` (no more `onProcessAction`) |
 
 > **Reminder.** Everything *not* in this table — purchases, restore, login,
@@ -147,7 +147,7 @@ switch (result.result) {
 
 `PresentationBuilder.placement(id).build()` returns a `PresentationRequest`.
 Calling `display([Transition])` shows the screen and resolves at **dismiss**
-with a `PresentationOutcome`.
+with a `PLYPresentationOutcome`.
 
 ```dart
 final outcome = await PresentationBuilder.placement('<YOUR_PLACEMENT_ID>')
@@ -160,7 +160,7 @@ if (outcome.error != null) {
   print('Display error: ${outcome.error!.message}');
 } else if (outcome.purchaseResult == PurchaseResult.purchased ||
     outcome.purchaseResult == PurchaseResult.restored) {
-  print('Purchased ${outcome.plan}');
+  print('Purchased ${outcome.plan?.name}');
 } else {
   print('Dismissed: ${outcome.closeReason}'); // button | backSystem | programmatic
 }
@@ -169,6 +169,12 @@ if (outcome.error != null) {
 `purchaseResult` is the `PurchaseResult` enum
 (`purchased` / `cancelled` / `restored`) and is `null` when the user dismissed
 the screen without a purchase action.
+
+`plan` is now a fully-typed **`PLYPlan?`** (was `Map<String, dynamic>?`) — the
+same model returned by `planWithIdentifier` and carried by a purchase
+interceptor's `PurchasePayload`. Read its fields directly (`outcome.plan?.vendorId`,
+`outcome.plan?.name`, `outcome.plan?.amount`, …). It is `null` when no purchase
+action produced a plan.
 
 > **iOS / Android `closeReason` parity.** Both native 6.0 SDKs now expose
 > `closeReason` on the outcome, and Flutter surfaces it on both platforms
@@ -191,6 +197,33 @@ await PresentationBuilder.screen('SCREEN_ID').build().display(const Transition.m
 
 // A specific product / content inside a screen (was presentProductWithIdentifier)
 await PresentationBuilder.screen('SCREEN_ID').contentId('CONTENT_ID').build().display();
+```
+
+### Sized transitions (`drawer` / `popin`) — BREAKING
+
+`Transition.heightPercentage` was **removed**. Drawer and popin transitions are
+now sized with the native dimension model, mirroring Android's
+`PLYTransitionDimension`. Use the `width` (popin only) and `height` (drawer +
+popin) fields with a `PLYTransitionDimension`, expressed as a `percentage`
+(`0.0`–`1.0`) or fixed `pixel` value. Leave a dimension `null` to size to
+content ("hug").
+
+```dart
+// Before (v5 / removed):
+// Transition(type: TransitionType.drawer, heightPercentage: 0.5);
+
+// After:
+const Transition(
+  type: TransitionType.drawer,
+  height: PLYTransitionDimension.percentage(0.5),
+);
+
+const Transition(
+  type: TransitionType.popin,
+  width: PLYTransitionDimension.pixel(320),
+  height: PLYTransitionDimension.percentage(0.6),
+  dismissible: false,
+);
 ```
 
 ---
@@ -294,8 +327,8 @@ await Purchasely.interceptAction(
 );
 
 // Cleanup
-await Purchasely.removeInterceptor(PresentationActionKind.purchase);
-await Purchasely.removeAllInterceptors();
+await Purchasely.removeActionInterceptor(PresentationActionKind.purchase);
+await Purchasely.removeAllActionInterceptors();
 ```
 
 Action kinds (`PresentationActionKind`): `close`, `closeAll`, `login`,
@@ -384,15 +417,14 @@ remains source-compatible except for removed v5 aliases; deeplinks use v6 names:
   `synchronize`, `allowDeeplink`, `allowCampaigns`, `handleDeeplink`,
   `setDebugMode`. (`readyToOpenDeeplink` / `isDeeplinkHandled` were removed.)
 
-> **`synchronize()` now reports completion.** The 6.0 native SDKs expose
-> success/error callbacks on `synchronize()` (Android
+> **`synchronize()` now reports completion (BREAKING signature).** The 6.0
+> native SDKs expose success/error callbacks on `synchronize()` (Android
 > `synchronize(onSuccess, onError)`, iOS `synchronize(success:failure:)`).
-> The Dart `Purchasely.synchronize()` keeps its `Future<void>` signature but
-> now **resolves when the synchronization actually completes** and **throws a
-> `PlatformException` on failure**, instead of the previous fire-and-forget
-> behaviour. `await` it (and optionally `try/catch`) before chaining a
-> follow-up presentation that targets subscribers. No call-site change is
-> required for code that already `await`ed it.
+> `Purchasely.synchronize()` now returns **`Future<bool>`** (was `Future<void>`):
+> it **resolves with `true` when the synchronization actually completes** and
+> **throws a `PlatformException` on failure**, instead of the previous
+> fire-and-forget behaviour. `await` it (and optionally `try/catch`) before
+> chaining a follow-up presentation that targets subscribers.
 
 > **Removed `presentSubscriptions()` (BREAKING).** The native subscriptions
 > screen was removed from the 6.0 SDKs on both platforms (the iOS

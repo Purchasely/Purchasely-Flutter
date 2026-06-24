@@ -3,7 +3,7 @@
 // Shows the canonical flow:
 //   1. Initialise the SDK via `PurchaselyBuilder.apiKey(...).start()`.
 //   2. Build a presentation request via `PresentationBuilder.placement(...)`.
-//   3. Display it and surface the enriched 5-field `PresentationOutcome`
+//   3. Display it and surface the enriched 5-field `PLYPresentationOutcome`
 //      (presentation, purchaseResult, plan, closeReason, error).
 //
 // Interceptor registration is exposed via the `Register interceptors` button —
@@ -26,7 +26,7 @@ class PresentationDemoScreen extends StatefulWidget {
 
 class _PresentationDemoScreenState extends State<PresentationDemoScreen> {
   String _status = 'Tap "Start SDK" to begin.';
-  PresentationOutcome? _lastOutcome;
+  PLYPresentationOutcome? _lastOutcome;
   PresentationError? _lastError;
 
   Future<void> _startSdk() async {
@@ -122,7 +122,7 @@ class _PresentationDemoScreenState extends State<PresentationDemoScreen> {
     setState(() => _status = 'Navigate + purchase interceptors registered');
   }
 
-  Widget _outcomeCard(PresentationOutcome outcome) {
+  Widget _outcomeCard(PLYPresentationOutcome outcome) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(12),
@@ -134,7 +134,7 @@ class _PresentationDemoScreenState extends State<PresentationDemoScreen> {
             const SizedBox(height: 6),
             Text('presentation.screenId: ${outcome.presentation?.screenId}'),
             Text('purchaseResult: ${outcome.purchaseResult}'),
-            Text('plan: ${outcome.plan}'),
+            Text('plan: ${outcome.plan?.vendorId}'),
             Text('closeReason: ${outcome.closeReason}'),
             Text('error: ${outcome.error}'),
           ],

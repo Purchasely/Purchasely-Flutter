@@ -771,6 +771,22 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
         }
     }
 
+    /**
+     * Parses a Dart transition dimension `{ "type": "pixel"|"percentage", "value": <Double> }`
+     * into a native [PLYTransitionDimension]. Returns `null` (→ surface default / hug) when
+     * absent or malformed.
+     */
+    private fun parseDimension(raw: Any?): PLYTransitionDimension? {
+        val map = raw as? Map<*, *> ?: return null
+        val value = (map["value"] as? Number)?.toFloat() ?: return null
+        val type = if (map["type"] as? String == "pixel") {
+            PLYDimensionType.PIXEL
+        } else {
+            PLYDimensionType.PERCENTAGE
+        }
+        return PLYTransitionDimension(type, value)
+    }
+
     private fun parseTransition(map: Map<*, *>?): PLYTransition? {
         if (map == null) return null
         val type = when (map["type"] as? String) {
@@ -782,15 +798,18 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
             "inlinePaywall" -> PLYTransitionType.INLINE_PAYWALL
             else -> return null
         }
-        val heightPercentage = (map["heightPercentage"] as? Number)?.toFloat()
         val dismissible = map["dismissible"] as? Boolean ?: true
-        // v6 models drawer/popin height as a PLYTransitionDimension; map the
-        // Dart `heightPercentage` (0..1) to a PERCENTAGE dimension. The legacy
-        // `heightPercentage` constructor arg is deprecated.
-        val height = heightPercentage?.let {
-            PLYTransitionDimension(PLYDimensionType.PERCENTAGE, it)
-        }
-        return PLYTransition(type = type, height = height, dismissible = dismissible)
+        // v6 models drawer/popin size as PLYTransitionDimension (width is popin-only,
+        // height drives drawer + popin). The legacy `heightPercentage` constructor arg
+        // is deprecated and intentionally not set.
+        val width = parseDimension(map["width"])
+        val height = parseDimension(map["height"])
+        return PLYTransition(
+            type = type,
+            width = width,
+            height = height,
+            dismissible = dismissible,
+        )
     }
 
     private fun tryParseHexColor(hex: String): Int? {
@@ -1335,13 +1354,9 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
             return mapOf(
                 "presentation" to outcome.presentation?.let { presentationToMap(it) },
                 "purchaseResult" to outcome.purchaseResult?.name?.lowercase(),
-                "plan" to outcome.plan?.let { plan ->
-                    mapOf(
-                        "vendorId" to plan.vendorId,
-                        "productId" to plan.getProductId(),
-                        "basePlanId" to plan.basePlanId,
-                    )
-                },
+                // Serialize the full PLYPlan (same shape as products/plans elsewhere)
+                // so the Dart side parses it into a fully-typed PLYPlan via plyPlanFromMap.
+                "plan" to outcome.plan?.let { transformPlanToMap(it) },
                 "closeReason" to outcome.closeReason?.value,
                 "error" to outcome.error?.let { errorToMap(it) },
             )

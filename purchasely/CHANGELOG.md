@@ -14,14 +14,17 @@
   then drive its lifecycle:
   - `PresentationRequest.preload()` fetches the screen without displaying it.
   - `PresentationRequest.display([Transition])` shows it and resolves at
-    **dismiss time** with the 5-field `PresentationOutcome`
-    (`presentation`, `purchaseResult`, `plan`, `closeReason`, `error`).
+    **dismiss time** with the 5-field `PLYPresentationOutcome`
+    (`presentation`, `purchaseResult`, `plan` (typed `PLYPlan?`), `closeReason`,
+    `error`). `closeReason` is `button` / `backSystem` / `programmatic`.
+    `Transition` sizes `drawer`/`popin` via `width`/`height`
+    (`PLYTransitionDimension.percentage(...)` / `.pixel(...)`).
   - A loaded `Presentation` exposes `display()`, `close()` and `back()` for
     programmatic control.
   - Inline (embedded) rendering uses the `PLYPresentationView` widget.
 - **Action interceptor.** Replaced by
   `Purchasely.interceptAction(PresentationActionKind, handler)` (plus
-  `removeInterceptor` / `removeAllInterceptors`). The handler receives a typed
+  `removeActionInterceptor` / `removeAllActionInterceptors`). The handler receives a typed
   `ActionPayload` (e.g. `NavigatePayload`, `PurchasePayload`) and returns an
   `InterceptResult` (`success` / `failed` / `notHandled`) — there is no more
   `onProcessAction`. `PurchasePayload` exposes real objects (`PLYPlan`,

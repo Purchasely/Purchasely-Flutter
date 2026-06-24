@@ -12,7 +12,7 @@ abstract class PresentationRequestActions {
   static PresentationRequestActions instance = _UninitialisedRequest();
 
   Future<Presentation> preload(PresentationRequest request);
-  Future<PresentationOutcome> display(
+  Future<PLYPresentationOutcome> display(
       PresentationRequest request, Transition? transition);
 }
 
@@ -23,7 +23,7 @@ class _UninitialisedRequest extends PresentationRequestActions {
   @override
   Future<Presentation> preload(_) => throw _err();
   @override
-  Future<PresentationOutcome> display(_, __) => throw _err();
+  Future<PLYPresentationOutcome> display(_, __) => throw _err();
 }
 
 /// Internal source kind used when constructing a request.
@@ -55,7 +55,7 @@ class PresentationSource {
 /// Calling [preload] fetches the presentation from the backend without
 /// presenting it. Calling [display] both fetches it (if not preloaded) and
 /// shows it; the returned future completes at dismiss time with the final
-/// [PresentationOutcome].
+/// [PLYPresentationOutcome].
 class PresentationRequest {
   /// Stable identifier shared between Dart and the native bridge so that
   /// callbacks and `close()` calls can be routed back to the right native
@@ -76,7 +76,7 @@ class PresentationRequest {
   final void Function(Presentation? presentation, PresentationError? error)?
       onPresented;
   final void Function()? onCloseRequested;
-  final void Function(PresentationOutcome outcome)? onDismissed;
+  final void Function(PLYPresentationOutcome outcome)? onDismissed;
 
   PresentationRequest({
     required this.requestId,
@@ -109,7 +109,7 @@ class PresentationRequest {
       PresentationRequestActions.instance.preload(this);
 
   /// Fetch (if needed) and display the presentation. The returned future
-  /// completes at dismiss time with the final [PresentationOutcome].
-  Future<PresentationOutcome> display([Transition? transition]) =>
+  /// completes at dismiss time with the final [PLYPresentationOutcome].
+  Future<PLYPresentationOutcome> display([Transition? transition]) =>
       PresentationRequestActions.instance.display(this, transition);
 }

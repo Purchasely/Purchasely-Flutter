@@ -8,7 +8,7 @@ import 'src/action_interceptor.dart'
 import 'src/bridge.dart' show PurchaselyBridge;
 import 'src/ply_models.dart';
 import 'src/ply_transformers.dart';
-import 'src/presentation_outcome.dart' show PresentationOutcome;
+import 'src/presentation_outcome.dart' show PLYPresentationOutcome;
 
 // --- Purchasely SDK cross-platform API ---
 //
@@ -17,7 +17,7 @@ import 'src/presentation_outcome.dart' show PresentationOutcome;
 // and get both the static `Purchasely` class below (purchases, restore,
 // login/logout, attributes, products/plans, subscriptions, events, offerings,
 // consent, config) and the builder-based presentation API (`PurchaselyBuilder`,
-// `PresentationBuilder`, `Presentation`, `PresentationOutcome`, `Transition`,
+// `PresentationBuilder`, `Presentation`, `PLYPresentationOutcome`, `Transition`,
 // ActionInterceptor…).
 export 'src/action_interceptor.dart';
 export 'src/bridge.dart' show PurchaselyBridge;
@@ -54,22 +54,22 @@ class Purchasely {
   ) =>
       PurchaselyBridge.ensureInstalled().registerInterceptor(kind, handler);
 
-  /// Removes the interceptor previously registered for [kind].
-  static Future<void> removeInterceptor(PresentationActionKind kind) =>
-      PurchaselyBridge.ensureInstalled().removeInterceptor(kind);
+  /// Removes the action interceptor previously registered for [kind].
+  static Future<void> removeActionInterceptor(PresentationActionKind kind) =>
+      PurchaselyBridge.ensureInstalled().removeActionInterceptor(kind);
 
   /// Removes all registered action interceptors.
-  static Future<void> removeAllInterceptors() =>
-      PurchaselyBridge.ensureInstalled().removeAllInterceptors();
+  static Future<void> removeAllActionInterceptors() =>
+      PurchaselyBridge.ensureInstalled().removeAllActionInterceptors();
 
   /// Registers the global dismiss handler for presentations opened by the SDK
   /// itself (campaigns, deeplinks, promoted in-app purchases).
   ///
-  /// The handler receives the rich v6 [PresentationOutcome], including the
-  /// [PresentationOutcome.presentation] field so the app can identify which
+  /// The handler receives the rich v6 [PLYPresentationOutcome], including the
+  /// [PLYPresentationOutcome.presentation] field so the app can identify which
   /// campaign/deeplink presentation was closed.
   static Future<void> setDefaultPresentationDismissHandler(
-    void Function(PresentationOutcome outcome) handler,
+    void Function(PLYPresentationOutcome outcome) handler,
   ) =>
       PurchaselyBridge.ensureInstalled()
           .setDefaultPresentationDismissHandler(handler);
@@ -155,12 +155,13 @@ class Purchasely {
   /// servers.
   ///
   /// Since the 6.0 native SDKs expose success/error callbacks on
-  /// `synchronize()`, the returned [Future] now resolves once the
+  /// `synchronize()`, the returned [Future] resolves with `true` once the
   /// synchronization actually completes and throws a [PlatformException] if it
   /// failed — instead of the previous fire-and-forget behaviour. `await` it
   /// before chaining a follow-up presentation that targets subscribers.
-  static Future<void> synchronize() async {
-    return await _channel.invokeMethod('synchronize');
+  static Future<bool> synchronize() async {
+    final result = await _channel.invokeMethod('synchronize');
+    return result == true;
   }
 
   static Future<String> get anonymousUserId async {

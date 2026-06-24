@@ -49,7 +49,7 @@ class PresentationBuilder {
   void Function(Presentation? presentation, PresentationError? error)?
       _onPresented;
   void Function()? _onCloseRequested;
-  void Function(PresentationOutcome outcome)? _onDismissed;
+  void Function(PLYPresentationOutcome outcome)? _onDismissed;
 
   PresentationBuilder._(this._source);
 
@@ -117,7 +117,7 @@ class PresentationBuilder {
   }
 
   PresentationBuilder onDismissed(
-      void Function(PresentationOutcome outcome) handler) {
+      void Function(PLYPresentationOutcome outcome) handler) {
     _onDismissed = handler;
     return this;
   }

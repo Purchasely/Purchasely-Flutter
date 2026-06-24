@@ -30,7 +30,7 @@ await PurchaselyBuilder.apiKey('<YOUR_API_KEY>')
 
 // 2. Build a presentation request and display it.
 //    `.display(...)` resolves at *dismiss* time with the enriched 5-field
-//    `PresentationOutcome` (presentation, purchaseResult, plan, closeReason,
+//    `PLYPresentationOutcome` (presentation, purchaseResult, plan, closeReason,
 //    error).
 final outcome = await PresentationBuilder
     .placement('<YOUR_PLACEMENT_ID>')

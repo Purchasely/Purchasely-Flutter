@@ -578,22 +578,17 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             }
         }()
 
-        var planMap: [String: Any?]? = nil
-        if let plan = outcome.plan {
-            planMap = [
-                "vendorId": plan.vendorId,
-                "productId": plan.appleProductId as Any?,
-            ]
-        }
+        // Serialize the full PLYPlan (same shape as products/plans elsewhere) so
+        // the Dart side can parse it into a fully-typed PLYPlan via plyPlanFromMap.
+        let planMap: [String: Any]? = outcome.plan?.toMap
 
-        // iOS v6 exposes `closeReason` on PLYPresentationOutcome. Its
-        // `rawDescription` matches Android's wire strings where applicable;
-        // interactive dismiss stays distinguishable for parity with native iOS.
+        // iOS v6 exposes `closeReason` on PLYPresentationOutcome. Serialize via
+        // `rawDescription`, which matches Android's wire strings — interactive
+        // dismiss stringifies to "back_system" for cross-platform parity.
         // `.none` means no close happened (e.g. a purchase/restore outcome) → send null.
         let closeReason: String? = {
             switch outcome.closeReason {
             case .none: return nil
-            case .interactiveDismiss: return "interactiveDismiss"
             default:    return outcome.closeReason.rawDescription
             }
         }()
@@ -667,19 +662,32 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
         }
     }
 
+    /// Parses a Dart transition dimension `{ "type": "pixel"|"percentage", "value": <Double> }`
+    /// into a native `PLYDimension` (`.value(Int)` for pixels, `.percentage(Float)` for
+    /// ratios). Returns `nil` (→ "hug" / size-to-content) when absent or malformed.
+    private static func parseDimension(_ raw: Any?) -> PLYDimension? {
+        guard let map = raw as? [String: Any],
+              let value = (map["value"] as? NSNumber)?.doubleValue else { return nil }
+        switch map["type"] as? String {
+        case "pixel":      return .value(Int(value.rounded()))
+        case "percentage": return .percentage(Float(value))
+        default:           return .percentage(Float(value))
+        }
+    }
+
     private static func parseTransition(_ map: [String: Any]?) -> PLYDisplayMode? {
         guard let map = map, let type = map["type"] as? String else { return nil }
-        let heightPercentage = (map["heightPercentage"] as? NSNumber)?.doubleValue
         let dismissible = map["dismissible"] as? Bool ?? true
+        // v6 models drawer/popin size as PLYDimension (width is popin-only, height
+        // drives drawer + popin). `nil` means "hug" — size to content.
+        let width = parseDimension(map["width"])
+        let height = parseDimension(map["height"])
         switch type {
         case "fullScreen":    return .fullScreen
         case "push":          return .push
         case "modal":         return .modal
-        // v6 models drawer/popin height as a PLYDimension; map the Dart
-        // `heightPercentage` (0..1) to a `.percentage` dimension. The legacy
-        // `heightPercentage:` factories are deprecated (removed in v7.0).
-        case "drawer":        return .drawer(height: .percentage(Float(heightPercentage ?? 0.5)), dismissible: dismissible)
-        case "popin":         return .popin(width: nil, height: .percentage(Float(heightPercentage ?? 0.5)), dismissible: dismissible)
+        case "drawer":        return .drawer(height: height, dismissible: dismissible)
+        case "popin":         return .popin(width: width, height: height, dismissible: dismissible)
         case "inlinePaywall": return .inlinePaywall
         default: return nil
         }

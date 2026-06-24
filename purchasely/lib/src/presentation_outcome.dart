@@ -1,5 +1,6 @@
 // Purchasely SDK — Presentation outcome models.
 
+import 'ply_models.dart';
 import 'presentation.dart';
 
 /// Result of the purchase action triggered from a presentation.
@@ -7,9 +8,14 @@ enum PurchaseResult { purchased, cancelled, restored }
 
 /// Reason a presentation was closed when no error occurred.
 ///
-/// Mutually exclusive with [PresentationOutcome.error] — when [error] is non
-/// null, [closeReason] is `null`.
-enum CloseReason { button, interactiveDismiss, backSystem, programmatic }
+/// Mutually exclusive with [PLYPresentationOutcome.error] — when [error] is
+/// non null, [closeReason] is `null`.
+///
+/// Mirrors the native `PLYCloseReason` wire contract shared by iOS and
+/// Android: `button` (`"button"`), `backSystem` (`"back_system"` — Android
+/// system back / iOS interactive swipe-down or nav-pop), and `programmatic`
+/// (`"programmatic"`).
+enum CloseReason { button, backSystem, programmatic }
 
 /// Error returned by the native SDK when a presentation could not be displayed.
 class PresentationError implements Exception {
@@ -38,18 +44,18 @@ class PresentationError implements Exception {
 ///  * [purchaseResult] — the purchase action result. `null` when no purchase
 ///    happened.
 ///  * [plan] — the plan involved in the purchase action (if any).
-///  * [closeReason] — why the presentation was closed. iOS sets this to `null`
-///    until the native fix lands (see contract P0.2).
+///  * [closeReason] — why the presentation was closed. `null` when an [error]
+///    occurred or when no close happened (e.g. a purchase/restore outcome).
 ///  * [error] — display error when the presentation could not be shown.
 ///    Mutually exclusive with [closeReason].
-class PresentationOutcome {
+class PLYPresentationOutcome {
   final Presentation? presentation;
   final PurchaseResult? purchaseResult;
-  final Map<String, dynamic>? plan;
+  final PLYPlan? plan;
   final CloseReason? closeReason;
   final PresentationError? error;
 
-  const PresentationOutcome({
+  const PLYPresentationOutcome({
     this.presentation,
     this.purchaseResult,
     this.plan,
@@ -59,7 +65,7 @@ class PresentationOutcome {
 
   @override
   String toString() =>
-      'PresentationOutcome(purchaseResult: $purchaseResult, closeReason: $closeReason, error: $error)';
+      'PLYPresentationOutcome(purchaseResult: $purchaseResult, closeReason: $closeReason, error: $error)';
 }
 
 PurchaseResult? purchaseResultFromString(String? value) {
@@ -83,10 +89,6 @@ CloseReason? closeReasonFromString(String? value) {
   switch (value) {
     case 'button':
       return CloseReason.button;
-    case 'interactiveDismiss':
-    case 'interactive_dismiss':
-      return CloseReason.interactiveDismiss;
-    case 'backSystem':
     case 'back_system':
       return CloseReason.backSystem;
     case 'programmatic':

@@ -181,8 +181,8 @@ final outcome = await PresentationBuilder.placement('<PLACEMENT_ID>')
     .build()
     .display(const Transition.fullScreen()); // fullScreen | modal | push | …
 
-// PresentationOutcome (5 champs) :
-//   presentation, purchaseResult, plan, closeReason, error
+// PLYPresentationOutcome (5 champs) :
+//   presentation, purchaseResult, plan (PLYPlan?), closeReason, error
 ```
 
 Autres sources : `PresentationBuilder.screen('<SCREEN_ID>')`,
@@ -196,8 +196,8 @@ await Purchasely.interceptAction(PresentationActionKind.purchase, (info, payload
   if (payload is PurchasePayload) { /* … */ }
   return InterceptResult.notHandled; // success | failed | notHandled
 });
-await Purchasely.removeInterceptor(PresentationActionKind.purchase);
-await Purchasely.removeAllInterceptors();
+await Purchasely.removeActionInterceptor(PresentationActionKind.purchase);
+await Purchasely.removeAllActionInterceptors();
 ```
 
 Kinds : `close, closeAll, login, navigate, purchase, restore, openPresentation,
