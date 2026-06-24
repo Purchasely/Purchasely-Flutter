@@ -173,7 +173,7 @@ pour tout code existant.
 
    | Ancien | Nouveau |
    |---|---|
-   | `PurchaselyBuilder` | `PLYPurchaselyBuilder` |
+   | `PLYPurchaselyBuilder` | `PurchaselyBuilder` — entry point via `Purchasely.apiKey(…)` |
    | `PresentationBuilder` | `PLYPresentationBuilder` |
    | `PresentationRequest` | `PLYPresentationRequest` |
    | `Presentation` | `PLYPresentation` |
@@ -222,7 +222,7 @@ pour tout code existant.
 ### Initialisation
 
 ```dart
-final bool configured = await PLYPurchaselyBuilder.apiKey('<API_KEY>')
+final bool configured = await Purchasely.apiKey('<API_KEY>')
     .appUserId('user_id')                          // optionnel
     .runningMode(PLYRunningMode.full)              // observer (défaut) | full
     .logLevel(PLYLogLevel.error)                   // debug | info | warn | error
@@ -432,7 +432,7 @@ depuis le trunk).
 - `purchasely-ai-skill/references/flutter/integration.md` : encore en **v5**
   (`Purchasely.start(...)`, `fetchPresentation`/`presentPresentation`,
   `setPaywallActionInterceptorCallback` + `onProcessAction`). À remplacer par
-  l'API v6 (§3) : `PLYPurchaselyBuilder`, `PLYPresentationBuilder` /
+  l'API v6 (§3) : `PurchaselyBuilder`, `PLYPresentationBuilder` /
   `PLYPresentationRequest`, `Purchasely.interceptAction`, `PLYPresentationView`,
   `synchronize` awaitable. **Tous les types doivent porter le préfixe `PLY`**
   (cf. §2.9 — BREAKING depuis le 2026-06-24).

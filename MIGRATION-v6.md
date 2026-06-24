@@ -32,7 +32,7 @@ usages.
 
 | Old name | New name |
 |---|---|
-| `PurchaselyBuilder` | `PLYPurchaselyBuilder` |
+| `PLYPurchaselyBuilder` | `PurchaselyBuilder` — now accessed via `Purchasely.apiKey(…)` |
 | `PresentationBuilder` | `PLYPresentationBuilder` |
 | `PresentationRequest` | `PLYPresentationRequest` |
 | `Presentation` | `PLYPresentation` |
@@ -88,7 +88,7 @@ final outcome = await PLYPresentationBuilder.placement('onboarding')
 ## TL;DR
 
 - Start the SDK with the fluent builder:
-  `PLYPurchaselyBuilder.apiKey('…').runningMode(PLYRunningMode.full).start()`.
+  `Purchasely.apiKey('…').runningMode(PLYRunningMode.full).start()`.
 - Build a presentation with `PLYPresentationBuilder`
   (`.placement(id)`, `.screen(id)`, `.defaultSource()`), then `.build()` to get
   a **`PLYPresentationRequest`** with a lifecycle (`preload()`,
@@ -114,7 +114,7 @@ been removed in favour of the builder API.
 
 | Old (`Purchasely.*`, removed) | New |
 |-------------------------------|-----|
-| `Purchasely.start(apiKey: …, androidStores: …, storeKit1: …, logLevel: …, runningMode: …, userId: …)` | `PLYPurchaselyBuilder.apiKey('…').appUserId(userId).runningMode(PLYRunningMode.full).logLevel(PLYLogLevel.error).stores([PLYStore.google]).storekitVersion(PLYStorekitVersion.storeKit2).start()` |
+| `Purchasely.start(apiKey: …, androidStores: …, storeKit1: …, logLevel: …, runningMode: …, userId: …)` | `Purchasely.apiKey('…').appUserId(userId).runningMode(PLYRunningMode.full).logLevel(PLYLogLevel.error).stores([PLYStore.google]).storekitVersion(PLYStorekitVersion.storeKit2).start()` |
 | `Purchasely.fetchPresentation(placementId: id)` | `PLYPresentationBuilder.placement(id).build().preload()` |
 | `Purchasely.presentPresentationForPlacement(id, isFullscreen: …)` | `PLYPresentationBuilder.placement(id).build().display(const PLYTransition.fullScreen())` |
 | `Purchasely.presentPresentationWithIdentifier(presentationId, …)` | `PLYPresentationBuilder.screen(id).build().display(const PLYTransition.modal())` |
@@ -159,7 +159,7 @@ Purchasely.readyToOpenDeeplink(true); // removed in v6; use allowDeeplink
 ```dart
 import 'package:purchasely_flutter/purchasely_flutter.dart';
 
-final bool configured = await PLYPurchaselyBuilder.apiKey('<YOUR_API_KEY>')
+final bool configured = await Purchasely.apiKey('<YOUR_API_KEY>')
     .appUserId('user_id')                          // optional, defaults to anonymous
     .runningMode(PLYRunningMode.full)              // PLYRunningMode.observer (default) | full
     .logLevel(PLYLogLevel.error)                   // debug | info | warn | error
@@ -433,7 +433,7 @@ carry no extra fields.
 
 ```dart
 // Allow deeplinks and campaigns at start:
-await PLYPurchaselyBuilder.apiKey('<YOUR_API_KEY>')
+await Purchasely.apiKey('<YOUR_API_KEY>')
     .allowDeeplink(true)
     .allowCampaigns(true)
     .start();
