@@ -14,6 +14,11 @@ on:
   workflow_dispatch:
   schedule:
     - cron: "0 3 * * *"
+  # TEMP: verify the workflow runs on the feature branch (workflow_dispatch is only
+  # dispatchable once on the default branch). Removed right after the verification run.
+  push:
+    branches: [feat/sdk-v6-migration]
+    paths: [".github/workflows/e2e-android.yml"]
 
 concurrency:
   group: e2e-android-${{ github.ref }}
