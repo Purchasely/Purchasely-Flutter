@@ -51,8 +51,6 @@ class PLYPurchaselyBuilder {
         _stores = List.of(stores),
         _storekitVersion = storekitVersion;
 
-  /// Start the chain with an API key. The terminal `.start()` will refuse an
-  /// empty key.
   static PLYPurchaselyBuilder apiKey(String key) => PLYPurchaselyBuilder._(key);
 
   PLYPurchaselyBuilder appUserId(String? id) {

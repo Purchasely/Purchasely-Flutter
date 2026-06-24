@@ -1,7 +1,7 @@
 // Demo screen for the Purchasely Flutter presentation API.
 //
 // Shows the canonical flow:
-//   1. Initialise the SDK via `PLYPurchaselyBuilder.apiKey(...).start()`.
+//   1. Initialise the SDK via `Purchasely.apiKey(...).start()`.
 //   2. Build a presentation request via `PLYPresentationBuilder.placement(...)`.
 //   3. Display it and surface the enriched 5-field `PLYPresentationOutcome`
 //      (presentation, purchaseResult, plan, closeReason, error).
@@ -32,7 +32,7 @@ class _PresentationDemoScreenState extends State<PresentationDemoScreen> {
   Future<void> _startSdk() async {
     setState(() => _status = 'Starting…');
     try {
-      final ok = await PLYPurchaselyBuilder.apiKey(
+      final ok = await Purchasely.apiKey(
         'fcb39be4-2ba4-4db7-bde3-2a5a1e20745d',
       )
           .runningMode(PLYRunningMode.observer)

@@ -501,7 +501,7 @@ void main() {
         () async {
       // Guards the MethodChannel `start` payload. This regressed before and
       // was not caught because tests mocked start→true without asserting args.
-      final ok = await PLYPurchaselyBuilder.apiKey('K')
+      final ok = await Purchasely.apiKey('K')
           .appUserId('U')
           .runningMode(PLYRunningMode.full)
           .logLevel(PLYLogLevel.warn)

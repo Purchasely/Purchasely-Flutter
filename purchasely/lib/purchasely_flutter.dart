@@ -9,7 +9,7 @@ import 'src/bridge.dart' show PurchaselyBridge;
 import 'src/ply_models.dart';
 import 'src/ply_transformers.dart';
 import 'src/presentation_outcome.dart' show PLYPresentationOutcome;
-import 'src/purchasely_builder.dart' show PLYLogLevel;
+import 'src/purchasely_builder.dart' show PLYLogLevel, PLYPurchaselyBuilder;
 
 // --- Purchasely SDK cross-platform API ---
 //
@@ -42,7 +42,19 @@ class Purchasely {
   static var events;
   static var purchases;
 
-  // --- Public Methods ---
+  // --- SDK initialisation ---
+
+  /// Start the SDK configuration chain.
+  ///
+  /// ```dart
+  /// await Purchasely.apiKey('<YOUR_API_KEY>')
+  ///     .runningMode(PLYRunningMode.full)
+  ///     .logLevel(PLYLogLevel.error)
+  ///     .stores([PLYStore.google])
+  ///     .start();
+  /// ```
+  static PLYPurchaselyBuilder apiKey(String key) =>
+      PLYPurchaselyBuilder.apiKey(key);
 
   // --- Action interceptor ---
 

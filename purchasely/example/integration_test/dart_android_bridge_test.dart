@@ -33,7 +33,7 @@ void main() {
 
   setUpAll(() async {
     // Start the SDK once for the whole suite (real config fetch over network).
-    final configured = await PLYPurchaselyBuilder.apiKey(kApiKey)
+    final configured = await Purchasely.apiKey(kApiKey)
         .runningMode(PLYRunningMode.full)
         .logLevel(PLYLogLevel.debug)
         .stores([PLYStore.google]).start();

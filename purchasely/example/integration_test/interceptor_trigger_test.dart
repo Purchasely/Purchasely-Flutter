@@ -23,7 +23,7 @@ void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
   setUpAll(() async {
-    final configured = await PLYPurchaselyBuilder.apiKey(kApiKey)
+    final configured = await Purchasely.apiKey(kApiKey)
         .runningMode(PLYRunningMode.full)
         .logLevel(PLYLogLevel.debug)
         .stores([PLYStore.google]).start();

@@ -1861,7 +1861,7 @@ void main() {
     });
 
     test('start with minimal config uses defaults', () async {
-      final ok = await PLYPurchaselyBuilder.apiKey('test-key').start();
+      final ok = await Purchasely.apiKey('test-key').start();
 
       expect(ok, true);
       final startCall = methodCalls.firstWhere((c) => c.method == 'start');
@@ -1874,7 +1874,7 @@ void main() {
     });
 
     test('start forwards every modifier', () async {
-      await PLYPurchaselyBuilder.apiKey('test-key')
+      await Purchasely.apiKey('test-key')
           .appUserId('user-123')
           .runningMode(PLYRunningMode.full)
           .logLevel(PLYLogLevel.debug)
