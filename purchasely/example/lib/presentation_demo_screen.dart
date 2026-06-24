@@ -68,7 +68,9 @@ class _PresentationDemoScreenState extends State<PresentationDemoScreen> {
             debugPrint('onDismissed — outcome=$o');
           })
           .build()
-          .display(const Transition.modal());
+          .preload()
+          .display(const Transition.drawer(
+              height: PLYTransitionDimension.percentage(0.5)));
 
       setState(() {
         _lastOutcome = outcome;

@@ -222,3 +222,10 @@ class Presentation {
   /// (matches `back()` on Android).
   Future<void> back() => PresentationActions.instance.back(this);
 }
+
+/// Convenience extension so a preload future can be chained directly to display:
+/// `await request.preload().display(const Transition.drawer(...))`.
+extension FuturePresentationDisplay on Future<Presentation> {
+  Future<PLYPresentationOutcome> display([Transition? transition]) =>
+      then((p) => p.display(transition));
+}

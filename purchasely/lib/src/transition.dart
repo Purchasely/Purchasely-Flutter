@@ -82,6 +82,28 @@ class Transition {
   const Transition.modal({bool? dismissible})
       : this(type: TransitionType.modal, dismissible: dismissible);
   const Transition.push() : this(type: TransitionType.push);
+  const Transition.drawer({
+    PLYTransitionDimension? height,
+    bool? dismissible,
+    TransitionColors? backgroundColors,
+  }) : this(
+          type: TransitionType.drawer,
+          height: height,
+          dismissible: dismissible,
+          backgroundColors: backgroundColors,
+        );
+  const Transition.popin({
+    PLYTransitionDimension? width,
+    PLYTransitionDimension? height,
+    bool? dismissible,
+    TransitionColors? backgroundColors,
+  }) : this(
+          type: TransitionType.popin,
+          width: width,
+          height: height,
+          dismissible: dismissible,
+          backgroundColors: backgroundColors,
+        );
 
   Map<String, Object?> toMap() => {
         'type': _typeToWire(type),
