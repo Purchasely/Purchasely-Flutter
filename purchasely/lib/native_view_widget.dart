@@ -9,7 +9,7 @@ import 'src/presentation_request.dart';
 /// Renders a Purchasely presentation inline (embedded) inside the Flutter
 /// widget tree, as opposed to a full-screen / modal presentation.
 ///
-/// The widget preloads the supplied [PresentationRequest] to obtain a stable
+/// The widget preloads the supplied [PLYPresentationRequest] to obtain a stable
 /// `requestId`, then hands that id to the native platform view through the
 /// `{ "requestId": <id> }` creation params. The native side resolves the
 /// preloaded presentation from that id and renders it inline.
@@ -19,17 +19,17 @@ import 'src/presentation_request.dart';
 /// presentation, keyed by `requestId`. When the inline presentation is
 /// dismissed, the native view emits the same `onDismissed` envelope (with the
 /// `display()`-style [PLYPresentationOutcome]) as the modal path, so the request's
-/// [PresentationRequest.onDismissed] callback fires for the inline view too.
+/// [PLYPresentationRequest.onDismissed] callback fires for the inline view too.
 class PLYPresentationView extends StatefulWidget {
   /// The presentation request to render inline. Build it with
-  /// `PresentationBuilder.placement(...)...build()`.
-  final PresentationRequest request;
+  /// `PLYPresentationBuilder.placement(...)...build()`.
+  final PLYPresentationRequest request;
 
   /// Optional widget shown while the presentation is preloading.
   final Widget? loadingBuilder;
 
   /// Optional builder shown when preloading fails.
-  final Widget Function(BuildContext context, PresentationError error)?
+  final Widget Function(BuildContext context, PLYPresentationError error)?
       errorBuilder;
 
   // View type must match the one defined in the native side.
@@ -47,8 +47,8 @@ class PLYPresentationView extends StatefulWidget {
 }
 
 class _PLYPresentationViewState extends State<PLYPresentationView> {
-  Presentation? _presentation;
-  PresentationError? _error;
+  PLYPresentation? _presentation;
+  PLYPresentationError? _error;
 
   @override
   void initState() {
@@ -61,12 +61,12 @@ class _PLYPresentationViewState extends State<PLYPresentationView> {
       final presentation = await widget.request.preload();
       if (!mounted) return;
       setState(() => _presentation = presentation);
-    } on PresentationError catch (e) {
+    } on PLYPresentationError catch (e) {
       if (!mounted) return;
       setState(() => _error = e);
     } catch (e) {
       if (!mounted) return;
-      setState(() => _error = PresentationError(message: e.toString()));
+      setState(() => _error = PLYPresentationError(message: e.toString()));
     }
   }
 

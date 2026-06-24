@@ -1,6 +1,6 @@
 // E2E: the global default dismiss handler receives the typed outcome for a
 // presentation the SDK opens itself (here via a deeplink), and the system-back
-// dismissal maps to CloseReason.backSystem.
+// dismissal maps to PLYCloseReason.backSystem.
 //
 // A concurrent host-side driver (scripts: press_back.sh) waits for the paywall
 // to render, then presses the system BACK button.
@@ -21,9 +21,9 @@ void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
   setUpAll(() async {
-    final configured = await PurchaselyBuilder.apiKey(kApiKey)
-        .runningMode(RunningMode.full)
-        .logLevel(LogLevel.debug)
+    final configured = await PLYPurchaselyBuilder.apiKey(kApiKey)
+        .runningMode(PLYRunningMode.full)
+        .logLevel(PLYLogLevel.debug)
         .allowDeeplink(true)
         .stores([PLYStore.google]).start();
     expect(configured, isTrue);
@@ -60,8 +60,8 @@ void main() {
       // no longer exists in the reduced v6 enum.
       expect(
         globalOutcome!.closeReason,
-        anyOf(CloseReason.backSystem, CloseReason.programmatic,
-            CloseReason.button),
+        anyOf(PLYCloseReason.backSystem, PLYCloseReason.programmatic,
+            PLYCloseReason.button),
       );
       debugPrint('default dismiss handler → '
           'closeReason=${globalOutcome!.closeReason} '

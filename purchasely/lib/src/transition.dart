@@ -1,7 +1,7 @@
-// Purchasely SDK — Presentation transitions.
+// Purchasely SDK — PLYPresentation transitions.
 
 /// Display transition type for a presentation.
-enum TransitionType {
+enum PLYTransitionType {
   fullScreen,
   push,
   modal,
@@ -43,14 +43,14 @@ class PLYTransitionDimension {
 }
 
 /// Background color configuration for a transition.
-class TransitionColors {
+class PLYTransitionColors {
   /// Hex color (e.g. `#000000`) used in light mode.
   final String? light;
 
   /// Hex color used in dark mode.
   final String? dark;
 
-  const TransitionColors({this.light, this.dark});
+  const PLYTransitionColors({this.light, this.dark});
 
   Map<String, Object?> toMap() => {
         if (light != null) 'light': light,
@@ -58,19 +58,19 @@ class TransitionColors {
       };
 }
 
-/// Display transition for a presentation (`PresentationRequest.display(...)`).
+/// Display transition for a presentation (`PLYPresentationRequest.display(...)`).
 ///
 /// [width] (popin only) and [height] (drawer + popin) size the surface via the
 /// native dimension model — see [PLYTransitionDimension]. [dismissible]
 /// defaults to `true` on the native side.
-class Transition {
-  final TransitionType type;
+class PLYTransition {
+  final PLYTransitionType type;
   final PLYTransitionDimension? width;
   final PLYTransitionDimension? height;
   final bool? dismissible;
-  final TransitionColors? backgroundColors;
+  final PLYTransitionColors? backgroundColors;
 
-  const Transition({
+  const PLYTransition({
     required this.type,
     this.width,
     this.height,
@@ -78,27 +78,27 @@ class Transition {
     this.backgroundColors,
   });
 
-  const Transition.fullScreen() : this(type: TransitionType.fullScreen);
-  const Transition.modal({bool? dismissible})
-      : this(type: TransitionType.modal, dismissible: dismissible);
-  const Transition.push() : this(type: TransitionType.push);
-  const Transition.drawer({
+  const PLYTransition.fullScreen() : this(type: PLYTransitionType.fullScreen);
+  const PLYTransition.modal({bool? dismissible})
+      : this(type: PLYTransitionType.modal, dismissible: dismissible);
+  const PLYTransition.push() : this(type: PLYTransitionType.push);
+  const PLYTransition.drawer({
     PLYTransitionDimension? height,
     bool? dismissible,
-    TransitionColors? backgroundColors,
+    PLYTransitionColors? backgroundColors,
   }) : this(
-          type: TransitionType.drawer,
+          type: PLYTransitionType.drawer,
           height: height,
           dismissible: dismissible,
           backgroundColors: backgroundColors,
         );
-  const Transition.popin({
+  const PLYTransition.popin({
     PLYTransitionDimension? width,
     PLYTransitionDimension? height,
     bool? dismissible,
-    TransitionColors? backgroundColors,
+    PLYTransitionColors? backgroundColors,
   }) : this(
-          type: TransitionType.popin,
+          type: PLYTransitionType.popin,
           width: width,
           height: height,
           dismissible: dismissible,
@@ -114,19 +114,19 @@ class Transition {
           'backgroundColors': backgroundColors!.toMap(),
       };
 
-  static String _typeToWire(TransitionType t) {
+  static String _typeToWire(PLYTransitionType t) {
     switch (t) {
-      case TransitionType.fullScreen:
+      case PLYTransitionType.fullScreen:
         return 'fullScreen';
-      case TransitionType.push:
+      case PLYTransitionType.push:
         return 'push';
-      case TransitionType.modal:
+      case PLYTransitionType.modal:
         return 'modal';
-      case TransitionType.drawer:
+      case PLYTransitionType.drawer:
         return 'drawer';
-      case TransitionType.popin:
+      case PLYTransitionType.popin:
         return 'popin';
-      case TransitionType.inlinePaywall:
+      case PLYTransitionType.inlinePaywall:
         return 'inlinePaywall';
     }
   }

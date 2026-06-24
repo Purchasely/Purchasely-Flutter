@@ -4,11 +4,12 @@ import 'dart:developer';
 import 'package:flutter/services.dart';
 
 import 'src/action_interceptor.dart'
-    show PresentationActionKind, ActionInterceptorHandler;
+    show PLYPresentationActionKind, PLYActionInterceptorHandler;
 import 'src/bridge.dart' show PurchaselyBridge;
 import 'src/ply_models.dart';
 import 'src/ply_transformers.dart';
 import 'src/presentation_outcome.dart' show PLYPresentationOutcome;
+import 'src/purchasely_builder.dart' show PLYLogLevel;
 
 // --- Purchasely SDK cross-platform API ---
 //
@@ -16,8 +17,8 @@ import 'src/presentation_outcome.dart' show PLYPresentationOutcome;
 // callers can `import 'package:purchasely_flutter/purchasely_flutter.dart';`
 // and get both the static `Purchasely` class below (purchases, restore,
 // login/logout, attributes, products/plans, subscriptions, events, offerings,
-// consent, config) and the builder-based presentation API (`PurchaselyBuilder`,
-// `PresentationBuilder`, `Presentation`, `PLYPresentationOutcome`, `Transition`,
+// consent, config) and the builder-based presentation API (`PLYPurchaselyBuilder`,
+// `PLYPresentationBuilder`, `PLYPresentation`, `PLYPresentationOutcome`, `PLYTransition`,
 // ActionInterceptor…).
 export 'src/action_interceptor.dart';
 export 'src/bridge.dart' show PurchaselyBridge;
@@ -46,16 +47,16 @@ class Purchasely {
   // --- Action interceptor ---
 
   /// Registers a typed interceptor for [kind] actions triggered from a
-  /// Presentation. The handler returns an `InterceptResult` (or a
-  /// `Future<InterceptResult>`). Thin façade over [PurchaselyBridge].
+  /// PLYPresentation. The handler returns an `PLYInterceptResult` (or a
+  /// `Future<PLYInterceptResult>`). Thin façade over [PurchaselyBridge].
   static Future<void> interceptAction(
-    PresentationActionKind kind,
-    ActionInterceptorHandler handler,
+    PLYPresentationActionKind kind,
+    PLYActionInterceptorHandler handler,
   ) =>
       PurchaselyBridge.ensureInstalled().registerInterceptor(kind, handler);
 
   /// Removes the action interceptor previously registered for [kind].
-  static Future<void> removeActionInterceptor(PresentationActionKind kind) =>
+  static Future<void> removeActionInterceptor(PLYPresentationActionKind kind) =>
       PurchaselyBridge.ensureInstalled().removeActionInterceptor(kind);
 
   /// Removes all registered action interceptors.
@@ -745,10 +746,6 @@ class Purchasely {
 
 // -- ENUMS --
 
-enum PLYLogLevel { debug, info, warn, error }
-
-enum PLYRunningMode { transactionOnly, observer, paywallObserver, full }
-
 enum PLYAttribute {
   firebase_app_instance_id,
   airship_channel_id,
@@ -785,10 +782,6 @@ enum PLYDataProcessingPurpose {
 }
 
 enum PLYThemeMode { light, dark, system }
-
-enum PLYPurchaseResult { purchased, cancelled, restored }
-
-enum PLYPresentationType { normal, fallback, deactivated, client }
 
 enum PLYSubscriptionSource {
   appleAppStore,
@@ -874,25 +867,6 @@ class PLYProduct {
   List<PLYPlan> plans;
 
   PLYProduct(this.name, this.vendorId, this.plans);
-}
-
-class PLYPresentationPlan {
-  String? planVendorId;
-  String? storeProductId;
-  String? basePlanId;
-  String? offerId;
-
-  PLYPresentationPlan(
-      this.planVendorId, this.storeProductId, this.basePlanId, this.offerId);
-
-  Map<String, dynamic> toMap() {
-    return {
-      'planVendorId': planVendorId,
-      'storeProductId': storeProductId,
-      'basePlanId': basePlanId,
-      'offerId': offerId,
-    };
-  }
 }
 
 class PLYSubscription {

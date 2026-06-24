@@ -39,9 +39,9 @@ class _MyAppState extends State<MyApp> {
       });*/
 
       bool configured =
-          await PurchaselyBuilder.apiKey('fcb39be4-2ba4-4db7-bde3-2a5a1e20745d')
-              .runningMode(RunningMode.full)
-              .logLevel(LogLevel.debug)
+          await PLYPurchaselyBuilder.apiKey('fcb39be4-2ba4-4db7-bde3-2a5a1e20745d')
+              .runningMode(PLYRunningMode.full)
+              .logLevel(PLYLogLevel.debug)
               .allowDeeplink(true)
               .stores([PLYStore.google]).start();
 
@@ -194,27 +194,27 @@ class _MyAppState extends State<MyApp> {
 
       // Register a typed `navigate` action interceptor as an example.
       await Purchasely.interceptAction(
-        PresentationActionKind.navigate,
+        PLYPresentationActionKind.navigate,
         (info, payload) {
-          if (payload is NavigatePayload) {
+          if (payload is PLYNavigatePayload) {
             print('User wants to navigate to ${payload.url}');
           }
-          return InterceptResult.notHandled;
+          return PLYInterceptResult.notHandled;
         },
       );
 
       // Register a typed `purchase` action interceptor: inspect the selected
-      // plan via the typed `PurchasePayload`, then return `notHandled` so the
+      // plan via the typed `PLYPurchasePayload`, then return `notHandled` so the
       // SDK keeps owning the purchase flow.
       await Purchasely.interceptAction(
-        PresentationActionKind.purchase,
+        PLYPresentationActionKind.purchase,
         (info, payload) {
-          if (payload is PurchasePayload) {
+          if (payload is PLYPurchasePayload) {
             final planId = payload.plan.vendorId ?? payload.plan.productId;
             print('User wants to purchase plan $planId — letting the SDK '
                 'proceed');
           }
-          return InterceptResult.notHandled;
+          return PLYInterceptResult.notHandled;
         },
       );
     } catch (e) {
@@ -275,22 +275,22 @@ class _MyAppState extends State<MyApp> {
 
   Future<void> displayPresentation() async {
     try {
-      final outcome = await PresentationBuilder.placement('STRIPE')
+      final outcome = await PLYPresentationBuilder.placement('STRIPE')
           .build()
-          .display(const Transition.fullScreen());
+          .display(const PLYTransition.fullScreen());
 
       switch (outcome.purchaseResult) {
-        case PurchaseResult.cancelled:
+        case PLYPurchaseResult.cancelled:
           print("User cancelled purchase");
           break;
-        case PurchaseResult.purchased:
+        case PLYPurchaseResult.purchased:
           print("User purchased ${outcome.plan}");
           break;
-        case PurchaseResult.restored:
+        case PLYPurchaseResult.restored:
           print("User restored ${outcome.plan}");
           break;
         case null:
-          print("Presentation dismissed without a purchase");
+          print("PLYPresentation dismissed without a purchase");
           break;
       }
     } catch (e) {
@@ -304,8 +304,8 @@ class _MyAppState extends State<MyApp> {
         builder: (context) => PresentationScreen.placement(
           'onboarding',
           onDismissed: (outcome) {
-            print('Presentation was closed');
-            print('Presentation result: ${outcome.purchaseResult}');
+            print('PLYPresentation was closed');
+            print('PLYPresentation result: ${outcome.purchaseResult}');
             navigatorKey.currentState?.pop();
           },
         ),
@@ -382,7 +382,7 @@ class _MyAppState extends State<MyApp> {
             child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
-            // Presentation API demo — start, display, interceptor, enriched outcome.
+            // PLYPresentation API demo — start, display, interceptor, enriched outcome.
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.only(left: 20.0, right: 30.0),

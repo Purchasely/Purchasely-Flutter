@@ -3,7 +3,7 @@
 // Sealed class hierarchy for typed action payloads. Each action carries its
 // own parameters. Register a per-action handler with
 // `Purchasely.interceptAction(kind, handler)`. The
-// handler returns an `InterceptResult` (or a `Future<InterceptResult>`) to let
+// handler returns an `PLYInterceptResult` (or a `Future<PLYInterceptResult>`) to let
 // the SDK know how the action was handled.
 
 import 'dart:async';
@@ -13,7 +13,7 @@ import 'ply_transformers.dart';
 import 'presentation.dart';
 
 /// Kind of action triggered from a presentation.
-enum PresentationActionKind {
+enum PLYPresentationActionKind {
   close,
   closeAll,
   login,
@@ -26,54 +26,54 @@ enum PresentationActionKind {
   webCheckout,
 }
 
-extension PresentationActionKindWire on PresentationActionKind {
+extension PresentationActionKindWire on PLYPresentationActionKind {
   String get wire {
     switch (this) {
-      case PresentationActionKind.close:
+      case PLYPresentationActionKind.close:
         return 'close';
-      case PresentationActionKind.closeAll:
+      case PLYPresentationActionKind.closeAll:
         return 'close_all';
-      case PresentationActionKind.login:
+      case PLYPresentationActionKind.login:
         return 'login';
-      case PresentationActionKind.navigate:
+      case PLYPresentationActionKind.navigate:
         return 'navigate';
-      case PresentationActionKind.purchase:
+      case PLYPresentationActionKind.purchase:
         return 'purchase';
-      case PresentationActionKind.restore:
+      case PLYPresentationActionKind.restore:
         return 'restore';
-      case PresentationActionKind.openPresentation:
+      case PLYPresentationActionKind.openPresentation:
         return 'open_presentation';
-      case PresentationActionKind.openPlacement:
+      case PLYPresentationActionKind.openPlacement:
         return 'open_placement';
-      case PresentationActionKind.promoCode:
+      case PLYPresentationActionKind.promoCode:
         return 'promo_code';
-      case PresentationActionKind.webCheckout:
+      case PLYPresentationActionKind.webCheckout:
         return 'web_checkout';
     }
   }
 
-  static PresentationActionKind? fromWire(String? value) {
+  static PLYPresentationActionKind? fromWire(String? value) {
     switch (value) {
       case 'close':
-        return PresentationActionKind.close;
+        return PLYPresentationActionKind.close;
       case 'close_all':
-        return PresentationActionKind.closeAll;
+        return PLYPresentationActionKind.closeAll;
       case 'login':
-        return PresentationActionKind.login;
+        return PLYPresentationActionKind.login;
       case 'navigate':
-        return PresentationActionKind.navigate;
+        return PLYPresentationActionKind.navigate;
       case 'purchase':
-        return PresentationActionKind.purchase;
+        return PLYPresentationActionKind.purchase;
       case 'restore':
-        return PresentationActionKind.restore;
+        return PLYPresentationActionKind.restore;
       case 'open_presentation':
-        return PresentationActionKind.openPresentation;
+        return PLYPresentationActionKind.openPresentation;
       case 'open_placement':
-        return PresentationActionKind.openPlacement;
+        return PLYPresentationActionKind.openPlacement;
       case 'promo_code':
-        return PresentationActionKind.promoCode;
+        return PLYPresentationActionKind.promoCode;
       case 'web_checkout':
-        return PresentationActionKind.webCheckout;
+        return PLYPresentationActionKind.webCheckout;
       default:
         return null;
     }
@@ -81,35 +81,35 @@ extension PresentationActionKindWire on PresentationActionKind {
 }
 
 /// Result returned by an interceptor to the SDK.
-enum InterceptResult { success, failed, notHandled }
+enum PLYInterceptResult { success, failed, notHandled }
 
-extension InterceptResultWire on InterceptResult {
+extension InterceptResultWire on PLYInterceptResult {
   String get wire {
     switch (this) {
-      case InterceptResult.success:
+      case PLYInterceptResult.success:
         return 'success';
-      case InterceptResult.failed:
+      case PLYInterceptResult.failed:
         return 'failed';
-      case InterceptResult.notHandled:
+      case PLYInterceptResult.notHandled:
         return 'notHandled';
     }
   }
 }
 
 /// Contextual information passed to every interceptor.
-class InterceptorInfo {
+class PLYInterceptorInfo {
   final String? contentId;
-  final Presentation? presentation;
+  final PLYPresentation? presentation;
 
-  const InterceptorInfo({this.contentId, this.presentation});
+  const PLYInterceptorInfo({this.contentId, this.presentation});
 
-  factory InterceptorInfo.fromMap(Map<dynamic, dynamic>? map) {
-    if (map == null) return const InterceptorInfo();
+  factory PLYInterceptorInfo.fromMap(Map<dynamic, dynamic>? map) {
+    if (map == null) return const PLYInterceptorInfo();
     final presentationMap = map['presentation'];
-    return InterceptorInfo(
+    return PLYInterceptorInfo(
       contentId: map['contentId'] as String?,
       presentation:
-          presentationMap is Map ? Presentation.fromMap(presentationMap) : null,
+          presentationMap is Map ? PLYPresentation.fromMap(presentationMap) : null,
     );
   }
 }
@@ -117,86 +117,86 @@ class InterceptorInfo {
 /// Sealed-ish hierarchy of action payloads. Dart doesn't have sealed classes
 /// in stable yet for all SDK versions; we use abstract + `kind` discriminator
 /// and downcast via `is` for type-safe access.
-abstract class ActionPayload {
-  PresentationActionKind get kind;
-  const ActionPayload();
+abstract class PLYActionPayload {
+  PLYPresentationActionKind get kind;
+  const PLYActionPayload();
 }
 
-class NavigatePayload extends ActionPayload {
+class PLYNavigatePayload extends PLYActionPayload {
   final String url;
   final String? title;
-  const NavigatePayload({required this.url, this.title});
+  const PLYNavigatePayload({required this.url, this.title});
   @override
-  PresentationActionKind get kind => PresentationActionKind.navigate;
+  PLYPresentationActionKind get kind => PLYPresentationActionKind.navigate;
 }
 
-class PurchasePayload extends ActionPayload {
+class PLYPurchasePayload extends PLYActionPayload {
   final PLYPlan plan;
   final PLYSubscriptionOffer? subscriptionOffer;
   final PLYPromoOffer? offer;
-  const PurchasePayload({
+  const PLYPurchasePayload({
     required this.plan,
     this.subscriptionOffer,
     this.offer,
   });
   @override
-  PresentationActionKind get kind => PresentationActionKind.purchase;
+  PLYPresentationActionKind get kind => PLYPresentationActionKind.purchase;
 }
 
-class ClosePayload extends ActionPayload {
+class PLYClosePayload extends PLYActionPayload {
   final String closeReason;
-  const ClosePayload({required this.closeReason});
+  const PLYClosePayload({required this.closeReason});
   @override
-  PresentationActionKind get kind => PresentationActionKind.close;
+  PLYPresentationActionKind get kind => PLYPresentationActionKind.close;
 }
 
-class CloseAllPayload extends ActionPayload {
+class PLYCloseAllPayload extends PLYActionPayload {
   final String closeReason;
-  const CloseAllPayload({required this.closeReason});
+  const PLYCloseAllPayload({required this.closeReason});
   @override
-  PresentationActionKind get kind => PresentationActionKind.closeAll;
+  PLYPresentationActionKind get kind => PLYPresentationActionKind.closeAll;
 }
 
-class OpenPresentationPayload extends ActionPayload {
+class PLYOpenPresentationPayload extends PLYActionPayload {
   final String presentationId;
-  const OpenPresentationPayload({required this.presentationId});
+  const PLYOpenPresentationPayload({required this.presentationId});
   @override
-  PresentationActionKind get kind => PresentationActionKind.openPresentation;
+  PLYPresentationActionKind get kind => PLYPresentationActionKind.openPresentation;
 }
 
-class OpenPlacementPayload extends ActionPayload {
+class PLYOpenPlacementPayload extends PLYActionPayload {
   final String placementId;
-  const OpenPlacementPayload({required this.placementId});
+  const PLYOpenPlacementPayload({required this.placementId});
   @override
-  PresentationActionKind get kind => PresentationActionKind.openPlacement;
+  PLYPresentationActionKind get kind => PLYPresentationActionKind.openPlacement;
 }
 
-class WebCheckoutPayload extends ActionPayload {
+class PLYWebCheckoutPayload extends PLYActionPayload {
   final String url;
   final String clientReferenceId;
   final String queryParameterKey;
   final String webCheckoutProvider;
-  const WebCheckoutPayload({
+  const PLYWebCheckoutPayload({
     required this.url,
     required this.clientReferenceId,
     required this.queryParameterKey,
     required this.webCheckoutProvider,
   });
   @override
-  PresentationActionKind get kind => PresentationActionKind.webCheckout;
+  PLYPresentationActionKind get kind => PLYPresentationActionKind.webCheckout;
 }
 
 /// Payload-less actions (login, restore, promoCode) reuse this sentinel.
-class _EmptyPayload extends ActionPayload {
-  final PresentationActionKind _kind;
+class _EmptyPayload extends PLYActionPayload {
+  final PLYPresentationActionKind _kind;
   const _EmptyPayload(this._kind);
   @override
-  PresentationActionKind get kind => _kind;
+  PLYPresentationActionKind get kind => _kind;
 }
 
 /// Parse an action payload sent by the bridge.
-ActionPayload? actionPayloadFromMap(
-    PresentationActionKind kind, Map<dynamic, dynamic>? rawParameters) {
+PLYActionPayload? actionPayloadFromMap(
+    PLYPresentationActionKind kind, Map<dynamic, dynamic>? rawParameters) {
   final parameters = rawParameters ?? const {};
 
   Map<dynamic, dynamic>? _map(Object? value) {
@@ -205,41 +205,41 @@ ActionPayload? actionPayloadFromMap(
   }
 
   switch (kind) {
-    case PresentationActionKind.navigate:
+    case PLYPresentationActionKind.navigate:
       final url = parameters['url'] as String?;
       if (url == null) return null;
-      return NavigatePayload(
+      return PLYNavigatePayload(
         url: url,
         title: parameters['title'] as String?,
       );
-    case PresentationActionKind.purchase:
+    case PLYPresentationActionKind.purchase:
       final plan = plyPlanFromMap(_map(parameters['plan']));
       if (plan == null) return null;
-      return PurchasePayload(
+      return PLYPurchasePayload(
         plan: plan,
         subscriptionOffer:
             plySubscriptionOfferFromMap(_map(parameters['subscriptionOffer'])),
         offer: plyPromoOfferFromMap(_map(parameters['offer'])),
       );
-    case PresentationActionKind.close:
-      return ClosePayload(
+    case PLYPresentationActionKind.close:
+      return PLYClosePayload(
           closeReason:
               (parameters['closeReason'] as String?) ?? 'programmatic');
-    case PresentationActionKind.closeAll:
-      return CloseAllPayload(
+    case PLYPresentationActionKind.closeAll:
+      return PLYCloseAllPayload(
           closeReason:
               (parameters['closeReason'] as String?) ?? 'programmatic');
-    case PresentationActionKind.openPresentation:
+    case PLYPresentationActionKind.openPresentation:
       final id = (parameters['presentationId'] ?? parameters['presentation'])
           as String?;
       if (id == null) return null;
-      return OpenPresentationPayload(presentationId: id);
-    case PresentationActionKind.openPlacement:
+      return PLYOpenPresentationPayload(presentationId: id);
+    case PLYPresentationActionKind.openPlacement:
       final id =
           (parameters['placementId'] ?? parameters['placement']) as String?;
       if (id == null) return null;
-      return OpenPlacementPayload(placementId: id);
-    case PresentationActionKind.webCheckout:
+      return PLYOpenPlacementPayload(placementId: id);
+    case PLYPresentationActionKind.webCheckout:
       final url = parameters['url'] as String?;
       final clientReferenceId = parameters['clientReferenceId'] as String?;
       final queryParameterKey = parameters['queryParameterKey'] as String?;
@@ -250,22 +250,22 @@ ActionPayload? actionPayloadFromMap(
           provider == null) {
         return null;
       }
-      return WebCheckoutPayload(
+      return PLYWebCheckoutPayload(
         url: url,
         clientReferenceId: clientReferenceId,
         queryParameterKey: queryParameterKey,
         webCheckoutProvider: provider,
       );
-    case PresentationActionKind.login:
-    case PresentationActionKind.restore:
-    case PresentationActionKind.promoCode:
+    case PLYPresentationActionKind.login:
+    case PLYPresentationActionKind.restore:
+    case PLYPresentationActionKind.promoCode:
       return _EmptyPayload(kind);
   }
 }
 
 /// Signature of an action interceptor handler. May return synchronously or
 /// asynchronously.
-typedef ActionInterceptorHandler = FutureOr<InterceptResult> Function(
-  InterceptorInfo info,
-  ActionPayload? payload,
+typedef PLYActionInterceptorHandler = FutureOr<PLYInterceptResult> Function(
+  PLYInterceptorInfo info,
+  PLYActionPayload? payload,
 );

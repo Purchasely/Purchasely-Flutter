@@ -937,7 +937,10 @@ void main() {
     group('PLYPresentationPlan', () {
       test('creates instance and converts to map', () {
         final plan = PLYPresentationPlan(
-            'plan-123', 'product-123', 'base-123', 'offer-123');
+            planVendorId: 'plan-123',
+            storeProductId: 'product-123',
+            basePlanId: 'base-123',
+            offerId: 'offer-123');
 
         final map = plan.toMap();
 
@@ -1131,10 +1134,8 @@ void main() {
     });
 
     test('PLYRunningMode has correct values', () {
-      expect(PLYRunningMode.transactionOnly.index, 0);
-      expect(PLYRunningMode.observer.index, 1);
-      expect(PLYRunningMode.paywallObserver.index, 2);
-      expect(PLYRunningMode.full.index, 3);
+      expect(PLYRunningMode.observer.index, 0);
+      expect(PLYRunningMode.full.index, 1);
     });
 
     test('PLYThemeMode has correct values', () {
@@ -1837,7 +1838,7 @@ void main() {
     });
   });
 
-  group('PurchaselyBuilder.start', () {
+  group('PLYPurchaselyBuilder.start', () {
     late MethodChannel channel;
     final List<MethodCall> methodCalls = [];
 
@@ -1860,7 +1861,7 @@ void main() {
     });
 
     test('start with minimal config uses defaults', () async {
-      final ok = await PurchaselyBuilder.apiKey('test-key').start();
+      final ok = await PLYPurchaselyBuilder.apiKey('test-key').start();
 
       expect(ok, true);
       final startCall = methodCalls.firstWhere((c) => c.method == 'start');
@@ -1873,14 +1874,14 @@ void main() {
     });
 
     test('start forwards every modifier', () async {
-      await PurchaselyBuilder.apiKey('test-key')
+      await PLYPurchaselyBuilder.apiKey('test-key')
           .appUserId('user-123')
-          .runningMode(RunningMode.full)
-          .logLevel(LogLevel.debug)
+          .runningMode(PLYRunningMode.full)
+          .logLevel(PLYLogLevel.debug)
           .allowDeeplink(true)
           .allowCampaigns(false)
           .stores([PLYStore.google, PLYStore.huawei, PLYStore.amazon])
-          .storekitVersion(StorekitVersion.storeKit1)
+          .storekitVersion(PLYStorekitVersion.storeKit1)
           .start();
 
       final startCall = methodCalls.firstWhere((c) => c.method == 'start');

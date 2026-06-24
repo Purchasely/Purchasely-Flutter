@@ -28,9 +28,9 @@ void main() {
     });
   });
 
-  group('Transition.toMap', () {
+  group('PLYTransition.toMap', () {
     test('modal forwards type + dismissible, omits dimensions', () {
-      final map = const Transition.modal(dismissible: false).toMap();
+      final map = const PLYTransition.modal(dismissible: false).toMap();
       expect(map['type'], 'modal');
       expect(map['dismissible'], false);
       expect(map.containsKey('width'), isFalse);
@@ -38,15 +38,15 @@ void main() {
     });
 
     test('fullScreen forwards just the type', () {
-      final map = const Transition.fullScreen().toMap();
+      final map = const PLYTransition.fullScreen().toMap();
       expect(map['type'], 'fullScreen');
       expect(map.containsKey('width'), isFalse);
       expect(map.containsKey('height'), isFalse);
     });
 
     test('popin serializes width + height as dimension maps', () {
-      final map = const Transition(
-        type: TransitionType.popin,
+      final map = const PLYTransition(
+        type: PLYTransitionType.popin,
         width: PLYTransitionDimension.pixel(320),
         height: PLYTransitionDimension.percentage(0.5),
         dismissible: true,
@@ -62,8 +62,8 @@ void main() {
     });
 
     test('drawer serializes only the provided height', () {
-      final map = const Transition(
-        type: TransitionType.drawer,
+      final map = const PLYTransition(
+        type: PLYTransitionType.drawer,
         height: PLYTransitionDimension.percentage(0.6),
       ).toMap();
 

@@ -1,4 +1,4 @@
-// Purchasely SDK — Fluent builder for `PresentationRequest`.
+// Purchasely SDK — Fluent builder for `PLYPresentationRequest`.
 
 import 'dart:math';
 
@@ -12,7 +12,7 @@ final _rand = Random.secure();
 /// Returns a 128-bit hex identifier suitable for cross-isolate routing.
 ///
 /// The cross-platform contract uses a `requestId` for every
-/// [PresentationRequest] so events and lifecycle calls can be routed back from
+/// [PLYPresentationRequest] so events and lifecycle calls can be routed back from
 /// native to Dart.
 String _nextRequestId() {
   final buf = StringBuffer('ply_');
@@ -22,113 +22,113 @@ String _nextRequestId() {
   return buf.toString();
 }
 
-/// Fluent builder for a [PresentationRequest].
+/// Fluent builder for a [PLYPresentationRequest].
 ///
-/// Pick a source via [PresentationBuilder.placement], [.screen] or
+/// Pick a source via [PLYPresentationBuilder.placement], [.screen] or
 /// [.defaultSource], then chain configuration and callbacks, then [.build].
 ///
 /// Example:
 /// ```dart
-/// final outcome = await PresentationBuilder
+/// final outcome = await PLYPresentationBuilder
 ///     .placement('home_screen')
 ///     .contentId('article-42')
 ///     .onPresented((p, err) => print('shown'))
 ///     .onDismissed((outcome) => print('dismissed: ${outcome.purchaseResult}'))
 ///     .build()
-///     .display(const Transition.modal());
+///     .display(const PLYTransition.modal());
 /// ```
-class PresentationBuilder {
-  final PresentationSource _source;
+class PLYPresentationBuilder {
+  final PLYPresentationSource _source;
   String? _contentId;
   String? _backgroundColorHex;
   String? _progressColorHex;
   bool? _displayCloseButton;
   bool? _displayBackButton;
 
-  void Function(Presentation presentation, PresentationError? error)? _onLoaded;
-  void Function(Presentation? presentation, PresentationError? error)?
+  void Function(PLYPresentation presentation, PLYPresentationError? error)? _onLoaded;
+  void Function(PLYPresentation? presentation, PLYPresentationError? error)?
       _onPresented;
   void Function()? _onCloseRequested;
   void Function(PLYPresentationOutcome outcome)? _onDismissed;
 
-  PresentationBuilder._(this._source);
+  PLYPresentationBuilder._(this._source);
 
   /// Source the presentation from a placement id.
-  static PresentationBuilder placement(String placementId) =>
-      PresentationBuilder._(PresentationSource.placement(placementId));
+  static PLYPresentationBuilder placement(String placementId) =>
+      PLYPresentationBuilder._(PLYPresentationSource.placement(placementId));
 
   /// Source the presentation from a specific screen id (`presentation.id` on
   /// iOS, `presentation.screenId` on Android).
-  static PresentationBuilder screen(String screenId) =>
-      PresentationBuilder._(PresentationSource.screen(screenId));
+  static PLYPresentationBuilder screen(String screenId) =>
+      PLYPresentationBuilder._(PLYPresentationSource.screen(screenId));
 
   /// Source the default presentation.
-  static PresentationBuilder defaultSource() =>
-      PresentationBuilder._(const PresentationSource.defaultSource());
+  static PLYPresentationBuilder defaultSource() =>
+      PLYPresentationBuilder._(const PLYPresentationSource.defaultSource());
 
-  PresentationBuilder contentId(String? id) {
+  PLYPresentationBuilder contentId(String? id) {
     _contentId = id;
     return this;
   }
 
   /// Background color of the loading screen, as a hex string (e.g. `#000000`).
-  PresentationBuilder backgroundColor(String? hex) {
+  PLYPresentationBuilder backgroundColor(String? hex) {
     _backgroundColorHex = hex;
     return this;
   }
 
   /// Progress / spinner color, as a hex string (e.g. `#FFFFFF`).
-  PresentationBuilder progressColor(String? hex) {
+  PLYPresentationBuilder progressColor(String? hex) {
     _progressColorHex = hex;
     return this;
   }
 
   /// Whether the SDK should render its close button.
   /// Android only at the moment — no-op on iOS.
-  PresentationBuilder displayCloseButton(bool show) {
+  PLYPresentationBuilder displayCloseButton(bool show) {
     _displayCloseButton = show;
     return this;
   }
 
   /// Whether the SDK should render its back button.
   /// Android only at the moment — no-op on iOS.
-  PresentationBuilder displayBackButton(bool show) {
+  PLYPresentationBuilder displayBackButton(bool show) {
     _displayBackButton = show;
     return this;
   }
 
-  PresentationBuilder onLoaded(
-      void Function(Presentation presentation, PresentationError? error)
+  PLYPresentationBuilder onLoaded(
+      void Function(PLYPresentation presentation, PLYPresentationError? error)
           handler) {
     _onLoaded = handler;
     return this;
   }
 
-  PresentationBuilder onPresented(
-      void Function(Presentation? presentation, PresentationError? error)
+  PLYPresentationBuilder onPresented(
+      void Function(PLYPresentation? presentation, PLYPresentationError? error)
           handler) {
     _onPresented = handler;
     return this;
   }
 
-  PresentationBuilder onCloseRequested(void Function() handler) {
+  PLYPresentationBuilder onCloseRequested(void Function() handler) {
     _onCloseRequested = handler;
     return this;
   }
 
-  PresentationBuilder onDismissed(
+  PLYPresentationBuilder onDismissed(
       void Function(PLYPresentationOutcome outcome) handler) {
     _onDismissed = handler;
     return this;
   }
 
-  /// Build the immutable [PresentationRequest]. A stable [requestId] is
+  /// Build the immutable [PLYPresentationRequest]. A stable [requestId] is
   /// generated for the bridge to route events back.
-  PresentationRequest build() {
+  PLYPresentationRequest build() {
     // Lazy install of the dispatcher so any presentation entry point
-    // initialises it, not just PurchaselyBuilder.start().
+    // initialises it, not just PLYPurchaselyBuilder.start().
     PurchaselyBridge.ensureInstalled();
-    return PresentationRequest(
+    return PLYPresentationRequest(
       requestId: _nextRequestId(),
       source: _source,
       contentId: _contentId,

@@ -1,10 +1,10 @@
-// Purchasely SDK — Presentation outcome models.
+// Purchasely SDK — PLYPresentation outcome models.
 
 import 'ply_models.dart';
 import 'presentation.dart';
 
 /// Result of the purchase action triggered from a presentation.
-enum PurchaseResult { purchased, cancelled, restored }
+enum PLYPurchaseResult { purchased, cancelled, restored }
 
 /// Reason a presentation was closed when no error occurred.
 ///
@@ -15,10 +15,10 @@ enum PurchaseResult { purchased, cancelled, restored }
 /// Android: `button` (`"button"`), `backSystem` (`"back_system"` — Android
 /// system back / iOS interactive swipe-down or nav-pop), and `programmatic`
 /// (`"programmatic"`).
-enum CloseReason { button, backSystem, programmatic }
+enum PLYCloseReason { button, backSystem, programmatic }
 
 /// Error returned by the native SDK when a presentation could not be displayed.
-class PresentationError implements Exception {
+class PLYPresentationError implements Exception {
   /// Native error code (`code` field from `PLYError`).
   final String? code;
 
@@ -28,10 +28,10 @@ class PresentationError implements Exception {
   /// Optional payload (e.g. underlying exception description, native stack).
   final dynamic details;
 
-  const PresentationError({this.code, this.message, this.details});
+  const PLYPresentationError({this.code, this.message, this.details});
 
   @override
-  String toString() => 'PresentationError(code: $code, message: $message)';
+  String toString() => 'PLYPresentationError(code: $code, message: $message)';
 }
 
 /// The outcome of a presentation session, delivered when the presentation is
@@ -49,11 +49,11 @@ class PresentationError implements Exception {
 ///  * [error] — display error when the presentation could not be shown.
 ///    Mutually exclusive with [closeReason].
 class PLYPresentationOutcome {
-  final Presentation? presentation;
-  final PurchaseResult? purchaseResult;
+  final PLYPresentation? presentation;
+  final PLYPurchaseResult? purchaseResult;
   final PLYPlan? plan;
-  final CloseReason? closeReason;
-  final PresentationError? error;
+  final PLYCloseReason? closeReason;
+  final PLYPresentationError? error;
 
   const PLYPresentationOutcome({
     this.presentation,
@@ -68,14 +68,14 @@ class PLYPresentationOutcome {
       'PLYPresentationOutcome(purchaseResult: $purchaseResult, closeReason: $closeReason, error: $error)';
 }
 
-PurchaseResult? purchaseResultFromString(String? value) {
+PLYPurchaseResult? purchaseResultFromString(String? value) {
   switch (value) {
     case 'purchased':
-      return PurchaseResult.purchased;
+      return PLYPurchaseResult.purchased;
     case 'cancelled':
-      return PurchaseResult.cancelled;
+      return PLYPurchaseResult.cancelled;
     case 'restored':
-      return PurchaseResult.restored;
+      return PLYPurchaseResult.restored;
     case null:
     case '':
     case 'none':
@@ -85,14 +85,14 @@ PurchaseResult? purchaseResultFromString(String? value) {
   }
 }
 
-CloseReason? closeReasonFromString(String? value) {
+PLYCloseReason? closeReasonFromString(String? value) {
   switch (value) {
     case 'button':
-      return CloseReason.button;
+      return PLYCloseReason.button;
     case 'back_system':
-      return CloseReason.backSystem;
+      return PLYCloseReason.backSystem;
     case 'programmatic':
-      return CloseReason.programmatic;
+      return PLYCloseReason.programmatic;
     default:
       return null;
   }

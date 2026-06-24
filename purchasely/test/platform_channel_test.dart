@@ -580,10 +580,8 @@ void main() {
     });
 
     test('PLYRunningMode converts to correct int values', () {
-      expect(PLYRunningMode.transactionOnly.index, 0);
-      expect(PLYRunningMode.observer.index, 1);
-      expect(PLYRunningMode.paywallObserver.index, 2);
-      expect(PLYRunningMode.full.index, 3);
+      expect(PLYRunningMode.observer.index, 0);
+      expect(PLYRunningMode.full.index, 1);
     });
 
     test('PLYThemeMode converts to correct int values', () {

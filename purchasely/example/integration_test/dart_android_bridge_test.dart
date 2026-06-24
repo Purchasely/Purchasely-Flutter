@@ -9,8 +9,8 @@
 // MethodChannel/EventChannel to the native Android SDK and returns the correct,
 // typed outputs — with special focus on the v6 changes:
 //   * synchronize() -> Future<bool>
-//   * PLYPresentationOutcome (typed plan, reduced CloseReason)
-//   * Transition dimension model (width/height as PLYTransitionDimension)
+//   * PLYPresentationOutcome (typed plan, reduced PLYCloseReason)
+//   * PLYTransition dimension model (width/height as PLYTransitionDimension)
 //   * removeActionInterceptor / removeAllActionInterceptors
 //
 // Run with:
@@ -33,9 +33,9 @@ void main() {
 
   setUpAll(() async {
     // Start the SDK once for the whole suite (real config fetch over network).
-    final configured = await PurchaselyBuilder.apiKey(kApiKey)
-        .runningMode(RunningMode.full)
-        .logLevel(LogLevel.debug)
+    final configured = await PLYPurchaselyBuilder.apiKey(kApiKey)
+        .runningMode(PLYRunningMode.full)
+        .logLevel(PLYLogLevel.debug)
         .stores([PLYStore.google]).start();
     expect(configured, isTrue,
         reason: 'SDK should configure against the real backend');
@@ -60,19 +60,19 @@ void main() {
   });
 
   group('Catalog / data round-trips', () {
-    testWidgets('preload(placement) returns a typed Presentation',
+    testWidgets('preload(placement) returns a typed PLYPresentation',
         (tester) async {
       final presentation =
-          await PresentationBuilder.placement(kPlacementAudiences)
+          await PLYPresentationBuilder.placement(kPlacementAudiences)
               .build()
               .preload();
 
       // A real backend round-trip: the screen id must come back.
       expect(presentation.screenId, isNotNull);
       expect(presentation.screenId, isNotEmpty);
-      expect(presentation.type, isA<PresentationType>());
-      // Plans embedded in the presentation are typed PresentationPlan.
-      expect(presentation.plans, isA<List<PresentationPlan>>());
+      expect(presentation.type, isA<PLYPresentationType>());
+      // Plans embedded in the presentation are typed PLYPresentationPlan.
+      expect(presentation.plans, isA<List<PLYPresentationPlan>>());
       debugPrint('preload → screenId=${presentation.screenId} '
           'type=${presentation.type} plans=${presentation.plans.length}');
     });
@@ -113,16 +113,16 @@ void main() {
         (tester) async {
       // Each call forwards to the native plugin over the MethodChannel.
       await Purchasely.interceptAction(
-        PresentationActionKind.purchase,
-        (info, payload) async => InterceptResult.notHandled,
+        PLYPresentationActionKind.purchase,
+        (info, payload) async => PLYInterceptResult.notHandled,
       );
       await Purchasely.interceptAction(
-        PresentationActionKind.navigate,
-        (info, payload) async => InterceptResult.notHandled,
+        PLYPresentationActionKind.navigate,
+        (info, payload) async => PLYInterceptResult.notHandled,
       );
 
       // Renamed in v6: must reach the native side without error.
-      await Purchasely.removeActionInterceptor(PresentationActionKind.purchase);
+      await Purchasely.removeActionInterceptor(PLYPresentationActionKind.purchase);
       await Purchasely.removeAllActionInterceptors();
       // Reaching here means all four bridge round-trips succeeded.
       expect(true, isTrue);
@@ -136,9 +136,9 @@ void main() {
       // Real native display needs real async (timers + platform/event channels).
       await tester.runAsync(() async {
         var presented = false;
-        PresentationError? presentError;
+        PLYPresentationError? presentError;
 
-        final request = PresentationBuilder.placement(kPlacementAudiences)
+        final request = PLYPresentationBuilder.placement(kPlacementAudiences)
             .onPresented((presentation, error) {
           presented = true;
           presentError = error;
@@ -148,8 +148,8 @@ void main() {
         // Display with the v6 dimension model (drawer height = 60%): exercises
         // parseTransition → PLYTransition(height=PERCENTAGE, value=0.6) natively.
         // The future resolves at dismiss.
-        final displayFuture = presentation.display(const Transition(
-          type: TransitionType.drawer,
+        final displayFuture = presentation.display(const PLYTransition(
+          type: PLYTransitionType.drawer,
           height: PLYTransitionDimension.percentage(0.6),
           dismissible: true,
         ));
@@ -178,8 +178,8 @@ void main() {
         // the close control).
         expect(
           outcome.closeReason,
-          anyOf(CloseReason.programmatic, CloseReason.button,
-              CloseReason.backSystem),
+          anyOf(PLYCloseReason.programmatic, PLYCloseReason.button,
+              PLYCloseReason.backSystem),
         );
         expect(outcome.plan, anyOf(isNull, isA<PLYPlan>()));
         debugPrint('local dismiss → purchaseResult=${outcome.purchaseResult} '

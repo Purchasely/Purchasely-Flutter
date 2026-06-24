@@ -92,8 +92,8 @@ void main() {
       messenger.setMockMessageHandler(eventChannelName, null);
     });
 
-    test('preload() invokes preload and returns a Presentation', () async {
-      final request = PresentationBuilder.placement('home').build();
+    test('preload() invokes preload and returns a PLYPresentation', () async {
+      final request = PLYPresentationBuilder.placement('home').build();
       final presentation = await request.preload();
 
       expect(calls, hasLength(1));
@@ -109,13 +109,13 @@ void main() {
     });
 
     test('display() awaits the onDismissed event before resolving', () async {
-      final request = PresentationBuilder.placement('home').build();
+      final request = PLYPresentationBuilder.placement('home').build();
       // Pre-register the request via preload so the dispatcher tracks it
       // (display() uses the same requestId).
       await request.preload();
       calls.clear();
 
-      final futureOutcome = request.display(const Transition.modal());
+      final futureOutcome = request.display(const PLYTransition.modal());
       // The display call should have been invoked.
       // Give the microtask queue a tick so the awaited invokeMethod resolves.
       await Future<void>.delayed(Duration.zero);
@@ -132,13 +132,13 @@ void main() {
       });
 
       final outcome = await futureOutcome;
-      expect(outcome.purchaseResult, PurchaseResult.purchased);
+      expect(outcome.purchaseResult, PLYPurchaseResult.purchased);
     });
 
     test('onLoaded event fires the builder callback', () async {
-      Presentation? loaded;
-      PresentationError? capturedErr;
-      final request = PresentationBuilder.placement('home').onLoaded((p, e) {
+      PLYPresentation? loaded;
+      PLYPresentationError? capturedErr;
+      final request = PLYPresentationBuilder.placement('home').onLoaded((p, e) {
         loaded = p;
         capturedErr = e;
       }).build();
@@ -166,11 +166,11 @@ void main() {
       expect(capturedErr, isNull);
     });
 
-    test('display() with a Transition forwards the wire payload', () async {
-      final request = PresentationBuilder.screen('screen_42').build();
+    test('display() with a PLYTransition forwards the wire payload', () async {
+      final request = PLYPresentationBuilder.screen('screen_42').build();
       // Don't await — just check the MethodCall arguments.
       // ignore: unawaited_futures
-      request.display(const Transition.modal(dismissible: false));
+      request.display(const PLYTransition.modal(dismissible: false));
       await Future<void>.delayed(Duration.zero);
 
       final displayCall = calls.firstWhere((c) => c.method == 'display');
@@ -183,12 +183,12 @@ void main() {
 
     test('display() outcome carries 5 fields including closeReason (P0.2)',
         () async {
-      final request = PresentationBuilder.placement('home').build();
+      final request = PLYPresentationBuilder.placement('home').build();
       await request.preload();
       calls.clear();
 
       // ignore: unawaited_futures
-      final futureOutcome = request.display(const Transition.modal());
+      final futureOutcome = request.display(const PLYTransition.modal());
       await Future<void>.delayed(Duration.zero);
 
       await emitEvent(<String, Object?>{
@@ -202,8 +202,8 @@ void main() {
       });
 
       final outcome = await futureOutcome;
-      expect(outcome.purchaseResult, PurchaseResult.purchased);
-      expect(outcome.closeReason, CloseReason.button);
+      expect(outcome.purchaseResult, PLYPurchaseResult.purchased);
+      expect(outcome.closeReason, PLYCloseReason.button);
       expect(outcome.error, isNull);
       expect(outcome.plan, isA<PLYPlan>());
       expect(outcome.plan!.vendorId, 'monthly');
@@ -211,12 +211,12 @@ void main() {
     });
 
     test('display() outcome plan is a fully-typed PLYPlan', () async {
-      final request = PresentationBuilder.placement('home').build();
+      final request = PLYPresentationBuilder.placement('home').build();
       await request.preload();
       calls.clear();
 
       // ignore: unawaited_futures
-      final futureOutcome = request.display(const Transition.modal());
+      final futureOutcome = request.display(const PLYTransition.modal());
       await Future<void>.delayed(Duration.zero);
 
       await emitEvent(<String, Object?>{
@@ -251,12 +251,12 @@ void main() {
 
     test('display() outcome carries error and null closeReason on failure',
         () async {
-      final request = PresentationBuilder.placement('home').build();
+      final request = PLYPresentationBuilder.placement('home').build();
       await request.preload();
       calls.clear();
 
       // ignore: unawaited_futures
-      final futureOutcome = request.display(const Transition.modal());
+      final futureOutcome = request.display(const PLYTransition.modal());
       await Future<void>.delayed(Duration.zero);
 
       await emitEvent(<String, Object?>{
@@ -309,8 +309,8 @@ void main() {
       });
 
       expect(captured, isNotNull);
-      expect(captured!.purchaseResult, PurchaseResult.restored);
-      expect(captured!.closeReason, CloseReason.backSystem);
+      expect(captured!.purchaseResult, PLYPurchaseResult.restored);
+      expect(captured!.closeReason, PLYCloseReason.backSystem);
       expect(captured!.plan?.vendorId, 'monthly');
       expect(captured!.presentation, isNotNull);
       expect(captured!.presentation!.screenId, 'campaign_screen');
@@ -319,26 +319,26 @@ void main() {
 
     test('re-display() after dismiss resolves the second future', () async {
       // Regression: after a dismiss the request entry is dropped, so a second
-      // display() on the same Presentation handle must re-register the entry —
+      // display() on the same PLYPresentation handle must re-register the entry —
       // otherwise its dismiss completer is never stored and the future hangs.
-      final request = PresentationBuilder.placement('home').build();
+      final request = PLYPresentationBuilder.placement('home').build();
       final presentation = await request.preload();
       calls.clear();
 
       // First display → dismiss.
       // ignore: unawaited_futures
-      final firstOutcome = presentation.display(const Transition.modal());
+      final firstOutcome = presentation.display(const PLYTransition.modal());
       await Future<void>.delayed(Duration.zero);
       await emitEvent(<String, Object?>{
         'event': 'onDismissed',
         'requestId': presentation.requestId,
         'outcome': <String, Object?>{'purchaseResult': 'cancelled'},
       });
-      expect((await firstOutcome).purchaseResult, PurchaseResult.cancelled);
+      expect((await firstOutcome).purchaseResult, PLYPurchaseResult.cancelled);
 
       // Second display on the same handle → dismiss. The future must complete.
       // ignore: unawaited_futures
-      final secondOutcome = presentation.display(const Transition.modal());
+      final secondOutcome = presentation.display(const PLYTransition.modal());
       await Future<void>.delayed(Duration.zero);
       expect(calls.where((c) => c.method == 'display'), hasLength(2));
       await emitEvent(<String, Object?>{
@@ -346,13 +346,13 @@ void main() {
         'requestId': presentation.requestId,
         'outcome': <String, Object?>{'purchaseResult': 'purchased'},
       });
-      expect((await secondOutcome).purchaseResult, PurchaseResult.purchased);
+      expect((await secondOutcome).purchaseResult, PLYPurchaseResult.purchased);
     });
 
     test('onCloseRequested fires the builder callback', () async {
       var fired = false;
       final request =
-          PresentationBuilder.placement('home').onCloseRequested(() {
+          PLYPresentationBuilder.placement('home').onCloseRequested(() {
         fired = true;
       }).build();
 
@@ -369,14 +369,14 @@ void main() {
     });
 
     test('interceptor lifecycle: register → trigger → resolve', () async {
-      InterceptorInfo? capturedInfo;
-      ActionPayload? capturedPayload;
+      PLYInterceptorInfo? capturedInfo;
+      PLYActionPayload? capturedPayload;
       await PurchaselyBridge.ensureInstalled().registerInterceptor(
-        PresentationActionKind.purchase,
+        PLYPresentationActionKind.purchase,
         (info, payload) async {
           capturedInfo = info;
           capturedPayload = payload;
-          return InterceptResult.success;
+          return PLYInterceptResult.success;
         },
       );
 
@@ -417,8 +417,8 @@ void main() {
 
       expect(capturedInfo, isNotNull);
       expect(capturedInfo!.contentId, 'c1');
-      expect(capturedPayload, isA<PurchasePayload>());
-      final purchase = capturedPayload as PurchasePayload;
+      expect(capturedPayload, isA<PLYPurchasePayload>());
+      final purchase = capturedPayload as PLYPurchasePayload;
       expect(
         purchase.plan,
         isA<PLYPlan>()
@@ -455,13 +455,13 @@ void main() {
     test('removeActionInterceptor unregisters the kind on the native side',
         () async {
       await PurchaselyBridge.ensureInstalled().registerInterceptor(
-        PresentationActionKind.login,
-        (_, __) async => InterceptResult.success,
+        PLYPresentationActionKind.login,
+        (_, __) async => PLYInterceptResult.success,
       );
       calls.clear();
 
       await PurchaselyBridge.ensureInstalled()
-          .removeActionInterceptor(PresentationActionKind.login);
+          .removeActionInterceptor(PLYPresentationActionKind.login);
 
       // Wire verb stays `removeInterceptor` (native dispatch unchanged).
       final removeCall =
@@ -471,8 +471,8 @@ void main() {
 
     test('removeAllActionInterceptors clears all on the native side', () async {
       await PurchaselyBridge.ensureInstalled().registerInterceptor(
-        PresentationActionKind.purchase,
-        (_, __) async => InterceptResult.success,
+        PLYPresentationActionKind.purchase,
+        (_, __) async => PLYInterceptResult.success,
       );
       calls.clear();
 
@@ -488,8 +488,8 @@ void main() {
     test('Purchasely.interceptAction registers via the same channel call',
         () async {
       await Purchasely.interceptAction(
-        PresentationActionKind.navigate,
-        (_, __) async => InterceptResult.notHandled,
+        PLYPresentationActionKind.navigate,
+        (_, __) async => PLYInterceptResult.notHandled,
       );
 
       final registerCall =
@@ -501,10 +501,10 @@ void main() {
         () async {
       // Guards the MethodChannel `start` payload. This regressed before and
       // was not caught because tests mocked start→true without asserting args.
-      final ok = await PurchaselyBuilder.apiKey('K')
+      final ok = await PLYPurchaselyBuilder.apiKey('K')
           .appUserId('U')
-          .runningMode(RunningMode.full)
-          .logLevel(LogLevel.warn)
+          .runningMode(PLYRunningMode.full)
+          .logLevel(PLYLogLevel.warn)
           .allowDeeplink(true)
           .allowCampaigns(false)
           .stores([PLYStore.google]).start();

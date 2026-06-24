@@ -23,42 +23,42 @@ void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
   setUpAll(() async {
-    final configured = await PurchaselyBuilder.apiKey(kApiKey)
-        .runningMode(RunningMode.full)
-        .logLevel(LogLevel.debug)
+    final configured = await PLYPurchaselyBuilder.apiKey(kApiKey)
+        .runningMode(PLYRunningMode.full)
+        .logLevel(PLYLogLevel.debug)
         .stores([PLYStore.google]).start();
     expect(configured, isTrue);
   });
 
   testWidgets(
-      'purchase action interceptor fires with a typed PurchasePayload on tap',
+      'purchase action interceptor fires with a typed PLYPurchasePayload on tap',
       (tester) async {
     await tester.runAsync(() async {
-      InterceptorInfo? capturedInfo;
-      ActionPayload? capturedPayload;
+      PLYInterceptorInfo? capturedInfo;
+      PLYActionPayload? capturedPayload;
       var presented = false;
 
       // SUCCESS for purchase: skip the SDK default but continue the chain. The
       // chain then fires close_all, which we also intercept with SUCCESS so the
       // paywall stays open (mirrors native Android ACT-01).
       await Purchasely.interceptAction(
-        PresentationActionKind.purchase,
+        PLYPresentationActionKind.purchase,
         (info, payload) async {
           capturedInfo = info;
           capturedPayload = payload;
-          return InterceptResult.success;
+          return PLYInterceptResult.success;
         },
       );
       await Purchasely.interceptAction(
-        PresentationActionKind.closeAll,
-        (info, payload) async => InterceptResult.success,
+        PLYPresentationActionKind.closeAll,
+        (info, payload) async => PLYInterceptResult.success,
       );
 
-      final request = PresentationBuilder.placement(kPlacementAudiences)
+      final request = PLYPresentationBuilder.placement(kPlacementAudiences)
           .onPresented((p, e) => presented = true)
           .build();
       // ignore: unawaited_futures
-      request.display(const Transition.fullScreen());
+      request.display(const PLYTransition.fullScreen());
 
       // Wait for the paywall to present.
       final presentSw = Stopwatch()..start();
@@ -74,10 +74,10 @@ void main() {
         await Future<void>.delayed(const Duration(milliseconds: 300));
       }
 
-      expect(capturedPayload, isA<PurchasePayload>(),
+      expect(capturedPayload, isA<PLYPurchasePayload>(),
           reason: 'purchase interceptor should fire on the native tap');
-      expect(capturedPayload!.kind, PresentationActionKind.purchase);
-      final purchase = capturedPayload as PurchasePayload;
+      expect(capturedPayload!.kind, PLYPresentationActionKind.purchase);
+      final purchase = capturedPayload as PLYPurchasePayload;
       expect(purchase.plan, isA<PLYPlan>());
       expect(purchase.plan.vendorId, isNotNull);
       expect(capturedInfo, isNotNull);

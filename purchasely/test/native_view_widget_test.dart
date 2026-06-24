@@ -55,7 +55,7 @@ void main() {
 
     testWidgets('shows a loading indicator before preload resolves',
         (WidgetTester tester) async {
-      final request = PresentationBuilder.placement('home').build();
+      final request = PLYPresentationBuilder.placement('home').build();
       final view = PLYPresentationView(request: request);
 
       await tester.pumpWidget(MaterialApp(home: Scaffold(body: view)));
@@ -69,7 +69,7 @@ void main() {
       final previousPlatform = debugDefaultTargetPlatformOverride;
       debugDefaultTargetPlatformOverride = TargetPlatform.android;
       try {
-        final request = PresentationBuilder.placement('home').build();
+        final request = PLYPresentationBuilder.placement('home').build();
         final view = PLYPresentationView(request: request);
 
         await tester.pumpWidget(
@@ -99,7 +99,7 @@ void main() {
       final previousPlatform = debugDefaultTargetPlatformOverride;
       debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
       try {
-        final request = PresentationBuilder.placement('home').build();
+        final request = PLYPresentationBuilder.placement('home').build();
         final view = PLYPresentationView(request: request);
 
         await tester.pumpWidget(MaterialApp(home: Scaffold(body: view)));
@@ -118,7 +118,7 @@ void main() {
         (WidgetTester tester) async {
       debugDefaultTargetPlatformOverride = TargetPlatform.windows;
 
-      final request = PresentationBuilder.placement('home').build();
+      final request = PLYPresentationBuilder.placement('home').build();
       final view = PLYPresentationView(request: request);
 
       await tester.pumpWidget(MaterialApp(home: Scaffold(body: view)));

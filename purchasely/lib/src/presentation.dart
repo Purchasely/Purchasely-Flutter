@@ -1,6 +1,6 @@
 // Purchasely SDK — Loaded presentation handle.
 //
-// A `Presentation` is what the SDK returns once a `PresentationRequest` has
+// A `PLYPresentation` is what the SDK returns once a `PLYPresentationRequest` has
 // been preloaded (or displayed). It carries metadata about the screen and
 // exposes mutable callbacks the host app can reassign after preload.
 
@@ -10,31 +10,31 @@ import 'presentation_outcome.dart';
 import 'transition.dart';
 
 /// Kind of presentation returned by the backend.
-enum PresentationType { normal, fallback, deactivated, client }
+enum PLYPresentationType { normal, fallback, deactivated, client }
 
-PresentationType _typeFromInt(int? raw) {
-  if (raw == null || raw < 0 || raw >= PresentationType.values.length) {
-    return PresentationType.normal;
+PLYPresentationType _typeFromInt(int? raw) {
+  if (raw == null || raw < 0 || raw >= PLYPresentationType.values.length) {
+    return PLYPresentationType.normal;
   }
-  return PresentationType.values[raw];
+  return PLYPresentationType.values[raw];
 }
 
 /// Plan summary embedded in a presentation payload.
-class PresentationPlan {
+class PLYPresentationPlan {
   final String? planVendorId;
   final String? storeProductId;
   final String? basePlanId;
   final String? offerId;
 
-  const PresentationPlan({
+  const PLYPresentationPlan({
     this.planVendorId,
     this.storeProductId,
     this.basePlanId,
     this.offerId,
   });
 
-  factory PresentationPlan.fromMap(Map<dynamic, dynamic> map) {
-    return PresentationPlan(
+  factory PLYPresentationPlan.fromMap(Map<dynamic, dynamic> map) {
+    return PLYPresentationPlan(
       planVendorId: map['planVendorId'] as String?,
       storeProductId: map['storeProductId'] as String?,
       basePlanId: map['basePlanId'] as String?,
@@ -50,19 +50,19 @@ class PresentationPlan {
       };
 }
 
-/// Indirection used by [Presentation.display] / [close] / [back] so the
+/// Indirection used by [PLYPresentation.display] / [close] / [back] so the
 /// public API can defer to the bridge without creating a circular import.
-abstract class PresentationActions {
+abstract class PLYPresentationActions {
   /// Singleton wired up by `bridge.dart` once the package is initialised.
-  static PresentationActions instance = _UninitialisedActions();
+  static PLYPresentationActions instance = _UninitialisedActions();
 
   Future<PLYPresentationOutcome> display(
-      Presentation presentation, Transition? transition);
-  Future<void> close(Presentation presentation);
-  Future<void> back(Presentation presentation);
+      PLYPresentation presentation, PLYTransition? transition);
+  Future<void> close(PLYPresentation presentation);
+  Future<void> back(PLYPresentation presentation);
 }
 
-class _UninitialisedActions extends PresentationActions {
+class _UninitialisedActions extends PLYPresentationActions {
   StateError _err() => StateError(
       'Purchasely bridge not initialised — call any presentation entry point first.');
 
@@ -74,12 +74,12 @@ class _UninitialisedActions extends PresentationActions {
   Future<void> back(_) => throw _err();
 }
 
-/// A loaded presentation. Returned from `PresentationRequest.preload()` and
+/// A loaded presentation. Returned from `PLYPresentationRequest.preload()` and
 /// embedded in [PLYPresentationOutcome.presentation] at dismiss time.
 ///
 /// Callbacks ([onPresented], [onCloseRequested], [onDismissed]) are mutable
 /// so the host app can reassign them between preload and display.
-class Presentation {
+class PLYPresentation {
   /// Internal request identifier used by the bridge to route subsequent calls
   /// (close/back/display) back to the right native request.
   final String requestId;
@@ -97,13 +97,13 @@ class Presentation {
   final String? flowId;
   final String? language;
   final int height;
-  final PresentationType type;
-  final List<PresentationPlan> plans;
+  final PLYPresentationType type;
+  final List<PLYPresentationPlan> plans;
   final Map<String, dynamic> metadata;
 
   /// Optional pre-loaded handler — fires once when the presentation has been
   /// shown for the first time (or with an error if display failed).
-  void Function(Presentation? presentation, PresentationError? error)?
+  void Function(PLYPresentation? presentation, PLYPresentationError? error)?
       onPresented;
 
   /// Optional close-requested handler — fires when the user taps the native
@@ -115,7 +115,7 @@ class Presentation {
   /// dismissed (whatever the reason). Receives the full outcome.
   void Function(PLYPresentationOutcome outcome)? onDismissed;
 
-  Presentation({
+  PLYPresentation({
     required this.requestId,
     this.screenId,
     this.placementId,
@@ -127,7 +127,7 @@ class Presentation {
     this.flowId,
     this.language,
     this.height = 0,
-    this.type = PresentationType.normal,
+    this.type = PLYPresentationType.normal,
     this.plans = const [],
     this.metadata = const {},
     this.onPresented,
@@ -135,17 +135,17 @@ class Presentation {
     this.onDismissed,
   });
 
-  /// Builds a [Presentation] from the wire map sent by the native bridge.
+  /// Builds a [PLYPresentation] from the wire map sent by the native bridge.
   ///
   /// Tolerant of either wire format (`screenId` or `id`). The iOS bridge maps
   /// `id` -> `screenId` once at the SDK boundary; this fallback keeps the
   /// Dart-side parsing resilient.
-  factory Presentation.fromMap(Map<dynamic, dynamic> map) {
+  factory PLYPresentation.fromMap(Map<dynamic, dynamic> map) {
     final plansList = (map['plans'] as List?)
             ?.whereType<Map>()
-            .map((e) => PresentationPlan.fromMap(e))
+            .map((e) => PLYPresentationPlan.fromMap(e))
             .toList() ??
-        const <PresentationPlan>[];
+        const <PLYPresentationPlan>[];
 
     final metadata = <String, dynamic>{};
     (map['metadata'] as Map?)?.forEach((key, value) {
@@ -159,7 +159,7 @@ class Presentation {
             ? _typeIndexFromString(rawType)
             : null;
 
-    return Presentation(
+    return PLYPresentation(
       requestId: map['requestId'] as String? ?? '',
       screenId: (map['screenId'] ?? map['id']) as String?,
       placementId: map['placementId'] as String?,
@@ -212,20 +212,20 @@ class Presentation {
   /// Re-display the presentation (matches `display()` on the native SDKs).
   ///
   /// The returned future completes at dismiss time with the final outcome.
-  Future<PLYPresentationOutcome> display([Transition? transition]) =>
-      PresentationActions.instance.display(this, transition);
+  Future<PLYPresentationOutcome> display([PLYTransition? transition]) =>
+      PLYPresentationActions.instance.display(this, transition);
 
   /// Close the presentation programmatically (matches `close()` on Android).
-  Future<void> close() => PresentationActions.instance.close(this);
+  Future<void> close() => PLYPresentationActions.instance.close(this);
 
   /// Navigate to the previous flow step or dismiss the current one
   /// (matches `back()` on Android).
-  Future<void> back() => PresentationActions.instance.back(this);
+  Future<void> back() => PLYPresentationActions.instance.back(this);
 }
 
 /// Convenience extension so a preload future can be chained directly to display:
-/// `await request.preload().display(const Transition.drawer(...))`.
-extension FuturePresentationDisplay on Future<Presentation> {
-  Future<PLYPresentationOutcome> display([Transition? transition]) =>
+/// `await request.preload().display(const PLYTransition.drawer(...))`.
+extension FuturePresentationDisplay on Future<PLYPresentation> {
+  Future<PLYPresentationOutcome> display([PLYTransition? transition]) =>
       then((p) => p.display(transition));
 }
