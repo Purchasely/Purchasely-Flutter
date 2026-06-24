@@ -129,16 +129,14 @@ void main() {
     });
   });
 
-  group('Presentation display + outcome (Transition dimension + closeReason)',
-      () {
+  group('Display + local dismiss (presentation.close)', () {
     testWidgets(
-        'display(drawer 60%) presents with the v6 Transition dimension, then closes',
+        'display(drawer 60%) → onPresented → close() resolves the outcome',
         (tester) async {
       // Real native display needs real async (timers + platform/event channels).
       await tester.runAsync(() async {
         var presented = false;
         PresentationError? presentError;
-        PLYPresentationOutcome? outcome;
 
         final request = PresentationBuilder.placement(kPlacementAudiences)
             .onPresented((presentation, error) {
@@ -147,18 +145,14 @@ void main() {
         }).build();
         final presentation = await request.preload();
 
-        // Display with the v6 dimension model (drawer height = 60%): this is the
-        // path that exercises parseTransition → PLYTransition(height=PERCENTAGE,
-        // value=0.6) natively. The future resolves at dismiss.
-        // ignore: unawaited_futures
-        presentation
-            .display(const Transition(
-              type: TransitionType.drawer,
-              height: PLYTransitionDimension.percentage(0.6),
-              dismissible: true,
-            ))
-            .then((o) => outcome = o)
-            .catchError((_) {});
+        // Display with the v6 dimension model (drawer height = 60%): exercises
+        // parseTransition → PLYTransition(height=PERCENTAGE, value=0.6) natively.
+        // The future resolves at dismiss.
+        final displayFuture = presentation.display(const Transition(
+          type: TransitionType.drawer,
+          height: PLYTransitionDimension.percentage(0.6),
+          dismissible: true,
+        ));
 
         // Wait for the native screen to present — proves the drawer transition
         // (with its dimension) was accepted and rendered by the native SDK.
@@ -171,30 +165,24 @@ void main() {
                 'native drawer should present with the v6 dimension transition');
         expect(presentError, isNull);
 
-        // Programmatic close, then give the dismiss event a moment (best-effort:
-        // the onDismissed cycle is not always delivered in the headless harness).
+        // Local dismiss from Dart: presentation.close() → native closeAllScreens.
+        // With the onDismissed wiring fixed, the display future MUST resolve.
         await presentation.close();
-        final closeSw = Stopwatch()..start();
-        while (outcome == null && closeSw.elapsed < const Duration(seconds: 8)) {
-          await Future<void>.delayed(const Duration(milliseconds: 250));
-        }
+        final outcome = await displayFuture.timeout(const Duration(seconds: 15));
 
-        if (outcome != null) {
-          expect(outcome, isA<PLYPresentationOutcome>());
-          expect(outcome!.error, isNull);
-          // Reduced v6 enum — interactiveDismiss no longer exists.
-          expect(
-            outcome!.closeReason,
-            anyOf(CloseReason.programmatic, CloseReason.button,
-                CloseReason.backSystem, isNull),
-          );
-          expect(outcome!.plan, anyOf(isNull, isA<PLYPlan>()));
-          debugPrint('display outcome → closeReason=${outcome!.closeReason} '
-              'plan=${outcome!.plan?.vendorId}');
-        } else {
-          debugPrint('display: onPresented fired (drawer dimension transition '
-              'reached native OK); onDismissed not delivered in headless harness');
-        }
+        expect(outcome, isA<PLYPresentationOutcome>());
+        expect(outcome.error, isNull);
+        // Reduced v6 enum — interactiveDismiss no longer exists. A programmatic
+        // close reports programmatic (button if the SDK attributes the chain to
+        // the close control).
+        expect(
+          outcome.closeReason,
+          anyOf(CloseReason.programmatic, CloseReason.button,
+              CloseReason.backSystem),
+        );
+        expect(outcome.plan, anyOf(isNull, isA<PLYPlan>()));
+        debugPrint('local dismiss → purchaseResult=${outcome.purchaseResult} '
+            'closeReason=${outcome.closeReason} plan=${outcome.plan?.vendorId}');
       });
     });
   });

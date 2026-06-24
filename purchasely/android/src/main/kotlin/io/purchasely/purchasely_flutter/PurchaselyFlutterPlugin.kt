@@ -584,20 +584,29 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
         val transition = parseTransition(a["transition"] as? Map<*, *>)
         val ctx: Context = activity ?: context
 
-        // The Dart-side Future returned from `display()` resolves at DISMISS — the
-        // dismissal callback wired in buildPrepared emits `onDismissed`, which the
-        // Dart side listens to on the event channel. `result.success(true)` only
-        // confirms the display call was dispatched.
-        displayCallbacks[requestId] = { /* outcome handled by emit('onDismissed') */ }
+        // The Dart-side Future returned from `display()` resolves at DISMISS via the
+        // `onDismissed` event. We MUST pass a real dismissal callback to display():
+        // the native `dispatchDisplay`/DSL `display(...)` overloads do
+        // `onDismissed = callback` for any non-null callback, which would CLOBBER the
+        // builder-wired emitter with an empty lambda and silently drop the dismissal.
+        // Passing the emitter directly makes the dismissal reach Dart on both the
+        // success and error paths regardless of that clobbering.
+        val onDismissed: (PLYPresentationOutcome) -> Unit = { outcome ->
+            displayCallbacks.remove(requestId)
+            emit(eventEnvelope("onDismissed", requestId).apply {
+                put("outcome", outcomeToMap(outcome))
+            })
+        }
+        displayCallbacks[requestId] = onDismissed
 
         try {
             // A loaded presentation displays directly; otherwise display from the prepared.
             val loaded = loadedPresentations[requestId]
             if (loaded != null) {
-                loaded.display(ctx, transition) { /* outcome emitted via onDismissed */ }
+                loaded.display(ctx, transition, onDismissed)
             } else {
                 val prepared = preparedRequests[requestId] ?: buildPrepared(a)
-                prepared.display(ctx, transition, { /* onLoaded */ }) { /* onDismissed */ }
+                prepared.display(ctx, transition, { /* onLoaded — not awaited by Dart here */ }, onDismissed)
             }
             result.safeSuccess(true)
         } catch (t: Throwable) {
