@@ -168,7 +168,8 @@ void main() {
         // Local dismiss from Dart: presentation.close() → native closeAllScreens.
         // With the onDismissed wiring fixed, the display future MUST resolve.
         await presentation.close();
-        final outcome = await displayFuture.timeout(const Duration(seconds: 15));
+        final outcome =
+            await displayFuture.timeout(const Duration(seconds: 15));
 
         expect(outcome, isA<PLYPresentationOutcome>());
         expect(outcome.error, isNull);

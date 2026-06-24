@@ -40,14 +40,15 @@ void main() {
 
       // The SDK opens the presentation itself (deeplink) — its dismissal is
       // routed to the default handler, not to any per-request onDismissed.
-      final handled = await Purchasely
-          .handleDeeplink('ply://ply/placements/$kPlacementAudiences');
+      final handled = await Purchasely.handleDeeplink(
+          'ply://ply/placements/$kPlacementAudiences');
       expect(handled, isTrue, reason: 'deeplink route should be handled');
 
       // The concurrent driver presses BACK once the paywall renders. Poll for
       // the default handler to receive the dismissal outcome.
       final sw = Stopwatch()..start();
-      while (globalOutcome == null && sw.elapsed < const Duration(seconds: 40)) {
+      while (
+          globalOutcome == null && sw.elapsed < const Duration(seconds: 40)) {
         await Future<void>.delayed(const Duration(milliseconds: 300));
       }
 
