@@ -450,7 +450,7 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
     private fun runningModeFrom(raw: Any?): PLYRunningMode {
         return when (raw) {
             is Number -> when (raw.toInt()) {
-                3 -> PLYRunningMode.Full
+                1 -> PLYRunningMode.Full
                 else -> PLYRunningMode.Observer
             }
             is String -> when (raw.lowercase(Locale.US)) {

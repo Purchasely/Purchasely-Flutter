@@ -62,6 +62,33 @@ class PLYPlan {
     offerDuration ??= introDuration;
     offerPeriod ??= introPeriod;
   }
+
+  @override
+  String toString() {
+    return 'PLYPlan('
+        'vendorId: $vendorId, '
+        'productId: $productId, '
+        'basePlanId: $basePlanId, '
+        'name: $name, '
+        'type: $type, '
+        'amount: $amount, '
+        'localizedAmount: $localizedAmount, '
+        'currencyCode: $currencyCode, '
+        'currencySymbol: $currencySymbol, '
+        'price: $price, '
+        'period: $period, '
+        'hasIntroductoryPrice: $hasIntroductoryPrice, '
+        'introPrice: $introPrice, '
+        'introAmount: $introAmount, '
+        'introDuration: $introDuration, '
+        'introPeriod: $introPeriod, '
+        'hasFreeTrial: $hasFreeTrial, '
+        'hasOfferPrice: $hasOfferPrice, '
+        'offerPrice: $offerPrice, '
+        'offerAmount: $offerAmount, '
+        'offerDuration: $offerDuration, '
+        'offerPeriod: $offerPeriod)';
+  }
 }
 
 class PLYPromoOffer {

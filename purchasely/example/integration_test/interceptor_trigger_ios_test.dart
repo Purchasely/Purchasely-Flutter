@@ -87,7 +87,6 @@ void main() {
           'contentId=${capturedInfo!.contentId}');
 
       await Purchasely.removeAllActionInterceptors();
-      await request.close();
     });
   });
 }

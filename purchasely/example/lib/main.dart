@@ -275,9 +275,13 @@ class _MyAppState extends State<MyApp> {
 
   Future<void> displayPresentation() async {
     try {
-      final outcome = await PLYPresentationBuilder.placement('STRIPE')
+      final presentation = await PLYPresentationBuilder.placement('FLOW')
           .build()
-          .display(const PLYTransition.fullScreen());
+          .preload();
+
+      final outcome = await presentation.display();
+
+          //.display(const PLYTransition.drawer(height: PLYTransitionDimension.percentage(0.5)));
 
       switch (outcome.purchaseResult) {
         case PLYPurchaseResult.cancelled:

@@ -429,7 +429,7 @@ void main() {
         ]) {
           Purchasely.clearUserAttribute(k);
         }
-        debugPrint('T14 → dbl=${(rawDbl as num).toDouble()} '
+        debugPrint('T14 → dbl=${(rawDbl).toDouble()} '
             'date=${dt.toIso8601String()} '
             'strArr=$strArr ✓');
       });
@@ -485,7 +485,7 @@ void main() {
         final v2 = await Purchasely.userAttribute('e2e_counter');
         expect(v2, isNotNull);
         if (v1 is num && v2 is num) {
-          expect((v2 as num).toDouble(), greaterThan((v1 as num).toDouble()),
+          expect((v2).toDouble(), greaterThan((v1).toDouble()),
               reason: 'increment doit augmenter la valeur');
         }
 
@@ -494,7 +494,7 @@ void main() {
         final v3 = await Purchasely.userAttribute('e2e_counter');
         expect(v3, isNotNull);
         if (v2 is num && v3 is num) {
-          expect((v3 as num).toDouble(), lessThan((v2 as num).toDouble()),
+          expect((v3).toDouble(), lessThan((v2).toDouble()),
               reason: 'decrement doit diminuer la valeur');
         }
 
