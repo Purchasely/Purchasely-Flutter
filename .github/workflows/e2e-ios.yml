@@ -1,0 +1,75 @@
+name: E2E iOS
+
+# End-to-end Dart <-> iOS tests against the REAL Purchasely backend, run on an
+# iOS Simulator. These are NOT part of the PR-gating `ci.yml` (they need a
+# simulator and real network) — they run on demand and nightly.
+#
+# Triggers:
+#   * workflow_dispatch — manual run (any branch the workflow exists on)
+#   * schedule          — nightly at 04:00 UTC (GitHub only fires schedules from
+#                         the repository's DEFAULT branch, so the nightly run
+#                         activates once this file is merged to main).
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 4 * * *"
+
+concurrency:
+  group: e2e-ios-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e-ios:
+    name: E2E iOS (real backend)
+    runs-on: macos-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.24.x"
+          channel: stable
+          cache: true
+
+      - name: Install Flutter deps (purchasely)
+        working-directory: purchasely
+        run: flutter pub get
+
+      - name: Install Flutter deps (example)
+        working-directory: purchasely/example
+        run: flutter pub get
+
+      - name: Install CocoaPods deps
+        working-directory: purchasely/example/ios
+        run: pod install --repo-update
+
+      - name: Boot iOS Simulator
+        id: boot-sim
+        run: |
+          # Find an available iPhone simulator (prefer iPhone 16, fall back to 15/14)
+          UDID=$(xcrun simctl list devices available | \
+            grep -E "iPhone (16|15|14)" | head -1 | \
+            grep -oE '[0-9A-F-]{36}')
+          if [ -z "$UDID" ]; then
+            echo "No iPhone simulator found" >&2
+            xcrun simctl list devices available >&2
+            exit 1
+          fi
+          echo "udid=$UDID" >> "$GITHUB_OUTPUT"
+          echo "Booting simulator $UDID"
+          xcrun simctl boot "$UDID" || true
+          xcrun simctl bootstatus "$UDID" -b
+
+      - name: Run E2E suite on iOS Simulator
+        run: bash purchasely/example/integration_test/tools/ci_run_e2e_ios.sh ${{ steps.boot-sim.outputs.udid }}
+
+      - name: Upload E2E logs
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: e2e-ios-logs
+          path: purchasely/example/integration_test/ci-logs/
+          retention-days: 7
