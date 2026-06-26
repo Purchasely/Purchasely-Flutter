@@ -369,9 +369,18 @@ class PurchaselyBridge {
     if (entry == null) return;
     final outcome =
         _outcomeFromMap(envelope['outcome'], fallback: entry.presentation);
+    // Routing: prefer the per-presentation/request onDismissed callback. When
+    // none is set, the dismissal isn't handled locally, so fall back to the
+    // global default dismiss handler — this lets a host fire-and-forget a
+    // display() (without awaiting it or setting onDismissed) and still receive
+    // the outcome centrally.
     final handler =
         entry.presentation?.onDismissed ?? entry.request?.onDismissed;
-    handler?.call(outcome);
+    if (handler != null) {
+      handler(outcome);
+    } else {
+      _defaultPresentationDismissHandler?.call(outcome);
+    }
     final completer = entry.dismissCompleter;
     entry.dismissCompleter = null;
     if (completer != null && !completer.isCompleted) {

@@ -317,6 +317,107 @@ void main() {
       expect(captured!.presentation!.campaignId, 'cmp_123');
     });
 
+    test(
+        'display() dismissal falls back to the default handler when no '
+        'onDismissed is set', () async {
+      PLYPresentationOutcome? viaDefault;
+      await Purchasely.setDefaultPresentationDismissHandler((outcome) {
+        viaDefault = outcome;
+      });
+
+      // No onDismissed on the builder → the dismissal isn't handled locally.
+      final request = PLYPresentationBuilder.placement('home').build();
+      // Fire-and-forget: display() is intentionally not awaited.
+      // ignore: unawaited_futures
+      request.display(const PLYTransition.modal());
+      await Future<void>.delayed(Duration.zero);
+
+      await emitEvent(<String, Object?>{
+        'event': 'onDismissed',
+        'requestId': request.requestId,
+        'outcome': <String, Object?>{
+          'purchaseResult': 'purchased',
+          'closeReason': 'button',
+        },
+      });
+
+      expect(viaDefault, isNotNull,
+          reason: 'default handler should catch the unhandled dismissal');
+      expect(viaDefault!.purchaseResult, PLYPurchaseResult.purchased);
+      expect(viaDefault!.closeReason, PLYCloseReason.button);
+    });
+
+    test(
+        'display() dismissal uses the local onDismissed and skips the default '
+        'handler when both are set', () async {
+      PLYPresentationOutcome? viaLocal;
+      PLYPresentationOutcome? viaDefault;
+      await Purchasely.setDefaultPresentationDismissHandler((outcome) {
+        viaDefault = outcome;
+      });
+
+      final request = PLYPresentationBuilder.placement('home')
+          .onDismissed((outcome) => viaLocal = outcome)
+          .build();
+      // ignore: unawaited_futures
+      request.display(const PLYTransition.modal());
+      await Future<void>.delayed(Duration.zero);
+
+      await emitEvent(<String, Object?>{
+        'event': 'onDismissed',
+        'requestId': request.requestId,
+        'outcome': <String, Object?>{
+          'purchaseResult': 'cancelled',
+          'closeReason': 'button',
+        },
+      });
+
+      expect(viaLocal, isNotNull);
+      expect(viaLocal!.purchaseResult, PLYPurchaseResult.cancelled);
+      // The local handler took precedence; the default handler must NOT fire.
+      expect(viaDefault, isNull);
+    });
+
+    test(
+        'await display() returns the outcome to the awaiting caller + local '
+        'onDismissed, and the default handler stays silent', () async {
+      PLYPresentationOutcome? viaLocal;
+      PLYPresentationOutcome? viaDefault;
+      await Purchasely.setDefaultPresentationDismissHandler((outcome) {
+        viaDefault = outcome;
+      });
+
+      final request = PLYPresentationBuilder.placement('home')
+          .onDismissed((outcome) => viaLocal = outcome)
+          .build();
+      await request.preload();
+      calls.clear();
+
+      final futureOutcome = request.display(const PLYTransition.modal());
+      await Future<void>.delayed(Duration.zero);
+
+      await emitEvent(<String, Object?>{
+        'event': 'onDismissed',
+        'requestId': request.requestId,
+        'outcome': <String, Object?>{
+          'purchaseResult': 'purchased',
+          'closeReason': 'button',
+          'plan': <String, Object?>{'vendorId': 'monthly'},
+        },
+      });
+
+      final outcome = await futureOutcome;
+      // The awaited display() future resolves with the outcome (local consume).
+      expect(outcome.purchaseResult, PLYPurchaseResult.purchased);
+      expect(outcome.closeReason, PLYCloseReason.button);
+      expect(outcome.plan?.vendorId, 'monthly');
+      // The local onDismissed also received it…
+      expect(viaLocal, isNotNull);
+      expect(viaLocal!.purchaseResult, PLYPurchaseResult.purchased);
+      // …and the default handler must NOT fire.
+      expect(viaDefault, isNull);
+    });
+
     test('re-display() after dismiss resolves the second future', () async {
       // Regression: after a dismiss the request entry is dropped, so a second
       // display() on the same PLYPresentation handle must re-register the entry —

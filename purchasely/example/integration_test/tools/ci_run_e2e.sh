@@ -59,10 +59,20 @@ run_suite "interceptor" integration_test/interceptor_trigger_test.dart \
   tap_purchase.sh interceptor \
   || echo "::warning::E2E Android interceptor suite failed after retries (non-blocking)"
 
-echo "=== Suite 3/3: default dismiss handler (system BACK) — best-effort ==="
+echo "=== Suite 3/5: default dismiss handler via deeplink (system BACK) — best-effort ==="
 run_suite "dismiss" integration_test/default_dismiss_handler_test.dart \
   press_back.sh dismiss \
   || echo "::warning::E2E Android dismiss suite failed after retries (non-blocking)"
+
+echo "=== Suite 4/5: default dismiss handler via fire-and-forget display() (system BACK) — best-effort ==="
+run_suite "dismiss_via_display" integration_test/default_dismiss_via_display_test.dart \
+  press_back.sh dismiss_via_display \
+  || echo "::warning::E2E Android dismiss-via-display suite failed after retries (non-blocking)"
+
+echo "=== Suite 5/5: local dismiss handler wins over default (system BACK) — best-effort ==="
+run_suite "local_dismiss" integration_test/local_dismiss_handler_test.dart \
+  press_back.sh local_dismiss \
+  || echo "::warning::E2E Android local-dismiss suite failed after retries (non-blocking)"
 
 echo "=== E2E Android finished (gating fail=$fail) ==="
 exit $fail

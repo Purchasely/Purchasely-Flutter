@@ -688,6 +688,18 @@ PresentationBuilder.defaultSource()
     .display();
 ```
 
+Alternatively, register a single app-wide handler with
+`Purchasely.setDefaultPresentationDismissHandler((outcome) { … })`.
+
+> **Where the outcome is delivered.** A dismissed presentation produces one
+> `PLYPresentationOutcome`, delivered to the **per-presentation `onDismissed` if
+> one is set, otherwise to the global default handler**. The deciding factor is
+> the presence of `onDismissed` — awaiting `display()` returns the outcome too
+> but does not by itself silence the global handler. Pick one channel per
+> presentation: await it, set `onDismissed`, or leave both off and let the global
+> handler catch it. The global handler is also what receives presentations the
+> SDK opens itself (deeplinks, campaigns, promoted in-app purchases).
+
 ### Checking a Deeplink
 
 ```dart

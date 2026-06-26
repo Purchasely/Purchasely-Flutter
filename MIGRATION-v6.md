@@ -428,6 +428,51 @@ await Purchasely.setDefaultPresentationDismissHandler((outcome) {
 final handled = await Purchasely.handleDeeplink('app://ply/presentations/');
 ```
 
+### Where the dismiss outcome is delivered (routing)
+
+A dismissed presentation produces one `PLYPresentationOutcome`. There are three
+ways to receive it:
+
+| Channel | What it is |
+|---------|------------|
+| `await display()` | the **return value** — you await the call and get the outcome inline |
+| `onDismissed` | a **per-presentation** callback attached to *this* request/presentation |
+| `setDefaultPresentationDismissHandler` | a single **global** handler for the whole app |
+
+**Routing rule:** at dismiss, the outcome goes to the **`onDismissed` handler if
+one is set, otherwise to the global default handler.** The deciding factor is the
+*presence of `onDismissed`* — not whether you awaited the future. Awaiting
+`display()` always gives you the outcome as a return value, but it does **not** by
+itself suppress the global handler.
+
+```dart
+await Purchasely.setDefaultPresentationDismissHandler((outcome) {
+  print('caught globally: ${outcome.purchaseResult}');
+});
+
+// (A) fire-and-forget, no onDismissed → the GLOBAL handler receives it.
+PLYPresentationBuilder.placement('PLACEMENT').build().display();
+
+// (B) local onDismissed set → the LOCAL handler receives it, global stays silent.
+PLYPresentationBuilder.placement('PLACEMENT')
+    .onDismissed((outcome) => print('caught locally'))
+    .build()
+    .display();
+
+// (C) await without onDismissed → the return value AND the global handler both
+//     receive it (set an onDismissed if you want the global to stay silent).
+final outcome =
+    await PLYPresentationBuilder.placement('PLACEMENT').build().display();
+
+// (D) await + onDismissed → return value + local handler receive it, global silent.
+```
+
+> **Rule of thumb:** pick *one* channel per presentation — await it, **or** set
+> `onDismissed`, **or** leave both off and let the global handler catch it.
+> The global handler is also the path for presentations the SDK opens itself
+> (campaigns, deeplinks, promoted in-app purchases), which have no host-side
+> `display()` call to await.
+
 ---
 
 ## Inline (embedded) presentations

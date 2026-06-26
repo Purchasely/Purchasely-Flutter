@@ -186,6 +186,26 @@ Files:
   - RN: identical JS + same back-press driver.
   - Cordova: `setDefaultPresentationDismissHandler(ok, err)` + `handleDeeplink(url, ok, err)`; same back-press driver. **iOS caveat:** Cordova iOS reports `closeReason='interactiveDismiss'` (not `back_system`).
 
+### T11 — default dismiss handler catches a fire-and-forget display() (host-opened)
+- **API:** `setDefaultPresentationDismissHandler(cb)`, `preload()`, `display()` (not awaited, no `onDismissed`)
+- **Action:** register the default handler; `preload('integration_test_audiences')`; `unawaited(presentation.display())` with **no per-presentation `onDismissed`**; **driver dismisses** (Android system BACK / iOS tap `ply_action_close`); poll for the handler.
+- **Expected:** the default handler receives the outcome (Android `closeReason=backSystem`, iOS `button`). Unlike T10 the screen is **host-opened via `display()`**, so the dismissal travels the per-request `onDismissed` event — but since the host set no local handler, the Dart bridge **falls back** to the default handler (`_handleOnDismissed`). This is the regression guard for the dismiss-routing fallback.
+- **Files:** `default_dismiss_via_display_test.dart` (Android), `default_dismiss_via_display_ios_test.dart` (iOS).
+- **Driver:** `tools/press_back.sh` (Android) / `tools/close_paywall_ios.sh` (iOS).
+- **Port:**
+  - RN: identical builder JS; `display()` without awaiting and without an `onDismissed`; reuse the same drivers. **Requires the RN bridge to implement the same local→default dismiss fallback** (see §5.5).
+  - Cordova: old imperative model has no per-presentation `onDismissed` to omit; not directly portable — skip or assert via the default handler only.
+
+### T12 — local onDismissed (+ awaited display()) wins over the default handler
+- **API:** `setDefaultPresentationDismissHandler(cb)`, `preload()`, `onDismissed`, `await display()`
+- **Action:** register the default handler; build `integration_test_audiences` **with** a local `onDismissed`; `preload()`; **`await display()`** (with a 50 s safety timeout); **driver dismisses** (Android system BACK / iOS tap `ply_action_close`).
+- **Expected:** the awaited `display()` future resolves with the outcome, the local `onDismissed` also receives it, and the **default handler stays silent** (`defaultOutcome == null`). This is the complement of T11: it pins that a local handler claims the dismissal so the fallback to the default does NOT happen. (Routing keys on the presence of `onDismissed`; awaiting alone always resolves the future but does not by itself suppress the default — hence the local handler here.)
+- **Files:** `local_dismiss_handler_test.dart` (Android), `local_dismiss_handler_ios_test.dart` (iOS).
+- **Driver:** `tools/press_back.sh` (Android) / `tools/close_paywall_ios.sh` (iOS).
+- **Port:**
+  - RN: identical builder JS with `onDismissed` set + `await display()`; reuse the same drivers; assert the default handler did not fire.
+  - Cordova: the imperative `presentPresentationForPlacement(...)` success callback is the per-presentation dismiss outcome — assert it fires and the default handler does not.
+
 ---
 
 ## 4. Host-side UI drivers
@@ -230,3 +250,11 @@ directly, as the native Android `integration-tests` module does.)
 4. **Interceptor chain.** Tapping the purchase button triggers `purchase` →
    `close_all`. To keep the paywall open while asserting (T9), intercept
    `close_all` too and return `success`/block.
+5. **Dismiss routing fallback (local → default).** When a host-opened
+   `display()` is dismissed and **no** per-presentation/request `onDismissed` is
+   set, the Flutter Dart bridge falls back to the global
+   `setDefaultPresentationDismissHandler` (in `_handleOnDismissed`) instead of
+   dropping the outcome — so a fire-and-forget `display()` (not awaited, no local
+   handler) still reports centrally. T11 guards this. **When porting:** the RN
+   bridge must apply the same precedence (local `onDismissed` first, else default
+   handler); otherwise a fire-and-forget `display()` silently loses its dismissal.
