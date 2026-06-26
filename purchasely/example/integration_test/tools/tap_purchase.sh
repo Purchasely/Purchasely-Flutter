@@ -6,17 +6,39 @@
 #   bash integration_test/tools/tap_purchase.sh emulator-5554 &
 #   flutter test integration_test/interceptor_trigger_test.dart -d emulator-5554
 #
+# Verbose per-iteration logging + dump retry: `uiautomator dump` can transiently
+# fail with "could not get idle state" while the paywall is still animating /
+# loading (more common on the slow CI emulator), so we retry the dump and log
+# every iteration's outcome to survive being killed when the test ends.
+#
 # Exits 0 after a successful tap, 1 on timeout.
+set -uo pipefail
+
 DEV="${1:-emulator-5554}"
 DESC="action:purchase"
+DUMP_DEV="/sdcard/uidump_tap.xml"
+DUMP_LOCAL="/tmp/uidump_tap_${DEV//[^a-zA-Z0-9]/_}.xml"
+
+dump_ui() {
+  local out
+  for _ in 1 2 3; do
+    out=$(adb -s "$DEV" exec-out uiautomator dump "$DUMP_DEV" 2>&1)
+    if echo "$out" | grep -q "dumped to"; then
+      adb -s "$DEV" pull "$DUMP_DEV" "$DUMP_LOCAL" >/dev/null 2>&1 && return 0
+    fi
+    sleep 1
+  done
+  echo "    dump failed: $out"
+  return 1
+}
+
 for i in $(seq 1 90); do
-  adb -s "$DEV" exec-out uiautomator dump /sdcard/uidump.xml >/dev/null 2>&1
-  adb -s "$DEV" pull /sdcard/uidump.xml /tmp/uidump_tap.xml >/dev/null 2>&1
-  coords=$(python3 - "$DESC" <<'PY'
+  if dump_ui; then
+    coords=$(python3 - "$DESC" "$DUMP_LOCAL" <<'PY'
 import sys, re
-desc = sys.argv[1]
+desc, path = sys.argv[1], sys.argv[2]
 try:
-    xml = open('/tmp/uidump_tap.xml', encoding='utf-8').read()
+    xml = open(path, encoding='utf-8').read()
 except Exception:
     sys.exit(0)
 for m in re.finditer(r'<node\b[^>]*>', xml):
@@ -30,13 +52,19 @@ for m in re.finditer(r'<node\b[^>]*>', xml):
             break
 PY
 )
-  if [ -n "$coords" ]; then
-    echo "[tap_purchase] found '$DESC' at $coords (iter $i)"
-    adb -s "$DEV" shell input tap $coords
-    echo "[tap_purchase] tapped"
-    exit 0
+    if [ -n "$coords" ]; then
+      echo "[tap_purchase] found '$DESC' at $coords (iter $i), tapping…"
+      adb -s "$DEV" shell input tap $coords
+      echo "[tap_purchase] tapped ✓"
+      exit 0
+    else
+      n=$(grep -c '<node' "$DUMP_LOCAL" 2>/dev/null || echo 0)
+      echo "[tap_purchase] iter $i: dump ok ($n nodes), no '$DESC' yet"
+    fi
+  else
+    echo "[tap_purchase] iter $i: dump unavailable, retrying"
   fi
   sleep 1
 done
-echo "[tap_purchase] button not found after polling"
+echo "[tap_purchase] button '$DESC' not found after polling"
 exit 1
