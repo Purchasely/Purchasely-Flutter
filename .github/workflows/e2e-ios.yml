@@ -47,7 +47,11 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.24.x"
+          # Match the dev toolchain (3.41.x). Flutter 3.24.5 + the macos-latest
+          # Xcode/iOS runtime makes the example app crash on launch on the
+          # simulator (the integration-test harness then times out after 12 min
+          # with setUpAll never running). 3.41.x runs the full suite locally.
+          flutter-version: "3.41.4"
           channel: stable
           cache: true
 
@@ -106,6 +110,16 @@ jobs:
 
       - name: Run E2E suite on iOS Simulator
         run: bash purchasely/example/integration_test/tools/ci_run_e2e_ios.sh ${{ steps.boot-sim.outputs.udid }}
+
+      - name: Collect simulator crash logs (on failure)
+        if: failure()
+        run: |
+          mkdir -p purchasely/example/integration_test/ci-logs
+          cp -R ~/Library/Logs/DiagnosticReports \
+            purchasely/example/integration_test/ci-logs/DiagnosticReports 2>/dev/null || true
+          xcrun simctl spawn ${{ steps.boot-sim.outputs.udid }} log show --last 5m \
+            --predicate 'processImagePath CONTAINS "Runner" OR senderImagePath CONTAINS "Purchasely"' \
+            > purchasely/example/integration_test/ci-logs/sim_log.txt 2>&1 || true
 
       - name: Upload E2E logs
         if: always()
