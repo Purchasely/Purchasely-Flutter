@@ -1,20 +1,17 @@
-// End-to-end Dart <-> Android bridge integration tests.
+// End-to-end Dart <-> iOS bridge integration tests.
 //
 // Tests T1-T13 mirror the React Native E2E_TEST_INDEX.md suite, run on a real
-// Android device/emulator against the REAL Purchasely backend.
-//
-// Same API key and placements as the native Android `integration-tests` module
-// (com.purchasely.integration.BaseIntegrationTest).
+// iOS device or simulator against the REAL Purchasely backend.
 //
 // Tests requiring a host driver (T8, T9):
-//   T8 — (bash integration_test/tools/tap_purchase.sh &)
-//   T9 — (bash integration_test/tools/press_back.sh &)
+//   T8 — (bash integration_test/tools/tap_purchase_ios.sh &)   # idb tap
+//   T9 — (bash integration_test/tools/swipe_dismiss_ios.sh &)  # idb swipe
 //
 // Run with:
-//   flutter test integration_test/dart_android_bridge_test.dart -d emulator-5554
+//   flutter test integration_test/dart_ios_bridge_test.dart \
+//     -d "iPhone 16"
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:purchasely_flutter/purchasely_flutter.dart';
@@ -29,7 +26,8 @@ void main() {
     final configured = await Purchasely.apiKey(kApiKey)
         .runningMode(PLYRunningMode.full)
         .logLevel(PLYLogLevel.debug)
-        .stores([PLYStore.google]).start();
+        .storekitVersion(PLYStorekitVersion.storeKit2)
+        .start();
     expect(configured, isTrue,
         reason: 'SDK should configure against the real backend');
   });
@@ -52,7 +50,7 @@ void main() {
     testWidgets('T2 — isAnonymous true → login → false → logout → true',
         (tester) async {
       expect(await Purchasely.isAnonymous(), isTrue);
-      await Purchasely.userLogin('flutter_it_user');
+      await Purchasely.userLogin('flutter_ios_it_user');
       expect(await Purchasely.isAnonymous(), isFalse);
       await Purchasely.userLogout();
       expect(await Purchasely.isAnonymous(), isTrue);
@@ -120,20 +118,6 @@ void main() {
     });
   });
 
-  // synchronize() — v6-specific (not in RN index but important for Android)
-  group('synchronize() -> Future<bool> (v6)', () {
-    testWidgets('resolves true or throws PlatformException on billing error',
-        (tester) async {
-      try {
-        final result = await Purchasely.synchronize();
-        expect(result, isTrue);
-        debugPrint('synchronize → $result (success)');
-      } on PlatformException catch (e) {
-        debugPrint('synchronize → PlatformException(${e.code}): ${e.message}');
-      }
-    });
-  });
-
   // T7 — Display drawer + programmatic close → outcome properties
   group('T7 — Display + local dismiss (presentation.close)', () {
     testWidgets(
@@ -175,7 +159,6 @@ void main() {
               PLYCloseReason.backSystem),
         );
         expect(outcome.plan, anyOf(isNull, isA<PLYPlan>()));
-        // v6 — outcome carries presentation metadata (RN T7 steps 7-8)
         expect(outcome.presentation?.screenId, isNotNull);
         expect(outcome.presentation?.screenId, isNotEmpty);
         expect(outcome.presentation?.placementId, isNotNull);
@@ -187,11 +170,13 @@ void main() {
     });
   });
 
-  // T8 — Purchase interceptor fires on real tap (host driver: tap_purchase.sh)
-  // Covered by integration_test/interceptor_trigger_test.dart
+  // T8 — Purchase interceptor fires on real tap
+  // Host driver: integration_test/tools/tap_purchase_ios.sh (idb tap)
+  // Covered by integration_test/interceptor_trigger_ios_test.dart
 
-  // T9 — Default dismiss handler + deeplink + BACK (host driver: press_back.sh)
-  // Covered by integration_test/default_dismiss_handler_test.dart
+  // T9 — Default dismiss handler + deeplink + swipe-dismiss
+  // Host driver: integration_test/tools/swipe_dismiss_ios.sh (idb swipe)
+  // Covered by integration_test/default_dismiss_handler_ios_test.dart
 
   // T10 — addEventListener → PRESENTATION_VIEWED
   group('T10 — Events: PRESENTATION_VIEWED', () {
@@ -203,7 +188,6 @@ void main() {
         // deduplicate PRESENTATION_VIEWED per session when the same paywall was
         // already shown in T7. PRESENTATION_LOADED fires unconditionally.
         PLYEvent? paywallEvent;
-
         Purchasely.listenToEvents((event) {
           if (event.name == PLYEventName.PRESENTATION_VIEWED ||
               event.name == PLYEventName.PRESENTATION_LOADED) {
@@ -276,7 +260,6 @@ void main() {
 
         expect(closedEvent, isNotNull,
             reason: 'PRESENTATION_CLOSED must fire after programmatic close');
-        // source_identifier is the placement_id in the Flutter event contract.
         expect(closedEvent!.properties.source_identifier, isNotNull);
         expect(closedEvent!.properties.source_identifier, isNotEmpty);
         expect(closedEvent!.properties.displayed_presentation, isNotNull);
@@ -318,7 +301,6 @@ void main() {
         // ignore: unawaited_futures
         presentation.display(const PLYTransition.fullScreen());
 
-        // Allow the paywall to render before closing.
         await Future<void>.delayed(const Duration(seconds: 3));
         await presentation.close();
         await Future<void>.delayed(const Duration(seconds: 2));
@@ -339,14 +321,14 @@ void main() {
         'setUserAttribute* / userAttribute / clearUserAttribute round-trip',
         (tester) async {
       await tester.runAsync(() async {
-        await Purchasely.setUserAttributeWithString('e2e_str', 'hello_flutter');
+        await Purchasely.setUserAttributeWithString('e2e_str', 'hello_flutter_ios');
         await Purchasely.setUserAttributeWithInt('e2e_num', 42);
         await Purchasely.setUserAttributeWithBoolean('e2e_bool', true);
 
         await Future<void>.delayed(const Duration(milliseconds: 300));
 
         final strVal = await Purchasely.userAttribute('e2e_str');
-        expect(strVal, equals('hello_flutter'));
+        expect(strVal, equals('hello_flutter_ios'));
 
         final numVal = await Purchasely.userAttribute('e2e_num');
         expect(numVal, equals(42));

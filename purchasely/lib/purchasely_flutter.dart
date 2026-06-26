@@ -702,7 +702,8 @@ class Purchasely {
       properties['anonymous_user_id'],
       plans,
       properties['deeplink_identifier'],
-      properties['source_identifier'],
+      // v6 iOS sends placement_id; v5 sent source_identifier. Accept both.
+      properties['source_identifier'] ?? properties['placement_id'],
       properties['selected_plan'],
       properties['previous_selected_plan'],
       properties['selected_presentation'],

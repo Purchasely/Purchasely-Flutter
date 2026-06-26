@@ -1280,7 +1280,15 @@ class SwiftEventHandler: NSObject, FlutterStreamHandler, PLYEventDelegate {
 
     func onListen(withArguments arguments: Any?, eventSink events: @escaping FlutterEventSink) -> FlutterError? {
         self.eventSink = events
-        Purchasely.setEventDelegate(self)
+        // Use the closure-based v6 API (setEventCallback) — more reliable than
+        // the ObjC delegate API (setEventDelegate) in SDK v6 RC+.
+        Purchasely.setEventCallback { [weak self] event, properties in
+            guard let self = self, let sink = self.eventSink else { return }
+            let name = NSString.fromPLYEvent(event)
+            DispatchQueue.main.async {
+                sink(["name": name, "properties": properties ?? [:]])
+            }
+        }
         return nil
     }
 
@@ -1292,8 +1300,9 @@ class SwiftEventHandler: NSObject, FlutterStreamHandler, PLYEventDelegate {
 
     func eventTriggered(_ event: PLYEvent, properties: [String : Any]?) {
         guard let eventSink = self.eventSink else { return }
+        let name = NSString.fromPLYEvent(event)
         DispatchQueue.main.async {
-            eventSink(["name": event.name, "properties": properties ?? [:]])
+            eventSink(["name": name, "properties": properties ?? [:]])
         }
     }
 }
