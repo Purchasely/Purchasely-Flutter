@@ -72,13 +72,22 @@ PY
   return 0
 }
 
+# Tap the CTA repeatedly once found: a single tap occasionally doesn't register
+# (paywall not yet interactive, or the label centre lands on padding). The
+# purchase interceptor returns SUCCESS, so re-tapping is harmless and just gives
+# the interceptor more chances to fire within the test's poll window.
+taps=0
 for i in $(seq 1 90); do
   if find_and_tap; then
-    exit 0
+    taps=$((taps + 1))
+    [ "$taps" -ge 8 ] && exit 0
+    sleep 2
+  else
+    echo "[tap_purchase_ios] purchase CTA not found yet (iter $i/90), retrying…"
+    sleep 1
   fi
-  echo "[tap_purchase_ios] purchase CTA not found yet (iter $i/90), retrying…"
-  sleep 1
 done
 
+if [ "$taps" -gt 0 ]; then exit 0; fi
 echo "[tap_purchase_ios] purchase CTA ($CTA_LABELS) not found after 90 s"
 exit 1

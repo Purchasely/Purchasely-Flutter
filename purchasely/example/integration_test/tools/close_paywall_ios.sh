@@ -58,6 +58,7 @@ if any(m in labels for m in markers):
 PY
 }
 
+swipes=0
 for i in $(seq 1 60); do
   geom=$(paywall_geometry)
   if [ -n "$geom" ]; then
@@ -66,16 +67,24 @@ for i in $(seq 1 60); do
     cx=$((w / 2))
     y_start=$((h / 5))
     y_end=$((h - 20))
-    # Let the paywall settle, then swipe down to dismiss the modal sheet.
+    # Let the paywall settle, then swipe down to dismiss the modal sheet. A single
+    # swipe occasionally doesn't dismiss (gesture starts mid-content), so repeat a
+    # few times until the paywall is gone or we've tried enough.
     sleep 1
     echo "[close_paywall_ios] paywall detected (${w}x${h}); swiping down ($cx,$y_start)->($cx,$y_end)…"
-    run_idb ui swipe "$cx" "$y_start" "$cx" "$y_end" --duration 0.3 --udid "$UDID" 2>&1
-    echo "[close_paywall_ios] swipe sent ✓"
-    exit 0
+    run_idb ui swipe "$cx" "$y_start" "$cx" "$y_end" --duration 0.25 --udid "$UDID" 2>&1
+    swipes=$((swipes + 1))
+    echo "[close_paywall_ios] swipe $swipes sent ✓"
+    [ "$swipes" -ge 5 ] && exit 0
+    sleep 2
+  else
+    # Paywall not present: either not up yet, or already dismissed by our swipe.
+    [ "$swipes" -gt 0 ] && { echo "[close_paywall_ios] paywall gone after $swipes swipe(s)"; exit 0; }
+    echo "[close_paywall_ios] paywall not detected yet (iter $i/60), retrying…"
+    sleep 1
   fi
-  echo "[close_paywall_ios] paywall not detected yet (iter $i/60), retrying…"
-  sleep 1
 done
 
+[ "$swipes" -gt 0 ] && exit 0
 echo "[close_paywall_ios] paywall not detected after 60 s"
 exit 1
