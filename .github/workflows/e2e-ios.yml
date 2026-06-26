@@ -4,6 +4,13 @@ name: E2E iOS
 # iOS Simulator. These are NOT part of the PR-gating `ci.yml` (they need a
 # simulator and real network) — they run on demand and nightly.
 #
+# Suites:
+#   1/3 — dart_ios_bridge_test.dart       (T1–T20, no native interaction)
+#   2/3 — interceptor_trigger_ios_test    (purchase interceptor; driver taps
+#          ply_action_purchase_* via idb)
+#   3/3 — default_dismiss_handler_ios     (deeplink + default dismiss; driver
+#          taps ply_action_close via idb)
+#
 # Triggers:
 #   * workflow_dispatch — manual run (any branch the workflow exists on)
 #   * schedule          — nightly at 04:00 UTC (GitHub only fires schedules from
@@ -45,6 +52,11 @@ jobs:
       - name: Install CocoaPods deps
         working-directory: purchasely/example/ios
         run: pod install --repo-update
+
+      - name: Install idb-companion + idb Python client
+        run: |
+          brew install idb-companion
+          pip3 install fb-idb
 
       - name: Boot iOS Simulator
         id: boot-sim
