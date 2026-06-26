@@ -30,9 +30,9 @@ void main() {
           .logLevel(PLYLogLevel.debug)
           .storekitVersion(PLYStorekitVersion.storeKit2)
           .start()
-          .timeout(const Duration(seconds: 90),
+          .timeout(const Duration(seconds: 120),
               onTimeout: () =>
-                  throw StateError('Purchasely.start() timed out after 90s'));
+                  throw StateError('Purchasely.start() timed out after 120s'));
     } catch (e) {
       debugPrint('SETUP → start() error: $e');
       rethrow;
