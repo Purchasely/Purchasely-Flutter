@@ -60,6 +60,10 @@ PY
     else
       n=$(grep -c '<node' "$DUMP_LOCAL" 2>/dev/null || echo 0)
       echo "[tap_purchase] iter $i: dump ok ($n nodes), no '$DESC' yet"
+      if [ "$i" = "5" ]; then
+        echo "    [diag] focus: $(adb -s "$DEV" shell dumpsys window 2>/dev/null | grep -E 'mCurrentFocus|mFocusedApp' | tr -d '\r')"
+        echo "    [diag] dump head: $(head -c 1200 "$DUMP_LOCAL" 2>/dev/null | tr -d '\n')"
+      fi
     fi
   else
     echo "[tap_purchase] iter $i: dump unavailable, retrying"
