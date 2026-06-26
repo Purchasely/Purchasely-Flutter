@@ -23,11 +23,22 @@ void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
   setUpAll(() async {
-    final configured = await Purchasely.apiKey(kApiKey)
-        .runningMode(PLYRunningMode.full)
-        .logLevel(PLYLogLevel.debug)
-        .storekitVersion(PLYStorekitVersion.storeKit2)
-        .start();
+    debugPrint('SETUP → calling Purchasely.start()…');
+    bool configured = false;
+    try {
+      configured = await Purchasely.apiKey(kApiKey)
+          .runningMode(PLYRunningMode.full)
+          .logLevel(PLYLogLevel.debug)
+          .storekitVersion(PLYStorekitVersion.storeKit2)
+          .start()
+          .timeout(const Duration(seconds: 90),
+              onTimeout: () =>
+                  throw StateError('Purchasely.start() timed out after 90s'));
+    } catch (e) {
+      debugPrint('SETUP → start() error: $e');
+      rethrow;
+    }
+    debugPrint('SETUP → configured=$configured');
     expect(configured, isTrue,
         reason: 'SDK should configure against the real backend');
   });

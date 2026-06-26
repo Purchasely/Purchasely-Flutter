@@ -26,17 +26,17 @@ flutter pub get
 fail=0
 
 echo "=== Suite 1/3: Dart↔iOS bridge (T1–T20, no native interaction) ==="
-flutter test integration_test/dart_ios_bridge_test.dart -d "$DEV" 2>&1 \
+flutter test integration_test/dart_ios_bridge_test.dart -d "$DEV" --reporter expanded 2>&1 \
   | tee "$LOGS/bridge.log" || fail=1
 
 echo "=== Suite 2/3: interceptor trigger (purchase tap via idb) ==="
 bash "$HERE/tap_purchase_ios.sh" "$DEV" > "$LOGS/tap_driver_ios.log" 2>&1 &
-flutter test integration_test/interceptor_trigger_ios_test.dart -d "$DEV" 2>&1 \
+flutter test integration_test/interceptor_trigger_ios_test.dart -d "$DEV" --reporter expanded 2>&1 \
   | tee "$LOGS/interceptor_ios.log" || fail=1
 
 echo "=== Suite 3/3: default dismiss handler (close tap via idb) ==="
 bash "$HERE/close_paywall_ios.sh" "$DEV" > "$LOGS/close_driver_ios.log" 2>&1 &
-flutter test integration_test/default_dismiss_handler_ios_test.dart -d "$DEV" 2>&1 \
+flutter test integration_test/default_dismiss_handler_ios_test.dart -d "$DEV" --reporter expanded 2>&1 \
   | tee "$LOGS/dismiss_ios.log" || fail=1
 
 echo "=== E2E iOS suite finished (fail=$fail) ==="

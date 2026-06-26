@@ -51,6 +51,13 @@ jobs:
           channel: stable
           cache: true
 
+      - name: Cache pub packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.pub-cache
+          key: ${{ runner.os }}-pub-${{ hashFiles('purchasely/pubspec.lock', 'purchasely/example/pubspec.lock') }}
+          restore-keys: ${{ runner.os }}-pub-
+
       - name: Install Flutter deps (purchasely)
         working-directory: purchasely
         run: flutter pub get
@@ -59,9 +66,19 @@ jobs:
         working-directory: purchasely/example
         run: flutter pub get
 
+      - name: Cache CocoaPods
+        uses: actions/cache@v4
+        with:
+          path: |
+            purchasely/example/ios/Pods
+            ~/Library/Caches/CocoaPods
+          key: ${{ runner.os }}-pods-${{ hashFiles('purchasely/example/ios/Podfile.lock') }}
+          restore-keys: ${{ runner.os }}-pods-
+
       - name: Install CocoaPods deps
         working-directory: purchasely/example/ios
-        run: pod install --repo-update
+        # No --repo-update: the CDN resolves specs without cloning the full repo.
+        run: pod install
 
       - name: Install idb-companion + idb Python client
         run: |

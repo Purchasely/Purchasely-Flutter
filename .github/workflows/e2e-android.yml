@@ -63,6 +63,13 @@ jobs:
       # 6.0.0-rc.2 is published to Maven Central, so Gradle resolves it directly —
       # no mavenLocal priming needed.
 
+      - name: Cache pub packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.pub-cache
+          key: ${{ runner.os }}-pub-${{ hashFiles('purchasely/pubspec.lock', 'purchasely/example/pubspec.lock') }}
+          restore-keys: ${{ runner.os }}-pub-
+
       - name: Install Flutter deps (purchasely)
         working-directory: purchasely
         run: flutter pub get
@@ -70,6 +77,28 @@ jobs:
       - name: Install Flutter deps (example)
         working-directory: purchasely/example
         run: flutter pub get
+
+      - name: AVD cache
+        uses: actions/cache@v4
+        id: avd-cache
+        with:
+          path: |
+            ~/.android/avd/*
+            ~/.android/adb*
+          key: avd-34-google_apis-x86_64-pixel_6
+
+      - name: Create AVD + snapshot for caching
+        if: steps.avd-cache.outputs.cache-hit != 'true'
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          force-avd-creation: false
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          disable-animations: true
+          script: echo "Generated AVD snapshot for caching."
 
       - name: Run E2E suite on emulator
         uses: reactivecircus/android-emulator-runner@v2
