@@ -64,7 +64,8 @@ void main() {
       expect(find.byType(CircularProgressIndicator), findsOneWidget);
     });
 
-    testWidgets('renders an AndroidView with the requestId after preload',
+    testWidgets(
+        'renders a hybrid-composition PlatformViewLink after preload (Android)',
         (WidgetTester tester) async {
       final previousPlatform = debugDefaultTargetPlatformOverride;
       debugDefaultTargetPlatformOverride = TargetPlatform.android;
@@ -80,15 +81,17 @@ void main() {
             ),
           ),
         );
-        // Let the preload future resolve, then rebuild.
-        await tester.pumpAndSettle();
+        // Let the preload future resolve, then rebuild. Avoid pumpAndSettle:
+        // the hybrid-composition platform view never "settles" under test.
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 50));
 
-        final androidView =
-            tester.widget<AndroidView>(find.byType(AndroidView));
-        expect(androidView.viewType, PLYPresentationView.viewType);
-        expect(androidView.layoutDirection, TextDirection.ltr);
-        final params = androidView.creationParams as Map;
-        expect(params['requestId'], request.requestId);
+        // The Android branch uses hybrid composition (PlatformViewLink +
+        // initExpensiveAndroidView) so the embedded native paywall receives
+        // touch events — a plain virtual-display AndroidView does not.
+        final link =
+            tester.widget<PlatformViewLink>(find.byType(PlatformViewLink));
+        expect(link.viewType, PLYPresentationView.viewType);
       } finally {
         debugDefaultTargetPlatformOverride = previousPlatform;
       }

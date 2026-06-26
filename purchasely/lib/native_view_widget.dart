@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 
 import 'src/presentation.dart';
@@ -89,11 +91,40 @@ class _PLYPresentationViewState extends State<PLYPresentationView> {
 
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
-        return AndroidView(
+        // Hybrid composition (the native view lives in the Android view
+        // hierarchy) so touch events reach the embedded Purchasely paywall.
+        // A plain virtual-display `AndroidView` does NOT reliably deliver taps
+        // to the interactive paywall controls (close ✕, plan/purchase buttons),
+        // which is why inline taps appeared to do nothing. The eager gesture
+        // recognizer makes the platform view claim the gestures so Flutter does
+        // not swallow them.
+        return PlatformViewLink(
           viewType: PLYPresentationView.viewType,
-          layoutDirection: Directionality.maybeOf(context) ?? TextDirection.ltr,
-          creationParams: creationParams,
-          creationParamsCodec: const StandardMessageCodec(),
+          surfaceFactory: (context, controller) {
+            return AndroidViewSurface(
+              controller: controller as AndroidViewController,
+              hitTestBehavior: PlatformViewHitTestBehavior.opaque,
+              gestureRecognizers: <Factory<OneSequenceGestureRecognizer>>{
+                Factory<OneSequenceGestureRecognizer>(
+                    () => EagerGestureRecognizer()),
+              },
+            );
+          },
+          onCreatePlatformView: (params) {
+            final controller = PlatformViewsService.initExpensiveAndroidView(
+              id: params.id,
+              viewType: PLYPresentationView.viewType,
+              layoutDirection:
+                  Directionality.maybeOf(context) ?? TextDirection.ltr,
+              creationParams: creationParams,
+              creationParamsCodec: const StandardMessageCodec(),
+              onFocus: () => params.onFocusChanged(true),
+            );
+            controller
+              ..addOnPlatformViewCreatedListener(params.onPlatformViewCreated)
+              ..create();
+            return controller;
+          },
         );
       case TargetPlatform.iOS:
         return SafeArea(

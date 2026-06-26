@@ -302,14 +302,31 @@ class _MyAppState extends State<MyApp> {
   }
 
   Future<void> displayPresentationInline(BuildContext context) async {
+    // Closing an inline paywall fires BOTH onCloseRequested (the ✕ asks the
+    // host to close) and, right after the view is removed, onDismissed. Pop the
+    // route only ONCE — otherwise the second pop would also dismiss the screen
+    // underneath (black screen).
+    var popped = false;
+    void closeInline() {
+      if (popped) return;
+      popped = true;
+      navigatorKey.currentState?.pop();
+    }
+
     navigatorKey.currentState?.push(
       MaterialPageRoute(
         builder: (context) => PresentationScreen.placement(
-          'onboarding',
+          'promo_offers',
+          onCloseRequested: () {
+            // Inline view: the ✕ button only requests a close, so we pop the
+            // screen ourselves.
+            print('PLYPresentation close requested — popping inline screen');
+            closeInline();
+          },
           onDismissed: (outcome) {
             print('PLYPresentation was closed');
             print('PLYPresentation result: ${outcome.purchaseResult}');
-            navigatorKey.currentState?.pop();
+            closeInline();
           },
         ),
       ),
