@@ -170,13 +170,16 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             userSubscriptionsHistory(result)
         case "setThemeMode":
             setThemeMode(arguments: arguments)
+            result(true)
         case "setAttribute":
             setAttribute(arguments: arguments)
+            result(true)
         case "setLanguage":
             let parameter = arguments?["language"] as? String
             setLanguage(with: parameter)
         case "userDidConsumeSubscriptionContent":
             userDidConsumeSubscriptionContent()
+            result(true)
         case "setUserAttributeWithString":
             setUserAttributeWithString(arguments: arguments)
         case "setUserAttributeWithInt":
@@ -230,6 +233,7 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             revokeDataProcessingConsent(arguments: arguments)
         case "setDebugMode":
             setDebugMode(arguments: arguments)
+            result(true)
         default:
             result(FlutterMethodNotImplemented)
         }
