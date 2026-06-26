@@ -63,8 +63,8 @@ void main() {
   // T4 — Dynamic offerings
   // T5 — All products
   group('T3-T5 — Catalog / data round-trips', () {
-    testWidgets(
-        'T3 — preload(placement) returns a full PLYPresentation', (tester) async {
+    testWidgets('T3 — preload(placement) returns a full PLYPresentation',
+        (tester) async {
       final presentation =
           await PLYPresentationBuilder.placement(kPlacementAudiences)
               .build()
@@ -88,7 +88,8 @@ void main() {
           'plans[0].planVendorId=$firstPlanVendorId');
     });
 
-    testWidgets('T4 — getDynamicOfferings returns a typed list', (tester) async {
+    testWidgets('T4 — getDynamicOfferings returns a typed list',
+        (tester) async {
       final offerings = await Purchasely.getDynamicOfferings();
       expect(offerings, isA<List<PLYDynamicOffering>>());
       debugPrint('T4 → ${offerings.length} offering(s)');
@@ -114,7 +115,8 @@ void main() {
         PLYPresentationActionKind.navigate,
         (info, payload) async => PLYInterceptResult.notHandled,
       );
-      await Purchasely.removeActionInterceptor(PLYPresentationActionKind.purchase);
+      await Purchasely.removeActionInterceptor(
+          PLYPresentationActionKind.purchase);
       await Purchasely.removeAllActionInterceptors();
       expect(true, isTrue);
     });
@@ -165,7 +167,8 @@ void main() {
         expect(presentError, isNull);
 
         await presentation.close();
-        final outcome = await displayFuture.timeout(const Duration(seconds: 15));
+        final outcome =
+            await displayFuture.timeout(const Duration(seconds: 15));
 
         expect(outcome, isA<PLYPresentationOutcome>());
         expect(outcome.error, isNull);
@@ -211,13 +214,15 @@ void main() {
           }
         });
 
-        final request = PLYPresentationBuilder.placement(kPlacementAudiences).build();
+        final request =
+            PLYPresentationBuilder.placement(kPlacementAudiences).build();
         final presentation = await request.preload();
         // ignore: unawaited_futures
         presentation.display(const PLYTransition.fullScreen());
 
         final sw = Stopwatch()..start();
-        while (paywallEvent == null && sw.elapsed < const Duration(seconds: 15)) {
+        while (
+            paywallEvent == null && sw.elapsed < const Duration(seconds: 15)) {
           await Future<void>.delayed(const Duration(milliseconds: 250));
         }
 
@@ -253,7 +258,8 @@ void main() {
           }
         });
 
-        final request = PLYPresentationBuilder.placement(kPlacementAudiences).build();
+        final request =
+            PLYPresentationBuilder.placement(kPlacementAudiences).build();
         final presentation = await request.preload();
         // ignore: unawaited_futures
         presentation.display(const PLYTransition.fullScreen());
@@ -313,7 +319,8 @@ void main() {
           },
         );
 
-        final request = PLYPresentationBuilder.placement(kPlacementAudiences).build();
+        final request =
+            PLYPresentationBuilder.placement(kPlacementAudiences).build();
         final presentation = await request.preload();
         // ignore: unawaited_futures
         presentation.display(const PLYTransition.fullScreen());
@@ -368,6 +375,272 @@ void main() {
 
         debugPrint('T13 → str=$strVal num=$numVal bool=$boolVal '
             '→ after clear: str=$strAfter num=$numAfter');
+      });
+    });
+  });
+
+  // T14 — Extended user attribute types: double, date, arrays
+  group('T14 — User attributes: types étendus', () {
+    testWidgets(
+        'double / date / string-array / int-array / boolean-array round-trip',
+        (tester) async {
+      await tester.runAsync(() async {
+        await Purchasely.setUserAttributeWithDouble('e2e_dbl', 3.14);
+        await Purchasely.setUserAttributeWithDate(
+            'e2e_date', DateTime.utc(2024, 6, 15, 12, 0, 0));
+        await Purchasely.setUserAttributeWithStringArray(
+            'e2e_str_arr', ['alpha', 'beta', 'gamma']);
+        await Purchasely.setUserAttributeWithIntArray(
+            'e2e_int_arr', [10, 20, 30]);
+        await Purchasely.setUserAttributeWithBooleanArray(
+            'e2e_bool_arr', [true, false, true]);
+
+        await Future<void>.delayed(const Duration(milliseconds: 400));
+
+        final rawDbl = await Purchasely.userAttribute('e2e_dbl');
+        expect(rawDbl, isNotNull);
+        expect((rawDbl as num).toDouble(), closeTo(3.14, 0.01));
+
+        final dateVal = await Purchasely.userAttribute('e2e_date');
+        expect(dateVal, isA<DateTime>());
+        final dt = dateVal as DateTime;
+        expect(dt.year, equals(2024));
+        expect(dt.month, equals(6));
+        expect(dt.day, equals(15));
+
+        final strArr = await Purchasely.userAttribute('e2e_str_arr');
+        expect(strArr, isA<List>());
+        expect((strArr as List).length, equals(3));
+
+        final intArr = await Purchasely.userAttribute('e2e_int_arr');
+        expect(intArr, isA<List>());
+        expect((intArr as List).length, equals(3));
+
+        final boolArr = await Purchasely.userAttribute('e2e_bool_arr');
+        expect(boolArr, isA<List>());
+        expect((boolArr as List).length, equals(3));
+
+        for (final k in [
+          'e2e_dbl',
+          'e2e_date',
+          'e2e_str_arr',
+          'e2e_int_arr',
+          'e2e_bool_arr'
+        ]) {
+          Purchasely.clearUserAttribute(k);
+        }
+        debugPrint('T14 → dbl=${(rawDbl as num).toDouble()} '
+            'date=${dt.toIso8601String()} '
+            'strArr=$strArr ✓');
+      });
+    });
+  });
+
+  // T15 — Bulk attribute operations: userAttributes(), clearUserAttributes(), clearBuiltInAttributes()
+  group('T15 — User attributes: opérations bulk', () {
+    testWidgets(
+        'userAttributes() returns map / clearUserAttributes() vide tout / clearBuiltInAttributes() no-throw',
+        (tester) async {
+      await tester.runAsync(() async {
+        await Purchasely.setUserAttributeWithString('bulk_a', 'hello');
+        await Purchasely.setUserAttributeWithInt('bulk_b', 99);
+        await Future<void>.delayed(const Duration(milliseconds: 300));
+
+        final all = await Purchasely.userAttributes();
+        expect(all, isA<Map>());
+        expect(all.containsKey('bulk_a'), isTrue,
+            reason: 'bulk_a doit apparaître dans userAttributes()');
+        expect(all['bulk_a'], equals('hello'));
+
+        Purchasely.clearUserAttributes();
+        await Future<void>.delayed(const Duration(milliseconds: 300));
+
+        final afterClear = await Purchasely.userAttribute('bulk_a');
+        expect(afterClear, isNull,
+            reason: 'clearUserAttributes doit supprimer tous les attributs');
+
+        Purchasely.clearBuiltInAttributes();
+        debugPrint('T15 → userAttributes=${all.length} entrées, '
+            'clearUserAttributes ✓, clearBuiltInAttributes no-throw ✓');
+      });
+    });
+  });
+
+  // T16 — Increment / decrement
+  group('T16 — User attributes: increment / decrement', () {
+    testWidgets(
+        'incrementUserAttribute / decrementUserAttribute modifient le compteur',
+        (tester) async {
+      await tester.runAsync(() async {
+        Purchasely.clearUserAttribute('e2e_counter');
+        await Future<void>.delayed(const Duration(milliseconds: 300));
+
+        await Purchasely.incrementUserAttribute('e2e_counter', value: 7);
+        await Future<void>.delayed(const Duration(milliseconds: 300));
+        final v1 = await Purchasely.userAttribute('e2e_counter');
+        expect(v1, isNotNull);
+
+        await Purchasely.incrementUserAttribute('e2e_counter', value: 3);
+        await Future<void>.delayed(const Duration(milliseconds: 300));
+        final v2 = await Purchasely.userAttribute('e2e_counter');
+        expect(v2, isNotNull);
+        if (v1 is num && v2 is num) {
+          expect((v2 as num).toDouble(), greaterThan((v1 as num).toDouble()),
+              reason: 'increment doit augmenter la valeur');
+        }
+
+        await Purchasely.decrementUserAttribute('e2e_counter', value: 4);
+        await Future<void>.delayed(const Duration(milliseconds: 300));
+        final v3 = await Purchasely.userAttribute('e2e_counter');
+        expect(v3, isNotNull);
+        if (v2 is num && v3 is num) {
+          expect((v3 as num).toDouble(), lessThan((v2 as num).toDouble()),
+              reason: 'decrement doit diminuer la valeur');
+        }
+
+        Purchasely.clearUserAttribute('e2e_counter');
+        debugPrint('T16 → counter: v1=$v1 → +3 → v2=$v2 → -4 → v3=$v3 ✓');
+      });
+    });
+  });
+
+  // T17 — Catalogue: productWithIdentifier / planWithIdentifier / isEligibleForIntroOffer
+  group(
+      'T17 — Catalogue: productWithIdentifier / planWithIdentifier / isEligibleForIntroOffer',
+      () {
+    testWidgets('lookup par vendorId + eligibility check', (tester) async {
+      await tester.runAsync(() async {
+        final products = await Purchasely.allProducts();
+        expect(products, isNotEmpty,
+            reason:
+                'Au moins un produit est nécessaire pour tester le catalogue');
+
+        final product = products.first;
+        final fetched =
+            await Purchasely.productWithIdentifier(product.vendorId);
+        expect(fetched.vendorId, equals(product.vendorId));
+        expect(fetched.name, isNotEmpty);
+        debugPrint('T17 → productWithIdentifier=${fetched.vendorId}');
+
+        final plan = product.plans.isNotEmpty ? product.plans.first : null;
+        final planId = plan?.vendorId;
+        if (planId != null) {
+          final fetchedPlan = await Purchasely.planWithIdentifier(planId);
+          expect(fetchedPlan, isNotNull);
+          expect(fetchedPlan!.vendorId, equals(planId));
+          debugPrint('T17 → planWithIdentifier=${fetchedPlan.vendorId}');
+
+          final isEligible = await Purchasely.isEligibleForIntroOffer(planId);
+          expect(isEligible, isA<bool>());
+          debugPrint('T17 → isEligibleForIntroOffer=$isEligible');
+        }
+      });
+    });
+  });
+
+  // T18 — Dynamic offerings: set / get / remove / clear
+  group('T18 — Dynamic offerings: CRUD', () {
+    testWidgets(
+        'setDynamicOffering → getDynamicOfferings → removeDynamicOffering → clearDynamicOfferings',
+        (tester) async {
+      await tester.runAsync(() async {
+        final presentation =
+            await PLYPresentationBuilder.placement(kPlacementAudiences)
+                .build()
+                .preload();
+        final planVendorId = presentation.plans.isNotEmpty
+            ? presentation.plans.first.planVendorId
+            : null;
+        expect(planVendorId, isNotNull,
+            reason: 'Un plan est nécessaire pour tester setDynamicOffering');
+
+        final ok = await Purchasely.setDynamicOffering(
+          PLYDynamicOffering('e2e_ref', planVendorId!, null),
+        );
+        expect(ok, isA<bool>());
+
+        await Future<void>.delayed(const Duration(milliseconds: 300));
+        final offerings = await Purchasely.getDynamicOfferings();
+        expect(offerings, isA<List<PLYDynamicOffering>>());
+
+        Purchasely.removeDynamicOffering('e2e_ref');
+        await Future<void>.delayed(const Duration(milliseconds: 300));
+        Purchasely.clearDynamicOfferings();
+
+        debugPrint('T18 → setDynamicOffering=$ok '
+            'offerings=${offerings.length} '
+            'remove+clear ✓');
+      });
+    });
+  });
+
+  // T19 — Builder screen(id) + variantes de transition (modal, popin)
+  group('T19 — Builder screen(id) + transitions: modal / popin', () {
+    testWidgets('PLYPresentationBuilder.screen(id) fonctionne + modal + popin',
+        (tester) async {
+      await tester.runAsync(() async {
+        final byPlacement =
+            await PLYPresentationBuilder.placement(kPlacementAudiences)
+                .build()
+                .preload();
+        final screenId = byPlacement.screenId;
+        expect(screenId, isNotNull);
+
+        // Variante screen(id) → modal
+        final byScreen =
+            await PLYPresentationBuilder.screen(screenId!).build().preload();
+        expect(byScreen.screenId, isNotNull);
+
+        final f1 = byScreen.display(const PLYTransition.modal());
+        await Future<void>.delayed(const Duration(seconds: 2));
+        await byScreen.close();
+        final outcome1 = await f1.timeout(const Duration(seconds: 10));
+        expect(outcome1.presentation?.screenId, isNotNull);
+        debugPrint('T19 → screen($screenId) modal → ${outcome1.closeReason}');
+
+        // Variante popin
+        final byScreen2 =
+            await PLYPresentationBuilder.screen(screenId).build().preload();
+        final f2 = byScreen2.display(const PLYTransition.popin(
+          width: PLYTransitionDimension.pixel(320),
+          height: PLYTransitionDimension.percentage(0.6),
+        ));
+        await Future<void>.delayed(const Duration(seconds: 2));
+        await byScreen2.close();
+        final outcome2 = await f2.timeout(const Duration(seconds: 10));
+        expect(outcome2.presentation?.screenId, isNotNull);
+        debugPrint('T19 → popin → ${outcome2.closeReason}');
+      });
+    });
+  });
+
+  // T20 — Config setters: smoke test (allowDeeplink, allowCampaigns, setLanguage,
+  //        setThemeMode, setLogLevel, setDebugMode, revokeDataProcessingConsent,
+  //        handleDeeplink)
+  group('T20 — Config setters: smoke test', () {
+    testWidgets(
+        'allowDeeplink / allowCampaigns / setLanguage / setThemeMode / setLogLevel / '
+        'setDebugMode / revokeDataProcessingConsent / handleDeeplink ne throw pas',
+        (tester) async {
+      await tester.runAsync(() async {
+        await Purchasely.allowDeeplink(true);
+        await Purchasely.allowDeeplink(false);
+        await Purchasely.allowCampaigns(true);
+        await Purchasely.allowCampaigns(false);
+        await Purchasely.setLanguage('en');
+        await Purchasely.setThemeMode(PLYThemeMode.system);
+        await Purchasely.setLogLevel(PLYLogLevel.debug);
+        await Purchasely.setDebugMode(false);
+        Purchasely.revokeDataProcessingConsent(
+            [PLYDataProcessingPurpose.analytics]);
+
+        // Sur iOS le SDK fait un aller-retour réseau avant de rejeter l'URL → timeout court.
+        final handled = await Purchasely.handleDeeplink(
+                'https://example.com/not-a-ply-link')
+            .timeout(const Duration(seconds: 5), onTimeout: () => false);
+        expect(handled, isA<bool>());
+        debugPrint(
+            'T20 → handleDeeplink=$handled, all config setters no-throw ✓');
       });
     });
   });
