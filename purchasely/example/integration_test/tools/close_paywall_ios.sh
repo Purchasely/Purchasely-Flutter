@@ -1,23 +1,29 @@
 #!/bin/bash
 # Host-side UI driver for default_dismiss_handler_ios_test.dart.
 #
-# Waits for the Purchasely paywall close button to appear in the simulator
-# accessibility tree (accessibility ID: ply_action_close) then taps it.
-# Equivalent to pressing system BACK on Android (press_back.sh).
+# The Purchasely iOS paywall is custom-rendered: its accessibility tree exposes
+# only StaticText (no close button / no accessibility identifier). So instead of
+# tapping a close affordance (as Android's press_back.sh does), we dismiss the
+# SDK-opened (deeplink) presentation with a downward swipe — the gesture that
+# dismisses a modally-presented sheet on iOS.
+#
 # Uses `idb` (pip install fb-idb) + idb-companion (brew install idb-companion).
-# Includes an asyncio fix for Python 3.12+.
+# A wrapper sets up an asyncio event loop before idb's main(), fixing Python
+# 3.12+. The AX JSON is passed to the parser via an env var (NOT stdin), since
+# `python3 - <<HEREDOC` already consumes stdin to read its own script.
 #
 # Run concurrently with the test:
 #   bash integration_test/tools/close_paywall_ios.sh <sim-udid> &
 #   flutter test integration_test/default_dismiss_handler_ios_test.dart -d <sim-udid>
 #
-# Exits 0 after a successful tap, 1 on timeout.
+# Exits 0 after swiping to dismiss, 1 on timeout.
 set -uo pipefail
 
 UDID="${1:?usage: $0 <simulator-udid>}"
-CLOSE_ID="ply_action_close"
+# Labels that prove a Purchasely paywall is on screen (locale-independent
+# marker first). Once detected, we swipe to dismiss.
+PAYWALL_MARKERS="Powered by Purchasely|Restore purchase|Continue"
 
-# idb wrapper: fixes Python 3.12+ asyncio.get_event_loop() RuntimeError.
 run_idb() {
   python3 - "$@" <<'__PYEOF__'
 import asyncio, sys
@@ -28,60 +34,48 @@ sys.exit(main())
 __PYEOF__
 }
 
-find_and_tap_close() {
+paywall_geometry() {
+  # Prints "W H" (screen size) if a paywall marker is present, else nothing.
   local raw
-  raw=$(run_idb --json ui describe-all --udid "$UDID" 2>/dev/null) || return 1
-
-  coords=$(python3 - "$CLOSE_ID" <<'PY'
-import sys, json
-
-target = sys.argv[1]
-
-def find(node):
-    if node.get("AXIdentifier", "") == target:
-        frame = node.get("AXFrame", {})
-        x = frame.get("x", 0) + frame.get("width", 0) / 2
-        y = frame.get("y", 0) + frame.get("height", 0) / 2
-        print(f"{x:.1f} {y:.1f}")
-        return True
-    for child in node.get("children", []):
-        if find(child):
-            return True
-    return False
-
+  raw=$(run_idb ui describe-all --json --udid "$UDID" 2>/dev/null) || return 1
+  AXJSON="$raw" MARKERS="$PAYWALL_MARKERS" python3 <<'PY'
+import os, json
+markers = [m.strip().lower() for m in os.environ["MARKERS"].split("|")]
 try:
-    data = json.loads(sys.stdin.read())
-    roots = data if isinstance(data, list) else [data]
-    for root in roots:
-        if find(root):
+    data = json.loads(os.environ["AXJSON"])
+except Exception:
+    raise SystemExit(0)
+labels = [(el.get("AXLabel") or "").strip().lower() for el in data]
+if any(m in labels for m in markers):
+    # The application element carries the full-screen frame.
+    for el in data:
+        if el.get("type") == "Application":
+            f = el.get("frame", {})
+            print(f"{int(round(f.get('width', 390)))} {int(round(f.get('height', 844)))}")
             break
-except Exception as e:
-    print(f"parse error: {e}", file=sys.stderr)
+    else:
+        print("390 844")
 PY
-  <<< "$raw")
-
-  if [ -z "$coords" ]; then
-    return 1
-  fi
-
-  local x y
-  x=$(echo "$coords" | awk '{print $1}')
-  y=$(echo "$coords" | awk '{print $2}')
-  # Small delay so the paywall is fully rendered before dismissal.
-  sleep 1
-  echo "[close_paywall_ios] found '$CLOSE_ID' at ($x, $y), tapping…"
-  run_idb ui tap "$x" "$y" --udid "$UDID" 2>&1
-  echo "[close_paywall_ios] close tapped ✓"
-  return 0
 }
 
 for i in $(seq 1 60); do
-  if find_and_tap_close; then
+  geom=$(paywall_geometry)
+  if [ -n "$geom" ]; then
+    w=$(echo "$geom" | awk '{print $1}')
+    h=$(echo "$geom" | awk '{print $2}')
+    cx=$((w / 2))
+    y_start=$((h / 5))
+    y_end=$((h - 20))
+    # Let the paywall settle, then swipe down to dismiss the modal sheet.
+    sleep 1
+    echo "[close_paywall_ios] paywall detected (${w}x${h}); swiping down ($cx,$y_start)->($cx,$y_end)…"
+    run_idb ui swipe "$cx" "$y_start" "$cx" "$y_end" --duration 0.3 --udid "$UDID" 2>&1
+    echo "[close_paywall_ios] swipe sent ✓"
     exit 0
   fi
-  echo "[close_paywall_ios] close button not found yet (iter $i/60), retrying…"
+  echo "[close_paywall_ios] paywall not detected yet (iter $i/60), retrying…"
   sleep 1
 done
 
-echo "[close_paywall_ios] '$CLOSE_ID' not found after 60 s"
+echo "[close_paywall_ios] paywall not detected after 60 s"
 exit 1
