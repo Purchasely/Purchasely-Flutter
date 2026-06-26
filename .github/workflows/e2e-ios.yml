@@ -12,11 +12,21 @@ name: E2E iOS
 #          taps ply_action_close via idb)
 #
 # Triggers:
+#   * pull_request      — run on PRs targeting main while the v6 migration is in
+#                         flight, so the E2E suite gates the merge. Scoped to
+#                         paths that affect the bridge / native layer / tests.
 #   * workflow_dispatch — manual run (any branch the workflow exists on)
 #   * schedule          — nightly at 04:00 UTC (GitHub only fires schedules from
 #                         the repository's DEFAULT branch, so the nightly run
 #                         activates once this file is merged to main).
 on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "purchasely/lib/**"
+      - "purchasely/ios/**"
+      - "purchasely/example/integration_test/**"
+      - ".github/workflows/e2e-ios.yml"
   workflow_dispatch:
   schedule:
     - cron: "0 4 * * *"
