@@ -25,7 +25,8 @@ void main() {
     final configured = await Purchasely.apiKey(kApiKey)
         .runningMode(PLYRunningMode.full)
         .logLevel(PLYLogLevel.debug)
-        .stores([PLYStore.apple]).start();
+        .storekitVersion(PLYStorekitVersion.storeKit2)
+        .start();
     expect(configured, isTrue);
   });
 

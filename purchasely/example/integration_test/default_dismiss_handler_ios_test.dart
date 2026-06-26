@@ -27,7 +27,8 @@ void main() {
         .runningMode(PLYRunningMode.full)
         .logLevel(PLYLogLevel.debug)
         .allowDeeplink(true)
-        .stores([PLYStore.apple]).start();
+        .storekitVersion(PLYStorekitVersion.storeKit2)
+        .start();
     expect(configured, isTrue);
   });
 
