@@ -65,8 +65,10 @@ jobs:
 
       - name: Install idb-companion + idb Python client
         run: |
-          brew install idb-companion
-          pip3 install fb-idb
+          # idb-companion lives in the facebook/fb tap, not homebrew-core.
+          brew install facebook/fb/idb-companion
+          # macOS runners' Python may be externally-managed (PEP 668).
+          pip3 install fb-idb || pip3 install --break-system-packages fb-idb
 
       - name: Boot iOS Simulator
         id: boot-sim
