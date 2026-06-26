@@ -38,12 +38,12 @@ class _MyAppState extends State<MyApp> {
         inspect(event);
       });*/
 
-      bool configured = await Purchasely.apiKey(
-              'fcb39be4-2ba4-4db7-bde3-2a5a1e20745d')
-          .runningMode(PLYRunningMode.full)
-          .logLevel(PLYLogLevel.debug)
-          .allowDeeplink(true)
-          .stores([PLYStore.google]).start();
+      bool configured =
+          await Purchasely.apiKey('fcb39be4-2ba4-4db7-bde3-2a5a1e20745d')
+              .runningMode(PLYRunningMode.full)
+              .logLevel(PLYLogLevel.debug)
+              .allowDeeplink(true)
+              .stores([PLYStore.google]).start();
 
       if (!configured) {
         print('Purchasely SDK not configured');

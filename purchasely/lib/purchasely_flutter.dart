@@ -53,8 +53,7 @@ class Purchasely {
   ///     .stores([PLYStore.google])
   ///     .start();
   /// ```
-  static PurchaselyBuilder apiKey(String key) =>
-      PurchaselyBuilder.apiKey(key);
+  static PurchaselyBuilder apiKey(String key) => PurchaselyBuilder.apiKey(key);
 
   // --- Action interceptor ---
 
