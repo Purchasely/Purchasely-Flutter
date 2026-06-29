@@ -51,25 +51,30 @@ run_suite() {
 
 fail=0
 
-echo "=== Suite 1/3: Dart↔Android bridge (T1–T20) — HARD gate ==="
+echo "=== Suite 1/6: Dart↔Android bridge (T1–T20) — HARD gate ==="
 run_suite "bridge" integration_test/dart_android_bridge_test.dart "" bridge || fail=1
 
-echo "=== Suite 2/3: interceptor trigger (uiautomator tap) — best-effort ==="
+echo "=== Suite 2/6: cold-start deeplink (builder.handleDeeplink → auto-open) — HARD gate ==="
+# Deterministic: the SDK opens the paywall itself from the cold-start deeplink and
+# the test only asserts on analytics events (no flaky uiautomator driver).
+run_suite "deeplink_cold_start" integration_test/deeplink_cold_start_test.dart "" deeplink_cold_start || fail=1
+
+echo "=== Suite 3/6: interceptor trigger (uiautomator tap) — best-effort ==="
 run_suite "interceptor" integration_test/interceptor_trigger_test.dart \
   tap_purchase.sh interceptor \
   || echo "::warning::E2E Android interceptor suite failed after retries (non-blocking)"
 
-echo "=== Suite 3/5: default dismiss handler via deeplink (system BACK) — best-effort ==="
+echo "=== Suite 4/6: default dismiss handler via deeplink (system BACK) — best-effort ==="
 run_suite "dismiss" integration_test/default_dismiss_handler_test.dart \
   press_back.sh dismiss \
   || echo "::warning::E2E Android dismiss suite failed after retries (non-blocking)"
 
-echo "=== Suite 4/5: default dismiss handler via fire-and-forget display() (system BACK) — best-effort ==="
+echo "=== Suite 5/6: default dismiss handler via fire-and-forget display() (system BACK) — best-effort ==="
 run_suite "dismiss_via_display" integration_test/default_dismiss_via_display_test.dart \
   press_back.sh dismiss_via_display \
   || echo "::warning::E2E Android dismiss-via-display suite failed after retries (non-blocking)"
 
-echo "=== Suite 5/5: local dismiss handler wins over default (system BACK) — best-effort ==="
+echo "=== Suite 6/6: local dismiss handler wins over default (system BACK) — best-effort ==="
 run_suite "local_dismiss" integration_test/local_dismiss_handler_test.dart \
   press_back.sh local_dismiss \
   || echo "::warning::E2E Android local-dismiss suite failed after retries (non-blocking)"

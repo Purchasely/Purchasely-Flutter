@@ -7,7 +7,14 @@
   (`allowDeeplink`, `handleDeeplink`) and removes the old v5 aliases. See
   `MIGRATION-v6.md` for the complete old→new mapping.
 - **Start.** The SDK is now started with the fluent builder
-  `PurchaselyBuilder.apiKey(...).appUserId(...).runningMode(...).logLevel(...).allowDeeplink(...).allowCampaigns(...).stores([...]).storekitVersion(...).start()`.
+  `PurchaselyBuilder.apiKey(...).appUserId(...).runningMode(...).logLevel(...).allowDeeplink(...).allowCampaigns(...).handleDeeplink(...).stores([...]).storekitVersion(...).start()`.
+- **Cold-start deeplink.** The start builder now exposes
+  `.handleDeeplink(String? deeplink)` — pass the launch deeplink captured by your
+  app and the SDK resolves it automatically once started (no separate
+  `Purchasely.handleDeeplink(...)` call needed). Mirrors the native
+  `PurchaselyBuilder.handleDeeplink(_:)` (iOS) and `Purchasely.Builder.handleDeeplink(uri)`
+  (Android). The runtime `Purchasely.handleDeeplink(url)` remains for deeplinks
+  received while the app is already running.
 - **Presentation.** Build a request with `PresentationBuilder`
   (`.placement(id)` / `.screen(id)` / `.defaultSource()`) plus
   `.contentId(...).onLoaded(...).onPresented(...).onCloseRequested(...).onDismissed(...).build()`,

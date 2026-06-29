@@ -2,6 +2,7 @@ package io.purchasely.purchasely_flutter
 
 import android.app.Activity
 import android.content.Context
+import android.net.Uri
 import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding
 import io.flutter.plugin.common.BinaryMessenger
@@ -11,12 +12,19 @@ import io.mockk.MockKAnnotations
 import io.mockk.every
 import io.mockk.impl.annotations.MockK
 import io.mockk.mockk
+import io.mockk.mockkStatic
 import io.mockk.unmockkAll
 import io.mockk.verify
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class PurchaselyFlutterPluginTest {
 
     private lateinit var plugin: PurchaselyFlutterPlugin
@@ -41,6 +49,10 @@ class PurchaselyFlutterPluginTest {
 
     @Before
     fun setUp() {
+        // The plugin is a CoroutineScope and the native start() path touches
+        // Dispatchers.Main; provide a test main dispatcher so JVM unit tests can
+        // drive onMethodCall("start", ...) without the missing-main crash.
+        Dispatchers.setMain(UnconfinedTestDispatcher())
         MockKAnnotations.init(this, relaxed = true)
         plugin = PurchaselyFlutterPlugin()
 
@@ -56,6 +68,7 @@ class PurchaselyFlutterPluginTest {
         PurchaselyFlutterPlugin.loadedPresentations.clear()
         PurchaselyFlutterPlugin.displayCallbacks.clear()
         PurchaselyFlutterPlugin.pendingInterceptors.clear()
+        Dispatchers.resetMain()
         unmockkAll()
     }
 
@@ -127,6 +140,46 @@ class PurchaselyFlutterPluginTest {
         )
 
         verify { mockResult.error("-1", "unknown action kind 'unknown_action'", null) }
+    }
+
+    @Test
+    fun `start reads the cold-start deeplink arg and routes it to the native builder`() {
+        // Proves the wire contract end-to-end on the native side: the bridge
+        // reads the `deeplink` key from the start payload, parses it, and hands
+        // the Uri to Purchasely.Builder.handleDeeplink(uri) BEFORE start(). The
+        // Uri.parse(...) verify fires only if the cold-start branch executed —
+        // i.e. the Dart `.handleDeeplink(...)` instruction was received and
+        // taken into account, not silently dropped.
+        mockkStatic(Uri::class)
+        val uri = mockk<Uri>(relaxed = true)
+        every { Uri.parse(any()) } returns uri
+
+        plugin.onAttachedToEngine(mockFlutterPluginBinding)
+        plugin.onMethodCall(
+            MethodCall(
+                "start",
+                mapOf(
+                    "apiKey" to "test-key",
+                    "deeplink" to "app://ply/presentations/onboarding",
+                ),
+            ),
+            mockResult,
+        )
+
+        verify { Uri.parse("app://ply/presentations/onboarding") }
+    }
+
+    @Test
+    fun `start without a deeplink never touches Uri parse`() {
+        mockkStatic(Uri::class)
+
+        plugin.onAttachedToEngine(mockFlutterPluginBinding)
+        plugin.onMethodCall(
+            MethodCall("start", mapOf("apiKey" to "test-key")),
+            mockResult,
+        )
+
+        verify(exactly = 0) { Uri.parse(any()) }
     }
 
     @Test

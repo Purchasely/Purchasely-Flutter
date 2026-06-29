@@ -39,6 +39,19 @@ class SwiftPurchaselyFlutterPluginTests: XCTestCase {
         XCTAssertNotEqual(PLYRunningMode.full, PLYRunningMode.observer)
     }
 
+    func testInitBuilderAcceptsColdStartDeeplink() {
+        // Mirrors the exact call `SwiftPurchaselyFlutterPlugin.start(...)` makes
+        // when the Dart builder chained `.handleDeeplink(url)`: the cold-start
+        // deeplink is applied on the init builder so the SDK resolves it once
+        // started. Compiling this proves the native cold-start API the bridge
+        // depends on exists with this signature (URL? -> PurchaselyBuilder).
+        let url = URL(string: "app://ply/presentations/onboarding")!
+        let builder = Purchasely.apiKey("test-api-key")
+            .appTechnology(.flutter)
+            .handleDeeplink(url)
+        XCTAssertNotNil(builder)
+    }
+
     // MARK: - Presentation builder factories (v6)
 
     func testPresentationBuilderFactories() {

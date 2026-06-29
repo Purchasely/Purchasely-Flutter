@@ -265,6 +265,12 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
         builder = builder.logLevel(Self.logLevel(from: arguments["logLevel"]))
         builder = builder.storekitSettings(Self.storekitSettings(from: arguments))
 
+        // Cold-start deeplink: the builder resolves it automatically once
+        // started, so the host does not need a separate handleDeeplink() call.
+        if let deeplink = arguments["deeplink"] as? String, let url = URL(string: deeplink) {
+            builder = builder.handleDeeplink(url)
+        }
+
         if let allowDeeplink = arguments["allowDeeplink"] as? Bool {
             Purchasely.allowDeeplink(allowDeeplink)
         }

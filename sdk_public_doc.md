@@ -671,6 +671,24 @@ await PurchaselyBuilder.apiKey('<YOUR_API_KEY>')
 `Purchasely.allowDeeplink(bool)` can also toggle this at runtime. The old
 `readyToOpenDeeplink` name remains only as a deprecated alias.
 
+### Cold-Start Deeplink
+
+When your app is launched **from** a deeplink, pass the captured URL to the start
+builder. The SDK replays it automatically once configured — no separate
+`Purchasely.handleDeeplink(...)` call is needed:
+
+```dart
+await PurchaselyBuilder.apiKey('<YOUR_API_KEY>')
+    .allowDeeplink(true)
+    .handleDeeplink(launchDeeplink) // null when not launched from a deeplink
+    .start();
+```
+
+`handleDeeplink(null)` (or omitting the modifier) is a no-op. Non-Purchasely URLs
+are ignored by the native SDK. This mirrors the native
+`PurchaselyBuilder.handleDeeplink(_:)` (iOS) and
+`Purchasely.Builder.handleDeeplink(uri)` (Android).
+
 ### Setting the Default Presentation Handler
 
 Retrieve the result of user actions on presentations opened via deeplinks by

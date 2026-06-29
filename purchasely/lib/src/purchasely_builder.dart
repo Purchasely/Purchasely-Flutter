@@ -30,6 +30,7 @@ class PurchaselyBuilder {
   PLYLogLevel _logLevel;
   bool? _allowDeeplink;
   bool? _allowCampaigns;
+  String? _deeplink;
   // Android only
   List<PLYStore> _stores;
   // iOS only
@@ -41,6 +42,7 @@ class PurchaselyBuilder {
       PLYLogLevel logLevel = PLYLogLevel.error,
       bool? allowDeeplink,
       bool? allowCampaigns,
+      String? deeplink,
       List<PLYStore> stores = const [PLYStore.google],
       PLYStorekitVersion storekitVersion = PLYStorekitVersion.storeKit2})
       : _appUserId = appUserId,
@@ -48,6 +50,7 @@ class PurchaselyBuilder {
         _logLevel = logLevel,
         _allowDeeplink = allowDeeplink,
         _allowCampaigns = allowCampaigns,
+        _deeplink = deeplink,
         _stores = List.of(stores),
         _storekitVersion = storekitVersion;
 
@@ -81,6 +84,18 @@ class PurchaselyBuilder {
     return this;
   }
 
+  /// Cold-start deeplink: pass a deeplink URL captured at launch (e.g. from the
+  /// intent / `UIScene` connection options) so the SDK resolves it
+  /// automatically once started. No separate [Purchasely.handleDeeplink] call
+  /// is needed — the deeplink is replayed after the SDK finishes configuring.
+  ///
+  /// Pass `null` (or omit the modifier) when the app was not launched from a
+  /// deeplink. Non-Purchasely URLs are ignored by the native SDK.
+  PurchaselyBuilder handleDeeplink(String? deeplink) {
+    _deeplink = deeplink;
+    return this;
+  }
+
   /// Android-only: stores the SDK is allowed to use (priority order). On iOS
   /// this modifier is a no-op.
   PurchaselyBuilder stores(List<PLYStore> stores) {
@@ -110,6 +125,7 @@ class PurchaselyBuilder {
         'logLevel': _logLevel.name,
         'allowDeeplink': _allowDeeplink,
         if (_allowCampaigns != null) 'allowCampaigns': _allowCampaigns,
+        if (_deeplink != null) 'deeplink': _deeplink,
         'stores': _stores.map((s) => s.name).toList(),
         'storekitVersion': _storekitVersion.name,
       },

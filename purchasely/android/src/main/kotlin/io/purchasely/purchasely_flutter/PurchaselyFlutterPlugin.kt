@@ -474,6 +474,7 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
         val stores = (a["stores"] as? List<*>)?.mapNotNull { it as? String } ?: emptyList()
         val allowDeeplink = a["allowDeeplink"] as? Boolean
         val allowCampaigns = a["allowCampaigns"] as? Boolean ?: true
+        val deeplink = (a["deeplink"] as? String)?.takeIf { it.isNotBlank() }
 
         Purchasely.Builder(context)
             .apiKey(apiKey)
@@ -484,6 +485,9 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
             .apply {
                 allowDeeplink?.let { this.allowDeeplink(it) }
                 this.allowCampaigns(allowCampaigns)
+                // Cold-start deeplink: replayed automatically once started, so
+                // the host does not need a separate handleDeeplink() call.
+                deeplink?.let { this.handleDeeplink(Uri.parse(it)) }
             }
             .build()
 

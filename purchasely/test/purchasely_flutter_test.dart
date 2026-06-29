@@ -1871,6 +1871,8 @@ void main() {
       expect(startCall.arguments['logLevel'], 'error');
       expect(startCall.arguments['storekitVersion'], 'storeKit2');
       expect(startCall.arguments.containsKey('allowCampaigns'), false);
+      // No cold-start deeplink unless handleDeeplink() is chained.
+      expect(startCall.arguments.containsKey('deeplink'), false);
     });
 
     test('start forwards every modifier', () async {
@@ -1880,6 +1882,7 @@ void main() {
           .logLevel(PLYLogLevel.debug)
           .allowDeeplink(true)
           .allowCampaigns(false)
+          .handleDeeplink('app://ply/presentations/onboarding')
           .stores([PLYStore.google, PLYStore.huawei, PLYStore.amazon])
           .storekitVersion(PLYStorekitVersion.storeKit1)
           .start();
@@ -1890,8 +1893,18 @@ void main() {
       expect(startCall.arguments['logLevel'], 'debug');
       expect(startCall.arguments['allowDeeplink'], true);
       expect(startCall.arguments['allowCampaigns'], false);
+      expect(startCall.arguments['deeplink'],
+          'app://ply/presentations/onboarding');
       expect(startCall.arguments['stores'], ['google', 'huawei', 'amazon']);
       expect(startCall.arguments['storekitVersion'], 'storeKit1');
+    });
+
+    test('handleDeeplink(null) does not forward a cold-start deeplink',
+        () async {
+      await Purchasely.apiKey('test-key').handleDeeplink(null).start();
+
+      final startCall = methodCalls.firstWhere((c) => c.method == 'start');
+      expect(startCall.arguments.containsKey('deeplink'), false);
     });
 
     test('runtime allowCampaigns forwards the campaign gate', () async {
