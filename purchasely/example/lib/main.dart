@@ -210,8 +210,8 @@ class _MyAppState extends State<MyApp> {
         PLYPresentationActionKind.purchase,
         (info, payload) {
           if (payload is PLYPurchasePayload) {
-            final planId = payload.plan.vendorId ?? payload.plan.productId;
-            print('User wants to purchase plan $planId — letting the SDK '
+            print(
+                'User wants to purchase plan ${payload.plan} with ${payload.offer} — letting the SDK '
                 'proceed');
           }
           return PLYInterceptResult.notHandled;
@@ -276,7 +276,7 @@ class _MyAppState extends State<MyApp> {
   Future<void> displayPresentation() async {
     try {
       final presentation =
-          await PLYPresentationBuilder.placement('FLOW').build().preload();
+          await PLYPresentationBuilder.placement('premium').build().preload();
 
       final outcome = await presentation.display();
 
