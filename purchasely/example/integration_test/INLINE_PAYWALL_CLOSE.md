@@ -36,6 +36,34 @@ nativement, aucun changement requis.
 > (le harness ne pilote pas l'input natif des platform views via `adb`/`idb`).
 > Vérification de la fermeture = app réelle (`flutter run`).
 
+### Pourquoi la fermeture inline n'est pas automatisable en `integration_test` (preuve empirique)
+
+Une tentative de suite E2E a été menée (driver host-side `tap_close_inline.sh` lancé
+en parallèle d'un `integration_test` montant la `PLYPresentationView`, placement
+`promo_offers`). Résultat **reproductible** sur émulateur Android (Pixel Tablet,
+SDK natif `6.0.0-rc.2`) :
+
+- le rendu fonctionne : **`onPresented` se déclenche** (la vue embarquée s'affiche) ;
+- le driver tape la **bonne** coordonnée du ✕ (vérifié par screenshot : `action:close`
+  à `(2504,216)`, soit la croix haut-droite), **8 fois** ;
+- pourtant **`onCloseRequested` n'est jamais reçu** côté Dart.
+
+`onPresented` (event de cycle de vie poussé par le SDK) passe, mais le **tap** ne
+produit aucun `onCloseRequested` → le tap `adb` **n'atteint pas la vue embarquée
+comme un geste interactif** sous instrumentation `integration_test`. C'est cohérent
+avec le fait que le binding de test Flutter possède le routage des pointeurs de sa
+propre fenêtre, alors que le forwarding hybrid-composition (Android) / `UiKitView`
+(iOS) ne se comporte pas comme en production.
+
+> Contraste : les suites `interceptor` / `dismiss` tapent des paywalls **modaux**
+> (fenêtres natives séparées, hors compositeur Flutter) — là, `adb`/`idb` atteint
+> bien la cible. C'est spécifique à la vue **embarquée**.
+
+**Comment tester la fermeture inline alors :**
+1. Manuellement via `flutter run` sur device réel (chemin retenu, cf. ci-dessous).
+2. Via un harness piloté **hors** `integration_test` (Appium / le repo `Mobile-UITests`),
+   qui injecte de vrais évènements tactiles au niveau OS sans le binding de test Flutter.
+
 ## Cause #2 — action de la croix (config Console)
 
 | Action de la croix ✕ | Inline | `onCloseRequested` ? |
