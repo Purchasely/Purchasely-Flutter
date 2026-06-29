@@ -1,7 +1,7 @@
 ## 6.0.0-rc.1
-- Updated Android Purchasely Google Play SDK to 6.0.0-rc.1.
+- Updated Android Purchasely Google Play SDK to `io.purchasely:google-play:6.0.0-rc.2` (published on Maven Central).
 - Aligns the extension package version with `purchasely_flutter` 6.0.0-rc.1.
-- `io.purchasely:google-play:6.0.0-rc.1` is published on Maven Central; the SDK resolves it from the public repository.
+- Migration guide: https://docs.purchasely.com/docs/migrating-from-v5-to-v6-flutter
 
 ## 5.7.3
 - Updated Android Purchasely Google Play SDK to 5.7.4.

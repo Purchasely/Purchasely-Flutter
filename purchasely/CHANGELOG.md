@@ -1,61 +1,24 @@
 ## 6.0.0-rc.1
 
-- **Adapts the plugin to the Purchasely 6.0 native SDKs.** The breaking changes
-  are limited to the paywall surface: **starting the SDK**, **displaying /
-  preloading / closing a presentation**, and the **action interceptor**. Other
-  `Purchasely` APIs remain source-compatible; deeplinks now expose the v6 names
-  (`allowDeeplink`, `handleDeeplink`) and removes the old v5 aliases. See
-  `MIGRATION-v6.md` for the complete old→new mapping.
-- **Start.** The SDK is now started with the fluent builder
-  `PurchaselyBuilder.apiKey(...).appUserId(...).runningMode(...).logLevel(...).allowDeeplink(...).allowCampaigns(...).handleDeeplink(...).stores([...]).storekitVersion(...).start()`.
-- **Cold-start deeplink.** The start builder now exposes
-  `.handleDeeplink(String? deeplink)` — pass the launch deeplink captured by your
-  app and the SDK resolves it automatically once started (no separate
-  `Purchasely.handleDeeplink(...)` call needed). Mirrors the native
-  `PurchaselyBuilder.handleDeeplink(_:)` (iOS) and `Purchasely.Builder.handleDeeplink(uri)`
-  (Android). The runtime `Purchasely.handleDeeplink(url)` remains for deeplinks
-  received while the app is already running.
-- **Presentation.** Build a request with `PresentationBuilder`
-  (`.placement(id)` / `.screen(id)` / `.defaultSource()`) plus
-  `.contentId(...).onLoaded(...).onPresented(...).onCloseRequested(...).onDismissed(...).build()`,
-  then drive its lifecycle:
-  - `PresentationRequest.preload()` fetches the screen without displaying it.
-  - `PresentationRequest.display([Transition])` shows it and resolves at
-    **dismiss time** with the 5-field `PLYPresentationOutcome`
-    (`presentation`, `purchaseResult`, `plan` (typed `PLYPlan?`), `closeReason`,
-    `error`). `closeReason` is `button` / `backSystem` / `programmatic`.
-    `Transition` sizes `drawer`/`popin` via `width`/`height`
-    (`PLYTransitionDimension.percentage(...)` / `.pixel(...)`).
-  - A loaded `Presentation` exposes `display()`, `close()` and `back()` for
-    programmatic control.
-  - Inline (embedded) rendering uses the `PLYPresentationView` widget.
-- **Action interceptor.** Replaced by
-  `Purchasely.interceptAction(PresentationActionKind, handler)` (plus
-  `removeActionInterceptor` / `removeAllActionInterceptors`). The handler receives a typed
-  `ActionPayload` (e.g. `NavigatePayload`, `PurchasePayload`) and returns an
-  `InterceptResult` (`success` / `failed` / `notHandled`) — there is no more
-  `onProcessAction`. `PurchasePayload` exposes real objects (`PLYPlan`,
-  `PLYSubscriptionOffer?`, `PLYPromoOffer?`) instead of raw maps.
-- **Behaviour — running mode default.** The 6.0 native SDKs default to
-  **Observer** mode (was Full). The builder mirrors this default
-  (`RunningMode.observer`); pass `.runningMode(RunningMode.full)` to keep the
-  previous Full behaviour.
-- **BREAKING — removed `presentSubscriptions()`.** The native subscriptions
-  screen was removed from the 6.0 SDKs (both Android and iOS — the iOS
-  `subscriptionsController()` entry point no longer exists), so
-  `Purchasely.presentSubscriptions()` has been **removed entirely** from the
-  Flutter API on every layer (Dart, iOS, Android). It is no longer a no-op — the
-  method no longer exists. Build your own subscriptions screen from
-  `userSubscriptions()` / `userSubscriptionsHistory()`.
-- **Behaviour — `displaySubscriptionCancellationInstruction()` is a no-op.** The
-  cancellation survey UI was removed from the 6.0 SDKs, so this method is a no-op
-  on both Android and iOS (kept for source compatibility).
-- **Native SDK bump.**
-  - iOS: `Purchasely 6.0.0-rc.1` (was 5.7.4).
-  - Android: `io.purchasely:core 6.0.0-rc.1` (was 5.7.4).
-  - Both pre-releases are published on public repositories — Android on Maven
-    Central, iOS on the CocoaPods trunk — so the SDK resolves them with no
-    `mavenLocal()` and no development pod.
+First release candidate for Purchasely 6.0. Adapts the Flutter plugin to the
+Purchasely 6.0 native SDKs (iOS `Purchasely 6.0.0-rc.2`, Android
+`io.purchasely:core 6.0.0-rc.2`, both published on public repositories).
+
+Breaking changes are limited to the paywall surface — starting the SDK, the
+presentation lifecycle (display / preload / close), and the action interceptor.
+Highlights:
+
+- **Start** with the fluent builder: `Purchasely.apiKey('…').runningMode(…).start()`.
+- **Default running mode is now `observer`** (was `full`) — pass
+  `.runningMode(PLYRunningMode.full)` to keep Purchasely handling and validating purchases.
+- **Presentations** use `PLYPresentationBuilder.placement(id).build()` then
+  `.preload()` / `.display([PLYTransition])`, resolving to a `PLYPresentationOutcome`.
+- **Action interceptor** is now per-kind: `Purchasely.interceptAction(kind, handler)`
+  returning a `PLYInterceptResult`.
+- **Removed** `presentSubscriptions()`; `displaySubscriptionCancellationInstruction()`
+  is now a no-op.
+
+Full migration guide: https://docs.purchasely.com/docs/migrating-from-v5-to-v6-flutter
 
 ## 5.7.3
 - Updated iOS Purchasely SDK to 5.7.4.
