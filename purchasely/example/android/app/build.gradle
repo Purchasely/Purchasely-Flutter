@@ -44,7 +44,7 @@ android {
         applicationId "com.purchasely.demo"
         // The purchasely_flutter plugin requires minSdk 23; flutter.minSdkVersion
         // varies by Flutter version (21 on 3.24, 24 on 3.41+), so pin explicitly.
-        minSdkVersion flutter.minSdkVersion
+        minSdkVersion 23
         targetSdkVersion 34
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
