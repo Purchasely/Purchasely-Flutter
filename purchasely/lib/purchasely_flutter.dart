@@ -39,8 +39,8 @@ class Purchasely {
 
   static UserAttributeListener? _userAttributeListener;
 
-  static var events;
-  static var purchases;
+  static StreamSubscription<dynamic>? events;
+  static StreamSubscription<dynamic>? purchases;
 
   // --- SDK initialisation ---
 
@@ -85,6 +85,12 @@ class Purchasely {
   ) =>
       PurchaselyBridge.ensureInstalled()
           .setDefaultPresentationDismissHandler(handler);
+
+  /// Removes the global dismiss handler previously registered with
+  /// [setDefaultPresentationDismissHandler].
+  static Future<void> removeDefaultPresentationDismissHandler() =>
+      PurchaselyBridge.ensureInstalled()
+          .removeDefaultPresentationDismissHandler();
 
   /// Removes the user attribute listener
   static void clearUserAttributeListener() {
@@ -356,7 +362,7 @@ class Purchasely {
   }
 
   static void stopListeningToEvents() {
-    events.cancel();
+    events?.cancel();
   }
 
   static void listenToPurchases(Function block) {
@@ -366,7 +372,7 @@ class Purchasely {
   }
 
   static void stopListeningToPurchases() {
-    purchases.cancel();
+    purchases?.cancel();
   }
 
   static Future<void> setAttribute(PLYAttribute attribute, String value) async {

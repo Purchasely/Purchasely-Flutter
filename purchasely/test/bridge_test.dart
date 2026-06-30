@@ -62,6 +62,7 @@ void main() {
             case 'removeAllInterceptors':
             case 'interceptorResolve':
             case 'setDefaultPresentationDismissHandler':
+            case 'removeDefaultPresentationDismissHandler':
               return true;
             case 'start':
               return true;
@@ -315,6 +316,33 @@ void main() {
       expect(captured!.presentation, isNotNull);
       expect(captured!.presentation!.screenId, 'campaign_screen');
       expect(captured!.presentation!.campaignId, 'cmp_123');
+    });
+
+    test(
+        'removeDefaultPresentationDismissHandler invokes the native verb and '
+        'nullifies the handler', () async {
+      PLYPresentationOutcome? captured;
+
+      await Purchasely.setDefaultPresentationDismissHandler((outcome) {
+        captured = outcome;
+      });
+
+      await Purchasely.removeDefaultPresentationDismissHandler();
+
+      expect(
+        calls.any((c) => c.method == 'removeDefaultPresentationDismissHandler'),
+        isTrue,
+      );
+
+      // A subsequent default dismiss event must be ignored now that the handler
+      // was removed.
+      await emitEvent(<String, Object?>{
+        'event': 'onDefaultPresentationDismissed',
+        'outcome': <String, Object?>{'purchaseResult': 'purchased'},
+      });
+
+      expect(captured, isNull,
+          reason: 'removed handler must not receive further outcomes');
     });
 
     test(

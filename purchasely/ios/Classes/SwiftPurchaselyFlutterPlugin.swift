@@ -146,6 +146,8 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             result(true)
         case "setDefaultPresentationDismissHandler":
             setDefaultPresentationDismissHandler(result: result)
+        case "removeDefaultPresentationDismissHandler":
+            removeDefaultPresentationDismissHandler(result: result)
         case "setLogLevel":
             let parameter = (arguments?["logLevel"] as? Int) ?? PLYLogger.PLYLogLevel.debug.rawValue
             let logLevel = PLYLogger.PLYLogLevel(rawValue: parameter) ?? PLYLogger.PLYLogLevel.debug
@@ -255,7 +257,7 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
 
         var builder = Purchasely.apiKey(apiKey)
             .appTechnology(.flutter)
-            .sdkBridgeVersion("6.0.0-rc.1")
+            .sdkBridgeVersion("6.0.0-rc.2")
 
         if let userId = (arguments["appUserId"] as? String) ?? (arguments["userId"] as? String), !userId.isEmpty {
             builder = builder.appUserId(userId)
@@ -823,6 +825,13 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
                     ),
                 ])
             }
+            result(true)
+        }
+    }
+
+    private func removeDefaultPresentationDismissHandler(result: @escaping FlutterResult) {
+        DispatchQueue.main.async {
+            Purchasely.setDefaultPresentationDismissHandler(nil)
             result(true)
         }
     }

@@ -246,6 +246,7 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
                 result.safeSuccess(true)
             }
             "setDefaultPresentationDismissHandler" -> setDefaultPresentationDismissHandler(result)
+            "removeDefaultPresentationDismissHandler" -> removeDefaultPresentationDismissHandler(result)
             "setLanguage" -> {
                 setLanguage(call.argument<String>("language"))
                 result.safeSuccess(true)
@@ -491,7 +492,7 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
             }
             .build()
 
-        Purchasely.sdkBridgeVersion = "6.0.0-rc.1"
+        Purchasely.sdkBridgeVersion = "6.0.0-rc.2"
         Purchasely.appTechnology = PLYAppTechnology.FLUTTER
 
         Purchasely.start { error ->
@@ -641,6 +642,14 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
                 put("outcome", outcomeToMap(outcome))
             })
         }
+        result.safeSuccess(true)
+    }
+
+    private fun removeDefaultPresentationDismissHandler(result: Result) {
+        // The native SDK exposes no public API to unregister the global dismiss
+        // handler. Parity-minimal with React Native: the Dart side nullifies its
+        // handler so the forwarded `onDefaultPresentationDismissed` event is
+        // ignored even if the native callback still fires.
         result.safeSuccess(true)
     }
     //endregion

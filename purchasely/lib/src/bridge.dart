@@ -270,6 +270,12 @@ class PurchaselyBridge {
     _defaultPresentationDismissHandler = handler;
   }
 
+  Future<void> removeDefaultPresentationDismissHandler() async {
+    _defaultPresentationDismissHandler = null;
+    await _method
+        .invokeMethod<dynamic>('removeDefaultPresentationDismissHandler');
+  }
+
   Future<void> _resolveInterceptor(
       String invocationId, PLYInterceptResult result) async {
     await _method.invokeMethod<dynamic>(
