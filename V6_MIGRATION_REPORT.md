@@ -122,8 +122,7 @@ Les écrans natifs d'abonnements et de désabonnement ont été retirés des SDK
 supprimé** du SDK Flutter (Dart + iOS + Android + tests + docs), pour s'aligner
 sur le SDK React Native — **BREAKING CHANGE** sans remplacement : reconstruire son
 propre écran via `userSubscriptions()` / `userSubscriptionsHistory()`.
-`displaySubscriptionCancellationInstruction` est conservé pour la compatibilité
-source mais reste un **no-op** sur Android **et** iOS.
+`displaySubscriptionCancellationInstruction` est également supprimé du SDK Flutter v6.
 
 ### 2.6 Tests ajoutés / mis à jour
 
