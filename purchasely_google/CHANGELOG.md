@@ -1,6 +1,6 @@
-## 6.0.0-rc.1
+## 6.0.0-rc.2
 - Updated Android Purchasely Google Play SDK to `io.purchasely:google-play:6.0.0-rc.2` (published on Maven Central).
-- Aligns the extension package version with `purchasely_flutter` 6.0.0-rc.1.
+- Aligns the extension package version with `purchasely_flutter` 6.0.0-rc.2.
 - Migration guide: https://docs.purchasely.com/docs/migrating-from-v5-to-v6-flutter
 
 ## 5.7.3
@@ -173,7 +173,7 @@ Upgraded to Google Play Billing Library v7, ensuring compatibility with the late
 ## 🚀 Campaigns Support
 Introducing our powerful new Campaigns feature, enabling you to launch targeted in-app campaigns for specific audiences or all users right at app launch.
 - Works just like deep links:
-  - Simply set `Purchasely.readyToOpenDeeplink = true` to enable campaigns.
+  - Simply call `Purchasely.allowCampaigns(true)` to enable campaigns.
 - Gain more control over campaign displays:
   - Use `Purchasely.uiHandler` for custom UI management.
 ## 📊 Enhanced Built-in Attributes

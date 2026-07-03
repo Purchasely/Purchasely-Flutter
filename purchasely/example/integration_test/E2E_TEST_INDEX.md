@@ -31,7 +31,7 @@ Mirror of the native Android `com.purchasely.integration.BaseIntegrationTest`.
 
 ### SDK init (per wrapper)
 
-- **Flutter:** `PurchaselyBuilder.apiKey(K).runningMode(RunningMode.full).logLevel(LogLevel.debug).stores([PLYStore.google]).start()` → `Future<bool>`
+- **Flutter:** `PurchaselyBuilder.apiKey(K).runningMode(PLYRunningMode.full).logLevel(PLYLogLevel.debug).stores([PLYStore.google]).start()` → `Future<bool>`
 - **React Native:** `Purchasely.builder(K).runningMode('full').logLevel(LogLevels.debug).stores(['google']).start()` → `Promise<boolean>`
 - **Cordova:** `Purchasely.start(K, ['Google'], false /*storekit1*/, null /*userId*/, Purchasely.LogLevel.DEBUG, Purchasely.RunningMode.full, success, error)`
 
@@ -56,8 +56,8 @@ Mirror of the native Android `com.purchasely.integration.BaseIntegrationTest`.
 | Anonymous id | `Purchasely.anonymousUserId` | `Purchasely.getAnonymousUserId()` | `Purchasely.getAnonymousUserId(ok, err)` |
 | Is anonymous | `Purchasely.isAnonymous()` | `Purchasely.isAnonymous()` | ❌ not exposed |
 | Login / logout | `userLogin(id)` / `userLogout()` | `userLogin(id)` / `userLogout()` | `userLogin(id, ok)` / `userLogout()` |
-| Preload | `PresentationBuilder.placement(id).build().preload()` | `Purchasely.presentation.placement(id).build().preload()` | `fetchPresentationForPlacement(placementId, contentId, ok, err)` |
-| Display | `request.display([Transition])` | `request.display([transition])` | `presentPresentationForPlacement(placementId, contentId, isFullscreen, ok, err)` |
+| Preload | `PLYPresentationBuilder.placement(id).build().preload()` | `Purchasely.presentation.placement(id).build().preload()` | `fetchPresentationForPlacement(placementId, contentId, ok, err)` |
+| Display | `request.display([PLYTransition])` | `request.display([transition])` | `presentPresentationForPlacement(placementId, contentId, isFullscreen, ok, err)` |
 | Local dismiss | `presentation.close()` | `presentation.close()` | `Purchasely.closePresentation()` |
 | All products | `allProducts()` | `allProducts()` | `allProducts(ok, err)` |
 | Dynamic offerings | `getDynamicOfferings()` | `getDynamicOfferings()` | ❌ not exposed |
@@ -70,7 +70,7 @@ Mirror of the native Android `com.purchasely.integration.BaseIntegrationTest`.
 
 > **RN ≈ Flutter (builder API).** Porting to RN is almost 1:1.
 > **Cordova is still on the pre-builder imperative API** — there is no
-> `PresentationBuilder`, no typed `interceptAction`/`InterceptResult`, and no
+> `PLYPresentationBuilder`, no typed `interceptAction`/`PLYInterceptResult`, and no
 > `isAnonymous`/`getDynamicOfferings`. Port the *intent* of each test using the
 > imperative entry points; some tests (T2 isAnonymous, T4 dynamic offerings, T7
 > interceptor cleanup) have no Cordova equivalent and should be skipped or
@@ -111,7 +111,7 @@ Files:
 - **Port:** RN identical. **Cordova:** no `isAnonymous` — test only `userLogin`/`userLogout` resolve without error.
 
 ### T3 — preload(placement) returns a typed Presentation
-- **API:** `PresentationBuilder.placement(id).build().preload()`
+- **API:** `PLYPresentationBuilder.placement(id).build().preload()`
 - **Action:** preload `integration_test_audiences`.
 - **Expected:** `screenId` non-null (observed `pres_Yzzy4U8bkPAzByL0QS8KJDj6mBWKd6a`), `type == normal`, `plans` is a typed list (observed length 1). Real backend round-trip.
 - **Port:** RN identical. **Cordova:** `fetchPresentationForPlacement(...)` → success cb gets a presentation object; assert its `id`/`screenId` and `plans`.
@@ -144,15 +144,15 @@ Files:
 - **Expected:** all four MethodChannel round-trips succeed (no throw).
 - **Port:** RN identical. **Cordova:** skip (old `setPaywallActionInterceptor`/`onProcessAction` model has no per-kind register/remove).
 
-### T8 — display + local dismiss (Transition dimension + closeReason)
-- **API:** `preload()`, `display(Transition)`, `onPresented`, `presentation.close()`
-- **Action:** preload `integration_test_audiences`; `display(Transition(drawer, height: PLYTransitionDimension.percentage(0.6)))`; wait for `onPresented`; `presentation.close()`; await the display future.
-- **Expected (observed):** `onPresented` fires (the **v6 Transition dimension** reached native and the drawer rendered); after `close()` the display future resolves with `purchaseResult=cancelled`, **`closeReason=programmatic`**, `plan=null`.
+### T8 — display + local dismiss (PLYTransition dimension + closeReason)
+- **API:** `preload()`, `display(PLYTransition)`, `onPresented`, `presentation.close()`
+- **Action:** preload `integration_test_audiences`; `display(PLYTransition.drawer(height: PLYTransitionDimension.percentage(0.6)))`; wait for `onPresented`; `presentation.close()`; await the display future.
+- **Expected (observed):** `onPresented` fires (the **v6 PLYTransition dimension** reached native and the drawer rendered); after `close()` the display future resolves with `purchaseResult=cancelled`, **`closeReason=programmatic`**, `plan=null`.
 - **Notes:** this is the path that surfaced and verifies the **onDismissed fix**
   (see §5). The drawer height uses the v6 dimension model
   (`{type:'percentage', value:0.6}` on the wire), not the removed `heightPercentage`.
 - **Port:**
-  - RN: same builder + `Transition` dimension shape; `presentation.close()`; assert outcome `closeReason`.
+  - RN: same builder + transition dimension shape; `presentation.close()`; assert outcome `closeReason`.
   - Cordova: `presentPresentationForPlacement(placement, null, true, ok, err)`
     (the `ok` callback is the dismiss outcome) then `closePresentation()`; assert
     the outcome's `closeReason`. Cordova has no drawer-dimension transition arg

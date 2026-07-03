@@ -192,15 +192,6 @@ class PurchaselyFlutterPluginTest {
     }
 
     @Test
-    fun `removed isDeeplinkHandled alias is not implemented`() {
-        plugin.onAttachedToEngine(mockFlutterPluginBinding)
-
-        plugin.onMethodCall(MethodCall("isDeeplinkHandled", mapOf<String, Any?>()), mockResult)
-
-        verify { mockResult.notImplemented() }
-    }
-
-    @Test
     fun `synchronize routes to the native callback and surfaces its result`() {
         // The 6.0 native SDK resolves synchronize() through onSuccess/onError
         // callbacks. With no store configured (fresh plugin, no Builder), the
@@ -211,14 +202,5 @@ class PurchaselyFlutterPluginTest {
         plugin.onMethodCall(MethodCall("synchronize", null), mockResult)
 
         verify { mockResult.error(eq("-1"), any(), any()) }
-    }
-
-    @Test
-    fun `removed Android subscription cancellation UI is a no-op`() {
-        plugin.onAttachedToEngine(mockFlutterPluginBinding)
-
-        plugin.onMethodCall(MethodCall("displaySubscriptionCancellationInstruction", null), mockResult)
-
-        verify(exactly = 1) { mockResult.success(true) }
     }
 }

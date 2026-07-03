@@ -1700,13 +1700,6 @@ void main() {
       expect(methodCalls.first.method, 'userLogout');
     });
 
-    test('displaySubscriptionCancellationInstruction calls native method',
-        () async {
-      await Purchasely.displaySubscriptionCancellationInstruction();
-      expect(methodCalls.first.method,
-          'displaySubscriptionCancellationInstruction');
-    });
-
     test('userDidConsumeSubscriptionContent calls native method', () async {
       await Purchasely.userDidConsumeSubscriptionContent();
       expect(methodCalls.first.method, 'userDidConsumeSubscriptionContent');
@@ -1870,7 +1863,7 @@ void main() {
       expect(startCall.arguments['runningMode'], 'observer');
       expect(startCall.arguments['logLevel'], 'error');
       expect(startCall.arguments['storekitVersion'], 'storeKit2');
-      expect(startCall.arguments.containsKey('allowCampaigns'), false);
+      expect(startCall.arguments['allowCampaigns'], true);
       // No cold-start deeplink unless handleDeeplink() is chained.
       expect(startCall.arguments.containsKey('deeplink'), false);
     });

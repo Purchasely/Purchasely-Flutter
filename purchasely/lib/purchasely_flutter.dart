@@ -272,10 +272,6 @@ class Purchasely {
     return products;
   }
 
-  static Future<void> displaySubscriptionCancellationInstruction() async {
-    await _channel.invokeMethod('displaySubscriptionCancellationInstruction');
-  }
-
   static Future<List<PLYSubscription>> userSubscriptions() async {
     final List<dynamic> result =
         await _channel.invokeMethod('userSubscriptions');

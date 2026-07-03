@@ -166,14 +166,6 @@ void main() {
         expect(history.first.cumulatedRevenuesInUSD, 29.97);
       });
 
-      test('displaySubscriptionCancellationInstruction sends method call',
-          () async {
-        await Purchasely.displaySubscriptionCancellationInstruction();
-
-        expect(methodCalls.first.method,
-            'displaySubscriptionCancellationInstruction');
-      });
-
       test('userDidConsumeSubscriptionContent sends method call', () async {
         await Purchasely.userDidConsumeSubscriptionContent();
 
@@ -761,8 +753,6 @@ dynamic _handleMethodCall(MethodCall methodCall) {
           'subscriptionDurationInMonths': 3,
         }
       ];
-    case 'displaySubscriptionCancellationInstruction':
-      return null;
     case 'userDidConsumeSubscriptionContent':
       return null;
     case 'setUserAttributeWithString':

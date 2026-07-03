@@ -214,9 +214,6 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             clearUserAttributes()
         case "clearBuiltInAttributes":
             clearBuiltInAttributes()
-        case "displaySubscriptionCancellationInstruction":
-            // iOS has no dedicated cancellation-instruction screen; no-op.
-            result(true)
         case "isAnonymous":
             isAnonymous(result: result)
         case "signPromotionalOffer":
@@ -276,9 +273,7 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
         if let allowDeeplink = arguments["allowDeeplink"] as? Bool {
             Purchasely.allowDeeplink(allowDeeplink)
         }
-        if let allowCampaigns = arguments["allowCampaigns"] as? Bool {
-            Purchasely.allowCampaigns(allowCampaigns)
-        }
+        Purchasely.allowCampaigns((arguments["allowCampaigns"] as? Bool) ?? true)
 
         DispatchQueue.main.async {
             builder.start { error in

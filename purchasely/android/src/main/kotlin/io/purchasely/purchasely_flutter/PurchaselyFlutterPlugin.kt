@@ -295,10 +295,6 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
                 call.argument<String>("offerId"),
                 call.argument<String>("contentId"),
                 result)
-            "displaySubscriptionCancellationInstruction" -> {
-                displaySubscriptionCancellationInstruction()
-                result.safeSuccess(true)
-            }
             "handleDeeplink" -> handleDeeplink(call.argument<String>("deeplink"), result)
             "userSubscriptions" -> launch { userSubscriptions(result) }
             "userSubscriptionsHistory" -> launch { userSubscriptionsHistory(result) }
@@ -974,11 +970,6 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
         }
         val uri = Uri.parse(deeplink)
         result.safeSuccess(Purchasely.handleDeeplink(uri, activity))
-    }
-
-    private fun displaySubscriptionCancellationInstruction() {
-        // The native Android v6 SDK removed the built-in cancellation survey UI.
-        Log.w("Purchasely", "displaySubscriptionCancellationInstruction is no longer supported by the Android v6 SDK")
     }
 
     private suspend fun userSubscriptions(result: Result) {

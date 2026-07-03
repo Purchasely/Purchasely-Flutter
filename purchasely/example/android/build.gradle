@@ -1,6 +1,5 @@
 allprojects {
     repositories {
-        mavenLocal() // Purchasely Android 6.0.0-beta.12 until it is published remotely
         google()
         mavenCentral()
     }

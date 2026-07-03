@@ -16,7 +16,6 @@ buildscript {
 
 rootProject.allprojects {
     repositories {
-        mavenLocal() // PURCHASELY v6.0.0 — remove once published to Maven Central
         google()
         mavenCentral()
     }

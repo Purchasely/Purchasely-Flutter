@@ -10,11 +10,11 @@ Use the exact same version for every Purchasely Flutter package:
 
 ```yaml
 dependencies:
-  purchasely_flutter: 6.0.0-rc.1
-  purchasely_google: 6.0.0-rc.1
+  purchasely_flutter: 6.0.0-rc.2
+  purchasely_google: 6.0.0-rc.2
 ```
 
-This package pulls `io.purchasely:google-play:6.0.0-rc.1` on Android, published on
+This package pulls `io.purchasely:google-play:6.0.0-rc.2` on Android, published on
 Maven Central, so it resolves directly from the public repository.
 
 ## Usage
@@ -25,19 +25,19 @@ Initialize the SDK with the v6 builder and include the Google store:
 import 'package:purchasely_flutter/purchasely_flutter.dart';
 
 final configured = await PurchaselyBuilder.apiKey('<YOUR_API_KEY>')
-    .runningMode(RunningMode.full)
+    .runningMode(PLYRunningMode.full)
     .stores([PLYStore.google])
     .start();
 ```
 
-Display presentations with `PresentationBuilder`:
+Display presentations with `PLYPresentationBuilder`:
 
 ```dart
-final outcome = await PresentationBuilder.placement('<YOUR_PLACEMENT_ID>')
+final outcome = await PLYPresentationBuilder.placement('<YOUR_PLACEMENT_ID>')
     .build()
-    .display(const Transition.fullScreen());
+    .display(const PLYTransition.fullScreen());
 
-if (outcome.purchaseResult == PurchaseResult.purchased) {
+if (outcome.purchaseResult == PLYPurchaseResult.purchased) {
   print('User purchased ${outcome.plan}');
 }
 ```

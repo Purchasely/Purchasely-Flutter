@@ -1,7 +1,7 @@
 # Migrating to the Purchasely 6.0 native SDK (Flutter)
 
 This release **adapts the Purchasely Flutter plugin to the Purchasely 6.0 native
-SDKs** (iOS `Purchasely 6.0.0-rc.1`, Android `io.purchasely:core 6.0.0-rc.1`).
+SDKs** (iOS `Purchasely 6.0.0-rc.2`, Android `io.purchasely:core 6.0.0-rc.2`).
 
 Three areas are breaking changes: **starting the SDK**, **displaying / preloading /
 closing a presentation**, and the **action interceptor**. Everything else on the
@@ -234,7 +234,7 @@ await PLYPresentationBuilder.screen('SCREEN_ID').contentId('CONTENT_ID').build()
 
 ### Sized transitions (`drawer` / `popin`) — BREAKING
 
-`Transition.heightPercentage` was **removed**. Drawer and popin transitions are
+`PLYTransition.heightPercentage` was **removed**. Drawer and popin transitions are
 now sized with the native dimension model, mirroring Android's
 `PLYTransitionDimension`. Use the `width` (popin only) and `height` (drawer +
 popin) fields with a `PLYTransitionDimension`, expressed as a `percentage`
@@ -507,9 +507,8 @@ remains source-compatible except for removed v5 aliases; deeplinks use v6 names:
 - **Identity**: `userLogin`, `userLogout`, `isAnonymous`, `anonymousUserId`.
 - **Catalog**: `allProducts`, `productWithIdentifier`, `planWithIdentifier`,
   `isEligibleForIntroOffer`.
-- **Subscriptions data**: `userSubscriptions`, `userSubscriptionsHistory`,
-  `displaySubscriptionCancellationInstruction` (no-op on both platforms — see
-  callout below). Note: `presentSubscriptions()` was **removed** (see callout).
+- **Subscriptions data**: `userSubscriptions`, `userSubscriptionsHistory`.
+  Note: `presentSubscriptions()` was **removed** (see callout).
 - **User attributes**: `setUserAttributeWithString` / `WithInt` / `WithDouble` /
   `WithBoolean` / `WithDate` / `WithStringArray` / `WithIntArray` /
   `WithDoubleArray` / `WithBooleanArray`, `incrementUserAttribute`,
@@ -544,13 +543,12 @@ remains source-compatible except for removed v5 aliases; deeplinks use v6 names:
 > `userSubscriptions()` / `userSubscriptionsHistory()`.
 >
 > The cancellation survey UI was likewise removed, so
-> `Purchasely.displaySubscriptionCancellationInstruction()` is kept for source
-> compatibility but is a **no-op on both Android and iOS**.
+> `Purchasely.displaySubscriptionCancellationInstruction()` was **removed** too.
 
 > **Native dependency.** This release targets the Purchasely 6.0 native SDKs,
-> pinned to the **`6.0.0-rc.1`** pre-release on both platforms
-> (Android `io.purchasely:core` / `google-play` / `player` `6.0.0-rc.1`;
-> iOS `Purchasely` `6.0.0-rc.1`). Both are published — Android on **Maven
+> pinned to the **`6.0.0-rc.2`** pre-release on both platforms
+> (Android `io.purchasely:core` / `google-play` / `player` `6.0.0-rc.2`;
+> iOS `Purchasely` `6.0.0-rc.2`). Both are published — Android on **Maven
 > Central**, iOS on the **CocoaPods trunk** — so the project builds from the
 > public repositories with no `mavenLocal()` and no development pod.
 
