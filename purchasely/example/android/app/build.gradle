@@ -65,6 +65,6 @@ flutter {
 
 dependencies {
     // Pin to the same native SDK version as the plugin (purchasely/android/build.gradle).
-    implementation 'io.purchasely:google-play:6.0.0-rc.2'
-    implementation 'io.purchasely:player:6.0.0-rc.2'
+    implementation 'io.purchasely:google-play:6.0.0-rc.3'
+    implementation 'io.purchasely:player:6.0.0-rc.3'
 }

@@ -90,7 +90,7 @@ dependencies:
 > versions will cause runtime errors or unexpected behavior.
 
 > **Native dependency.** This release targets the Purchasely 6.0 native SDKs,
-> pinned to `6.0.0-rc.2` (iOS `Purchasely`, Android `io.purchasely:core`). Both
+> pinned to `6.0.0-rc.3` (iOS `Purchasely`, Android `io.purchasely:core`). Both
 > pre-releases are published — Android on Maven Central, iOS on the CocoaPods
 > trunk — so the project builds from the public repositories.
 

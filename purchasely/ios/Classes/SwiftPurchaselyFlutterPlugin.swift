@@ -473,10 +473,7 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
 
     private func clientPresentationDisplayed(_ args: [String: Any]?) {
         guard let presentation = clientPresentation(from: args, method: "clientPresentationDisplayed") else { return }
-        // The 6.0.0-rc.2 pod still names this `clientPresentationOpened(with:)`;
-        // the native SDK renames it to `clientPresentationDisplayed(with:)` in
-        // rc.3+ — update this call when bumping the podspec.
-        Purchasely.clientPresentationOpened(with: presentation)
+        Purchasely.clientPresentationDisplayed(with: presentation)
     }
 
     private func clientPresentationClosed(_ args: [String: Any]?) {

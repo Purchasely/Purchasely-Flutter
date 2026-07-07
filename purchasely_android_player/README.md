@@ -15,7 +15,7 @@ dependencies:
   purchasely_android_player: 6.0.0-rc.2
 ```
 
-This package pulls `io.purchasely:player:6.0.0-rc.2` on Android, published on
+This package pulls `io.purchasely:player:6.0.0-rc.3` on Android, published on
 Maven Central, so it resolves directly from the public repository.
 
 ## Usage

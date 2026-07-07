@@ -2,10 +2,10 @@ PODS:
   - Flutter (1.0.0)
   - integration_test (0.0.1):
     - Flutter
-  - Purchasely (6.0.0-rc.2)
+  - Purchasely (6.0.0-rc.3)
   - purchasely_flutter (6.0.0-rc.2):
     - Flutter
-    - Purchasely (= 6.0.0-rc.2)
+    - Purchasely (= 6.0.0-rc.3)
 
 DEPENDENCIES:
   - Flutter (from `Flutter`)

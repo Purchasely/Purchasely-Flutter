@@ -1,7 +1,7 @@
 # Migrating to the Purchasely 6.0 native SDK (Flutter)
 
 This release **adapts the Purchasely Flutter plugin to the Purchasely 6.0 native
-SDKs** (iOS `Purchasely 6.0.0-rc.2`, Android `io.purchasely:core 6.0.0-rc.2`).
+SDKs** (iOS `Purchasely 6.0.0-rc.3`, Android `io.purchasely:core 6.0.0-rc.3`).
 
 Three areas are breaking changes: **starting the SDK**, **displaying / preloading /
 closing a presentation**, and the **action interceptor**. Everything else on the
@@ -546,9 +546,9 @@ remains source-compatible except for removed v5 aliases; deeplinks use v6 names:
 > `Purchasely.displaySubscriptionCancellationInstruction()` was **removed** too.
 
 > **Native dependency.** This release targets the Purchasely 6.0 native SDKs,
-> pinned to the **`6.0.0-rc.2`** pre-release on both platforms
-> (Android `io.purchasely:core` / `google-play` / `player` `6.0.0-rc.2`;
-> iOS `Purchasely` `6.0.0-rc.2`). Both are published — Android on **Maven
+> pinned to the **`6.0.0-rc.3`** pre-release on both platforms
+> (Android `io.purchasely:core` / `google-play` / `player` `6.0.0-rc.3`;
+> iOS `Purchasely` `6.0.0-rc.3`). Both are published — Android on **Maven
 > Central**, iOS on the **CocoaPods trunk** — so the project builds from the
 > public repositories with no `mavenLocal()` and no development pod.
 

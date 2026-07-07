@@ -1,8 +1,8 @@
 ## 6.0.0-rc.2
 
 First release candidate for Purchasely 6.0. Adapts the Flutter plugin to the
-Purchasely 6.0 native SDKs (iOS `Purchasely 6.0.0-rc.2`, Android
-`io.purchasely:core 6.0.0-rc.2`, both published on public repositories).
+Purchasely 6.0 native SDKs (iOS `Purchasely 6.0.0-rc.3`, Android
+`io.purchasely:core 6.0.0-rc.3`, both published on public repositories).
 
 Breaking changes are limited to the paywall surface — starting the SDK, the
 presentation lifecycle (display / preload / close), and the action interceptor.
