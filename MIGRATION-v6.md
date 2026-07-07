@@ -98,7 +98,7 @@ been removed in favour of the builder API.
 | `Purchasely.getPresentationView(...)` | the `PLYPresentationView(request: …)` widget |
 | `Purchasely.closePresentation()` / `hidePresentation()` / `close()` | `presentation.close()` (on the loaded `PLYPresentation`) |
 | `Purchasely.showPresentation()` | `presentation.display()` (on the loaded `PLYPresentation`) |
-| `Purchasely.clientPresentationDisplayed(...)` / `clientPresentationClosed(...)` | handled via the `PLYPresentationRequest` lifecycle (`preload` → inspect `PLYPresentationType.client` → render your own UI) |
+| `Purchasely.clientPresentationDisplayed(...)` / `clientPresentationClosed(...)` | **kept, same names** — pass the `PLYPresentation` returned by `preload()` when you display/close your own paywall (`PLYPresentationType.client`) |
 | `Purchasely.setDefaultPresentationResultHandler(cb)` / `setDefaultPresentationResultCallback(cb)` | `Purchasely.setDefaultPresentationDismissHandler((outcome) => …)` — receives `PLYPresentationOutcome` (`presentation`, `purchaseResult`, `plan`, `closeReason`, `error`) |
 | `Purchasely.setPaywallActionInterceptorCallback(cb)` + `Purchasely.onProcessAction(bool)` | `Purchasely.interceptAction(kind, handler)` — handler returns `PLYInterceptResult.success` / `.failed` / `.notHandled` (no more `onProcessAction`) |
 

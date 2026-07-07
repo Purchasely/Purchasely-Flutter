@@ -198,6 +198,14 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
             "display" -> display(args, result)
             "close" -> closePresentation(args, result)
             "back" -> back(args, result)
+            "clientPresentationDisplayed" -> {
+                clientPresentationDisplayed(args?.get("presentation") as? Map<*, *>)
+                result.safeSuccess(true)
+            }
+            "clientPresentationClosed" -> {
+                clientPresentationClosed(args?.get("presentation") as? Map<*, *>)
+                result.safeSuccess(true)
+            }
 
             // --- action interceptor ---
             "registerInterceptor" -> registerInterceptor(args, result)
@@ -628,6 +636,31 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
         val loaded = requestId?.let { loadedPresentations[it] }
         loaded?.back()
         result.safeSuccess(true)
+    }
+
+    /**
+     * Resolves the native loaded presentation for a client-paywall notification.
+     * The Dart map carries the `requestId` of the preload that produced the
+     * presentation; the native handle cannot be rebuilt from the map, so we look
+     * it up in the registry.
+     */
+    private fun clientPresentation(presentationMap: Map<*, *>?, method: String): PLYPresentationBase.Loaded? {
+        val requestId = presentationMap?.get("requestId") as? String
+        val loaded = requestId?.let { loadedPresentations[it] }
+        if (loaded == null) {
+            Log.w("PurchaselyFlutter", "$method: no loaded presentation found for this handle — pass the PLYPresentation returned by preload()")
+        }
+        return loaded
+    }
+
+    private fun clientPresentationDisplayed(presentationMap: Map<*, *>?) {
+        val loaded = clientPresentation(presentationMap, "clientPresentationDisplayed") ?: return
+        Purchasely.clientPresentationDisplayed(loaded)
+    }
+
+    private fun clientPresentationClosed(presentationMap: Map<*, *>?) {
+        val loaded = clientPresentation(presentationMap, "clientPresentationClosed") ?: return
+        Purchasely.clientPresentationClosed(loaded)
     }
     //endregion
 

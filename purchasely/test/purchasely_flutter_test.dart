@@ -468,6 +468,32 @@ void main() {
       expect(methodCalls.first.arguments['allowDeeplink'], true);
     });
 
+    test('clientPresentationDisplayed sends the presentation map', () async {
+      final presentation = PLYPresentation(
+        requestId: 'req-42',
+        placementId: 'home',
+        type: PLYPresentationType.client,
+      );
+      await Purchasely.clientPresentationDisplayed(presentation);
+
+      expect(methodCalls.first.method, 'clientPresentationDisplayed');
+      final map = methodCalls.first.arguments['presentation'] as Map;
+      expect(map['requestId'], 'req-42');
+      expect(map['placementId'], 'home');
+    });
+
+    test('clientPresentationClosed sends the presentation map', () async {
+      final presentation = PLYPresentation(
+        requestId: 'req-42',
+        type: PLYPresentationType.client,
+      );
+      await Purchasely.clientPresentationClosed(presentation);
+
+      expect(methodCalls.first.method, 'clientPresentationClosed');
+      final map = methodCalls.first.arguments['presentation'] as Map;
+      expect(map['requestId'], 'req-42');
+    });
+
     test('setDebugMode calls native method correctly', () async {
       await Purchasely.setDebugMode(true);
 

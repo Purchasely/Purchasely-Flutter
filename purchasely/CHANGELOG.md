@@ -17,6 +17,9 @@ Highlights:
   returning a `PLYInterceptResult`.
 - **Removed** `presentSubscriptions()` and
   `displaySubscriptionCancellationInstruction()`.
+- **Kept** `clientPresentationDisplayed(presentation)` /
+  `clientPresentationClosed(presentation)` — same names as v5; pass the
+  `PLYPresentation` returned by `preload()`.
 
 Full migration guide: https://docs.purchasely.com/docs/migrating-from-v5-to-v6-flutter
 

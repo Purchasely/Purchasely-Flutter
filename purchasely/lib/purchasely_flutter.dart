@@ -8,6 +8,7 @@ import 'src/action_interceptor.dart'
 import 'src/bridge.dart' show PurchaselyBridge;
 import 'src/ply_models.dart';
 import 'src/ply_transformers.dart';
+import 'src/presentation.dart' show PLYPresentation, PLYPresentationType;
 import 'src/presentation_outcome.dart' show PLYPresentationOutcome;
 import 'src/purchasely_builder.dart' show PLYLogLevel, PurchaselyBuilder;
 
@@ -91,6 +92,29 @@ class Purchasely {
   static Future<void> removeDefaultPresentationDismissHandler() =>
       PurchaselyBridge.ensureInstalled()
           .removeDefaultPresentationDismissHandler();
+
+  // --- Client paywalls ---
+
+  /// Notifies Purchasely that a paywall rendered by your own code (a
+  /// presentation of type [PLYPresentationType.client]) is displayed.
+  ///
+  /// Pass the [PLYPresentation] returned by
+  /// `PLYPresentationBuilder…build().preload()`.
+  static Future<void> clientPresentationDisplayed(
+      PLYPresentation presentation) async {
+    return await _channel.invokeMethod('clientPresentationDisplayed',
+        <String, dynamic>{'presentation': presentation.toMap()});
+  }
+
+  /// Notifies Purchasely that a paywall rendered by your own code (a
+  /// presentation of type [PLYPresentationType.client]) is closed.
+  ///
+  /// Pass the same [PLYPresentation] given to [clientPresentationDisplayed].
+  static Future<void> clientPresentationClosed(
+      PLYPresentation presentation) async {
+    return await _channel.invokeMethod('clientPresentationClosed',
+        <String, dynamic>{'presentation': presentation.toMap()});
+  }
 
   /// Removes the user attribute listener
   static void clearUserAttributeListener() {

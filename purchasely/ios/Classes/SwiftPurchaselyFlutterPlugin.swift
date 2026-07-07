@@ -109,6 +109,12 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             closePresentation(arguments, result: result)
         case "back":
             back(arguments, result: result)
+        case "clientPresentationDisplayed":
+            clientPresentationDisplayed(arguments)
+            result(true)
+        case "clientPresentationClosed":
+            clientPresentationClosed(arguments)
+            result(true)
 
         // --- action interceptor ---
         case "registerInterceptor":
@@ -450,6 +456,32 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             presentation.back()
         }
         result(true)
+    }
+
+    /// Resolves the native `PLYPresentation` for a client-paywall notification.
+    /// The Dart map carries the `requestId` of the preload that produced the
+    /// presentation; v6 `PLYPresentation` is a protocol and cannot be rebuilt
+    /// from the map, so we look it up in the registry.
+    private func clientPresentation(from args: [String: Any]?, method: String) -> PLYPresentation? {
+        guard let requestId = (args?["presentation"] as? [String: Any])?["requestId"] as? String,
+              let presentation = SwiftPurchaselyFlutterPlugin.loadedPresentations[requestId] else {
+            print("Purchasely", "\(method): no loaded presentation found for this handle — pass the PLYPresentation returned by preload()")
+            return nil
+        }
+        return presentation
+    }
+
+    private func clientPresentationDisplayed(_ args: [String: Any]?) {
+        guard let presentation = clientPresentation(from: args, method: "clientPresentationDisplayed") else { return }
+        // The 6.0.0-rc.2 pod still names this `clientPresentationOpened(with:)`;
+        // the native SDK renames it to `clientPresentationDisplayed(with:)` in
+        // rc.3+ — update this call when bumping the podspec.
+        Purchasely.clientPresentationOpened(with: presentation)
+    }
+
+    private func clientPresentationClosed(_ args: [String: Any]?) {
+        guard let presentation = clientPresentation(from: args, method: "clientPresentationClosed") else { return }
+        Purchasely.clientPresentationClosed(with: presentation)
     }
 
     // MARK: - Action interceptor
