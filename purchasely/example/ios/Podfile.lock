@@ -3,7 +3,7 @@ PODS:
   - integration_test (0.0.1):
     - Flutter
   - Purchasely (6.0.0-rc.3)
-  - purchasely_flutter (6.0.0-rc.2):
+  - purchasely_flutter (6.0.0-rc.3):
     - Flutter
     - Purchasely (= 6.0.0-rc.3)
 

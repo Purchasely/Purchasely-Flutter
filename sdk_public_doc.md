@@ -51,7 +51,7 @@ Add the Purchasely Flutter SDK to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  purchasely_flutter: 6.0.0-rc.2
+  purchasely_flutter: 6.0.0-rc.3
 ```
 
 Then run:
@@ -73,8 +73,8 @@ Google Play Billing extension:
 
 ```yaml
 dependencies:
-  purchasely_flutter: 6.0.0-rc.2
-  purchasely_google: 6.0.0-rc.2
+  purchasely_flutter: 6.0.0-rc.3
+  purchasely_google: 6.0.0-rc.3
 ```
 
 #### Video Player (Required for Video Paywalls)
@@ -83,7 +83,7 @@ If your presentations contain videos, add the Android video player extension:
 
 ```yaml
 dependencies:
-  purchasely_android_player: 6.0.0-rc.2
+  purchasely_android_player: 6.0.0-rc.3
 ```
 
 > ⚠️ **All Purchasely packages must be at the exact same version.** Mismatched

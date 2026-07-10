@@ -32,8 +32,8 @@ target 'Runner' do
   use_frameworks!
   use_modular_headers!
 
-  # Purchasely 6.0.0-rc.2 is published on the public CocoaPods trunk, so the
-  # plugin's `s.dependency 'Purchasely', '6.0.0-rc.2'` resolves from there — no
+  # Purchasely 6.0.0-rc.3 is published on the public CocoaPods trunk, so the
+  # plugin's `s.dependency 'Purchasely', '6.0.0-rc.3'` resolves from there — no
   # development pod needed.
   flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
 

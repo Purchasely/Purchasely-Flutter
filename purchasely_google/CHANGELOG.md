@@ -1,3 +1,7 @@
+## 6.0.0-rc.3
+- Aligns the extension package version with `purchasely_flutter` 6.0.0-rc.3.
+- Keeps the Android Purchasely Google Play SDK pinned to `io.purchasely:google-play:6.0.0-rc.3`.
+
 ## 6.0.0-rc.2
 - Updated Android Purchasely Google Play SDK to `io.purchasely:google-play:6.0.0-rc.3` (published on Maven Central).
 - Aligns the extension package version with `purchasely_flutter` 6.0.0-rc.2.

@@ -1,3 +1,8 @@
+## 6.0.0-rc.3
+
+- Aligns the Flutter package and native bridge version with 6.0.0-rc.3.
+- Keeps the iOS and Android Purchasely SDK dependencies pinned to 6.0.0-rc.3.
+
 ## 6.0.0-rc.2
 
 First release candidate for Purchasely 6.0. Adapts the Flutter plugin to the

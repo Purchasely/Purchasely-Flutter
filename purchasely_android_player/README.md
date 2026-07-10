@@ -11,8 +11,8 @@ Use the exact same version for every Purchasely Flutter package:
 
 ```yaml
 dependencies:
-  purchasely_flutter: 6.0.0-rc.2
-  purchasely_android_player: 6.0.0-rc.2
+  purchasely_flutter: 6.0.0-rc.3
+  purchasely_android_player: 6.0.0-rc.3
 ```
 
 This package pulls `io.purchasely:player:6.0.0-rc.3` on Android, published on

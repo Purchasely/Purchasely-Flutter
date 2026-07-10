@@ -27,7 +27,7 @@ class SwiftPurchaselyFlutterPluginTests: XCTestCase {
         // Mirrors the chain used by `SwiftPurchaselyFlutterPlugin.start(...)`.
         let builder = Purchasely.apiKey("test-api-key")
             .appTechnology(.flutter)
-            .sdkBridgeVersion("6.0.0-rc.2")
+            .sdkBridgeVersion("6.0.0-rc.3")
             .runningMode(.full)
             .logLevel(.debug)
             .storekitSettings(.storeKit2)

@@ -60,7 +60,7 @@ jobs:
           cache: true
 
       # The native Purchasely Android SDK (io.purchasely:core / google-play / player)
-      # 6.0.0-rc.2 is published to Maven Central, so Gradle resolves it directly —
+      # 6.0.0-rc.3 is published to Maven Central, so Gradle resolves it directly —
       # no mavenLocal priming needed.
 
       - name: Cache pub packages
