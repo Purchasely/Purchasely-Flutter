@@ -143,7 +143,7 @@ jobs:
           cache: true
 
       - name: Setup Gradle cache
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: |
             ~/.gradle/caches
@@ -190,7 +190,7 @@ jobs:
           cache: true
 
       - name: Setup CocoaPods cache
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: purchasely/example/ios/Pods
           key: ${{ runner.os }}-pods-${{ hashFiles('purchasely/example/ios/Podfile.lock') }}
@@ -245,7 +245,7 @@ jobs:
           cache: true
 
       - name: Setup CocoaPods cache
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: purchasely/example/ios/Pods
           key: ${{ runner.os }}-pods-${{ hashFiles('purchasely/example/ios/Podfile.lock') }}
@@ -290,7 +290,7 @@ jobs:
           cache: true
 
       - name: Setup Gradle cache
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: |
             ~/.gradle/caches
