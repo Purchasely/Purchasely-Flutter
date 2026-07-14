@@ -377,6 +377,94 @@ jobs:
         run: flutter build appbundle --release
 
   # ============================================
+  # Flutter 3.44 / AGP 9 Compatibility
+  # ============================================
+  flutter-3-44-agp-9:
+    name: Flutter 3.44 / AGP 9
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Setup Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: "temurin"
+          java-version: "17"
+          cache: "gradle"
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.44.0"
+          channel: "stable"
+          cache: true
+
+      - name: Install dependencies (purchasely)
+        working-directory: purchasely
+        run: flutter pub get
+
+      - name: Install dependencies (purchasely_google)
+        working-directory: purchasely_google
+        run: flutter pub get
+
+      - name: Install dependencies (purchasely_android_player)
+        working-directory: purchasely_android_player
+        run: flutter pub get
+
+      - name: Check formatting
+        run: |
+          dart format --set-exit-if-changed purchasely
+          dart format --set-exit-if-changed purchasely_google
+          dart format --set-exit-if-changed purchasely_android_player
+
+      - name: Analyze
+        run: |
+          flutter analyze --no-fatal-infos --no-fatal-warnings purchasely
+          flutter analyze --no-fatal-infos --no-fatal-warnings purchasely_google
+          flutter analyze --no-fatal-infos --no-fatal-warnings purchasely_android_player
+
+      - name: Run tests
+        run: |
+          flutter test purchasely
+          flutter test purchasely_google
+          flutter test purchasely_android_player
+
+      - name: Build Android APK (Release)
+        working-directory: purchasely/example
+        run: flutter build apk --release
+
+      - name: Build Android App Bundle (Release)
+        working-directory: purchasely/example
+        run: flutter build appbundle --release
+
+      - name: Build Google extension Android release APK
+        env:
+          EXTENSION_PATH: purchasely_google
+          PROJECT_NAME: purchasely_google_build
+        run: |
+          extension_app="$RUNNER_TEMP/$PROJECT_NAME"
+          flutter create --platforms=android --project-name "$PROJECT_NAME" "$extension_app"
+          (
+            cd "$extension_app"
+            flutter pub add purchasely_google --path "$GITHUB_WORKSPACE/$EXTENSION_PATH"
+            flutter build apk --release
+          )
+
+      - name: Build player extension Android release APK
+        env:
+          EXTENSION_PATH: purchasely_android_player
+          PROJECT_NAME: purchasely_android_player_build
+        run: |
+          extension_app="$RUNNER_TEMP/$PROJECT_NAME"
+          flutter create --platforms=android --project-name "$PROJECT_NAME" "$extension_app"
+          (
+            cd "$extension_app"
+            flutter pub add purchasely_android_player --path "$GITHUB_WORKSPACE/$EXTENSION_PATH"
+            flutter build apk --release
+          )
+
+  # ============================================
   # Version Consistency Check
   # ============================================
   version-check:
@@ -440,6 +528,7 @@ jobs:
         build-ios,
         build-ios-swiftpm,
         build-android,
+        flutter-3-44-agp-9,
         version-check,
       ]
     if: always()
@@ -472,6 +561,10 @@ jobs:
           fi
           if [[ "${{ needs.build-android.result }}" != "success" ]]; then
             echo "Android build job failed"
+            exit 1
+          fi
+          if [[ "${{ needs.flutter-3-44-agp-9.result }}" != "success" ]]; then
+            echo "Flutter 3.44 / AGP 9 compatibility job failed"
             exit 1
           fi
           if [[ "${{ needs.version-check.result }}" != "success" ]]; then
