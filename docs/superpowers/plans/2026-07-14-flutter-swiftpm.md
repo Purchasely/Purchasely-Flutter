@@ -4,32 +4,33 @@
 
 **Goal:** Let the Flutter v6 plugin build with Swift Package Manager while retaining CocoaPods support.
 
-**Architecture:** `Package.swift` exposes the existing Swift bridge, links the Purchasely iOS package and Flutter generated artifacts, and declares only required source/resource/privacy metadata. CI builds the SwiftPM example path and continues the CocoaPods build path.
+**Architecture:** `ios/purchasely_flutter/Package.swift` exposes the existing Swift bridge from the Flutter-required package location, links the Purchasely iOS package and Flutter generated artifacts, and declares no plugin resources or privacy manifest because neither is owned by this target. CI builds a disposable SwiftPM-only copy of the example and continues the CocoaPods build path.
 
 **Tech Stack:** SwiftPM, Swift, Xcode, Flutter plugin tooling, CocoaPods, GitHub Actions.
 
 **Enhanced:** 2026-07-14  
 **Reviewed:** 2026-07-14  
-**Completed:** Pending
+**Completed:** 2026-07-14
 
 ---
 
 ### Task 1: Define the Swift package
 
 **Files:**
-- Create: `purchasely/ios/Package.swift`
-- Modify: `purchasely/ios/Classes/*` only for package-safe imports if compilation requires it.
+- Create: `purchasely/ios/purchasely_flutter/Package.swift`
+- Move: `purchasely/ios/Classes/*` → `purchasely/ios/purchasely_flutter/Classes/*`
+- Modify: `purchasely/ios/purchasely_flutter.podspec`, `purchasely/pubspec.yaml`
 
-- [ ] Add a package manifest with the plugin's iOS minimum target, the Purchasely iOS package dependency, existing Swift bridge source path, and framework linkage matching the podspec.
-- [ ] Add resources or privacy metadata only after verifying they are owned by the plugin target rather than the Purchasely SDK target.
-- [ ] Run `swift package dump-package` and a simulator build against the generated Flutter SwiftPM integration.
-- [ ] Commit with `feat(ios): add Flutter plugin SwiftPM manifest`.
+- [x] Add a package manifest with the plugin's iOS minimum target, exact Purchasely iOS package dependency, existing Swift bridge source path, and static Flutter-generated package linkage.
+- [x] Verify that the plugin owns neither resources nor a privacy manifest; the Purchasely SDK dependency provides its own privacy metadata.
+- [x] Run `swift package dump-package` and a simulator build against the generated Flutter SwiftPM integration.
+- [x] Include the manifest in the atomic SwiftPM commit.
 
 ### Task 2: Preserve and validate both dependency managers
 
 **Files:**
-- Modify: `.github/workflows/ci.yml`, `purchasely/example/ios/Podfile` only if setup requires explicit selection.
+- Modify: `.github/workflows/ci.yml`, `purchasely/example/ios/Runner.xcodeproj/project.pbxproj`, `purchasely/example/ios/Runner.xcodeproj/xcshareddata/xcschemes/Runner.xcscheme`
 
-- [ ] Add a macOS SwiftPM build job for the example without removing the `pod install` and `Runner.xcworkspace` test path.
-- [ ] Run the CocoaPods simulator build and the SwiftPM simulator build locally or on CI.
-- [ ] Validate workflow YAML and commit with `ci(ios): build Flutter plugin with SwiftPM`.
+- [x] Add a macOS SwiftPM build job for a disposable CocoaPods-deintegrated copy of the example without removing the `pod install` and `Runner.xcworkspace` test path.
+- [x] Run the CocoaPods simulator build and the SwiftPM simulator build locally.
+- [x] Validate workflow YAML and include it in the atomic SwiftPM commit.

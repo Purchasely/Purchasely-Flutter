@@ -30,7 +30,7 @@ flutter:
         package: io.purchasely.purchasely_flutter
         pluginClass: PurchaselyFlutterPlugin
       ios:
-        pluginClass: PurchaselyFlutterPlugin
+        pluginClass: SwiftPurchaselyFlutterPlugin
 
   assets:
     - images/icon.png

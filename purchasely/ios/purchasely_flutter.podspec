@@ -13,7 +13,7 @@ Flutter Plugin for Purchasely SDK
   s.license          = { :file => '../LICENSE' }
   s.author           = { 'Your Company' => 'mathieu@purchasely.com' }
   s.source           = { :path => '.' }
-  s.source_files = 'Classes/**/*'
+  s.source_files = 'purchasely_flutter/Classes/**/*'
   s.dependency 'Flutter'
   s.platform = :ios, '13.4'
 

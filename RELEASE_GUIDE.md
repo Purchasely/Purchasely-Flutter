@@ -210,7 +210,7 @@ Monitor the workflow at: https://github.com/Purchasely/Purchasely-Flutter/action
 | `purchasely/pubspec.yaml` | `version` field |
 | `purchasely_google/pubspec.yaml` | `version` field, `purchasely_flutter` dependency |
 | `purchasely_android_player/pubspec.yaml` | `version` field, `purchasely_flutter` dependency |
-| `purchasely/ios/Classes/SwiftPurchaselyFlutterPlugin.swift` | Bridge version |
+| `purchasely/ios/purchasely_flutter/Classes/SwiftPurchaselyFlutterPlugin.swift` | Bridge version |
 | `purchasely/android/.../PurchaselyFlutterPlugin.kt` | Bridge version |
 | `purchasely/CHANGELOG.md` | New version entry |
 | `purchasely_google/CHANGELOG.md` | New version entry |
