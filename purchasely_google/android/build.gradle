@@ -30,7 +30,7 @@ if (agpMajor < 9) {
 
 android {
     namespace 'io.purchasely.purchasely_flutter_google'
-    compileSdkVersion 36
+    compileSdk = 36
 
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
@@ -38,7 +38,7 @@ android {
     }
 
     defaultConfig {
-        minSdkVersion 23
+        minSdk = 23
     }
 }
 
