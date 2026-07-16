@@ -446,6 +446,9 @@ jobs:
         run: |
           extension_app="$RUNNER_TEMP/$PROJECT_NAME"
           flutter create --platforms=android --project-name "$PROJECT_NAME" "$extension_app"
+          # The generated app defaults to AGP 9 built-in Kotlin; the extension opts out
+          # via KGP, so align the throwaway app to the same build model.
+          printf '\nandroid.newDsl=false\nandroid.builtInKotlin=false\n' >> "$extension_app/android/gradle.properties"
           (
             cd "$extension_app"
             flutter pub add purchasely_google --path "$GITHUB_WORKSPACE/$EXTENSION_PATH"
@@ -459,6 +462,9 @@ jobs:
         run: |
           extension_app="$RUNNER_TEMP/$PROJECT_NAME"
           flutter create --platforms=android --project-name "$PROJECT_NAME" "$extension_app"
+          # The generated app defaults to AGP 9 built-in Kotlin; the extension opts out
+          # via KGP, so align the throwaway app to the same build model.
+          printf '\nandroid.newDsl=false\nandroid.builtInKotlin=false\n' >> "$extension_app/android/gradle.properties"
           (
             cd "$extension_app"
             flutter pub add purchasely_android_player --path "$GITHUB_WORKSPACE/$EXTENSION_PATH"
