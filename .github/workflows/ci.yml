@@ -438,6 +438,7 @@ jobs:
         android-unit-tests,
         ios-unit-tests,
         build-ios,
+        build-ios-swiftpm,
         build-android,
         version-check,
       ]
@@ -463,6 +464,10 @@ jobs:
           fi
           if [[ "${{ needs.build-ios.result }}" != "success" ]]; then
             echo "iOS build job failed"
+            exit 1
+          fi
+          if [[ "${{ needs.build-ios-swiftpm.result }}" != "success" ]]; then
+            echo "iOS SwiftPM build job failed"
             exit 1
           fi
           if [[ "${{ needs.build-android.result }}" != "success" ]]; then
