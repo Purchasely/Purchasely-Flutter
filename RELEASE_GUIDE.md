@@ -88,6 +88,14 @@ If the iOS Purchasely SDK version needs to be updated, edit the podspec file:
 s.dependency 'Purchasely', '5.6.4'
 ```
 
+The SwiftPM manifest pins the same native version with `exact:` and must be bumped in lockstep with the podspec:
+
+**File:** `purchasely/ios/purchasely_flutter/Package.swift`
+
+```swift
+.package(url: "https://github.com/Purchasely/Purchasely-iOS.git", exact: "5.6.4")
+```
+
 ### Step 3: Update Android SDK Version (if needed)
 
 If the Android Purchasely SDK version needs to be updated, edit the `build.gradle` file in **each package folder** and the example app:
@@ -222,6 +230,7 @@ Monitor the workflow at: https://github.com/Purchasely/Purchasely-Flutter/action
 |------|----------------|
 | `VERSIONS.md` | Always - add new version row |
 | `purchasely/ios/purchasely_flutter.podspec` | When iOS SDK version changes |
+| `purchasely/ios/purchasely_flutter/Package.swift` | When iOS SDK version changes (SwiftPM `exact:` pin — keep in sync with the podspec) |
 | `purchasely/android/build.gradle` | When Android SDK version changes (dependency + minSdkVersion) |
 | `purchasely_google/android/build.gradle` | When Android SDK version changes (dependency + minSdkVersion) |
 | `purchasely_android_player/android/build.gradle` | When Android SDK version changes (dependency + minSdkVersion) |
@@ -276,6 +285,7 @@ flutter pub get
 □ Add package-specific changelog summaries
 □ Fix tab→space indentation in SwiftPurchaselyFlutterPlugin.swift and PurchaselyFlutterPlugin.kt
 □ Update purchasely/ios/purchasely_flutter.podspec (iOS SDK version, if needed)
+□ Update purchasely/ios/purchasely_flutter/Package.swift (SwiftPM iOS SDK pin, keep in sync with podspec)
 □ Update all build.gradle files (Android SDK version, if needed)
 □ Update purchasely/example/android/app/build.gradle (Android SDK deps, if needed)
 □ Check Android minSdkVersion requirements (if Android SDK version changed)
