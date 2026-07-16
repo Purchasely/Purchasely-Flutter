@@ -23,6 +23,8 @@ rootProject.allprojects {
 
 apply plugin: 'com.android.library'
 
+// AGP 9+ ships built-in Kotlin, which is incompatible with the kotlin-android
+// plugin. Only apply it on older AGP (e.g. integrator apps still on AGP 8).
 def agpMajor = com.android.Version.ANDROID_GRADLE_PLUGIN_VERSION.tokenize('.')[0] as int
 if (agpMajor < 9) {
     apply plugin: 'kotlin-android'
@@ -30,7 +32,7 @@ if (agpMajor < 9) {
 
 android {
     namespace 'io.purchasely.purchasely_flutter'
-    compileSdkVersion 36
+    compileSdk = 36
 
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_11
@@ -38,7 +40,7 @@ android {
     }
 
     defaultConfig {
-        minSdkVersion 23
+        minSdk = 23
     }
 
     testOptions {
@@ -46,12 +48,6 @@ android {
             includeAndroidResources = true
             returnDefaultValues = true
         }
-    }
-}
-
-kotlin {
-    compilerOptions {
-        jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11
     }
 }
 
