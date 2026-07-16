@@ -335,10 +335,10 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             ])
         }
 
-        _ = builder.onClose { [weak self] in
-            // iOS exposes `onClose` (close-requested semantics). Renamed to
-            // `onCloseRequested` on the wire so the Dart-side façade matches
-            // the cross-platform contract.
+        _ = builder.onCloseRequested { [weak self] in
+            // Native `onCloseRequested` (close-requested semantics), forwarded as
+            // `onCloseRequested` on the wire so the Dart-side façade matches the
+            // cross-platform contract.
             self?.presentationEventHandler.emit([
                 "event": "onCloseRequested",
                 "requestId": requestId,
@@ -575,10 +575,10 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
     private func presentationToMap(_ p: PLYPresentation, requestId: String) -> [String: Any] {
         return [
             "requestId": requestId,
-            // iOS `id` maps to wire `screenId`. The Dart factory tolerates both
+            // Native `screenId` → wire `screenId`. The Dart factory tolerates both
             // keys; we send `screenId` for forward compatibility with the
             // contract.
-            "screenId": p.id,
+            "screenId": p.screenId,
             "placementId": p.placementId as Any,
             "contentId": NSNull(),
             "audienceId": p.audienceId as Any,
@@ -654,7 +654,7 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             "contentId": info.contentId,
             "presentation": info.presentation.map { p in
                 [
-                    "screenId": p.id,
+                    "screenId": p.screenId,
                     "placementId": p.placementId as Any,
                 ]
             } as Any?,
@@ -711,7 +711,7 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
         }
     }
 
-    private static func parseTransition(_ map: [String: Any]?) -> PLYDisplayMode? {
+    private static func parseTransition(_ map: [String: Any]?) -> PLYTransition? {
         guard let map = map, let type = map["type"] as? String else { return nil }
         let dismissible = map["dismissible"] as? Bool ?? true
         // v6 models drawer/popin size as PLYDimension (width is popin-only, height

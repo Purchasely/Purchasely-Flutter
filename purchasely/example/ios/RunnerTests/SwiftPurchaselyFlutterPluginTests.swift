@@ -102,9 +102,9 @@ class SwiftPurchaselyFlutterPluginTests: XCTestCase {
     func testDisplayModeFactories() {
         // Mirrors `parseTransition(_:)`: full screen, modal and the
         // dimension-based drawer/popin.
-        XCTAssertNotNil(PLYDisplayMode.fullScreen)
-        XCTAssertNotNil(PLYDisplayMode.modal)
-        XCTAssertNotNil(PLYDisplayMode.drawer(height: .percentage(0.5), dismissible: true))
-        XCTAssertNotNil(PLYDisplayMode.popin(width: nil, height: .percentage(0.5), dismissible: true))
+        XCTAssertNotNil(PLYTransition.fullScreen)
+        XCTAssertNotNil(PLYTransition.modal)
+        XCTAssertNotNil(PLYTransition.drawer(height: .percentage(0.5), dismissible: true))
+        XCTAssertNotNil(PLYTransition.popin(width: nil, height: .percentage(0.5), dismissible: true))
     }
 }
