@@ -26,6 +26,15 @@
 	<false/>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<!-- Required for the Dart VM service used by `flutter test`/integration_test
+	     on iOS 14+ (local network discovery). Without these the XCTest host
+	     crashes with SIGSEGV before establishing the test connection. -->
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Allow the Flutter tools to discover the running app over the local network for tests.</string>
+	<key>NSBonjourServices</key>
+	<array>
+		<string>_dartVmService._tcp</string>
+	</array>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

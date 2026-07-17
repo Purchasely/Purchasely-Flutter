@@ -178,6 +178,10 @@ jobs:
   ios-unit-tests:
     name: iOS Unit Tests
     runs-on: macos-latest
+    # Safety net: the RunnerTests host launches the Flutter engine; if it ever
+    # stalls waiting on a VM-service connection, fail fast instead of burning the
+    # job's full timeout.
+    timeout-minutes: 20
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
