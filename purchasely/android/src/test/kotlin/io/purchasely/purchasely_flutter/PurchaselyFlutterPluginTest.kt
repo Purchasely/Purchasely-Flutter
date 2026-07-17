@@ -131,6 +131,20 @@ class PurchaselyFlutterPluginTest {
     }
 
     @Test
+    fun `getBuiltInAttribute without key returns argument error instead of hanging`() {
+        // Regression guard: a missing "key" must complete the Dart Future with an
+        // error, not `return` silently and leave the awaited call hanging forever.
+        plugin.onAttachedToEngine(mockFlutterPluginBinding)
+
+        plugin.onMethodCall(
+            MethodCall("getBuiltInAttribute", mapOf<String, Any?>()),
+            mockResult,
+        )
+
+        verify { mockResult.error("MISSING_PARAMETER", "The 'key' parameter is required.", null) }
+    }
+
+    @Test
     fun `registerInterceptor rejects unknown action kind`() {
         plugin.onAttachedToEngine(mockFlutterPluginBinding)
 

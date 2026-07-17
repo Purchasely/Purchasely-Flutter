@@ -430,7 +430,11 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
             }
             "getBuiltInAttributes" -> getBuiltInAttributes(result)
             "getBuiltInAttribute" -> {
-                val key = call.argument<String>("key") ?: return
+                val key = call.argument<String>("key")
+                if (key == null) {
+                    result.error("MISSING_PARAMETER", "The 'key' parameter is required.", null)
+                    return
+                }
                 getBuiltInAttribute(key, result)
             }
             "setDynamicOffering" -> {
