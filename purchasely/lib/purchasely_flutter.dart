@@ -606,8 +606,10 @@ class Purchasely {
 
     try {
       value = DateTime.parse(value);
-    } catch (FormatException) {
-      //do nothing it is not a date
+    } catch (_) {
+      // Not a date: broad catch is intentional — DateTime.parse throws
+      // FormatException on a bad string and TypeError on a non-string value
+      // (int/bool/null). Either way, keep the original value.
     }
 
     return value;
@@ -621,8 +623,10 @@ class Purchasely {
       dynamic attributeValue = value;
       try {
         attributeValue = DateTime.parse(value);
-      } catch (FormatException) {
-        //do nothing it is not a date
+      } catch (_) {
+        // Not a date: broad catch is intentional — DateTime.parse throws
+        // FormatException on a bad string and TypeError on a non-string value
+        // (int/bool/null). Either way, keep the original value.
       }
       return MapEntry(key, attributeValue);
     });
@@ -649,8 +653,10 @@ class Purchasely {
 
     try {
       value = DateTime.parse(value);
-    } catch (FormatException) {
-      //do nothing it is not a date
+    } catch (_) {
+      // Not a date: broad catch is intentional — DateTime.parse throws
+      // FormatException on a bad string and TypeError on a non-string value
+      // (int/bool/null). Either way, keep the original value.
     }
 
     return value;
@@ -665,8 +671,10 @@ class Purchasely {
       dynamic attributeValue = value;
       try {
         attributeValue = DateTime.parse(value);
-      } catch (FormatException) {
-        //do nothing it is not a date
+      } catch (_) {
+        // Not a date: broad catch is intentional — DateTime.parse throws
+        // FormatException on a bad string and TypeError on a non-string value
+        // (int/bool/null). Either way, keep the original value.
       }
       return MapEntry(key, attributeValue);
     });

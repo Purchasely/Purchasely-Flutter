@@ -1505,6 +1505,31 @@ void main() {
           .setMockMethodCallHandler(channel, null);
     });
 
+    test('userAttribute returns a non-string value as-is without throwing',
+        () async {
+      // Guards the broad `catch (_)` around DateTime.parse: a non-string
+      // attribute (int/bool/…) makes DateTime.parse throw a TypeError, not a
+      // FormatException. Narrowing to `on FormatException` would let that
+      // TypeError escape and reject the whole future — this pins that it
+      // doesn't.
+      final channel = const MethodChannel('purchasely');
+
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (MethodCall methodCall) async {
+        if (methodCall.method == 'userAttribute') {
+          return 42;
+        }
+        return null;
+      });
+
+      final value = await Purchasely.userAttribute('intKey');
+
+      expect(value, 42);
+
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, null);
+    });
+
     test('userAttributes parses date values in map', () async {
       final channel = const MethodChannel('purchasely');
 
