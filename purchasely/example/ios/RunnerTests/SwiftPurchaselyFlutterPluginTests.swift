@@ -107,4 +107,44 @@ class SwiftPurchaselyFlutterPluginTests: XCTestCase {
         XCTAssertNotNil(PLYTransition.drawer(height: .percentage(0.5), dismissible: true))
         XCTAssertNotNil(PLYTransition.popin(width: nil, height: .percentage(0.5), dismissible: true))
     }
+
+    // MARK: - Inline view event delegation (FLT-W-12)
+
+    func testInlineNativeViewIsAnEventDelegate() {
+        // Regression guard for FLT-W-12: the inline `NativeView` must receive SDK
+        // events through the `PLYEventDelegate` slot, which is independent of the
+        // closure-based `setEventCallback` slot `SwiftEventHandler` uses to
+        // forward every event to Dart. A regression back to `setEventCallback`
+        // in the inline view would clobber that single global slot and silently
+        // stop the Dart event stream. This assignment compiles only while the
+        // conformance holds.
+        let _: PLYEventDelegate.Type = NativeView.self
+    }
+
+    func testEventDelegateRegisterAndUnregisterApiExists() {
+        // Compile-only guard (defined, never executed — no global SDK state is
+        // mutated): the delegate register/unregister API the inline `NativeView`
+        // relies on in `init`/`deinit` must exist with these signatures. Mirrors
+        // the exact production calls.
+        func compileOnly(_ delegate: PLYEventDelegate) {
+            Purchasely.setEventDelegate(delegate)
+            Purchasely.removeEventDelegate()
+        }
+        XCTAssertNotNil(compileOnly)
+    }
+
+    // MARK: - contentId registry lifecycle (FLT-W-06)
+
+    func testRequestContentIdsRegistryIsClearable() {
+        // Issue: the per-request `contentId` registry is written when a
+        // presentation carries a contentId and must be removed on dismiss, or it
+        // grows unbounded for the session's lifetime. This pins that the registry
+        // symbol exists (a rename fails to compile) and that an entry can be
+        // added and removed the way every production dismiss path does.
+        let key = "req-\(UUID().uuidString)"
+        SwiftPurchaselyFlutterPlugin.requestContentIds[key] = "content-1"
+        XCTAssertEqual(SwiftPurchaselyFlutterPlugin.requestContentIds[key], "content-1")
+        SwiftPurchaselyFlutterPlugin.requestContentIds.removeValue(forKey: key)
+        XCTAssertNil(SwiftPurchaselyFlutterPlugin.requestContentIds[key])
+    }
 }
