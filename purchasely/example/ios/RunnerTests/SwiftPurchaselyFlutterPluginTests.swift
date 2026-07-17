@@ -97,9 +97,9 @@ class SwiftPurchaselyFlutterPluginTests: XCTestCase {
         XCTAssertEqual(actions.count, 10)
     }
 
-    // MARK: - Display modes (v6)
+    // MARK: - Transition (v6)
 
-    func testDisplayModeFactories() {
+    func testTransitionFactories() {
         // Mirrors `parseTransition(_:)`: full screen, modal and the
         // dimension-based drawer/popin.
         XCTAssertNotNil(PLYTransition.fullScreen)
