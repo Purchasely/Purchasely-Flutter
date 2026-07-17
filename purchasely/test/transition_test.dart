@@ -76,5 +76,63 @@ void main() {
       // dismissible omitted when not set.
       expect(map.containsKey('dismissible'), isFalse);
     });
+
+    test('push forwards just the type', () {
+      final map = const PLYTransition.push().toMap();
+      expect(map['type'], 'push');
+      expect(map.containsKey('width'), isFalse);
+      expect(map.containsKey('height'), isFalse);
+      expect(map.containsKey('dismissible'), isFalse);
+    });
+
+    test('drawer with backgroundColors forwards the colors map', () {
+      final map = const PLYTransition.drawer(
+        backgroundColors:
+            PLYTransitionColors(light: '#FFFFFF', dark: '#000000'),
+      ).toMap();
+
+      expect(map['backgroundColors'],
+          <String, Object?>{'light': '#FFFFFF', 'dark': '#000000'});
+    });
+
+    test('popin with backgroundColors forwards the colors map', () {
+      final map = const PLYTransition.popin(
+        backgroundColors: PLYTransitionColors(dark: '#111111'),
+      ).toMap();
+
+      expect(map['backgroundColors'], <String, Object?>{'dark': '#111111'});
+    });
+
+    test('backgroundColors omitted when not set', () {
+      final map = const PLYTransition.drawer().toMap();
+      expect(map.containsKey('backgroundColors'), isFalse);
+    });
+  });
+
+  group('PLYTransitionColors.toMap', () {
+    test('both colors set', () {
+      expect(
+        const PLYTransitionColors(light: '#FFFFFF', dark: '#000000').toMap(),
+        <String, Object?>{'light': '#FFFFFF', 'dark': '#000000'},
+      );
+    });
+
+    test('only light set', () {
+      expect(
+        const PLYTransitionColors(light: '#FFFFFF').toMap(),
+        <String, Object?>{'light': '#FFFFFF'},
+      );
+    });
+
+    test('only dark set', () {
+      expect(
+        const PLYTransitionColors(dark: '#000000').toMap(),
+        <String, Object?>{'dark': '#000000'},
+      );
+    });
+
+    test('neither set serializes to an empty map', () {
+      expect(const PLYTransitionColors().toMap(), <String, Object?>{});
+    });
   });
 }

@@ -64,6 +64,9 @@ void main() {
       expect(received.first.properties.sdk_version, '6.0.0');
       expect(received.first.properties.displayed_presentation, 'pres_123');
       expect(received.first.properties.source_identifier, 'placement_abc');
+      // The static subscription handle is exposed so a host can inspect/cancel
+      // it directly instead of only going through stopListeningToEvents().
+      expect(Purchasely.events, isNotNull);
 
       Purchasely.stopListeningToEvents();
     });
@@ -99,6 +102,7 @@ void main() {
       await pumpEventQueue();
 
       expect(received, ['purchased']);
+      expect(Purchasely.purchases, isNotNull);
 
       Purchasely.stopListeningToPurchases();
     });
