@@ -650,10 +650,14 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
     }
 
     private fun closePresentation(args: Map<String, Any?>?, result: Result) {
-        // PAR-23: PLYPresentationBase.Loaded exposes a scoped close() in the
-        // pinned native SDK — mirror iOS (which scopes to the tracked
-        // requestId's loaded presentation, falling back to closing everything
-        // only when there is no per-request handle to target).
+        // PAR-23: route the close through the per-presentation handle
+        // (`PLYPresentationBase.Loaded.close()`) tracked by requestId, mirroring
+        // iOS's structure, and fall back to closing everything only when there
+        // is no handle to target. NOTE: in the pinned native Android SDK,
+        // `Loaded.close()` currently delegates to `Purchasely.closeAllScreens()`
+        // — so today this closes ALL screens regardless of the requestId (pinned
+        // by a native-side test). It becomes scoped transparently, with no
+        // change here, once the native SDK implements per-presentation close.
         val requestId = args?.get("requestId") as? String
         val loaded = requestId?.let { loadedPresentations[it] }
         if (loaded != null) {
