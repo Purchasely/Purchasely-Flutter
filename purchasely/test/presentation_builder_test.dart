@@ -8,6 +8,9 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:purchasely_flutter/purchasely_flutter.dart';
+// PurchaselyBridge (ensureInstalled/debugReset) is a test-only entry point —
+// removed from the public barrel export (PAR-13) — import src/ directly.
+import 'package:purchasely_flutter/src/bridge.dart';
 
 void main() {
   // PLYPresentationBuilder.build() calls PurchaselyBridge.ensureInstalled(),

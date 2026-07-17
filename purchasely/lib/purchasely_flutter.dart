@@ -22,7 +22,6 @@ import 'src/purchasely_builder.dart' show PLYLogLevel, PurchaselyBuilder;
 // `PLYPresentationBuilder`, `PLYPresentation`, `PLYPresentationOutcome`, `PLYTransition`,
 // ActionInterceptor…).
 export 'src/action_interceptor.dart';
-export 'src/bridge.dart' show PurchaselyBridge;
 export 'src/ply_models.dart';
 export 'src/presentation.dart';
 export 'src/presentation_builder.dart';
@@ -93,6 +92,13 @@ class Purchasely {
       PurchaselyBridge.ensureInstalled()
           .removeDefaultPresentationDismissHandler();
 
+  /// Closes every currently displayed Purchasely presentation, regardless of
+  /// how it was opened (PAR-19 / FLT-W-02 comment). For closing a single
+  /// [PLYPresentation] instead, prefer [PLYPresentation.close].
+  static Future<void> closeAllScreens() async {
+    await _channel.invokeMethod('closeAllScreens');
+  }
+
   // --- Client paywalls ---
 
   /// Notifies Purchasely that a paywall rendered by your own code (a
@@ -157,7 +163,12 @@ class Purchasely {
     }
   }
 
-  /// Maps the type string to the enum
+  /// Maps the native wire type string to [PLYUserAttributeType]. Never
+  /// throws — an unrecognized type (or a genuinely new native case, e.g. the
+  /// real iOS `.dictionary` case) logs and maps to
+  /// [PLYUserAttributeType.unknown] instead of raising an uncaught
+  /// `ArgumentError` inside the listener's `.listen()` callback
+  /// (REC-09 / FLT-W-04 / ENM-08).
   static PLYUserAttributeType mapType(String type) {
     if (type == "STRING") {
       return PLYUserAttributeType.string;
@@ -177,8 +188,12 @@ class Purchasely {
       return PLYUserAttributeType.floatArray;
     } else if (type == "BOOLEAN_ARRAY") {
       return PLYUserAttributeType.boolArray;
+    } else if (type == "DICTIONARY") {
+      return PLYUserAttributeType.dictionary;
     } else {
-      throw ArgumentError('Unknown type: $type');
+      log('Purchasely: unknown user attribute type "$type", mapping to '
+          'PLYUserAttributeType.unknown');
+      return PLYUserAttributeType.unknown;
     }
   }
 
@@ -217,13 +232,21 @@ class Purchasely {
     return restored;
   }
 
-  static Future<void> userLogout() async {
-    return await _channel.invokeMethod("userLogout");
+  /// Logs the current user out.
+  ///
+  /// [clearUserAttributes] also clears locally-stored user attributes.
+  /// Defaults to `true`, matching the native default (PAR-30).
+  static Future<void> userLogout({bool clearUserAttributes = true}) async {
+    return await _channel.invokeMethod("userLogout",
+        <String, dynamic>{'clearUserAttributes': clearUserAttributes});
   }
 
+  /// Sets the SDK log level. Wire-encoded as `.name` (e.g. `"debug"`), the
+  /// same encoding [PurchaselyBuilder.logLevel] uses for `start()` — PAR-27,
+  /// standardizing PLYLogLevel's wire format so both entry points agree.
   static Future<bool> setLogLevel(PLYLogLevel logLevel) async {
     final bool restored = await _channel.invokeMethod(
-        'setLogLevel', <String, dynamic>{'logLevel': logLevel.index});
+        'setLogLevel', <String, dynamic>{'logLevel': logLevel.name});
     return restored;
   }
 
@@ -262,6 +285,12 @@ class Purchasely {
     return transformToPLYPlan(result);
   }
 
+  /// Signs a StoreKit promotional offer for `storeProductId`/`storeOfferId`.
+  ///
+  /// iOS-only — StoreKit has no direct Google Play Billing equivalent. On
+  /// Android this is a no-op that resolves with an empty map rather than
+  /// throwing (FLT-W-01 / REC-04); it never rejects, so calling it
+  /// cross-platform is safe, but the result is only meaningful on iOS.
   static Future<Map<dynamic, dynamic>> signPromotionalOffer(
       String storeProductId, String storeOfferId) async {
     final Map<dynamic, dynamic> result = await _channel.invokeMethod(
@@ -296,9 +325,15 @@ class Purchasely {
     return products;
   }
 
-  static Future<List<PLYSubscription>> userSubscriptions() async {
-    final List<dynamic> result =
-        await _channel.invokeMethod('userSubscriptions');
+  /// Fetches the user's active subscriptions.
+  ///
+  /// [invalidateCache] forces a refresh instead of returning a cached result
+  /// (PAR-29). Defaults to `false`, matching the native default.
+  static Future<List<PLYSubscription>> userSubscriptions(
+      {bool invalidateCache = false}) async {
+    final List<dynamic> result = await _channel.invokeMethod(
+        'userSubscriptions',
+        <String, dynamic>{'invalidateCache': invalidateCache});
 
     final List<PLYSubscription> subscriptions = new List.empty(growable: true);
     result.forEach((element) {
@@ -315,7 +350,7 @@ class Purchasely {
 
       subscriptions.add(PLYSubscription(
           element['purchaseToken'],
-          PLYSubscriptionSource.values[element['subscriptionSource']],
+          _subscriptionSourceFromWire(element['subscriptionSource']),
           element['nextRenewalDate'],
           element['cancelledDate'],
           transformToPLYPlan(element['plan']),
@@ -328,9 +363,16 @@ class Purchasely {
     return subscriptions;
   }
 
-  static Future<List<PLYSubscription>> userSubscriptionsHistory() async {
-    final List<dynamic> result =
-        await _channel.invokeMethod('userSubscriptionsHistory');
+  /// Fetches the user's subscription history (includes cancelled/expired
+  /// subscriptions plus revenue/duration aggregates).
+  ///
+  /// [invalidateCache] forces a refresh instead of returning a cached result
+  /// (PAR-29). Defaults to `false`, matching the native default.
+  static Future<List<PLYSubscription>> userSubscriptionsHistory(
+      {bool invalidateCache = false}) async {
+    final List<dynamic> result = await _channel.invokeMethod(
+        'userSubscriptionsHistory',
+        <String, dynamic>{'invalidateCache': invalidateCache});
 
     final List<PLYSubscription> subscriptions = new List.empty(growable: true);
     result.forEach((element) {
@@ -347,7 +389,7 @@ class Purchasely {
 
       subscriptions.add(PLYSubscription(
         element['purchaseToken'],
-        PLYSubscriptionSource.values[element['subscriptionSource']],
+        _subscriptionSourceFromWire(element['subscriptionSource']),
         element['nextRenewalDate'],
         element['cancelledDate'],
         transformToPLYPlan(element['plan']),
@@ -361,6 +403,17 @@ class Purchasely {
     return subscriptions;
   }
 
+  /// Maps the wire `subscriptionSource` to [PLYSubscriptionSource]. Android
+  /// sends `null` for a store type outside the 4 known ones (or a missing/
+  /// out-of-range index) — falls back to [PLYSubscriptionSource.none]
+  /// instead of an uncaught `List` index error (REC-09 / FLT-W-07).
+  static PLYSubscriptionSource _subscriptionSourceFromWire(dynamic raw) {
+    if (raw is int && raw >= 0 && raw < PLYSubscriptionSource.values.length) {
+      return PLYSubscriptionSource.values[raw];
+    }
+    return PLYSubscriptionSource.none;
+  }
+
   static Future<bool> handleDeeplink(String deepLink) async {
     return await _channel.invokeMethod(
         'handleDeeplink', <String, dynamic>{'deeplink': deepLink});
@@ -368,14 +421,7 @@ class Purchasely {
 
   static void listenToEvents(Function(PLYEvent) block) {
     events = _stream.receiveBroadcastStream().listen((event) {
-      PLYEventName eventName = PLYEventName.APP_CONFIGURED;
-      try {
-        eventName = PLYEventName.values
-            .firstWhere((e) => e.toString() == 'PLYEventName.' + event['name']);
-      } catch (e) {
-        print("Error $e because event ${event['name']} is not found");
-      }
-
+      final eventName = _eventNameFromWire(event['name'] as String?);
       block(PLYEvent(
           eventName, transformToPLYEventProperties(event['properties'])));
     });
@@ -384,6 +430,15 @@ class Purchasely {
   static void stopListeningToEvents() {
     events?.cancel();
   }
+
+  /// Alias for [listenToEvents] — `addEventListener`/`removeEventListener`
+  /// are the shared naming anchor across the Purchasely cross-platform
+  /// bridges (REC-18 / PAR-18).
+  static void addEventListener(Function(PLYEvent) block) =>
+      listenToEvents(block);
+
+  /// Alias for [stopListeningToEvents].
+  static void removeEventListener() => stopListeningToEvents();
 
   static void listenToPurchases(Function block) {
     purchases = _purchases.receiveBroadcastStream().listen((event) {
@@ -585,6 +640,38 @@ class Purchasely {
     _channel.invokeMethod('clearBuiltInAttributes');
   }
 
+  /// Reads a single built-in (SDK-computed) user attribute by [key] — the
+  /// read counterpart of the built-in attributes the SDK tracks internally
+  /// (PAR-07).
+  static Future<dynamic> getBuiltInAttribute(String key) async {
+    dynamic value = await _channel
+        .invokeMethod('getBuiltInAttribute', <String, dynamic>{'key': key});
+
+    try {
+      value = DateTime.parse(value);
+    } catch (FormatException) {
+      //do nothing it is not a date
+    }
+
+    return value;
+  }
+
+  /// Reads all built-in (SDK-computed) user attributes (PAR-07).
+  static Future<Map<dynamic, dynamic>> getBuiltInAttributes() async {
+    Map<dynamic, dynamic> attributes =
+        await _channel.invokeMethod('getBuiltInAttributes');
+
+    return attributes.map((key, value) {
+      dynamic attributeValue = value;
+      try {
+        attributeValue = DateTime.parse(value);
+      } catch (FormatException) {
+        //do nothing it is not a date
+      }
+      return MapEntry(key, attributeValue);
+    });
+  }
+
   static Future<void> setThemeMode(PLYThemeMode mode) async {
     return await _channel
         .invokeMethod('setThemeMode', <String, dynamic>{'mode': mode.index});
@@ -664,13 +751,7 @@ class Purchasely {
 
   static PLYEventProperties transformToPLYEventProperties(
       Map<dynamic, dynamic> properties) {
-    PLYEventName eventName = PLYEventName.APP_CONFIGURED;
-    try {
-      eventName = PLYEventName.values.firstWhere(
-          (e) => e.toString() == 'PLYEventName.' + properties['event_name']);
-    } catch (e) {
-      print(e);
-    }
+    final eventName = _eventNameFromWire(properties['event_name'] as String?);
 
     List<PLYEventPropertyPlan> plans = new List.empty(growable: true);
     properties['purchasable_plans']?.forEach((element) => plans.add(
@@ -782,8 +863,33 @@ class Purchasely {
   }
 }
 
+/// Maps a native event name string to [PLYEventName]. Falls back to
+/// [PLYEventName.UNKNOWN] (logging the mismatch) instead of silently
+/// misclassifying an unrecognized event as [PLYEventName.APP_CONFIGURED]
+/// (REC-13 / EVT-01) — shared by [Purchasely.listenToEvents] and
+/// [Purchasely.transformToPLYEventProperties] so the fallback only lives in
+/// one place.
+PLYEventName _eventNameFromWire(String? wire) {
+  for (final name in PLYEventName.values) {
+    if (name.name == wire) return name;
+  }
+  log('Purchasely: unknown event name "$wire", mapping to PLYEventName.UNKNOWN');
+  return PLYEventName.UNKNOWN;
+}
+
 // -- ENUMS --
 
+// WARNING: This enum must be strictly identical (same case names, same
+// order) to FlutterPLYAttribute on both native bridges
+// (ios/Classes/SwiftPurchaselyFlutterPlugin.swift and
+// android/.../PurchaselyFlutterPlugin.kt's companion object). All 3 map by
+// case *name* to the native `Purchasely.PLYAttribute`/`Attribute`, never by
+// raw ordinal — the two native SDKs' own attribute enums are NOT
+// ordinal-aligned with each other (iOS has `oneSignalPlayerId`, which this
+// Dart enum deliberately does NOT declare, at a different position; Android
+// has no such case at all), so an ordinal-based bridge mapping would
+// silently cross-wire attributes. Add new cases here AND in both native
+// enums in lockstep (REC-11 / ENM-03).
 enum PLYAttribute {
   firebase_app_instance_id,
   airship_channel_id,
@@ -806,6 +912,7 @@ enum PLYAttribute {
   moengageUniqueId,
   oneSignalExternalId,
   batchCustomUserId,
+  oneSignalUserId,
 }
 
 enum PLYDataProcessingLegalBasis { essential, optional }
@@ -829,6 +936,14 @@ enum PLYSubscriptionSource {
   none
 }
 
+/// Native SDK event names forwarded over the `purchasely-events` channel.
+///
+/// 51 cases: 50 correspond to a real native event name (including
+/// [PLACEMENT_OPENED] and [PURCHASE_FROM_STORE_TAPPED], added for parity —
+/// REC-13 / EVT-01), plus [UNKNOWN] — a Dart-only fallback sentinel never
+/// sent by the native SDKs. Keep this count comment accurate when adding
+/// cases; a stale count here previously masked exactly this kind of gap.
+/// [_eventNameFromWire] matches by exact case name, never by ordinal.
 enum PLYEventName {
   APP_INSTALLED,
   APP_CONFIGURED,
@@ -850,6 +965,7 @@ enum PLYEventName {
   PLAN_SELECTED,
   OPTIONS_SELECTED,
   OPTIONS_VALIDATED,
+  PLACEMENT_OPENED,
   PRESENTATION_VIEWED,
   PRESENTATION_OPENED,
   PRESENTATION_SELECTED,
@@ -857,6 +973,7 @@ enum PLYEventName {
   PRESENTATION_CLOSED,
   PROMO_CODE_TAPPED,
   PURCHASE_CANCELLED,
+  PURCHASE_FROM_STORE_TAPPED,
   PURCHASE_TAPPED,
   RESTORE_TAPPED,
   RECEIPT_CREATED,
@@ -877,7 +994,12 @@ enum PLYEventName {
   WEB_CHECKOUT_OPENED_IN_WEB_BROWSER,
   WEB_CHECKOUT_ERROR,
   WEB_CHECKOUT_TAPPED,
-  WEB_CHECKOUT_TIMED_OUT
+  WEB_CHECKOUT_TIMED_OUT,
+
+  /// Sentinel for a native event name this enum doesn't (yet) declare a case
+  /// for. Never silently misclassified as [APP_CONFIGURED] — see
+  /// [_eventNameFromWire].
+  UNKNOWN,
 }
 
 enum PLYUserAttributeSource {
@@ -895,6 +1017,15 @@ enum PLYUserAttributeType {
   intArray,
   floatArray,
   boolArray,
+
+  /// Native iOS's `PLYUserAttributeType.dictionary` case (confirmed real,
+  /// not hypothetical — see FLT-W-04). Value is passed through as-is; no
+  /// dedicated Dart model, same as every other case here.
+  dictionary,
+
+  /// Sentinel for a native wire type this enum doesn't (yet) declare a case
+  /// for. [Purchasely.mapType] never throws — see its doc comment.
+  unknown,
 }
 
 // -- CLASSES --

@@ -71,7 +71,9 @@ void main() {
       Purchasely.stopListeningToEvents();
     });
 
-    test('falls back to APP_CONFIGURED for an unknown event name', () async {
+    test(
+        'falls back to UNKNOWN (not APP_CONFIGURED) for an unrecognized '
+        'event name (REC-13 / EVT-01)', () async {
       emitOnListen(const EventChannel('purchasely-events'), [
         {
           'name': 'NOT_A_REAL_EVENT',
@@ -87,9 +89,69 @@ void main() {
       await pumpEventQueue();
 
       expect(received, isNotNull);
-      expect(received!.name, PLYEventName.APP_CONFIGURED);
+      expect(received!.name, PLYEventName.UNKNOWN);
+      expect(received!.properties.event_name, PLYEventName.UNKNOWN);
 
       Purchasely.stopListeningToEvents();
+    });
+
+    test(
+        'decodes the PLACEMENT_OPENED and PURCHASE_FROM_STORE_TAPPED '
+        'parity additions (REC-13 / EVT-01)', () async {
+      emitOnListen(const EventChannel('purchasely-events'), [
+        {
+          'name': 'PLACEMENT_OPENED',
+          'properties': {
+            'event_name': 'PLACEMENT_OPENED',
+            'event_created_at': '2026-06-29T10:00:00Z',
+          },
+        },
+        {
+          'name': 'PURCHASE_FROM_STORE_TAPPED',
+          'properties': {
+            'event_name': 'PURCHASE_FROM_STORE_TAPPED',
+            'event_created_at': '2026-06-29T10:00:00Z',
+          },
+        },
+      ]);
+
+      final received = <PLYEvent>[];
+      Purchasely.listenToEvents(received.add);
+      await pumpEventQueue();
+
+      expect(received, hasLength(2));
+      expect(received[0].name, PLYEventName.PLACEMENT_OPENED);
+      expect(received[1].name, PLYEventName.PURCHASE_FROM_STORE_TAPPED);
+
+      Purchasely.stopListeningToEvents();
+    });
+  });
+
+  group('addEventListener / removeEventListener aliases', () {
+    test(
+        'addEventListener/removeEventListener delegate to '
+        'listenToEvents/stopListeningToEvents (REC-18 / PAR-18)', () async {
+      emitOnListen(const EventChannel('purchasely-events'), [
+        {
+          'name': 'APP_STARTED',
+          'properties': {
+            'event_name': 'APP_STARTED',
+            'event_created_at': '2026-06-29T10:00:00Z',
+          },
+        },
+      ]);
+
+      final received = <PLYEvent>[];
+      Purchasely.addEventListener(received.add);
+      await pumpEventQueue();
+
+      expect(received, hasLength(1));
+      expect(received.first.name, PLYEventName.APP_STARTED);
+      // Same static subscription handle as listenToEvents.
+      expect(Purchasely.events, isNotNull);
+
+      // Must not throw — delegates to stopListeningToEvents().
+      Purchasely.removeEventListener();
     });
   });
 

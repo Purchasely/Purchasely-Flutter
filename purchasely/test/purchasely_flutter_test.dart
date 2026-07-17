@@ -1,6 +1,9 @@
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:purchasely_flutter/purchasely_flutter.dart';
+// PurchaselyBridge (ensureInstalled/debugReset) is a test-only entry point —
+// removed from the public barrel export (PAR-13) — import src/ directly.
+import 'package:purchasely_flutter/src/bridge.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -197,7 +200,9 @@ void main() {
     test('setLogLevel calls native method correctly', () async {
       final result = await Purchasely.setLogLevel(PLYLogLevel.warn);
       expect(result, true);
-      expect(methodCalls.first.arguments['logLevel'], 2);
+      // PAR-27: wire-encoded as `.name`, same as the start() builder — not
+      // the ordinal index.
+      expect(methodCalls.first.arguments['logLevel'], 'warn');
     });
 
     test('restoreAllProducts returns correct value', () async {
@@ -825,10 +830,15 @@ void main() {
           Purchasely.mapType('FLOAT_ARRAY'), PLYUserAttributeType.floatArray);
       expect(
           Purchasely.mapType('BOOLEAN_ARRAY'), PLYUserAttributeType.boolArray);
+      expect(Purchasely.mapType('DICTIONARY'), PLYUserAttributeType.dictionary);
     });
 
-    test('mapType throws for unknown type', () {
-      expect(() => Purchasely.mapType('UNKNOWN'), throwsArgumentError);
+    test(
+        'mapType never throws for an unknown type — maps to unknown '
+        '(REC-09 / FLT-W-04 / ENM-08)', () {
+      expect(Purchasely.mapType('UNKNOWN'), PLYUserAttributeType.unknown);
+      expect(Purchasely.mapType('SOME_FUTURE_NATIVE_TYPE'),
+          PLYUserAttributeType.unknown);
     });
 
     test('mapDataProcessingLegalBasisToString returns correct strings', () {
@@ -1204,6 +1214,19 @@ void main() {
       expect(PLYAttribute.airship_channel_id.index, 1);
       expect(PLYAttribute.oneSignalExternalId.index, 19);
       expect(PLYAttribute.batchCustomUserId.index, 20);
+      // REC-11 / ENM-03: added for parity with both native SDKs.
+      expect(PLYAttribute.oneSignalUserId.index, 21);
+    });
+
+    test('PLYAttribute has no oneSignalPlayerId case (REC-11 / ENM-03)', () {
+      // iOS has `oneSignalPlayerId`; Android has no equivalent case at all.
+      // The 3 bridges map by case name, never by ordinal, so this Flutter
+      // enum must not add it either — see the WARNING comment above the
+      // enum declaration.
+      expect(
+        PLYAttribute.values.map((a) => a.name),
+        isNot(contains('oneSignalPlayerId')),
+      );
     });
 
     test('PLYDataProcessingLegalBasis has correct values', () {
@@ -1241,8 +1264,14 @@ void main() {
       expect(PLYEventName.APP_INSTALLED.index, 0);
       expect(PLYEventName.APP_CONFIGURED.index, 1);
       expect(PLYEventName.IN_APP_PURCHASED.index, 6);
-      expect(PLYEventName.PRESENTATION_VIEWED.index, 20);
-      expect(PLYEventName.PURCHASE_TAPPED.index, 27);
+      // Shifted by the PLACEMENT_OPENED / PURCHASE_FROM_STORE_TAPPED
+      // additions (REC-13 / EVT-01) — indices aren't part of the wire
+      // contract (matching is by exact case name, see _eventNameFromWire).
+      expect(PLYEventName.PLACEMENT_OPENED.index, 20);
+      expect(PLYEventName.PRESENTATION_VIEWED.index, 21);
+      expect(PLYEventName.PURCHASE_FROM_STORE_TAPPED.index, 28);
+      expect(PLYEventName.PURCHASE_TAPPED.index, 29);
+      expect(PLYEventName.UNKNOWN.index, PLYEventName.values.length - 1);
     });
   });
 
@@ -1504,6 +1533,76 @@ void main() {
   });
 
   group('Subscription Handling Edge Cases', () {
+    test(
+        'userSubscriptions falls back to .none for a null subscriptionSource '
+        'instead of crashing (REC-09 / FLT-W-07)', () async {
+      final channel = const MethodChannel('purchasely');
+
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (MethodCall methodCall) async {
+        if (methodCall.method == 'userSubscriptions') {
+          return [
+            {
+              'purchaseToken': 'token-123',
+              // Android emits null for a StoreType outside the 4 known ones.
+              'subscriptionSource': null,
+              'nextRenewalDate': null,
+              'cancelledDate': null,
+              // transformToPLYPlan() takes a non-nullable Map — {} (empty)
+              // is its documented "absent" convention, unrelated to the
+              // subscriptionSource fix under test here.
+              'plan': <String, dynamic>{},
+              'product': null,
+            }
+          ];
+        }
+        return null;
+      });
+
+      final subscriptions = await Purchasely.userSubscriptions();
+
+      expect(subscriptions.length, 1);
+      expect(
+          subscriptions.first.subscriptionSource, PLYSubscriptionSource.none);
+
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, null);
+    });
+
+    test(
+        'userSubscriptions falls back to .none for an out-of-range '
+        'subscriptionSource index (REC-09 / FLT-W-07)', () async {
+      final channel = const MethodChannel('purchasely');
+
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (MethodCall methodCall) async {
+        if (methodCall.method == 'userSubscriptions') {
+          return [
+            {
+              'purchaseToken': 'token-123',
+              'subscriptionSource': 99,
+              'nextRenewalDate': null,
+              'cancelledDate': null,
+              // transformToPLYPlan() takes a non-nullable Map — {} (empty)
+              // is its documented "absent" convention, unrelated to the
+              // subscriptionSource fix under test here.
+              'plan': <String, dynamic>{},
+              'product': null,
+            }
+          ];
+        }
+        return null;
+      });
+
+      final subscriptions = await Purchasely.userSubscriptions();
+
+      expect(
+          subscriptions.first.subscriptionSource, PLYSubscriptionSource.none);
+
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, null);
+    });
+
     test('userSubscriptions handles null product', () async {
       final channel = const MethodChannel('purchasely');
 
@@ -1684,6 +1783,37 @@ void main() {
       final plan = Purchasely.transformToPLYPlan(planMap);
       expect(plan!.type, PLYPlanType.unknown);
     });
+
+    test(
+        'transformToPLYPlan tolerates the String wire format too '
+        '(rc.4 hardening — Android will switch plan type to a String)', () {
+      final planMap = {
+        'vendorId': 'vendor-123',
+        'productId': 'product-123',
+        'name': 'Renewing',
+        'type': 'RENEWING_SUBSCRIPTION', // String, not the legacy Int index
+        'amount': 9.99,
+        'localizedAmount': '\$9.99',
+        'currencyCode': 'USD',
+        'currencySymbol': '\$',
+        'price': '9.99',
+        'period': 'P1M',
+        'hasIntroductoryPrice': false,
+        'introPrice': null,
+        'introAmount': null,
+        'introDuration': null,
+        'introPeriod': null,
+        'hasFreeTrial': false
+      };
+
+      final plan = Purchasely.transformToPLYPlan(planMap);
+      expect(plan!.type, PLYPlanType.autoRenewingSubscription);
+
+      // And an unrecognized String still degrades to unknown, not a throw.
+      final unknownPlan = Purchasely.transformToPLYPlan(
+          {...planMap, 'type': 'SOME_FUTURE_TYPE'});
+      expect(unknownPlan!.type, PLYPlanType.unknown);
+    });
   });
 
   group('Subscription Sources Coverage', () {
@@ -1755,6 +1885,7 @@ void main() {
       expect(PLYAttribute.moengageUniqueId.index, 18);
       expect(PLYAttribute.oneSignalExternalId.index, 19);
       expect(PLYAttribute.batchCustomUserId.index, 20);
+      expect(PLYAttribute.oneSignalUserId.index, 21);
     });
   });
 

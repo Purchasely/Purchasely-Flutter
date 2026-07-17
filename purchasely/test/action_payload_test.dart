@@ -143,21 +143,21 @@ void main() {
           };
 
       // Correct wire format (String, matches Android's `.name` / fixed iOS).
-      final fromString =
-          actionPayloadFromMap(PLYPresentationActionKind.webCheckout,
-              withProvider('STRIPE')) as PLYWebCheckoutPayload;
+      final fromString = actionPayloadFromMap(
+              PLYPresentationActionKind.webCheckout, withProvider('STRIPE'))
+          as PLYWebCheckoutPayload;
       expect(fromString.webCheckoutProvider, 'STRIPE');
 
       // Legacy/regressed Int rawValue (pre-fix iOS): must not throw, and
       // should still map to a usable provider name.
       final fromInt0 = actionPayloadFromMap(
-          PLYPresentationActionKind.webCheckout,
-          withProvider(0)) as PLYWebCheckoutPayload;
+              PLYPresentationActionKind.webCheckout, withProvider(0))
+          as PLYWebCheckoutPayload;
       expect(fromInt0.webCheckoutProvider, 'STRIPE');
 
       final fromInt1 = actionPayloadFromMap(
-          PLYPresentationActionKind.webCheckout,
-          withProvider(1)) as PLYWebCheckoutPayload;
+              PLYPresentationActionKind.webCheckout, withProvider(1))
+          as PLYWebCheckoutPayload;
       expect(fromInt1.webCheckoutProvider, 'OTHER');
 
       // Unrecognized Int (e.g. the `.none` sentinel, rawValue 2) → no crash,
