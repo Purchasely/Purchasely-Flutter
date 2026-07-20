@@ -117,26 +117,6 @@ class PLYSubscriptionOffer {
 /// platforms always report [PLYBillingPlanType.unspecified].
 enum PLYBillingPlanType { unspecified, upFront, monthly }
 
-/// Tolerantly maps the wire `billingPlanType` to [PLYBillingPlanType]. Accepts
-/// the native string form (`"up_front"` / `"monthly"`) and, defensively, the
-/// legacy Int rawValue (0/1/2). Unknown / null falls back to unspecified.
-PLYBillingPlanType plyBillingPlanTypeFromWire(dynamic raw) {
-  if (raw is int && raw >= 0 && raw < PLYBillingPlanType.values.length) {
-    return PLYBillingPlanType.values[raw];
-  }
-  if (raw is String) {
-    switch (raw) {
-      case 'up_front':
-        return PLYBillingPlanType.upFront;
-      case 'monthly':
-        return PLYBillingPlanType.monthly;
-      default:
-        return PLYBillingPlanType.unspecified;
-    }
-  }
-  return PLYBillingPlanType.unspecified;
-}
-
 extension PLYBillingPlanTypeWire on PLYBillingPlanType {
   /// Wire value sent to the native bridge, matching the iOS SDK's wire form.
   String get wire {
@@ -181,16 +161,6 @@ class PLYCommitmentInfo {
     this.totalDuration,
   });
 
-  factory PLYCommitmentInfo.fromJson(Map<dynamic, dynamic> json) =>
-      PLYCommitmentInfo(
-        billingPlanType: plyBillingPlanTypeFromWire(json['billingPlanType']),
-        billingPrice: _toDouble(json['billingPrice']),
-        billingPeriod: json['billingPeriod'] as String?,
-        totalPrice: _toDouble(json['totalPrice']),
-        totalPeriod: json['totalPeriod'] as String?,
-        totalDuration: _toInt(json['totalDuration']),
-      );
-
   @override
   String toString() => 'PLYCommitmentInfo('
       'billingPlanType: $billingPlanType, '
@@ -223,14 +193,6 @@ class PLYCommitmentProgress {
     this.commitmentPrice,
   });
 
-  factory PLYCommitmentProgress.fromJson(Map<dynamic, dynamic> json) =>
-      PLYCommitmentProgress(
-        billingPeriodNumber: _toInt(json['billingPeriodNumber']),
-        totalBillingPeriods: _toInt(json['totalBillingPeriods']),
-        commitmentExpiresDate: json['commitmentExpiresDate'] as String?,
-        commitmentPrice: _toDouble(json['commitmentPrice']),
-      );
-
   @override
   String toString() => 'PLYCommitmentProgress('
       'billingPeriodNumber: $billingPeriodNumber, '
@@ -238,6 +200,3 @@ class PLYCommitmentProgress {
       'commitmentExpiresDate: $commitmentExpiresDate, '
       'commitmentPrice: $commitmentPrice)';
 }
-
-double? _toDouble(dynamic v) => v is num ? v.toDouble() : null;
-int? _toInt(dynamic v) => v is num ? v.toInt() : null;
