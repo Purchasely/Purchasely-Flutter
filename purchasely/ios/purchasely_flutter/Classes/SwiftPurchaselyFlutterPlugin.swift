@@ -18,6 +18,23 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
     // our own registry of what was passed in so `presentationToMap` can echo
     // it back instead of hardcoding null (FLT-W-06 / REC-09).
     static var requestContentIds: [String: String] = [:]
+    // FIFO cap on the retained registries: requestIds are random per Dart
+    // build(), so without a bound they'd grow for the app's lifetime. Evicting
+    // the oldest is safe because a Dart re-display resends the full original
+    // source — an evicted request is rebuilt identically from the display args.
+    static let requestRetentionCap = 64
+    private static var requestOrder: [String] = []
+
+    static func retainRequest(_ requestId: String) {
+        requestOrder.removeAll { $0 == requestId }
+        requestOrder.append(requestId)
+        while requestOrder.count > requestRetentionCap {
+            let evicted = requestOrder.removeFirst()
+            requests.removeValue(forKey: evicted)
+            requestContentIds.removeValue(forKey: evicted)
+            loadedPresentations.removeValue(forKey: evicted)
+        }
+    }
     // invocationId -> SDK interceptor completion. Single-shot, removed on resolve.
     private static var pendingInterceptors: [String: (PLYInterceptResult) -> Void] = [:]
 
@@ -86,6 +103,13 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
                                     presentation: presentation,
                                     error: error,
                                     requestId: requestId) ?? [:]
+    }
+
+    /// Static accessor to the presentation serializer so the inline NativeView
+    /// emits the exact same `presentation` shape as the full-screen path.
+    static func presentationMap(_ presentation: PLYPresentation,
+                                requestId: String) -> [String: Any] {
+        return shared?.presentationToMap(presentation, requestId: requestId) ?? [:]
     }
 
     public static func register(with registrar: FlutterPluginRegistrar) {
@@ -341,6 +365,12 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
         if let hex = args["progressColor"] as? String, let color = UIColor.ply_from(hex: hex) {
             _ = builder.progressColor(color)
         }
+        if let displayCloseButton = args["displayCloseButton"] as? Bool {
+            _ = builder.displayCloseButton(displayCloseButton)
+        }
+        if let displayBackButton = args["displayBackButton"] as? Bool {
+            _ = builder.displayBackButton(displayBackButton)
+        }
 
         // Builder-seeded callbacks are transferred onto the loaded presentation
         // automatically by the SDK. They run on the main actor; we emit on the
@@ -371,16 +401,18 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
                 "requestId": requestId,
                 "outcome": self?.outcomeToMap(outcome, presentation: presentation, error: nil, requestId: requestId) as Any?,
             ])
-            // Full-screen dismiss: clear all per-request state so the
-            // registries don't grow unbounded and stale handles aren't
-            // addressable via close/back. Mirrors the inline NativeView cleanup.
+            // Full-screen dismiss: drop only the loaded handle (stale once
+            // dismissed). The request and its contentId stay registered so a
+            // Dart-side re-display() of the same handle reuses the original
+            // native request — and thus its source (placement/screen) — instead
+            // of being rebuilt against the default source. Mirrors Android,
+            // which keeps preparedRequests across dismissals.
             SwiftPurchaselyFlutterPlugin.loadedPresentations.removeValue(forKey: requestId)
-            SwiftPurchaselyFlutterPlugin.requests.removeValue(forKey: requestId)
-            SwiftPurchaselyFlutterPlugin.requestContentIds.removeValue(forKey: requestId)
         }
 
         let request = builder.build()
         SwiftPurchaselyFlutterPlugin.requests[requestId] = request
+        SwiftPurchaselyFlutterPlugin.retainRequest(requestId)
         return request
     }
 
@@ -687,13 +719,22 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
     }
 
     private static func interceptorInfoToMap(_ info: PLYInterceptorInfo) -> [String: Any?] {
-        // Mirror Android's shape — only the keys consumed by the Dart façade.
+        // Mirror Android's shape, which serializes the full presentation map —
+        // the Dart façade parses it with the tolerant PLYPresentation.fromMap,
+        // so attribution fields (audience/AB test/campaign) survive the bridge.
         return [
             "contentId": info.contentId,
             "presentation": info.presentation.map { p in
                 [
                     "screenId": p.screenId,
                     "placementId": p.placementId as Any,
+                    "audienceId": p.audienceId as Any,
+                    "abTestId": p.abTestId as Any,
+                    "abTestVariantId": p.abTestVariantId as Any,
+                    "campaignId": p.campaignId as Any,
+                    "flowId": p.flowId as Any,
+                    "language": p.language,
+                    "type": p.type.rawValue,
                 ]
             } as Any?,
         ]
@@ -708,6 +749,17 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             map["plan"] = [
                 "vendorId": plan.vendorId as Any,
                 "productId": plan.appleProductId as Any?,
+            ]
+        }
+        // Promotional offer attached to the tapped plan (`offer` on the wire,
+        // matching Android's shape). iOS has no `subscriptionOffer` equivalent —
+        // that payload field stays Android-only (Google Play base-plan /
+        // offer-token concepts). PLYPromoOffer.publicId is internal on iOS and
+        // intentionally omitted.
+        if let offer = params.promoOffer {
+            map["offer"] = [
+                "vendorId": offer.vendorId,
+                "storeOfferId": offer.storeOfferId,
             ]
         }
         if let presentationId = params.presentation { map["presentationId"] = presentationId }
@@ -768,6 +820,16 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
         }
     }
 
+    /// Parses the Dart `{ "light": "#RRGGBB", "dark": "#RRGGBB" }` map into a
+    /// native `PLYColors`. Returns `nil` when absent so the SDK default applies.
+    private static func parseColors(_ raw: Any?) -> PLYColors? {
+        guard let map = raw as? [String: Any] else { return nil }
+        let light = (map["light"] as? String).flatMap { UIColor.ply_from(hex: $0) }
+        let dark = (map["dark"] as? String).flatMap { UIColor.ply_from(hex: $0) }
+        if light == nil && dark == nil { return nil }
+        return PLYColors(lightColor: light, darkColor: dark)
+    }
+
     private static func parseTransition(_ map: [String: Any]?) -> PLYTransition? {
         guard let map = map, let type = map["type"] as? String else { return nil }
         let dismissible = map["dismissible"] as? Bool ?? true
@@ -775,12 +837,24 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
         // drives drawer + popin). `nil` means "hug" — size to content.
         let width = parseDimension(map["width"])
         let height = parseDimension(map["height"])
+        // drawer/popin background override; built via the designated initializer
+        // because the `.drawer`/`.popin` factories don't take colors.
+        let colors = parseColors(map["backgroundColors"])
         switch type {
         case "fullScreen":    return .fullScreen
         case "push":          return .push
-        case "modal":         return .modal
-        case "drawer":        return .drawer(height: height, dismissible: dismissible)
-        case "popin":         return .popin(width: width, height: height, dismissible: dismissible)
+        case "modal":         return .modal(dismissible: dismissible)
+        case "drawer":
+            return PLYTransition(type: .drawer,
+                                 height: height,
+                                 backgroundColors: colors,
+                                 dismissible: dismissible)
+        case "popin":
+            return PLYTransition(type: .popin,
+                                 height: height,
+                                 width: width,
+                                 backgroundColors: colors,
+                                 dismissible: dismissible)
         case "inlinePaywall": return .inlinePaywall
         default: return nil
         }

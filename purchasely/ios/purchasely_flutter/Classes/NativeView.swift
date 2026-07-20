@@ -60,6 +60,20 @@ class NativeView: NSObject, FlutterPlatformView {
                 rootVC.addChild(controller)
                 controller.didMove(toParent: rootVC)
             }
+
+            // The native SDK fires no `onPresented` for an embedded controller —
+            // synthesise it once the view is mounted so the Dart-side
+            // request/presentation `onPresented` callback fires for the inline
+            // path too (parity with the full-screen path).
+            if let requestId = _requestId,
+               let presentation = SwiftPurchaselyFlutterPlugin.loadedPresentations[requestId] {
+                SwiftPurchaselyFlutterPlugin.emitPresentationEvent([
+                    "event": "onPresented",
+                    "requestId": requestId,
+                    "presentation": SwiftPurchaselyFlutterPlugin.presentationMap(
+                        presentation, requestId: requestId),
+                ])
+            }
         }
 
         UIDevice.current.beginGeneratingDeviceOrientationNotifications()
@@ -109,8 +123,10 @@ class NativeView: NSObject, FlutterPlatformView {
         return UIApplication.shared.delegate?.window??.rootViewController
     }
 
-    /// Emits the `onDismissed` envelope once, mirroring the full-screen path,
-    /// and clears the request's static state so a re-display re-registers.
+    /// Emits the `onDismissed` envelope once, mirroring the full-screen path.
+    /// Only the loaded handle is dropped: the request and its contentId stay
+    /// registered so a Dart-side re-display() of the same handle keeps its
+    /// original source (placement/screen) — same policy as the full-screen path.
     private func emitDismissed(requestId: String, outcome: PLYPresentationOutcome) {
         guard !_didEmitDismissed else { return }
         _didEmitDismissed = true
@@ -123,8 +139,6 @@ class NativeView: NSObject, FlutterPlatformView {
             ) as Any?,
         ])
         SwiftPurchaselyFlutterPlugin.loadedPresentations.removeValue(forKey: requestId)
-        SwiftPurchaselyFlutterPlugin.requests.removeValue(forKey: requestId)
-        SwiftPurchaselyFlutterPlugin.requestContentIds.removeValue(forKey: requestId)
     }
 
     private func cleanupController() {

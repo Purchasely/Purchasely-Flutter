@@ -31,6 +31,7 @@ class PurchaselyBuilder {
   bool? _allowDeeplink;
   bool _allowCampaigns;
   String? _deeplink;
+  bool? _automaticDeeplinkHandling;
   // Android only
   List<PLYStore> _stores;
   // iOS only
@@ -96,6 +97,16 @@ class PurchaselyBuilder {
     return this;
   }
 
+  /// Android-only: whether the SDK automatically intercepts Purchasely
+  /// deeplinks (`true` by default in v6). Disable it to fully control routing
+  /// yourself (e.g. `singleTask` activities that re-dispatch intents manually)
+  /// and call [Purchasely.handleDeeplink] where appropriate. iOS never
+  /// auto-intercepts, so this modifier is a no-op there.
+  PurchaselyBuilder automaticDeeplinkHandling(bool enabled) {
+    _automaticDeeplinkHandling = enabled;
+    return this;
+  }
+
   /// Android-only: stores the SDK is allowed to use (priority order). On iOS
   /// this modifier is a no-op.
   PurchaselyBuilder stores(List<PLYStore> stores) {
@@ -126,6 +137,8 @@ class PurchaselyBuilder {
         'allowDeeplink': _allowDeeplink,
         'allowCampaigns': _allowCampaigns,
         if (_deeplink != null) 'deeplink': _deeplink,
+        if (_automaticDeeplinkHandling != null)
+          'automaticDeeplinkHandling': _automaticDeeplinkHandling,
         'stores': _stores.map((s) => s.name).toList(),
         'storekitVersion': _storekitVersion.name,
       },

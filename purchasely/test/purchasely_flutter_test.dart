@@ -2058,6 +2058,7 @@ void main() {
           .allowDeeplink(true)
           .allowCampaigns(false)
           .handleDeeplink('app://ply/presentations/onboarding')
+          .automaticDeeplinkHandling(false)
           .stores([PLYStore.google, PLYStore.huawei, PLYStore.amazon])
           .storekitVersion(PLYStorekitVersion.storeKit1)
           .start();
@@ -2070,8 +2071,17 @@ void main() {
       expect(startCall.arguments['allowCampaigns'], false);
       expect(startCall.arguments['deeplink'],
           'app://ply/presentations/onboarding');
+      expect(startCall.arguments['automaticDeeplinkHandling'], false);
       expect(startCall.arguments['stores'], ['google', 'huawei', 'amazon']);
       expect(startCall.arguments['storekitVersion'], 'storeKit1');
+    });
+
+    test('start omits automaticDeeplinkHandling unless set', () async {
+      await Purchasely.apiKey('test-key').start();
+
+      final startCall = methodCalls.firstWhere((c) => c.method == 'start');
+      expect(
+          startCall.arguments.containsKey('automaticDeeplinkHandling'), false);
     });
 
     test('handleDeeplink(null) does not forward a cold-start deeplink',
