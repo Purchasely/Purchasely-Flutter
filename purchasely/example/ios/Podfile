@@ -37,8 +37,13 @@ target 'Runner' do
   # development pod needed.
   flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
 
+  # RunnerTests runs as a HOSTLESS logic-test bundle (no TEST_HOST): the full
+  # Flutter example app crashes on launch on headless CI simulators, and these
+  # tests only need the Purchasely SDK + plugin types, not a running app. So the
+  # test bundle must LINK/EMBED the pods itself (`:complete`), not just inherit
+  # search paths from a host it no longer has.
   target 'RunnerTests' do
-    inherit! :search_paths
+    inherit! :complete
   end
 
 end

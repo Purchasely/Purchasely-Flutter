@@ -178,6 +178,10 @@ jobs:
   ios-unit-tests:
     name: iOS Unit Tests
     runs-on: macos-latest
+    # Safety net: the RunnerTests host launches the Flutter engine; if it ever
+    # stalls waiting on a VM-service connection, fail fast instead of burning the
+    # job's full timeout.
+    timeout-minutes: 20
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
@@ -205,16 +209,37 @@ jobs:
         working-directory: purchasely/example/ios
         run: pod install --repo-update
 
+      - name: Boot iOS Simulator
+        id: boot-sim
+        run: |
+          # macos-latest ships no "iPhone 15,OS=latest" — resolve dynamically.
+          UDID=$(xcrun simctl list devices available | \
+            grep -E "iPhone (17|16|15|14)" | head -1 | \
+            grep -oE '[0-9A-F-]{36}')
+          if [ -z "$UDID" ]; then
+            echo "No iPhone simulator found" >&2
+            xcrun simctl list devices available >&2
+            exit 1
+          fi
+          echo "udid=$UDID" >> "$GITHUB_OUTPUT"
+          xcrun simctl boot "$UDID" || true
+          xcrun simctl bootstatus "$UDID" -b
+
       - name: Run iOS unit tests
         working-directory: purchasely/example/ios
         run: |
+          # RunnerTests is a HOSTLESS logic-test bundle (no TEST_HOST — see the
+          # Podfile/pbxproj), so `test` runs the XCTest cases WITHOUT launching
+          # the full Flutter example app, which SIGSEGVs on headless CI sims.
+          # `set -o pipefail` + no `|| true`: a real failure gates the job.
+          set -o pipefail
           xcodebuild test \
             -workspace Runner.xcworkspace \
             -scheme Runner \
-            -destination 'platform=iOS Simulator,name=iPhone 15,OS=latest' \
+            -destination "id=${{ steps.boot-sim.outputs.udid }}" \
             -only-testing:RunnerTests \
             -resultBundlePath TestResults.xcresult \
-            | xcpretty --color --report junit --output test-results.xml || true
+            | xcpretty --color --report junit --output test-results.xml
 
       - name: Upload test results
         uses: actions/upload-artifact@v7

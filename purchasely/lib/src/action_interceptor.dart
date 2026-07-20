@@ -245,7 +245,8 @@ PLYActionPayload? actionPayloadFromMap(
       final url = parameters['url'] as String?;
       final clientReferenceId = parameters['clientReferenceId'] as String?;
       final queryParameterKey = parameters['queryParameterKey'] as String?;
-      final provider = parameters['webCheckoutProvider'] as String?;
+      final provider =
+          _webCheckoutProviderFromWire(parameters['webCheckoutProvider']);
       if (url == null ||
           clientReferenceId == null ||
           queryParameterKey == null ||
@@ -263,6 +264,27 @@ PLYActionPayload? actionPayloadFromMap(
     case PLYPresentationActionKind.promoCode:
       return _EmptyPayload(kind);
   }
+}
+
+/// Tolerantly parses the `webCheckoutProvider` wire value. The contract is a
+/// String (Android's Kotlin enum `.name`; iOS maps its Swift enum to the same
+/// case names) but this also accepts the raw Int `rawValue` iOS used to send
+/// before that fix (`PLYWebCheckoutProvider`: stripe=0, other=1, none=2), so a
+/// native regression degrades gracefully instead of throwing a type-cast
+/// error in the listener (FLT-W-08 / REC-01).
+String? _webCheckoutProviderFromWire(Object? value) {
+  if (value is String) return value;
+  if (value is int) {
+    switch (value) {
+      case 0:
+        return 'STRIPE';
+      case 1:
+        return 'OTHER';
+      default:
+        return null;
+    }
+  }
+  return null;
 }
 
 /// Signature of an action interceptor handler. May return synchronously or

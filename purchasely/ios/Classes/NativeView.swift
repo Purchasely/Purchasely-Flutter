@@ -20,6 +20,17 @@ class NativeView: NSObject, FlutterPlatformView {
         _containerView = NativeContainerView(frame: frame)
         _requestId = (args as? [String: Any])?["requestId"] as? String
         super.init()
+
+        // Fallback: if the loaded presentation's `onDismissed` callback (set
+        // below) doesn't fire for the embedded controller, synthesise the
+        // dismissal from the `.presentationClosed` SDK event instead. Uses the
+        // ObjC delegate API (`setEventDelegate`/`PLYEventDelegate`), which is a
+        // separate slot from the closure-based `setEventCallback` that
+        // `SwiftEventHandler` uses to forward EVERY Purchasely event to Dart.
+        // Registering a callback here would clobber that single global closure
+        // slot and silently stop all events flowing to Dart for the view's
+        // lifetime (FLT-W-12); the delegate slot doesn't conflict and is
+        // released via `removeEventDelegate()` on `deinit`.
         Purchasely.setEventDelegate(self)
 
         // The inline native view is built from a Presentation that was already
@@ -113,6 +124,7 @@ class NativeView: NSObject, FlutterPlatformView {
         ])
         SwiftPurchaselyFlutterPlugin.loadedPresentations.removeValue(forKey: requestId)
         SwiftPurchaselyFlutterPlugin.requests.removeValue(forKey: requestId)
+        SwiftPurchaselyFlutterPlugin.requestContentIds.removeValue(forKey: requestId)
     }
 
     private func cleanupController() {
@@ -127,10 +139,35 @@ class NativeView: NSObject, FlutterPlatformView {
         _controller = nil
     }
 
+    /// Fallback handler for the `.presentationClosed` SDK event — see the
+    /// `setEventDelegate` registration in `init`. Idempotent via
+    /// `_didEmitDismissed`.
+    private func handlePresentationClosed() {
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            if let requestId = self._requestId, !self._didEmitDismissed {
+                self.emitDismissed(requestId: requestId, outcome: PLYPresentationOutcome())
+            }
+            self.cleanupController()
+        }
+    }
+
     deinit {
         NotificationCenter.default.removeObserver(self)
         UIDevice.current.endGeneratingDeviceOrientationNotifications()
+        // Clean unregistration (FLT-W-12): release the event delegate so the
+        // SDK stops holding this soon-to-be-deallocated view. This does NOT
+        // touch `SwiftEventHandler`'s independent `setEventCallback` stream, so
+        // event forwarding to Dart keeps working after the inline view is gone.
+        Purchasely.removeEventDelegate()
         cleanupController()
+    }
+}
+
+extension NativeView: PLYEventDelegate {
+    func eventTriggered(_ event: PLYEvent, properties: [String: Any]?) {
+        guard event == .presentationClosed else { return }
+        handlePresentationClosed()
     }
 }
 
@@ -199,25 +236,5 @@ private class NoAnimationTransitionCoordinator: NSObject, UIViewControllerTransi
 
     func notifyWhenInteractionChanges(_ handler: @escaping (any UIViewControllerTransitionCoordinatorContext) -> Void) {
         handler(self)
-    }
-}
-
-extension NativeView: PLYEventDelegate {
-    func eventTriggered(_ event: PLYEvent, properties: [String : Any]?) {
-        if event == .presentationClosed {
-            DispatchQueue.main.async { [weak self] in
-                guard let self = self else { return }
-                // Fallback: if the loaded presentation's `onDismissed` callback did
-                // not fire for the embedded controller, synthesise the dismissal so
-                // the Dart `onDismissed` still resolves. Idempotent via the guard.
-                if let requestId = self._requestId, !self._didEmitDismissed {
-                    self.emitDismissed(
-                        requestId: requestId,
-                        outcome: PLYPresentationOutcome()
-                    )
-                }
-                self.cleanupController()
-            }
-        }
     }
 }

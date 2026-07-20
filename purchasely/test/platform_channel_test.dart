@@ -84,6 +84,15 @@ void main() {
         await Purchasely.userLogout();
 
         expect(methodCalls.first.method, 'userLogout');
+        // PAR-30: defaults to true, aligned with the native default.
+        expect(methodCalls.first.arguments['clearUserAttributes'], true);
+      });
+
+      test('userLogout(clearUserAttributes: false) forwards the override',
+          () async {
+        await Purchasely.userLogout(clearUserAttributes: false);
+
+        expect(methodCalls.first.arguments['clearUserAttributes'], false);
       });
 
       test('isAnonymous returns boolean from native', () async {
@@ -154,16 +163,34 @@ void main() {
         final subs = await Purchasely.userSubscriptions();
 
         expect(methodCalls.first.method, 'userSubscriptions');
+        // PAR-29: defaults to false, aligned with the native default.
+        expect(methodCalls.first.arguments['invalidateCache'], false);
         expect(subs, isNotEmpty);
         expect(subs.first.purchaseToken, 'token-123');
+      });
+
+      test('userSubscriptions(invalidateCache: true) forwards the override',
+          () async {
+        await Purchasely.userSubscriptions(invalidateCache: true);
+
+        expect(methodCalls.first.arguments['invalidateCache'], true);
       });
 
       test('userSubscriptionsHistory returns history', () async {
         final history = await Purchasely.userSubscriptionsHistory();
 
         expect(methodCalls.first.method, 'userSubscriptionsHistory');
+        expect(methodCalls.first.arguments['invalidateCache'], false);
         expect(history, isNotEmpty);
         expect(history.first.cumulatedRevenuesInUSD, 29.97);
+      });
+
+      test(
+          'userSubscriptionsHistory(invalidateCache: true) forwards the '
+          'override', () async {
+        await Purchasely.userSubscriptionsHistory(invalidateCache: true);
+
+        expect(methodCalls.first.arguments['invalidateCache'], true);
       });
 
       test('userDidConsumeSubscriptionContent sends method call', () async {
@@ -307,6 +334,30 @@ void main() {
         Purchasely.clearBuiltInAttributes();
 
         expect(methodCalls.first.method, 'clearBuiltInAttributes');
+      });
+
+      test('getBuiltInAttribute returns value from native (PAR-07)', () async {
+        final value = await Purchasely.getBuiltInAttribute('install_date');
+
+        expect(methodCalls.first.method, 'getBuiltInAttribute');
+        expect(methodCalls.first.arguments['key'], 'install_date');
+        expect(value, 'builtin-value');
+      });
+
+      test('getBuiltInAttributes returns map from native (PAR-07)', () async {
+        final attrs = await Purchasely.getBuiltInAttributes();
+
+        expect(methodCalls.first.method, 'getBuiltInAttributes');
+        expect(attrs, isA<Map>());
+        expect(attrs['builtin_attr'], 'builtin-value');
+      });
+    });
+
+    group('Presentation Screens', () {
+      test('closeAllScreens sends method call to native (PAR-19)', () async {
+        await Purchasely.closeAllScreens();
+
+        expect(methodCalls.first.method, 'closeAllScreens');
       });
     });
 
@@ -519,6 +570,14 @@ void main() {
             PLYAttribute.batchCustomUserId, 'batch-custom-user');
 
         expect(methodCalls.first.arguments['attribute'], 20);
+      });
+
+      test('setAttribute with oneSignalUserId (REC-11 / ENM-03)', () async {
+        await Purchasely.setAttribute(
+            PLYAttribute.oneSignalUserId, 'onesignal-user');
+
+        expect(methodCalls.first.arguments['attribute'], 21);
+        expect(methodCalls.first.arguments['value'], 'onesignal-user');
       });
     });
 
@@ -774,6 +833,12 @@ dynamic _handleMethodCall(MethodCall methodCall) {
     case 'clearUserAttribute':
     case 'clearUserAttributes':
     case 'clearBuiltInAttributes':
+      return null;
+    case 'getBuiltInAttribute':
+      return 'builtin-value';
+    case 'getBuiltInAttributes':
+      return {'builtin_attr': 'builtin-value'};
+    case 'closeAllScreens':
       return null;
     case 'setAttribute':
       return null;

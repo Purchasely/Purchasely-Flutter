@@ -8,6 +8,9 @@
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:purchasely_flutter/purchasely_flutter.dart';
+// PurchaselyBridge (ensureInstalled/debugReset) is a test-only entry point —
+// removed from the public barrel export (PAR-13) — import src/ directly.
+import 'package:purchasely_flutter/src/bridge.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -624,6 +627,115 @@ void main() {
       final registerCall =
           calls.firstWhere((c) => c.method == 'registerInterceptor');
       expect((registerCall.arguments as Map)['kind'], 'navigate');
+    });
+
+    test('onPresented event fires the builder callback', () async {
+      PLYPresentation? presented;
+      PLYPresentationError? capturedErr;
+      final request =
+          PLYPresentationBuilder.placement('home').onPresented((p, e) {
+        presented = p;
+        capturedErr = e;
+      }).build();
+
+      // ignore: unawaited_futures
+      request.preload();
+      await Future<void>.delayed(Duration.zero);
+
+      await emitEvent(<String, Object?>{
+        'event': 'onPresented',
+        'requestId': request.requestId,
+        'presentation': <String, Object?>{
+          'screenId': 'home_screen',
+          'placementId': 'home',
+          'height': 800,
+          'type': 0,
+          'plans': <Map<String, Object?>>[],
+        },
+      });
+
+      expect(presented, isNotNull);
+      expect(presented!.screenId, 'home_screen');
+      expect(capturedErr, isNull);
+    });
+
+    test(
+        'onLoaded failure (no presentation) falls back to onPresented(null, error)',
+        () async {
+      PLYPresentation? loaded;
+      PLYPresentation? presented;
+      PLYPresentationError? presentedErr;
+      final request = PLYPresentationBuilder.placement('home')
+          .onLoaded((p, e) => loaded = p)
+          .onPresented((p, e) {
+        presented = p;
+        presentedErr = e;
+      }).build();
+
+      // ignore: unawaited_futures
+      request.preload();
+      await Future<void>.delayed(Duration.zero);
+
+      await emitEvent(<String, Object?>{
+        'event': 'onLoaded',
+        'requestId': request.requestId,
+        'error': <String, Object?>{'code': 'NOT_FOUND', 'message': 'no screen'},
+      });
+
+      expect(loaded, isNull,
+          reason: 'onLoaded itself must not fire without a presentation');
+      expect(presented, isNull);
+      expect(presentedErr, isNotNull);
+      expect(presentedErr!.code, 'NOT_FOUND');
+    });
+
+    test('close() invokes the native verb with the requestId', () async {
+      final request = PLYPresentationBuilder.placement('home').build();
+      final presentation = await request.preload();
+      calls.clear();
+
+      await presentation.close();
+
+      final closeCall = calls.firstWhere((c) => c.method == 'close');
+      expect((closeCall.arguments as Map)['requestId'], request.requestId);
+    });
+
+    test('back() invokes the native verb with the requestId', () async {
+      final request = PLYPresentationBuilder.placement('home').build();
+      final presentation = await request.preload();
+      calls.clear();
+
+      await presentation.back();
+
+      final backCall = calls.firstWhere((c) => c.method == 'back');
+      expect((backCall.arguments as Map)['requestId'], request.requestId);
+    });
+
+    test(
+        'FuturePresentationDisplay sugar: preload().display() chains and '
+        'resolves the outcome', () async {
+      final request = PLYPresentationBuilder.placement('home').build();
+
+      final futureOutcome =
+          request.preload().display(const PLYTransition.modal());
+      await Future<void>.delayed(Duration.zero);
+      await Future<void>.delayed(Duration.zero);
+
+      expect(
+          calls.map((c) => c.method),
+          containsAllInOrder(<String>[
+            'preload',
+            'display',
+          ]));
+
+      await emitEvent(<String, Object?>{
+        'event': 'onDismissed',
+        'requestId': request.requestId,
+        'outcome': <String, Object?>{'purchaseResult': 'purchased'},
+      });
+
+      final outcome = await futureOutcome;
+      expect(outcome.purchaseResult, PLYPurchaseResult.purchased);
     });
 
     test('start() forwards the exact wire contract the native side reads',
