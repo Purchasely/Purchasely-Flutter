@@ -27,6 +27,14 @@
 //    bash .../swipe_dismiss_ios.sh <sim-udid> 2) &
 //   flutter test integration_test/modal_dismissible_ios_test.dart -d <sim-udid>
 
+// EVIDENCE COUPLING (CI arbitration note):
+// Test 1 (dismissible:false ignores swipe) is a meaningful M1 regression guard
+// ONLY in an environment where Test 2's premise holds (a swipe DOES dismiss a
+// dismissible modal). In an environment where the swipe gesture is impotent
+// (e.g. local iOS 26.5 sim, where Test 2 fails 3/3), Test 1 passes vacuously —
+// with or without the M1 fix. Interpret Test 1 PASS + Test 2 FAIL as
+// "no conclusion on M1" until Test 2 is green on the same run.
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
