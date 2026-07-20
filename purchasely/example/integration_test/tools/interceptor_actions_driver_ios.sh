@@ -23,7 +23,7 @@ echo "[interceptor_actions_driver_ios] tap 1/2 (S5/failed)…"
 bash "$HERE/tap_label_ios.sh" "$UDID" "Login"
 
 if [ -n "${SUITE_LOG:-}" ]; then
-  echo "[interceptor_actions_driver_ios] waiting for S5 callback-order marker in $SUITE_LOG…"
+  echo "[interceptor_actions_driver_ios] waiting for S5 callback-order marker in ${SUITE_LOG}…"
   found=0
   for _ in $(seq 1 60); do
     if [ -f "$SUITE_LOG" ] && grep -q '\[S5/failed\] callback order:' "$SUITE_LOG"; then
