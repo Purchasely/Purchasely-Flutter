@@ -9,7 +9,7 @@ buildscript {
     }
 
     dependencies {
-        classpath 'com.android.tools.build:gradle:8.13.2'
+        classpath 'com.android.tools.build:gradle:9.0.1'
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
     }
 }
@@ -22,27 +22,27 @@ rootProject.allprojects {
 }
 
 apply plugin: 'com.android.library'
+// AGP 9 defaults to built-in Kotlin, which drops src/main/kotlin from library
+// modules and can't be configured via the kotlin {} DSL here. Opt out with
+// android.builtInKotlin=false (consumer gradle.properties) and keep the mature
+// KGP path so the plugin still builds on both AGP 8 and AGP 9.
 apply plugin: 'kotlin-android'
 
 android {
     namespace 'io.purchasely.purchasely_flutter'
-    compileSdkVersion 36
+    compileSdk = 36
 
+    // AGP 9's built-in Kotlin defaults the Kotlin jvmTarget to 17 and no longer
+    // derives it from targetCompatibility, so Java must target 17 too — otherwise
+    // the build fails with "Inconsistent JVM-target between Java and Kotlin tasks".
+    // AGP 9 already requires JDK 17+, so this raises no consumer floor.
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_11
-        targetCompatibility JavaVersion.VERSION_11
-    }
-
-    kotlinOptions {
-        jvmTarget = '11'
-    }
-
-    sourceSets {
-        main.java.srcDirs += 'src/main/kotlin'
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
     }
 
     defaultConfig {
-        minSdkVersion 23
+        minSdk = 23
     }
 
     testOptions {
@@ -50,6 +50,12 @@ android {
             includeAndroidResources = true
             returnDefaultValues = true
         }
+    }
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
     }
 }
 

@@ -24,16 +24,12 @@ if (flutterVersionName == null) {
 
 android {
     namespace "io.purchasely.sample"
-    compileSdkVersion 36
+    compileSdk = 36
     ndkVersion "28.2.13676358"
 
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
-    }
-
-    kotlinOptions {
-        jvmTarget = '1.8'
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
     }
 
     sourceSets {
@@ -45,8 +41,8 @@ android {
         applicationId "com.purchasely.demo"
         // The purchasely_flutter plugin requires minSdk 23; flutter.minSdkVersion
         // varies by Flutter version (21 on 3.24, 24 on 3.41+), so pin explicitly.
-        minSdkVersion 23
-        targetSdkVersion 34
+        minSdk = 23
+        targetSdk = 34
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
     }
@@ -57,6 +53,24 @@ android {
             // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig signingConfigs.debug
         }
+    }
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
+    }
+}
+
+// AGP 9 requires a unique namespace per library. integration_test pulls the legacy
+// espresso 3.2.0 artifacts (espresso-core:3.2+), where espresso-core and
+// espresso-idling-resource both declare `androidx.test.espresso`, which AGP 9 rejects
+// during manifest merge. Force a modern espresso whose modules use distinct namespaces.
+// See https://github.com/flutter/flutter/issues/56591
+configurations.configureEach {
+    resolutionStrategy {
+        force 'androidx.test.espresso:espresso-core:3.6.1'
+        force 'androidx.test.espresso:espresso-idling-resource:3.6.1'
     }
 }
 
