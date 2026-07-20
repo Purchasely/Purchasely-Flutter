@@ -908,11 +908,14 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
         val width = parseDimension(map["width"])
         val height = parseDimension(map["height"])
         // drawer/popin background override (`{ light, dark }` hex strings).
+        // Only materialize Colors when at least one value is present — an
+        // empty map must not override native defaults (mirrors iOS, whose
+        // parseColors returns nil when both are absent).
         val backgroundColors = (map["backgroundColors"] as? Map<*, *>)?.let { colors ->
-            Colors(
-                light = colors["light"] as? String,
-                dark = colors["dark"] as? String,
-            )
+            val light = (colors["light"] as? String)?.takeIf { it.isNotBlank() }
+            val dark = (colors["dark"] as? String)?.takeIf { it.isNotBlank() }
+            if (light == null && dark == null) null
+            else Colors(light = light, dark = dark)
         }
         return PLYTransition(
             type = type,
@@ -1454,8 +1457,19 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
 
         // Prepared/loaded presentations keyed by Dart requestId. They are retained after
         // dismissal so a Dart Presentation handle can be displayed again and so the inline
-        // platform view can resolve a preloaded requestId. There is no native dispose API yet.
-        val preparedRequests = ConcurrentHashMap<String, PLYPresentationBase.Prepared>()
+        // platform view can resolve a preloaded requestId. There is no native dispose API,
+        // so the prepared registry is FIFO-capped (mirrors iOS): evicting the eldest is
+        // safe because a Dart re-display resends the full original source — an evicted
+        // request is rebuilt identically from the display args.
+        private const val REQUEST_RETENTION_CAP = 64
+        val preparedRequests: MutableMap<String, PLYPresentationBase.Prepared> =
+            Collections.synchronizedMap(
+                object : LinkedHashMap<String, PLYPresentationBase.Prepared>() {
+                    override fun removeEldestEntry(
+                        eldest: MutableMap.MutableEntry<String, PLYPresentationBase.Prepared>?
+                    ) = size > REQUEST_RETENTION_CAP
+                }
+            )
         val loadedPresentations = ConcurrentHashMap<String, PLYPresentationBase.Loaded>()
         val displayCallbacks = ConcurrentHashMap<String, (PLYPresentationOutcome) -> Unit>()
 

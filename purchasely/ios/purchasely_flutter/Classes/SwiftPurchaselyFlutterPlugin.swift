@@ -18,6 +18,23 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
     // our own registry of what was passed in so `presentationToMap` can echo
     // it back instead of hardcoding null (FLT-W-06 / REC-09).
     static var requestContentIds: [String: String] = [:]
+    // FIFO cap on the retained registries: requestIds are random per Dart
+    // build(), so without a bound they'd grow for the app's lifetime. Evicting
+    // the oldest is safe because a Dart re-display resends the full original
+    // source — an evicted request is rebuilt identically from the display args.
+    static let requestRetentionCap = 64
+    private static var requestOrder: [String] = []
+
+    static func retainRequest(_ requestId: String) {
+        requestOrder.removeAll { $0 == requestId }
+        requestOrder.append(requestId)
+        while requestOrder.count > requestRetentionCap {
+            let evicted = requestOrder.removeFirst()
+            requests.removeValue(forKey: evicted)
+            requestContentIds.removeValue(forKey: evicted)
+            loadedPresentations.removeValue(forKey: evicted)
+        }
+    }
     // invocationId -> SDK interceptor completion. Single-shot, removed on resolve.
     private static var pendingInterceptors: [String: (PLYInterceptResult) -> Void] = [:]
 
@@ -395,6 +412,7 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
 
         let request = builder.build()
         SwiftPurchaselyFlutterPlugin.requests[requestId] = request
+        SwiftPurchaselyFlutterPlugin.retainRequest(requestId)
         return request
     }
 

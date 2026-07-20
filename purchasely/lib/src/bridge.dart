@@ -99,6 +99,14 @@ class PurchaselyBridge {
   final Map<String, PLYActionInterceptorHandler> _interceptors =
       <String, PLYActionInterceptorHandler>{};
 
+  /// Originating request `source` maps keyed by requestId, retained across
+  /// dismissals so a handle-based re-display resends the ORIGINAL source.
+  /// Inferring the source from the loaded presentation would narrow a dynamic
+  /// default source to whatever screen/placement it happened to resolve to,
+  /// bypassing updated targeting on the rebuild path.
+  final Map<String, Map<String, Object?>> _originSources =
+      <String, Map<String, Object?>>{};
+
   /// Global dismiss handler for SDK-owned presentations (campaigns,
   /// deeplinks, promoted in-app purchases).
   void Function(PLYPresentationOutcome outcome)?
@@ -122,6 +130,7 @@ class PurchaselyBridge {
     _eventSub = null;
     _entries.clear();
     _interceptors.clear();
+    _originSources.clear();
     _defaultPresentationDismissHandler = null;
   }
 
@@ -204,9 +213,10 @@ class PurchaselyBridge {
           'requestId': presentation.requestId,
           // The native side may have to rebuild the request from these args
           // (e.g. a retry after a failed display dropped the native request):
-          // resend the source so a rebuild targets the original
-          // placement/screen instead of the default source.
-          'source': _sourceMapForPresentation(presentation),
+          // resend the ORIGINAL source — falling back to inference from the
+          // handle only when the bridge was re-created (e.g. hot restart).
+          'source': _originSources[presentation.requestId] ??
+              _sourceMapForPresentation(presentation),
           if (presentation.contentId != null)
             'contentId': presentation.contentId,
           if (transition != null) 'transition': transition.toMap(),
@@ -443,9 +453,12 @@ class PurchaselyBridge {
     return Map<String, Object?>.from(request.toMap());
   }
 
-  /// Reconstructs the request `source` map from a loaded presentation handle:
-  /// a placement-sourced presentation carries its placementId; a screen-sourced
-  /// one only its screenId.
+  /// Degraded fallback when the originating source is unknown (bridge
+  /// re-created, e.g. hot restart): infers a source from the loaded
+  /// presentation handle. A placement-sourced presentation carries its
+  /// placementId; a screen-sourced one only its screenId. Note this can pin a
+  /// default-sourced presentation to its resolved screen — the retained
+  /// [_originSources] entry is always preferred.
   Map<String, Object?> _sourceMapForPresentation(PLYPresentation p) {
     final placementId = p.placementId;
     if (placementId != null && placementId.isNotEmpty) {
@@ -459,6 +472,7 @@ class PurchaselyBridge {
   }
 
   void _registerRequest(PLYPresentationRequest request) {
+    _originSources[request.requestId] = request.source.toMap();
     _entries.putIfAbsent(
       request.requestId,
       () => _RequestEntry(request),

@@ -509,6 +509,37 @@ void main() {
       await outcome;
     });
 
+    test(
+        're-display() preserves a dynamic default source (not the resolved '
+        'screen)', () async {
+      // Regression (PR #136 review, P2): a presentation built from
+      // defaultSource() resolves to a concrete screen/placement, but a
+      // re-display must resend the ORIGINAL default source — pinning the
+      // resolved screen would bypass updated targeting on a native rebuild.
+      final request = PLYPresentationBuilder.defaultSource().build();
+      final presentation = await request.preload();
+      // The mocked preload response carries a resolved screenId, which the
+      // fallback inference would otherwise pick up.
+      expect(presentation.screenId, isNotNull);
+      calls.clear();
+
+      // ignore: unawaited_futures
+      final outcome = presentation.display(const PLYTransition.modal());
+      await Future<void>.delayed(Duration.zero);
+
+      final displayCall = calls.firstWhere((c) => c.method == 'display');
+      final args = displayCall.arguments as Map;
+      expect((args['source'] as Map)['kind'], 'defaultSource');
+      expect((args['source'] as Map).containsKey('id'), false);
+
+      await emitEvent(<String, Object?>{
+        'event': 'onDismissed',
+        'requestId': presentation.requestId,
+        'outcome': <String, Object?>{'purchaseResult': 'cancelled'},
+      });
+      await outcome;
+    });
+
     test('onCloseRequested fires the builder callback', () async {
       var fired = false;
       final request =
