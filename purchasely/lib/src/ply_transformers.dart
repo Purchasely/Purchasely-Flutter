@@ -34,7 +34,24 @@ PLYPlan? plyPlanFromMap(Map<dynamic, dynamic>? plan) {
     offerDuration,
     offerPeriod,
     plan['basePlanId'],
-  );
+  )..commitmentInfo = plyCommitmentInfoFromMap(plan['commitmentInfo']);
+}
+
+/// Parses the Apple commitment installment array (iOS 26.4+). Returns an empty
+/// list when absent (Android and other platforms never send it).
+List<PLYCommitmentInfo> plyCommitmentInfoFromMap(dynamic raw) {
+  if (raw is! List) return const [];
+  return raw
+      .whereType<Map>()
+      .map((e) => PLYCommitmentInfo.fromJson(e))
+      .toList();
+}
+
+/// Parses the Apple commitment progress object (iOS 26.4+). Returns null when
+/// absent (Android and other platforms never send it).
+PLYCommitmentProgress? plyCommitmentProgressFromMap(dynamic raw) {
+  if (raw is! Map || raw.isEmpty) return null;
+  return PLYCommitmentProgress.fromJson(raw);
 }
 
 PLYPlanType plyPlanTypeFromWire(dynamic rawType) {
