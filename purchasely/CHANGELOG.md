@@ -1,3 +1,11 @@
+## 6.0.0
+
+First stable release of Purchasely 6.0.
+- Updated iOS Purchasely SDK to 6.0.0.
+- Updated Android Purchasely Core SDK to 6.0.1.
+- Updated bridge version to 6.0.0.
+Full changelog available at https://docs.purchasely.com/changelog/60-12-month-commitment-and-personalized-tags
+
 ## 6.0.0-rc.3
 
 - Aligns the Flutter package and native bridge version with 6.0.0-rc.3.

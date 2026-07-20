@@ -10,11 +10,11 @@ Use the exact same version for every Purchasely Flutter package:
 
 ```yaml
 dependencies:
-  purchasely_flutter: 6.0.0-rc.3
-  purchasely_google: 6.0.0-rc.3
+  purchasely_flutter: 6.0.0
+  purchasely_google: 6.0.0
 ```
 
-This package pulls `io.purchasely:google-play:6.0.0-rc.3` on Android, published on
+This package pulls `io.purchasely:google-play:6.0.1` on Android, published on
 Maven Central, so it resolves directly from the public repository.
 
 ## Usage
