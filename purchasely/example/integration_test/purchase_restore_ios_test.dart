@@ -1,0 +1,163 @@
+// E2E (S7 — StoreKit purchase + restore, iOS): the purchase action interceptor
+// fires on a real tap, is allowed to PROCEED (PLYInterceptResult.notHandled,
+// the v6 equivalent of the pre-v6 `onProcessAction(true)`) instead of being
+// blocked like interceptor_trigger_ios_test.dart does, and the resulting
+// PLYPresentationOutcome.purchaseResult is asserted to be `.purchased` — a
+// real local StoreKit2 transaction, then `Purchasely.restoreAllProducts()` is
+// asserted to return `true`.
+//
+// --- Execution path (read before running) ---------------------------------
+//
+// StoreKit Testing configuration files (`Configuration.storekit`, wired into
+// the shared `Runner.xcscheme`'s LaunchAction) ONLY apply when the app is
+// actually LAUNCHED via that Xcode scheme. Plain `flutter test
+// integration_test/x_test.dart -d <sim>` installs and launches the app
+// through `flutter_tools`' own device control (`xcrun simctl launch`
+// directly), which never touches the Xcode scheme — so the local StoreKit
+// config never attaches and any purchase attempt would hit the real
+// (sandbox) App Store, which has no `com.purchasely.plus.*` products and no
+// signed-in tester on this machine.
+//
+// The only path that launches the app through the scheme — and therefore
+// actually applies Configuration.storekit — is `xcodebuild test`. Flutter
+// does not run its own `integration_test` widget tests that way by default;
+// the officially documented bridge (see the `integration_test` pub package
+// README, "iOS Device Testing" / Firebase Test Lab section) is a **Unit
+// Testing Bundle Xcode target with `TEST_HOST` set to the Runner app**,
+// hosting the Flutter engine in-process, plus the `INTEGRATION_TEST_IOS_RUNNER`
+// macro that turns each Dart test into a native XCTest method. This repo's
+// existing `RunnerTests` target is deliberately HOSTLESS (see its own header
+// comment + ci.yml: launching the Flutter engine that way previously
+// SIGSEGV'd on headless CI simulators), so a SEPARATE target —
+// `RunnerIntegrationTests` (purchasely/example/ios/RunnerIntegrationTests/) —
+// was added specifically for this suite, additive and untouched otherwise.
+//
+// Run (see tools/run_storekit_suite_ios.sh for the scripted version):
+//
+//   cd purchasely/example
+//   flutter build ios --config-only --simulator \
+//     integration_test/purchase_restore_ios_test.dart
+//   cd ios && pod install
+//   (bash ../integration_test/tools/tap_purchase_ios.sh <sim-udid> &)
+//   xcodebuild test -workspace Runner.xcworkspace -scheme Runner \
+//     -only-testing:RunnerIntegrationTests -destination id=<sim-udid>
+//
+// No separate driver taps the StoreKit purchase-confirmation sheet:
+// RunnerIntegrationTests.m sets `SKTestSession.disableDialogs = YES`, which
+// auto-confirms the purchase locally. That sheet is a SpringBoard-level
+// system UI outside the app process anyway — idb's app-scoped
+// `ui describe-all` targets the app under test, not SpringBoard, so driving
+// it would need a different (and flakier) mechanism for no additional signal
+// here: this suite is proving the SDK's purchase/restore flow, not Apple's
+// confirmation dialog.
+//
+// CI implication (for Task 7): this suite needs the same TEST_HOST launch
+// this repo previously moved AWAY from for RunnerTests because it SIGSEGV'd
+// on headless CI simulators. It may well hit the same wall in CI even though
+// it works on a local, non-headless simulator session — Task 7 should treat
+// it as best-effort/non-blocking (like the other idb-driven suites in
+// ci_run_e2e_ios.sh) until proven stable on the actual CI runner image.
+
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:integration_test/integration_test.dart';
+import 'package:purchasely_flutter/purchasely_flutter.dart';
+
+import 'helpers/e2e_start.dart';
+
+const String kApiKey = '0ad0594b-3b3d-4fea-8ee1-4b5df91efe87';
+const String kPlacementAudiences = 'integration_test_audiences';
+
+void main() {
+  IntegrationTestWidgetsFlutterBinding.ensureInitialized();
+
+  setUpAll(() async {
+    debugPrint('SETUP → calling Purchasely.start()…');
+    final configured = await startWithRetry(() => Purchasely.apiKey(kApiKey)
+        .runningMode(PLYRunningMode.full)
+        .logLevel(PLYLogLevel.debug)
+        .storekitVersion(PLYStorekitVersion.storeKit2)
+        .start()
+        .timeout(const Duration(seconds: 120),
+            onTimeout: () =>
+                throw StateError('Purchasely.start() timed out after 120s')));
+    debugPrint('SETUP → configured=$configured');
+    expect(configured, isTrue,
+        reason: 'SDK should configure against the real backend');
+  });
+
+  testWidgets(
+      'S7 — purchase interceptor lets the flow proceed → purchased outcome → restore',
+      (tester) async {
+    await tester.runAsync(() async {
+      PLYInterceptorInfo? capturedInfo;
+      PLYActionPayload? capturedPayload;
+      var presented = false;
+
+      // notHandled = the v6 equivalent of the removed `onProcessAction(true)`:
+      // the interceptor observes the action but does NOT short-circuit it, so
+      // the native SDK proceeds with its own default purchase flow (a real
+      // StoreKit2 transaction against the local Configuration.storekit).
+      await Purchasely.interceptAction(
+        PLYPresentationActionKind.purchase,
+        (info, payload) async {
+          capturedInfo = info;
+          capturedPayload = payload;
+          return PLYInterceptResult.notHandled;
+        },
+      );
+
+      final request = PLYPresentationBuilder.placement(kPlacementAudiences)
+          .onPresented((p, e) => presented = true)
+          .build();
+      final displayFuture = request.display(const PLYTransition.fullScreen());
+
+      // Wait for the paywall to present.
+      final presentSw = Stopwatch()..start();
+      while (!presented && presentSw.elapsed < const Duration(seconds: 20)) {
+        await Future<void>.delayed(const Duration(milliseconds: 250));
+      }
+      expect(presented, isTrue, reason: 'paywall should present');
+
+      // The concurrent driver (tap_purchase_ios.sh) taps the purchase CTA.
+      // Poll for the interceptor to fire with the typed purchase payload.
+      final fireSw = Stopwatch()..start();
+      while (capturedPayload == null &&
+          fireSw.elapsed < const Duration(seconds: 40)) {
+        await Future<void>.delayed(const Duration(milliseconds: 300));
+      }
+      expect(capturedPayload, isA<PLYPurchasePayload>(),
+          reason: 'purchase interceptor should fire on the native tap');
+      final purchase = capturedPayload as PLYPurchasePayload;
+      debugPrint('S7 iOS → interceptor fired (notHandled → proceeding) '
+          'plan.vendorId=${purchase.plan.vendorId} '
+          'plan.productId=${purchase.plan.productId} '
+          'contentId=${capturedInfo?.contentId}');
+
+      // A second concurrent driver (confirm_storekit_purchase_ios.sh) taps the
+      // system StoreKit purchase-confirmation sheet. Await the final outcome
+      // — the SDK auto-dismisses the paywall once the purchase completes.
+      final outcome = await displayFuture.timeout(const Duration(seconds: 90));
+
+      expect(outcome, isA<PLYPresentationOutcome>());
+      expect(outcome.error, isNull,
+          reason: 'a completed purchase must not carry a display error');
+      expect(outcome.purchaseResult, PLYPurchaseResult.purchased,
+          reason: 'the local StoreKit2 transaction should be reported as '
+              'purchased, not cancelled/restored/none');
+      debugPrint('S7 iOS → PLYPresentationOutcome purchaseResult='
+          '${outcome.purchaseResult} plan=${outcome.plan?.vendorId} '
+          'closeReason=${outcome.closeReason}');
+
+      await Purchasely.removeAllActionInterceptors();
+
+      // restoreAllProducts(): the just-purchased subscription should be found
+      // on restore. Bounded timeout — never hang indefinitely.
+      final restored = await Purchasely.restoreAllProducts(
+          timeout: const Duration(seconds: 60));
+      expect(restored, isTrue,
+          reason: 'restoreAllProducts should find the just-purchased plan');
+      debugPrint('S7 iOS → restoreAllProducts=$restored');
+    });
+  });
+}
