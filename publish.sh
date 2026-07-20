@@ -31,7 +31,9 @@ sed -i '' "s/^.*version:.*$/version: ${VERSION}/" purchasely_android_player/pubs
 sed -i '' "s/^.*Purchasely.sdkBridgeVersion.*$/\t  Purchasely.sdkBridgeVersion = \"${VERSION}\"/" purchasely/android/src/main/kotlin/io/purchasely/purchasely_flutter/PurchaselyFlutterPlugin.kt
 
 # Replace version number in ios plugin
-sed -i '' "s/^.*Purchasely.setSdkBridgeVersion.*$/\t\tPurchasely.setSdkBridgeVersion(\"${VERSION}\")/" purchasely/ios/purchasely_flutter/Classes/SwiftPurchaselyFlutterPlugin.swift
+# v6 sets the bridge version via the builder chain `.sdkBridgeVersion("…")`
+# (12-space indentation inside the Purchasely.apiKey(...) chain).
+sed -i '' "s/^.*\.sdkBridgeVersion(.*$/            .sdkBridgeVersion(\"${VERSION}\")/" purchasely/ios/purchasely_flutter/Classes/SwiftPurchaselyFlutterPlugin.swift
 
 # Update all CHANGELOG.md files
 update_changelog "purchasely/CHANGELOG.md"
