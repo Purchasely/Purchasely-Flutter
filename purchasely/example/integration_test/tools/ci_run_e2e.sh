@@ -41,6 +41,13 @@ LOGS="integration_test/ci-logs"
 mkdir -p "$LOGS"
 
 adb -s "$DEV" wait-for-device
+# Suppress the one-time "Immersive mode confirmation" system dialog a fresh
+# AVD shows the first time any app goes fullscreen — one less window
+# contending for focus alongside the launcher-ANR condition diagnosed in
+# task-9-android-report.md (identical mCurrentFocus window IDs for this
+# dialog were observed pinned across 5 different failing suites in one CI
+# run). Best-effort: harmless if the setting doesn't exist on this API level.
+adb -s "$DEV" shell settings put secure immersive_mode_confirmations confirmed 2>/dev/null || true
 flutter pub get
 
 # Runs "$@" with a hard $TIMEOUT-second ceiling. Portable (no dependency on

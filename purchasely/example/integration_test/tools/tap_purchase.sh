@@ -32,7 +32,28 @@ dump_ui() {
   return 1
 }
 
+# CI-only recovery: on a resource-starved cold AVD some OTHER package (the
+# launcher, in every run analyzed for task-9) can ANR mid-suite. Its "App Not
+# Responding" system dialog then owns window focus for the REST of the job —
+# every BACK/tap this driver sends lands on that dialog, not the app under
+# test, forever (see task-9-android-report.md: identical mCurrentFocus window
+# IDs across 5 different suites in one CI run). force-stop the ANR'd package
+# (never our own app) so the dialog is torn down and focus returns to the
+# foreground app; a no-op when nothing is stuck.
+clear_stuck_anr() {
+  local pkg
+  pkg=$(adb -s "$DEV" shell dumpsys window 2>/dev/null |
+    grep -o 'Application Not Responding: [^}]*' | head -1 |
+    sed 's/Application Not Responding: //' | tr -d '\r ')
+  if [ -n "$pkg" ] && [ "$pkg" != "com.purchasely.demo" ]; then
+    echo "[tap_purchase] $pkg is ANR'd and stealing focus, force-stopping it"
+    adb -s "$DEV" shell am force-stop "$pkg" 2>/dev/null
+    sleep 1
+  fi
+}
+
 for i in $(seq 1 90); do
+  clear_stuck_anr
   if dump_ui; then
     coords=$(python3 - "$DESC" "$DUMP_LOCAL" <<'PY'
 import sys, re
