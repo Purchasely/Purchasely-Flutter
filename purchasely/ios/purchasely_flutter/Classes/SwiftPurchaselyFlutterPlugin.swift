@@ -746,10 +746,16 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
         if let url = params.url?.absoluteString { map["url"] = url }
         if let title = params.title { map["title"] = title }
         if let plan = params.plan {
-            map["plan"] = [
+            var planMap: [String: Any] = [
                 "vendorId": plan.vendorId as Any,
                 "productId": plan.appleProductId as Any?,
             ]
+            // Apple commitment installment details (iOS 26.4+), same wire shape
+            // as PLYPlan.toMap so the Dart payload parses a fully-typed plan.
+            if !plan.commitmentInfo.isEmpty {
+                planMap["commitmentInfo"] = plan.commitmentInfoMaps
+            }
+            map["plan"] = planMap
         }
         // Promotional offer attached to the tapped plan (`offer` on the wire,
         // matching Android's shape). iOS has no `subscriptionOffer` equivalent —
@@ -1353,11 +1359,22 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
         }
 
         let offerVendorId = arguments["offerVendorId"] as? String
+        let billingPlanType = Self.billingPlanType(fromWire: arguments["billingPlanType"] as? String)
 
         DispatchQueue.main.async {
-            Purchasely.setDynamicOffering(reference: reference, planVendorId: planVendorId, offerVendorId: offerVendorId, completion: { success in
+            Purchasely.setDynamicOffering(reference: reference, planVendorId: planVendorId, offerVendorId: offerVendorId, billingPlanType: billingPlanType, completion: { success in
                 result(success)
             })
+        }
+    }
+
+    /// Maps the Dart `billingPlanType` wire string to the native enum. Unknown
+    /// / nil (Apple-only feature) falls back to `.unspecified`.
+    private static func billingPlanType(fromWire wire: String?) -> PLYBillingPlanType {
+        switch wire {
+        case "up_front": return .upFront
+        case "monthly":  return .monthly
+        default:         return .unspecified
         }
     }
 
@@ -1372,6 +1389,7 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
 
                     map["reference"] = offering.reference
                     map["planVendorId"] = offering.planId
+                    map["billingPlanType"] = offering.billingPlanType.wireValue
 
                     if let offerId = offering.offerId {
                         map["offerVendorId"] = offerId

@@ -69,7 +69,40 @@ extension PLYPlan {
         if let introPeriod = self.localizedIntroductoryPeriod(language: nil) {
             result["introPeriod"] = introPeriod
         }
-        
+
+        // Apple commitment installment details (iOS 26.4+ "monthly subscription
+        // with N-month commitment"). Empty on non-Apple stores / older iOS.
+        if !self.commitmentInfo.isEmpty {
+            result["commitmentInfo"] = self.commitmentInfoMaps
+        }
+
         return result
+    }
+
+    /// Serializes `commitmentInfo` into the same wire shape the Dart
+    /// `plyCommitmentInfoFromMap` parses. Reused by the interceptor payload.
+    var commitmentInfoMaps: [[String: Any]] {
+        self.commitmentInfo.map { info in
+            [
+                "billingPlanType": info.billingPlanType.wireValue,
+                "billingPrice": info.billingPrice.doubleValue,
+                "billingPeriod": info.billingPeriod,
+                "totalPrice": info.totalPrice.doubleValue,
+                "totalPeriod": info.totalPeriod,
+                "totalDuration": info.totalDuration,
+            ]
+        }
+    }
+}
+
+extension PLYBillingPlanType {
+    /// Wire value sent to the Dart bridge, matching the native SDK's own
+    /// string form (`"up_front"` / `"monthly"`).
+    var wireValue: String {
+        switch self {
+        case .upFront: return "up_front"
+        case .monthly: return "monthly"
+        default:       return "unspecified"
+        }
     }
 }
