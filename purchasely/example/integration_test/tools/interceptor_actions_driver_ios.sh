@@ -43,4 +43,6 @@ echo "[interceptor_actions_driver_ios] tap 2/2 (S6/notHandled)…"
 bash "$HERE/tap_label_ios.sh" "$UDID" "Login"
 
 echo "[interceptor_actions_driver_ios] re-foregrounding app after S6 backgrounds it to Safari…"
-xcrun simctl launch "$UDID" com.purchasely.demo 2>&1 || true
+if ! xcrun simctl launch "$UDID" com.purchasely.demo 2>&1; then
+  echo "[interceptor_actions_driver_ios] re-foreground failed (non-fatal)"
+fi

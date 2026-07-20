@@ -49,6 +49,21 @@ flutter pub get
 # whichever loses. Returns 124 on timeout (matches GNU timeout's convention),
 # else "$@"'s own exit code.
 #
+# TREE KILL: "$@" is backgrounded with job control (`set -m`) enabled so bash
+# gives it its own process group (PGID == its own PID) — standard POSIX job
+# control, identical on GNU bash 3.2/macOS and bash 5.x/Linux (unlike
+# `setsid`/GNU `timeout`, this isn't a coreutils-only feature, so it needs no
+# per-runner branching). On timeout we kill the *group*
+# (`kill -TERM -- "-$cmd_pid"`), not just $cmd_pid, so children reparented
+# under it (gradle/dart/xcodebuild, background taps) are reached too, not
+# just the immediate `flutter test` process. `set -m` is scoped to only the
+# backgrounding line so it doesn't change job-control semantics anywhere
+# else in this function (incl. the pipe-hang fix below). LIMITATION: a
+# Gradle daemon detaches into its own session by design (so it survives its
+# launching process) and therefore escapes this process group — that daemon
+# is shared/pre-existing across attempts, not per-attempt state, so it isn't
+# something this kill needs to reach.
+#
 # NOTE (found via local testing, see task-7-report.md): when this whole
 # function is used as the left side of a pipe (`run_with_timeout ... | tee
 # log`, exactly how it's called below), killing ONLY the watchdog subshell's
@@ -57,20 +72,26 @@ flutter pub get
 # downstream `tee` never sees EOF and the whole pipeline hangs for the
 # remainder of $TIMEOUT even on a perfectly healthy, fast-passing attempt.
 # `pkill -P "$watchdog_pid"` (kill its child by parent-pid) BEFORE killing
-# the subshell itself avoids this — verified with an isolated repro.
+# the subshell itself avoids this — verified with an isolated repro. (An
+# earlier attempt to also `disown` the backgrounded "$@" job, to silence
+# bash's cosmetic job-control "Terminated" notice, reintroduced this exact
+# class of race on the fast/no-timeout path — dropped; the notice is
+# harmless log noise, left as-is.)
 run_with_timeout() {
   local marker
   marker="$(mktemp)"
+  set -m
   "$@" &
   local cmd_pid=$!
+  set +m
   (
     sleep "$TIMEOUT"
     if kill -0 "$cmd_pid" 2>/dev/null; then
-      echo "::warning::watchdog: attempt exceeded ${TIMEOUT}s, killing PID $cmd_pid"
+      echo "::warning::watchdog: attempt exceeded ${TIMEOUT}s, killing PGID $cmd_pid"
       echo 1 >"$marker"
-      kill -TERM "$cmd_pid" 2>/dev/null
+      kill -TERM -- "-$cmd_pid" 2>/dev/null
       sleep 5
-      kill -KILL "$cmd_pid" 2>/dev/null
+      kill -KILL -- "-$cmd_pid" 2>/dev/null
     fi
   ) &
   local watchdog_pid=$!
@@ -116,17 +137,27 @@ run_suite() {
     fi
     echo "::endgroup::"
     if [ "$status" -eq 0 ]; then
-      cp "$LOGS/${logbase}_$a.log" "$LOGS/${logbase}.log" 2>/dev/null || true
-      [ -n "$dpid" ] && kill "$dpid" 2>/dev/null || true
+      if ! cp "$LOGS/${logbase}_$a.log" "$LOGS/${logbase}.log" 2>/dev/null; then
+        echo "[cleanup] failed to copy ${logbase}_$a.log (non-fatal)"
+      fi
+      if [ -n "$dpid" ]; then
+        kill "$dpid" 2>/dev/null || echo "[cleanup] driver pid $dpid already exited (non-fatal)"
+      fi
       echo "=== $label passed on attempt $a ==="
       return 0
     fi
-    [ -n "$dpid" ] && kill "$dpid" 2>/dev/null || true
+    if [ -n "$dpid" ]; then
+      kill "$dpid" 2>/dev/null || echo "[cleanup] driver pid $dpid already exited (non-fatal)"
+    fi
     echo "=== $label failed attempt $a (exit=$status) ==="
-    adb -s "$DEV" shell am force-stop com.purchasely.demo 2>/dev/null || true
+    if ! adb -s "$DEV" shell am force-stop com.purchasely.demo 2>/dev/null; then
+      echo "[cleanup] force-stop failed (non-fatal)"
+    fi
     sleep 3
   done
-  cp "$LOGS/${logbase}_${attempts}.log" "$LOGS/${logbase}.log" 2>/dev/null || true
+  if ! cp "$LOGS/${logbase}_${attempts}.log" "$LOGS/${logbase}.log" 2>/dev/null; then
+    echo "[cleanup] failed to copy ${logbase}_${attempts}.log (non-fatal)"
+  fi
   return 1
 }
 
