@@ -62,10 +62,12 @@ void main() {
       're-display() of the same handle shows the same presentation, not the '
       "placement's default", (tester) async {
     await tester.runAsync(() async {
-      // Supplementary evidence only (not asserted on): PRESENTATION_VIEWED can
-      // be deduplicated per session for a screen already shown (observed in
-      // dart_ios_bridge_test.dart T10), so it's logged for diagnosis rather
-      // than used as the hard identity check.
+      // Independent cross-check (secondary to the outcome-based assertion
+      // below): PRESENTATION_VIEWED can be deduplicated per session for a
+      // screen already shown (observed in dart_ios_bridge_test.dart T10),
+      // so this is compared, not primary — but it must still be a HARD
+      // assertion (guarded below), not a diagnostic no-op, or it would
+      // reopen the exact vacuous-comparison hole this suite guards against.
       final viewedIds = <String?>[];
       Purchasely.listenToEvents((event) {
         if (event.name == PLYEventName.PRESENTATION_VIEWED ||
@@ -131,6 +133,10 @@ void main() {
           'screenId=${firstOutcome!.presentation?.screenId} '
           'placementId=${firstOutcome!.presentation?.placementId}');
 
+      // Snapshot the event stream collected so far so cycle 2's events can
+      // be isolated below (list only grows — no restructuring needed).
+      final cycle1ViewedIds = List<String?>.from(viewedIds);
+
       // --- Cycle 2: RE-display the SAME handle ------------------------------
       presented = false;
       PLYPresentationOutcome? secondOutcome;
@@ -178,9 +184,10 @@ void main() {
           'screenId=${secondOutcome!.presentation?.screenId} '
           'placementId=${secondOutcome!.presentation?.placementId}');
       debugPrint('PRESENTATION_VIEWED/LOADED displayed_presentation per '
-          'cycle (diagnostic only): $viewedIds');
+          'cycle: $viewedIds');
 
       // --- The M2 assertion: same handle → same screen, every cycle ---------
+      // Primary check.
       expect(
         secondOutcome!.presentation?.screenId,
         equals(firstOutcome!.presentation?.screenId),
@@ -191,6 +198,31 @@ void main() {
       expect(
         secondOutcome!.presentation?.placementId,
         equals(firstOutcome!.presentation?.placementId),
+      );
+
+      // Independent cross-check via the event stream (not the outcome
+      // parsing path being guarded above). Guarded so missing/unusable data
+      // FAILS loudly rather than silently no-oping — an independent check
+      // that can't fail proves nothing.
+      final cycle2ViewedIds = viewedIds.sublist(cycle1ViewedIds.length);
+      expect(cycle1ViewedIds, isNotEmpty,
+          reason: 'cycle 1 should have produced at least one '
+              'PRESENTATION_VIEWED/LOADED event to cross-check against — '
+              'if this fails, the event-stream cross-check has no baseline');
+      expect(cycle1ViewedIds.last, isNotNull);
+      expect(cycle1ViewedIds.last, isNotEmpty);
+      expect(cycle2ViewedIds, isNotEmpty,
+          reason: 'cycle 2 (re-display) should have produced at least one '
+              'PRESENTATION_VIEWED/LOADED event — an event-stream '
+              'cross-check with nothing to compare would silently no-op '
+              'instead of catching a regression');
+      expect(
+        cycle2ViewedIds.last,
+        equals(cycle1ViewedIds.last),
+        reason: 'event-stream cross-check: cycle 2\'s PRESENTATION_VIEWED/'
+            'LOADED displayed_presentation id must equal cycle 1\'s '
+            '(independent corroboration of the outcome-based assertion '
+            'above)',
       );
 
       Purchasely.stopListeningToEvents();
