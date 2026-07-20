@@ -481,6 +481,34 @@ void main() {
       expect((await secondOutcome).purchaseResult, PLYPurchaseResult.purchased);
     });
 
+    test('re-display() resends the source so a native rebuild keeps it',
+        () async {
+      // Regression (v6 audit M2): after a dismiss the native side may have to
+      // rebuild the request from the display args. A handle-based display()
+      // must therefore carry the original source, not just the requestId —
+      // otherwise the rebuild falls back to the default source.
+      final request = PLYPresentationBuilder.placement('home').build();
+      final presentation = await request.preload();
+      calls.clear();
+
+      // ignore: unawaited_futures
+      final outcome = presentation.display(const PLYTransition.modal());
+      await Future<void>.delayed(Duration.zero);
+
+      final displayCall = calls.firstWhere((c) => c.method == 'display');
+      final args = displayCall.arguments as Map;
+      expect(args['requestId'], presentation.requestId);
+      expect((args['source'] as Map)['kind'], 'placementId');
+      expect((args['source'] as Map)['id'], 'home');
+
+      await emitEvent(<String, Object?>{
+        'event': 'onDismissed',
+        'requestId': presentation.requestId,
+        'outcome': <String, Object?>{'purchaseResult': 'cancelled'},
+      });
+      await outcome;
+    });
+
     test('onCloseRequested fires the builder callback', () async {
       var fired = false;
       final request =

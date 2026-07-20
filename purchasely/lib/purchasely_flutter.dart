@@ -197,15 +197,26 @@ class Purchasely {
     }
   }
 
-  static Future<bool> restoreAllProducts() async {
-    final bool restored = await _channel.invokeMethod('restoreAllProducts');
-    return restored;
+  /// Restores every purchase previously made by the user (App Store /
+  /// Google Play restore flow).
+  ///
+  /// On a device without a working store (e.g. an emulator without Google
+  /// Play), the native call may never resolve — pass [timeout] to fail with a
+  /// [TimeoutException] instead of awaiting forever.
+  static Future<bool> restoreAllProducts({Duration? timeout}) async {
+    final call = _channel.invokeMethod('restoreAllProducts');
+    final dynamic restored =
+        await (timeout == null ? call : call.timeout(timeout));
+    return restored == true;
   }
 
-  static Future<bool> silentRestoreAllProducts() async {
-    final bool restored =
-        await _channel.invokeMethod('silentRestoreAllProducts');
-    return restored;
+  /// Silent variant of [restoreAllProducts] (no store sign-in prompt on iOS).
+  /// Same [timeout] semantics.
+  static Future<bool> silentRestoreAllProducts({Duration? timeout}) async {
+    final call = _channel.invokeMethod('silentRestoreAllProducts');
+    final dynamic restored =
+        await (timeout == null ? call : call.timeout(timeout));
+    return restored == true;
   }
 
   /// Forces a synchronization of the user's purchases with the Purchasely
@@ -216,6 +227,10 @@ class Purchasely {
   /// synchronization actually completes and throws a [PlatformException] if it
   /// failed — instead of the previous fire-and-forget behaviour. `await` it
   /// before chaining a follow-up presentation that targets subscribers.
+  ///
+  /// Resolves `false` when the receipt is still pending store/backend
+  /// validation (deferred purchase, Android) — a normal transient state, not
+  /// a failure.
   static Future<bool> synchronize() async {
     final result = await _channel.invokeMethod('synchronize');
     return result == true;
@@ -414,6 +429,14 @@ class Purchasely {
     return PLYSubscriptionSource.none;
   }
 
+  /// Hands a deeplink to the SDK; returns `true` when the SDK handled it
+  /// (e.g. by opening the targeted placement/presentation).
+  ///
+  /// A handled deeplink fires `DEEPLINK_OPENED` and `PRESENTATION_LOADED` /
+  /// `PRESENTATION_VIEWED` (never `PRESENTATION_OPENED`), but the relative
+  /// order of `DEEPLINK_OPENED` and `PRESENTATION_LOADED` differs between the
+  /// native SDKs (iOS emits `DEEPLINK_OPENED` first, Android may emit
+  /// `PRESENTATION_LOADED` first) — don't rely on their ordering.
   static Future<bool> handleDeeplink(String deepLink) async {
     return await _channel.invokeMethod(
         'handleDeeplink', <String, dynamic>{'deeplink': deepLink});

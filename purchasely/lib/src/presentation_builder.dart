@@ -84,15 +84,15 @@ class PLYPresentationBuilder {
     return this;
   }
 
-  /// Whether the SDK should render its close button.
-  /// Android only at the moment — no-op on iOS.
+  /// Whether the SDK should render its close button. Supported on both
+  /// platforms; `false` suppresses a backend-configured close button.
   PLYPresentationBuilder displayCloseButton(bool show) {
     _displayCloseButton = show;
     return this;
   }
 
-  /// Whether the SDK should render its back button.
-  /// Android only at the moment — no-op on iOS.
+  /// Whether the SDK should render its back button. Supported on both
+  /// platforms; `false` suppresses a backend-configured back button.
   PLYPresentationBuilder displayBackButton(bool show) {
     _displayBackButton = show;
     return this;

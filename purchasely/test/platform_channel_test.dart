@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:purchasely_flutter/purchasely_flutter.dart';
@@ -155,6 +157,23 @@ void main() {
         await Purchasely.silentRestoreAllProducts();
 
         expect(methodCalls.first.method, 'silentRestoreAllProducts');
+      });
+
+      test('restoreAllProducts times out when native never resolves',
+          () async {
+        // Regression (v6 audit m7): without a Play Store the native restore
+        // can hang forever — the optional timeout must surface it.
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(channel, (call) {
+          // Never resolve.
+          return Completer<Object?>().future;
+        });
+
+        await expectLater(
+          Purchasely.restoreAllProducts(
+              timeout: const Duration(milliseconds: 50)),
+          throwsA(isA<TimeoutException>()),
+        );
       });
     });
 

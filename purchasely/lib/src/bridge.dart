@@ -202,6 +202,13 @@ class PurchaselyBridge {
         'display',
         <String, Object?>{
           'requestId': presentation.requestId,
+          // The native side may have to rebuild the request from these args
+          // (e.g. a retry after a failed display dropped the native request):
+          // resend the source so a rebuild targets the original
+          // placement/screen instead of the default source.
+          'source': _sourceMapForPresentation(presentation),
+          if (presentation.contentId != null)
+            'contentId': presentation.contentId,
           if (transition != null) 'transition': transition.toMap(),
         },
       );
@@ -434,6 +441,21 @@ class PurchaselyBridge {
 
   Map<String, Object?> _argsForRequest(PLYPresentationRequest request) {
     return Map<String, Object?>.from(request.toMap());
+  }
+
+  /// Reconstructs the request `source` map from a loaded presentation handle:
+  /// a placement-sourced presentation carries its placementId; a screen-sourced
+  /// one only its screenId.
+  Map<String, Object?> _sourceMapForPresentation(PLYPresentation p) {
+    final placementId = p.placementId;
+    if (placementId != null && placementId.isNotEmpty) {
+      return {'kind': 'placementId', 'id': placementId};
+    }
+    final screenId = p.screenId;
+    if (screenId != null && screenId.isNotEmpty) {
+      return {'kind': 'screenId', 'id': screenId};
+    }
+    return {'kind': 'defaultSource'};
   }
 
   void _registerRequest(PLYPresentationRequest request) {
