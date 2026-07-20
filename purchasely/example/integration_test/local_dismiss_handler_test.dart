@@ -19,6 +19,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:purchasely_flutter/purchasely_flutter.dart';
 
+import 'helpers/e2e_start.dart';
+
 const String kApiKey = '0ad0594b-3b3d-4fea-8ee1-4b5df91efe87';
 const String kPlacementAudiences = 'integration_test_audiences';
 
@@ -26,11 +28,11 @@ void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
   setUpAll(() async {
-    final configured = await Purchasely.apiKey(kApiKey)
+    final configured = await startWithRetry(() => Purchasely.apiKey(kApiKey)
         .runningMode(PLYRunningMode.full)
         .logLevel(PLYLogLevel.debug)
         .allowDeeplink(true)
-        .stores([PLYStore.google]).start();
+        .stores([PLYStore.google]).start());
     expect(configured, isTrue);
   });
 
