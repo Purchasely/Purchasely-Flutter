@@ -12,3 +12,5 @@ android/.idea
 .vscode/
 
 doc/
+
+.worktrees/
