@@ -36,6 +36,9 @@ import io.purchasely.models.PLYPresentationPlan
 import io.purchasely.models.PLYProduct
 import kotlinx.coroutines.*
 import io.purchasely.ext.Purchasely
+// `Colors` is the (public) type of the public `PLYTransition.backgroundColors`
+// field; it lives under `internal.` by package convention only.
+import io.purchasely.internal.presentation.models.Colors
 import io.purchasely.models.PLYError
 import io.purchasely.views.presentation.PLYThemeMode
 import io.purchasely.views.presentation.models.PLYDimensionType
@@ -509,6 +512,7 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
         val allowDeeplink = a["allowDeeplink"] as? Boolean
         val allowCampaigns = a["allowCampaigns"] as? Boolean ?: true
         val deeplink = (a["deeplink"] as? String)?.takeIf { it.isNotBlank() }
+        val automaticDeeplinkHandling = a["automaticDeeplinkHandling"] as? Boolean
 
         Purchasely.Builder(context)
             .apiKey(apiKey)
@@ -522,6 +526,9 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
                 // Cold-start deeplink: replayed automatically once started, so
                 // the host does not need a separate handleDeeplink() call.
                 deeplink?.let { this.handleDeeplink(Uri.parse(it)) }
+                // v6 auto-intercepts Purchasely deeplinks by default; hosts that
+                // route intents themselves can opt out from the Dart builder.
+                automaticDeeplinkHandling?.let { this.automaticDeeplinkHandling(it) }
             }
             .build()
 
@@ -900,10 +907,18 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
         // is deprecated and intentionally not set.
         val width = parseDimension(map["width"])
         val height = parseDimension(map["height"])
+        // drawer/popin background override (`{ light, dark }` hex strings).
+        val backgroundColors = (map["backgroundColors"] as? Map<*, *>)?.let { colors ->
+            Colors(
+                light = colors["light"] as? String,
+                dark = colors["dark"] as? String,
+            )
+        }
         return PLYTransition(
             type = type,
             width = width,
             height = height,
+            backgroundColors = backgroundColors,
             dismissible = dismissible,
         )
     }
@@ -1013,7 +1028,15 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
         Purchasely.synchronize(
             onSuccess = { result.safeSuccess(true) },
             onError = { error ->
-                result.safeError("-1", error?.message ?: "Synchronization failed", error)
+                if (error == null) {
+                    // A null PLYError means the receipt is still PENDING (deferred
+                    // purchase awaiting backend validation) — a normal state, not
+                    // a failure. Resolve `false` ("not completed yet") instead of
+                    // throwing a PlatformException at the Dart caller.
+                    result.safeSuccess(false)
+                } else {
+                    result.safeError("-1", error.message ?: "Synchronization failed", error)
+                }
             }
         )
     }
@@ -1472,7 +1495,7 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
             )
         }
 
-        private fun presentationToMap(p: PLYPresentationBase.Loaded): Map<String, Any?> {
+        internal fun presentationToMap(p: PLYPresentationBase.Loaded): Map<String, Any?> {
             return mapOf(
                 "screenId" to p.screenId,
                 "placementId" to p.placementId,

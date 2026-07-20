@@ -36,8 +36,11 @@ internal class NativeView(
                 // sink and envelope shape as the full-screen path, keyed by the
                 // request's `requestId`, so the Dart `onDismissed` callback (and the
                 // pending `display()` future) fire for the inline path too.
+                // Only the loaded handle and display callback are dropped: the
+                // prepared request stays registered so a re-display of the same
+                // Dart handle keeps its original source (same policy as the
+                // full-screen path).
                 PurchaselyFlutterPlugin.loadedPresentations.remove(requestId)
-                PurchaselyFlutterPlugin.preparedRequests.remove(requestId)
                 PurchaselyFlutterPlugin.displayCallbacks.remove(requestId)
                 PurchaselyFlutterPlugin.emitPresentationEvent(
                     PurchaselyFlutterPlugin.eventEnvelope("onDismissed", requestId).apply {
@@ -47,6 +50,16 @@ internal class NativeView(
             }
             Log.d("Purchasely", "Presentation built successfully.")
             layout.addView(presentationView)
+
+            // The native SDK fires no `onPresented` for an embedded view —
+            // synthesise it once the view is mounted so the Dart-side
+            // request/presentation `onPresented` callback fires for the inline
+            // path too (parity with the full-screen path).
+            PurchaselyFlutterPlugin.emitPresentationEvent(
+                PurchaselyFlutterPlugin.eventEnvelope("onPresented", requestId).apply {
+                    put("presentation", PurchaselyFlutterPlugin.presentationToMap(presentation))
+                }
+            )
         } else {
             Log.e("Purchasely", "Loaded Presentation not found for requestId=$requestId; nothing to display inline.")
         }
