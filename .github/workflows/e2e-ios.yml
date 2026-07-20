@@ -109,6 +109,14 @@ jobs:
           xcrun simctl bootstatus "$UDID" -b
 
       - name: Run E2E suite on iOS Simulator
+        # Step-level ceiling below the 60min job timeout: ci_run_e2e_ios.sh's
+        # own per-suite watchdog (600s x 3 attempts x 14 suites) already
+        # fails fast on any single hang, but this bounds the WHOLE step so
+        # that, even in a worst case, the "Collect simulator crash logs" and
+        # "Upload E2E logs" steps (which run on failure/always) still get a
+        # chance to preserve diagnostics instead of the entire job being
+        # killed at the 60min job-level cutoff with nothing salvaged.
+        timeout-minutes: 50
         run: bash purchasely/example/integration_test/tools/ci_run_e2e_ios.sh ${{ steps.boot-sim.outputs.udid }}
 
       - name: Collect simulator crash logs (on failure)

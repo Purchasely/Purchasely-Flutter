@@ -52,18 +52,18 @@ jobs:
           java-version: "17"
           cache: gradle
 
-      # 3.44.0, NOT 3.24.x. The AGP 9 / Gradle 9 migration (PR #130) bumped the
-      # Android jobs in ci.yml to 3.44.0 and missed this workflow, so every
-      # E2E Android run since then has died at Gradle startup with
-      #   flutter.groovy: 8: unable to resolve class groovy.xml.QName
-      # from Flutter 3.24.5's own Gradle plugin, which Gradle 9 no longer puts
-      # groovy.xml on the classpath for. The app never built, so each suite then
-      # burned the integration_test harness's 12-minute timeout waiting for an
-      # app that was never installed, and the job hit its 60-minute cap.
-      # e2e-ios.yml is on 3.41.4 for the same class of reason.
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
+          # 3.44.0: matches the post-AGP9 toolchain (#130) the example app's
+          # Android build now requires (Gradle 9.1.0 / AGP 9.0.1). The
+          # previous "3.24.x" pin bundled a flutter.groovy that imports
+          # groovy.xml.QName, an API Groovy 4 (Gradle 9) no longer exposes —
+          # compileGroovy failed on every attempt, surfaced only via
+          # flutter_tools' generic 12-minute per-test timeout (see Task 7's
+          # CI-hang diagnosis). This is the one workflow file #130 forgot to
+          # touch; see ci.yml's "Flutter 3.44 / AGP 9 Compatibility" job,
+          # which already validates this exact combination.
           flutter-version: "3.44.0"
           channel: stable
           cache: true
@@ -110,6 +110,14 @@ jobs:
           script: echo "Generated AVD snapshot for caching."
 
       - name: Run E2E suite on emulator
+        # Step-level ceiling below the 60min job timeout: ci_run_e2e.sh's own
+        # per-suite watchdog (600s x 3 attempts x 12 suites) already fails
+        # fast on any single hang, but this bounds the WHOLE step so that,
+        # even in a worst case, the "Upload E2E logs" step (which runs
+        # `if: always()`) still gets a chance to preserve the per-suite logs
+        # instead of the entire job (including that upload) being killed at
+        # the 60min job-level cutoff with nothing salvaged.
+        timeout-minutes: 50
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 34
