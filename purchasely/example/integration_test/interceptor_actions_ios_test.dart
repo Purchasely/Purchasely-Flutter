@@ -156,6 +156,20 @@ void main() {
       }).build();
       final presentation = await request.preload();
 
+      // Load-proof: fail loud and clear if the SDK silently served its
+      // bundled fallback instead of "DailyMail+ Pill Landing" (e.g. the
+      // screen was renamed/deactivated) — otherwise S5 dies 40s+90s later as
+      // an illegible driver timeout instead of a crisp assertion failure.
+      expect(presentation.screenId, isNotNull);
+      expect(
+        presentation.type,
+        isNot(anyOf(
+            PLYPresentationType.fallback, PLYPresentationType.deactivated)),
+        reason: 'screen $kLoginRestoreScreenId not served — renamed/'
+            'deactivated? (S5/S6 would otherwise die as an illegible driver '
+            'timeout)',
+      );
+
       PLYPresentationOutcome? outcome;
       // Fire-and-forget: the whole point of test A is that this stays pending
       // (the paywall must remain displayed) until the programmatic close below.
@@ -277,6 +291,20 @@ void main() {
         callbackOrder.add('presented');
       }).build();
       final presentation = await request.preload();
+
+      // Load-proof: fail loud and clear if the SDK silently served its
+      // bundled fallback instead of "DailyMail+ Pill Landing" (e.g. the
+      // screen was renamed/deactivated) — otherwise S6 dies 40s+90s later as
+      // an illegible driver timeout instead of a crisp assertion failure.
+      expect(presentation.screenId, isNotNull);
+      expect(
+        presentation.type,
+        isNot(anyOf(
+            PLYPresentationType.fallback, PLYPresentationType.deactivated)),
+        reason: 'screen $kLoginRestoreScreenId not served — renamed/'
+            'deactivated? (S5/S6 would otherwise die as an illegible driver '
+            'timeout)',
+      );
 
       // Fire-and-forget: NOT awaited, and no result is ever read. Once the
       // SDK backgrounds the app (see CAUTION above), this isolate may be
