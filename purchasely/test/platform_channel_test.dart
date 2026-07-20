@@ -159,8 +159,7 @@ void main() {
         expect(methodCalls.first.method, 'silentRestoreAllProducts');
       });
 
-      test('restoreAllProducts times out when native never resolves',
-          () async {
+      test('restoreAllProducts times out when native never resolves', () async {
         // Regression (v6 audit m7): without a Play Store the native restore
         // can hang forever — the optional timeout must surface it.
         TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
