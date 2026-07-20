@@ -94,7 +94,7 @@ jobs:
 
       - name: Run tests (purchasely)
         working-directory: purchasely
-        run: flutter test --coverage || echo "No tests found, skipping..."
+        run: flutter test --coverage
 
       - name: Override purchasely_flutter dependency to local path
         run: |
@@ -108,7 +108,7 @@ jobs:
 
       - name: Run tests (purchasely_google)
         working-directory: purchasely_google
-        run: flutter test --coverage || echo "No tests found, skipping..."
+        run: flutter test --coverage
 
       - name: Install dependencies (purchasely_android_player)
         working-directory: purchasely_android_player
@@ -116,7 +116,7 @@ jobs:
 
       - name: Run tests (purchasely_android_player)
         working-directory: purchasely_android_player
-        run: flutter test --coverage || echo "No tests found, skipping..."
+        run: flutter test --coverage
 
   # ============================================
   # Android Unit Tests (Kotlin/Java)
@@ -428,8 +428,8 @@ jobs:
       - name: Run tests
         run: |
           (cd purchasely && flutter test)
-          (cd purchasely_google && flutter test || echo "No tests found, skipping...")
-          (cd purchasely_android_player && flutter test || echo "No tests found, skipping...")
+          (cd purchasely_google && flutter test)
+          (cd purchasely_android_player && flutter test)
 
       - name: Build Android APK (Release)
         working-directory: purchasely/example
