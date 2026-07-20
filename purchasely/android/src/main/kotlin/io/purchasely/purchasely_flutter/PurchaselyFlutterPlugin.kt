@@ -197,6 +197,10 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
             "preload" -> preload(args, result)
             "display" -> display(args, result)
             "close" -> closePresentation(args, result)
+            "closeAllScreens" -> {
+                Purchasely.closeAllScreens()
+                result.safeSuccess(true)
+            }
             "back" -> back(args, result)
             "clientPresentationDisplayed" -> {
                 clientPresentationDisplayed(args?.get("presentation") as? Map<*, *>)
@@ -217,6 +221,15 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
             "synchronize" -> synchronize(result)
             "restoreAllProducts" -> restoreAllProducts(result)
             "silentRestoreAllProducts" -> silentRestoreAllProducts(result)
+            "signPromotionalOffer" -> {
+                // FLT-W-01 / REC-04: StoreKit promotional-offer signing is
+                // iOS-only — there is no Google Play Billing equivalent. Resolve
+                // success with an empty signature instead of falling through to
+                // `notImplemented()` (MissingPluginException on Android), so a
+                // host calling this cross-platform doesn't crash. See the Dart
+                // doc comment on `Purchasely.signPromotionalOffer`.
+                result.safeSuccess(emptyMap<String, Any?>())
+            }
             "getAnonymousUserId" -> result.safeSuccess(getAnonymousUserId())
             "isAnonymous" -> result.safeSuccess(isAnonymous())
             "isEligibleForIntroOffer" -> {
@@ -238,11 +251,12 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
                 userLogin(userId, result)
             }
             "userLogout" -> {
-                userLogout()
+                // PAR-30: defaults to true, aligned with the native default.
+                userLogout(call.argument<Boolean>("clearUserAttributes") ?: true)
                 result.safeSuccess(true)
             }
             "setLogLevel" -> {
-                setLogLevel(call.argument<Int>("logLevel"))
+                setLogLevel(args?.get("logLevel"))
                 result.safeSuccess(true)
             }
             "allowDeeplink" -> {
@@ -304,8 +318,13 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
                 call.argument<String>("contentId"),
                 result)
             "handleDeeplink" -> handleDeeplink(call.argument<String>("deeplink"), result)
-            "userSubscriptions" -> launch { userSubscriptions(result) }
-            "userSubscriptionsHistory" -> launch { userSubscriptionsHistory(result) }
+            "userSubscriptions" -> launch {
+                // PAR-29: defaults to false, aligned with the native default.
+                userSubscriptions(call.argument<Boolean>("invalidateCache") ?: false, result)
+            }
+            "userSubscriptionsHistory" -> launch {
+                userSubscriptionsHistory(call.argument<Boolean>("invalidateCache") ?: false, result)
+            }
             "setThemeMode" -> {
                 setThemeMode(call.argument<Int>("mode"))
                 result.safeSuccess(true)
@@ -409,6 +428,15 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
                 clearBuiltInAttributes()
                 result.safeSuccess(true)
             }
+            "getBuiltInAttributes" -> getBuiltInAttributes(result)
+            "getBuiltInAttribute" -> {
+                val key = call.argument<String>("key")
+                if (key == null) {
+                    result.error("MISSING_PARAMETER", "The 'key' parameter is required.", null)
+                    return
+                }
+                getBuiltInAttribute(key, result)
+            }
             "setDynamicOffering" -> {
                 setDynamicOffering(
                     call.argument<String>("reference") ?: "",
@@ -452,12 +480,13 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
         }
     }
 
+    // Dart only ever sends the running mode as a String ("observer"/"full" —
+    // `PLYRunningMode.name` in purchasely_builder.dart). There is no Int wire
+    // format, and the since-removed Int branch here was dead *and* wrong: it
+    // mapped raw.toInt() == 1 to Full, which doesn't correspond to any real
+    // contract (FLT-W-10). Unknown/missing input → Observer.
     private fun runningModeFrom(raw: Any?): PLYRunningMode {
         return when (raw) {
-            is Number -> when (raw.toInt()) {
-                1 -> PLYRunningMode.Full
-                else -> PLYRunningMode.Observer
-            }
             is String -> when (raw.lowercase(Locale.US)) {
                 "full" -> PLYRunningMode.Full
                 else -> PLYRunningMode.Observer
@@ -625,9 +654,21 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
     }
 
     private fun closePresentation(args: Map<String, Any?>?, result: Result) {
-        // The native SDK does not expose per-presentation programmatic close;
-        // close all screens regardless of whether a requestId was provided.
-        Purchasely.closeAllScreens()
+        // PAR-23: route the close through the per-presentation handle
+        // (`PLYPresentationBase.Loaded.close()`) tracked by requestId, mirroring
+        // iOS's structure, and fall back to closing everything only when there
+        // is no handle to target. NOTE: in the pinned native Android SDK,
+        // `Loaded.close()` currently delegates to `Purchasely.closeAllScreens()`
+        // — so today this closes ALL screens regardless of the requestId (pinned
+        // by a native-side test). It becomes scoped transparently, with no
+        // change here, once the native SDK implements per-presentation close.
+        val requestId = args?.get("requestId") as? String
+        val loaded = requestId?.let { loadedPresentations[it] }
+        if (loaded != null) {
+            loaded.close()
+        } else {
+            Purchasely.closeAllScreens()
+        }
         result.safeSuccess(true)
     }
 
@@ -675,10 +716,14 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
     }
 
     private fun removeDefaultPresentationDismissHandler(result: Result) {
-        // The native SDK exposes no public API to unregister the global dismiss
-        // handler. Parity-minimal with React Native: the Dart side nullifies its
-        // handler so the forwarded `onDefaultPresentationDismissed` event is
-        // ignored even if the native callback still fires.
+        // FLT-W-03 / PAR-11: the native SDK exposes no public "unregister" API
+        // for the global dismiss handler, only `setDefaultPresentationDismissHandler`
+        // (which replaces whatever is currently registered). Overwrite it with
+        // a no-op so the native listener genuinely stops doing anything —
+        // functionally equivalent to unregistering with the pinned API,
+        // instead of relying solely on the Dart side discarding its own
+        // reference while the native listener keeps firing internally.
+        Purchasely.setDefaultPresentationDismissHandler { }
         result.safeSuccess(true)
     }
     //endregion
@@ -940,12 +985,16 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
         Purchasely.userLogin(userId) { refresh -> result.safeSuccess(refresh) }
     }
 
-    private fun userLogout() {
-        Purchasely.userLogout(true)
+    private fun userLogout(clearUserAttributes: Boolean) {
+        Purchasely.userLogout(clearUserAttributes)
     }
 
-    private fun setLogLevel(logLevel: Int?) {
-        Purchasely.logLevel = LogLevel.values()[logLevel ?: 0]
+    private fun setLogLevel(raw: Any?) {
+        // PAR-27: the wire contract is `.name` (String) everywhere, same as
+        // `start()` — reuse the same tolerant parser (`logLevelFrom`) instead
+        // of an Int-only cast that would throw ClassCastException on a String
+        // payload.
+        Purchasely.logLevel = logLevelFrom(raw)
     }
 
     private fun allowDeeplink(allowDeeplink: Boolean?) {
@@ -1005,18 +1054,18 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
         result.safeSuccess(Purchasely.handleDeeplink(uri, activity))
     }
 
-    private suspend fun userSubscriptions(result: Result) {
+    private suspend fun userSubscriptions(invalidateCache: Boolean, result: Result) {
         try {
-            val subscriptions = Purchasely.userSubscriptions(true)
+            val subscriptions = Purchasely.userSubscriptions(invalidateCache)
             result.safeSuccess(transformSubscriptionsToList(subscriptions))
         } catch (e: Exception) {
             result.safeError("-1", e.message, e)
         }
     }
 
-    private suspend fun userSubscriptionsHistory(result: Result) {
+    private suspend fun userSubscriptionsHistory(invalidateCache: Boolean, result: Result) {
         try {
-            val subscriptions = Purchasely.userSubscriptionsHistory(true)
+            val subscriptions = Purchasely.userSubscriptionsHistory(invalidateCache)
             result.safeSuccess(transformSubscriptionsToList(subscriptions))
         } catch (e: Exception) {
             result.safeError("-1", e.message, e)
@@ -1082,6 +1131,7 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
             FlutterPLYAttribute.moengageUniqueId.ordinal -> Attribute.MOENGAGE_UNIQUE_ID
             FlutterPLYAttribute.oneSignalExternalId.ordinal -> Attribute.ONESIGNAL_EXTERNAL_ID
             FlutterPLYAttribute.batchCustomUserId.ordinal -> Attribute.BATCH_CUSTOM_USER_ID
+            FlutterPLYAttribute.oneSignalUserId.ordinal -> Attribute.ONESIGNAL_USER_ID
             else -> null
         }
 
@@ -1211,6 +1261,20 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
 
     fun clearBuiltInAttributes() {
         Purchasely.clearBuiltInAttributes()
+    }
+
+    private fun getBuiltInAttributes(result: Result) {
+        val map = Purchasely.getBuiltInAttributes()
+        result.safeSuccess(
+            map.mapValues {
+                getUserAttributeValueForFlutter(it.value)
+            }
+        )
+    }
+
+    private fun getBuiltInAttribute(key: String, result: Result) {
+        val value = getUserAttributeValueForFlutter(Purchasely.getBuiltInAttribute(key))
+        result.safeSuccess(value)
     }
 
     fun setLanguage(language: String?) {
@@ -1461,7 +1525,17 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
             }
         }
 
-        // WARNING: This enum must be strictly identical to the one in the Flutter side (purchasely_flutter.PLYAttribute).
+        // WARNING: This enum must be strictly identical (same case names, same
+        // order) to purchasely_flutter.PLYAttribute (Dart) and
+        // FlutterPLYAttribute (iOS, SwiftPurchaselyFlutterPlugin.swift). All 3
+        // bridges map by case *name* to the native `Attribute`/`Purchasely.PLYAttribute`,
+        // never by raw ordinal — the two native SDKs' own attribute enums are
+        // NOT ordinal-aligned with each other (iOS has `oneSignalPlayerId` at a
+        // different position; Android has no such case at all), so an
+        // ordinal-based bridge mapping would silently cross-wire attributes.
+        // Add new cases here, in purchasely_flutter.dart's PLYAttribute enum,
+        // and in SwiftPurchaselyFlutterPlugin.swift's FlutterPLYAttribute in
+        // lockstep.
         enum class FlutterPLYAttribute {
             firebase_app_instance_id,
             airship_channel_id,
@@ -1484,6 +1558,7 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
             moengageUniqueId,
             oneSignalExternalId,
             batchCustomUserId,
+            oneSignalUserId,
         }
     }
 }

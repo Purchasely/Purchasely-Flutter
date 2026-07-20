@@ -12,6 +12,12 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
     // Dart Presentation handle; there is no native dispose API yet.
     static var requests: [String: PLYPresentationRequest] = [:]
     static var loadedPresentations: [String: PLYPresentation] = [:]
+    // The native `PLYPresentation` protocol and `PLYPresentationRequest`
+    // protocol expose no `contentId` getter (verified against the SDK
+    // interface) — only the builder's write-only `.contentId(_:)` setter. Keep
+    // our own registry of what was passed in so `presentationToMap` can echo
+    // it back instead of hardcoding null (FLT-W-06 / REC-09).
+    static var requestContentIds: [String: String] = [:]
     // invocationId -> SDK interceptor completion. Single-shot, removed on resolve.
     private static var pendingInterceptors: [String: (PLYInterceptResult) -> Void] = [:]
 
@@ -107,6 +113,9 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             display(arguments, result: result)
         case "close":
             closePresentation(arguments, result: result)
+        case "closeAllScreens":
+            Purchasely.closeAllScreens()
+            result(true)
         case "back":
             back(arguments, result: result)
         case "clientPresentationDisplayed":
@@ -141,7 +150,7 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
         case "userLogin":
             userLogin(arguments: arguments, result: result)
         case "userLogout":
-            userLogout(result: result)
+            userLogout(arguments: arguments, result: result)
         case "allowDeeplink":
             let parameter = arguments?["allowDeeplink"] as? Bool
             allowDeeplink(allowDeeplink: parameter)
@@ -155,9 +164,11 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
         case "removeDefaultPresentationDismissHandler":
             removeDefaultPresentationDismissHandler(result: result)
         case "setLogLevel":
-            let parameter = (arguments?["logLevel"] as? Int) ?? PLYLogger.PLYLogLevel.debug.rawValue
-            let logLevel = PLYLogger.PLYLogLevel(rawValue: parameter) ?? PLYLogger.PLYLogLevel.debug
-            Purchasely.setLogLevel(logLevel)
+            // PAR-27: the wire contract is `.name` (String) everywhere, same as
+            // the `start()` builder — reuse the same tolerant parser rather
+            // than a second, Int-only one that would crash `as? Int` into a
+            // silent `.debug` default for a String payload.
+            Purchasely.setLogLevel(Self.logLevel(from: arguments?["logLevel"]))
             DispatchQueue.main.async {
                 result(true)
             }
@@ -173,9 +184,9 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             let parameter = arguments?["deeplink"] as? String
             handleDeeplink(parameter, result: result)
         case "userSubscriptions":
-            userSubscriptions(result)
+            userSubscriptions(arguments, result: result)
         case "userSubscriptionsHistory":
-            userSubscriptionsHistory(result)
+            userSubscriptionsHistory(arguments, result: result)
         case "setThemeMode":
             setThemeMode(arguments: arguments)
             result(true)
@@ -185,6 +196,7 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
         case "setLanguage":
             let parameter = arguments?["language"] as? String
             setLanguage(with: parameter)
+            result(true)
         case "userDidConsumeSubscriptionContent":
             userDidConsumeSubscriptionContent()
             result(true)
@@ -220,6 +232,10 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             clearUserAttributes()
         case "clearBuiltInAttributes":
             clearBuiltInAttributes()
+        case "getBuiltInAttributes":
+            getBuiltInAttributes(result: result)
+        case "getBuiltInAttribute":
+            getBuiltInAttribute(arguments: arguments, result: result)
         case "isAnonymous":
             isAnonymous(result: result)
         case "signPromotionalOffer":
@@ -315,7 +331,10 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             }
         }()
 
-        if let contentId = contentId { _ = builder.contentId(contentId) }
+        if let contentId = contentId {
+            SwiftPurchaselyFlutterPlugin.requestContentIds[requestId] = contentId
+            _ = builder.contentId(contentId)
+        }
         if let hex = args["backgroundColor"] as? String, let color = UIColor.ply_from(hex: hex) {
             _ = builder.backgroundColor(color)
         }
@@ -352,6 +371,9 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
                 "requestId": requestId,
                 "outcome": self?.outcomeToMap(outcome, presentation: presentation, error: nil, requestId: requestId) as Any?,
             ])
+            // contentId is only read by `presentationToMap` during load/present;
+            // drop it on dismiss so the registry doesn't grow unbounded.
+            SwiftPurchaselyFlutterPlugin.requestContentIds.removeValue(forKey: requestId)
         }
 
         let request = builder.build()
@@ -430,6 +452,9 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
                     "requestId": requestId,
                     "outcome": outcome,
                 ])
+                // Display failed before present/dismiss, so `builder.onDismissed`
+                // never fires — clean up the contentId registry here too.
+                SwiftPurchaselyFlutterPlugin.requestContentIds.removeValue(forKey: requestId)
                 result(true)
             } else {
                 result(true)
@@ -539,10 +564,13 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
 
     // MARK: - Presentation serializers
 
+    // Dart only ever sends the running mode as a String ("observer"/"full" —
+    // `PLYRunningMode.name` in purchasely_builder.dart). There is no Int wire
+    // format: the native `PLYRunningMode` rawValues (Observer=2, Full=3) don't
+    // even line up with Dart's own enum ordinals (0/1), so a since-removed Int
+    // branch here was dead *and* wrong — it would have silently resolved any
+    // int input to `.observer` (FLT-W-10). Unknown/missing input → observer.
     private static func runningMode(from raw: Any?) -> PLYRunningMode {
-        if let value = raw as? Int {
-            return PLYRunningMode(rawValue: value) ?? .observer
-        }
         if let value = raw as? String, value.lowercased() == "full" {
             return .full
         }
@@ -580,7 +608,10 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             // contract.
             "screenId": p.screenId,
             "placementId": p.placementId as Any,
-            "contentId": NSNull(),
+            // The native PLYPresentation has no contentId getter — echo back
+            // what was passed to the builder for this requestId instead of
+            // hardcoding null (FLT-W-06 / REC-09).
+            "contentId": SwiftPurchaselyFlutterPlugin.requestContentIds[requestId] as Any,
             "audienceId": p.audienceId as Any,
             "abTestId": p.abTestId as Any,
             "abTestVariantId": p.abTestVariantId as Any,
@@ -674,12 +705,31 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
         }
         if let presentationId = params.presentation { map["presentationId"] = presentationId }
         if let placementId = params.placement { map["placementId"] = placementId }
-        // `webCheckoutProvider` is a non-optional enum with `.none` sentinel;
-        // forward the raw value so the Dart side can treat .none as "absent".
-        map["webCheckoutProvider"] = params.webCheckoutProvider.rawValue
+        // `webCheckoutProvider` is a non-optional enum with `.none` sentinel
+        // (meaningful only for the `web_checkout` kind). Send the case name as
+        // a String — matching Android's `action.webCheckoutProvider.name`
+        // wire contract — instead of the raw Int rawValue: Dart's interceptor
+        // casts this field as a String, so the previous Int payload crashed
+        // before the native completion could ever resolve (FLT-W-08 / REC-01).
+        if let providerName = Self.webCheckoutProviderWireName(params.webCheckoutProvider) {
+            map["webCheckoutProvider"] = providerName
+        }
         if let clientRef = params.clientReferenceId { map["clientReferenceId"] = clientRef }
         if let queryParam = params.queryParameterKey { map["queryParameterKey"] = queryParam }
         return map
+    }
+
+    /// Maps the native `PLYWebCheckoutProvider` Int-backed enum to the same
+    /// case-name strings Android sends via `action.webCheckoutProvider.name`.
+    /// `.none` is the "not a web-checkout action" sentinel — omit the key
+    /// entirely rather than invent a wire string Android never sends.
+    private static func webCheckoutProviderWireName(_ provider: PLYWebCheckoutProvider) -> String? {
+        switch provider {
+        case .stripe: return "STRIPE"
+        case .other:  return "OTHER"
+        case .none:   return nil
+        @unknown default: return nil
+        }
     }
 
     private static func actionFromWire(_ wire: String) -> PLYPresentationAction? {
@@ -822,8 +872,10 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
         }
     }
 
-    private func userLogout(result: @escaping FlutterResult) {
-        Purchasely.userLogout()
+    private func userLogout(arguments: [String: Any]?, result: @escaping FlutterResult) {
+        // PAR-30: defaults to true, aligned with the native default.
+        let clearUserAttributes = (arguments?["clearUserAttributes"] as? Bool) ?? true
+        Purchasely.userLogout(clearUserAttributes)
         result(true)
     }
 
@@ -966,10 +1018,11 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
         }
     }
 
-    private func userSubscriptions(_ result: @escaping FlutterResult) {
-
+    private func userSubscriptions(_ arguments: [String: Any]?, result: @escaping FlutterResult) {
+        // PAR-29: defaults to false, aligned with the native default.
+        let invalidateCache = (arguments?["invalidateCache"] as? Bool) ?? false
         DispatchQueue.main.async {
-            Purchasely.userSubscriptions { subscriptions in
+            Purchasely.userSubscriptions(invalidateCache) { subscriptions in
                 result((subscriptions ?? []).compactMap { $0.toMap })
             } failure: { error in
                 result(FlutterError.error(code:"-1", message:"failed to fetch user subscriptions", error: error))
@@ -977,10 +1030,10 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
         }
     }
 
-    private func userSubscriptionsHistory(_ result: @escaping FlutterResult) {
-
+    private func userSubscriptionsHistory(_ arguments: [String: Any]?, result: @escaping FlutterResult) {
+        let invalidateCache = (arguments?["invalidateCache"] as? Bool) ?? false
         DispatchQueue.main.async {
-            Purchasely.userSubscriptionsHistory { subscriptions in
+            Purchasely.userSubscriptionsHistory(invalidateCache) { subscriptions in
                 result((subscriptions ?? []).compactMap { $0.toMap })
             } failure: { error in
                 result(FlutterError.error(code:"-1", message:"failed to fetch user subscriptions history", error: error))
@@ -1048,6 +1101,8 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
                 return .oneSignalExternalId
             case .batchCustomUserId:
                 return .batchCustomUserId
+            case .oneSignalUserId:
+                return .oneSignalUserId
             }
         }()
 
@@ -1182,6 +1237,25 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
         let resultAttributes = Purchasely.userAttributes.mapValues { getUserAttributeForFlutter(with: $0) }
         DispatchQueue.main.async {
             result(resultAttributes)
+        }
+    }
+
+    private func getBuiltInAttributes(result: @escaping FlutterResult) {
+        let resultAttributes = Purchasely.getBuiltInAttributes().mapValues { getUserAttributeForFlutter(with: $0) }
+        DispatchQueue.main.async {
+            result(resultAttributes)
+        }
+    }
+
+    private func getBuiltInAttribute(arguments: [String: Any]?, result: @escaping FlutterResult) {
+        guard let arguments = arguments, let key = arguments["key"] as? String else {
+            result(FlutterError.error(code: "-1", message: "key must not be nil", error: nil))
+            return
+        }
+
+        let attribute = getUserAttributeForFlutter(with: Purchasely.getBuiltInAttribute(with: key))
+        DispatchQueue.main.async {
+            result(attribute)
         }
     }
 
@@ -1486,7 +1560,15 @@ extension UIColor {
     }
 }
 
-// WARNING: This enum must be strictly identical to the one in the Flutter side (purchasely_flutter.PLYAttribute).
+// WARNING: This enum must be strictly identical (same case names, same order)
+// to purchasely_flutter.PLYAttribute (Dart) and FlutterPLYAttribute (Android,
+// PurchaselyFlutterPlugin.kt). All 3 bridges map by case *name* to the native
+// `Purchasely.PLYAttribute`/`Attribute`, never by raw ordinal — the two native
+// SDKs' own attribute enums are NOT ordinal-aligned with each other (iOS has
+// `oneSignalPlayerId` at a different position; Android has no such case at
+// all), so an ordinal-based bridge mapping would silently cross-wire
+// attributes. Add new cases here, in purchasely_flutter.dart's PLYAttribute
+// enum, and in PurchaselyFlutterPlugin.kt's FlutterPLYAttribute in lockstep.
 enum FlutterPLYAttribute: Int {
     case firebaseAppInstanceId
     case airshipChannelId
@@ -1509,4 +1591,5 @@ enum FlutterPLYAttribute: Int {
     case moengageUniqueId
     case oneSignalExternalId
     case batchCustomUserId
+    case oneSignalUserId
 }

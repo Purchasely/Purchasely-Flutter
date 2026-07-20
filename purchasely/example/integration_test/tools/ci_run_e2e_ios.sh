@@ -52,38 +52,46 @@ run_suite() {
 
 fail=0
 
-echo "=== Suite 1/7: Dart↔iOS bridge (T1–T20) — HARD gate ==="
+echo "=== Suite 1/8: Dart↔iOS bridge (T1–T20) — HARD gate ==="
 run_suite "bridge-ios" integration_test/dart_ios_bridge_test.dart "" bridge || fail=1
 
-echo "=== Suite 2/7: cold-start deeplink (builder.handleDeeplink → auto-open) — HARD gate ==="
+echo "=== Suite 2/8: cold-start deeplink (builder.handleDeeplink → auto-open) — HARD gate ==="
 # Deterministic: the SDK opens the paywall itself from the cold-start deeplink and
 # the test only asserts on analytics events (no flaky idb driver).
 run_suite "deeplink-cold-start-ios" integration_test/deeplink_cold_start_test.dart "" deeplink_cold_start_ios || fail=1
 
-echo "=== Suite 3/7: user-attribute listener (set/removed events) — HARD gate ==="
+echo "=== Suite 3/8: user-attribute listener (set/removed events) — HARD gate ==="
 # Deterministic: setting/clearing an attribute makes the native SDK emit a change
 # event the listener must receive (no UI interaction, no driver).
 run_suite "user-attribute-listener-ios" integration_test/user_attribute_listener_test.dart "" user_attribute_listener_ios || fail=1
 
-echo "=== Suite 4/7: interceptor trigger (idb tap) — best-effort ==="
+echo "=== Suite 4/8: interceptor trigger (idb tap) — best-effort ==="
 run_suite "interceptor-ios" integration_test/interceptor_trigger_ios_test.dart \
   tap_purchase_ios.sh interceptor_ios \
   || echo "::warning::E2E iOS interceptor suite failed after retries (non-blocking)"
 
-echo "=== Suite 5/7: default dismiss handler via deeplink (idb tap close) — best-effort ==="
+echo "=== Suite 5/8: default dismiss handler via deeplink (idb tap close) — best-effort ==="
 run_suite "dismiss-ios" integration_test/default_dismiss_handler_ios_test.dart \
   close_paywall_ios.sh dismiss_ios \
   || echo "::warning::E2E iOS dismiss suite failed after retries (non-blocking)"
 
-echo "=== Suite 6/7: default dismiss handler via fire-and-forget display() (idb tap close) — best-effort ==="
+echo "=== Suite 6/8: default dismiss handler via fire-and-forget display() (idb tap close) — best-effort ==="
 run_suite "dismiss-via-display-ios" integration_test/default_dismiss_via_display_ios_test.dart \
   close_paywall_ios.sh dismiss_via_display_ios \
   || echo "::warning::E2E iOS dismiss-via-display suite failed after retries (non-blocking)"
 
-echo "=== Suite 7/7: local dismiss handler wins over default (idb tap close) — best-effort ==="
+echo "=== Suite 7/8: local dismiss handler wins over default (idb tap close) — best-effort ==="
 run_suite "local-dismiss-ios" integration_test/local_dismiss_handler_ios_test.dart \
   close_paywall_ios.sh local_dismiss_ios \
   || echo "::warning::E2E iOS local-dismiss suite failed after retries (non-blocking)"
+
+echo "=== Suite 8/8: inline view keeps the global event stream flowing (FLT-W-12) — best-effort ==="
+# No idb driver — deterministic once the inline platform view renders. This is
+# the iOS-specific regression (setEventCallback clobber); kept non-blocking
+# until the inline-render path is proven reliable on the CI simulator, then
+# promote to a HARD gate (|| fail=1).
+run_suite "inline-events-ios" integration_test/inline_events_test.dart "" inline_events_ios \
+  || echo "::warning::E2E iOS inline-events suite failed after retries (non-blocking)"
 
 echo "=== E2E iOS finished (gating fail=$fail) ==="
 exit $fail

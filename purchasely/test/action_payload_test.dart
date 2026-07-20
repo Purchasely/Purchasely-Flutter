@@ -132,6 +132,43 @@ void main() {
       );
     });
 
+    test(
+        'webCheckout tolerates a legacy Int webCheckoutProvider (rawValue) '
+        'without crashing (FLT-W-08 / REC-01)', () {
+      Map<String, Object?> withProvider(Object? provider) => {
+            'url': 'https://pay.example.com',
+            'clientReferenceId': 'ref_1',
+            'queryParameterKey': 'token',
+            'webCheckoutProvider': provider,
+          };
+
+      // Correct wire format (String, matches Android's `.name` / fixed iOS).
+      final fromString = actionPayloadFromMap(
+              PLYPresentationActionKind.webCheckout, withProvider('STRIPE'))
+          as PLYWebCheckoutPayload;
+      expect(fromString.webCheckoutProvider, 'STRIPE');
+
+      // Legacy/regressed Int rawValue (pre-fix iOS): must not throw, and
+      // should still map to a usable provider name.
+      final fromInt0 = actionPayloadFromMap(
+              PLYPresentationActionKind.webCheckout, withProvider(0))
+          as PLYWebCheckoutPayload;
+      expect(fromInt0.webCheckoutProvider, 'STRIPE');
+
+      final fromInt1 = actionPayloadFromMap(
+              PLYPresentationActionKind.webCheckout, withProvider(1))
+          as PLYWebCheckoutPayload;
+      expect(fromInt1.webCheckoutProvider, 'OTHER');
+
+      // Unrecognized Int (e.g. the `.none` sentinel, rawValue 2) → no crash,
+      // payload is null because the field is required.
+      expect(
+        actionPayloadFromMap(
+            PLYPresentationActionKind.webCheckout, withProvider(2)),
+        isNull,
+      );
+    });
+
     test('login / restore / promoCode yield a payload carrying their kind', () {
       for (final kind in [
         PLYPresentationActionKind.login,
