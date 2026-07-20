@@ -28,7 +28,7 @@ flutter build ios --config-only --simulator \
   integration_test/purchase_restore_ios_test.dart
 (cd ios && pod install)
 
-xcrun simctl terminate "$UDID" com.purchasely.demo >/dev/null 2>&1 || true
+xcrun simctl terminate "$UDID" com.purchasely.demo >/dev/null 2>&1
 
 # Capture the Dart suite's print()/debugPrint() lines from the simulator's
 # unified log in the background — independent of xcodebuild's own result.
@@ -45,9 +45,9 @@ xcodebuild test -workspace ios/Runner.xcworkspace -scheme Runner \
   -only-testing:RunnerIntegrationTests -destination "id=$UDID"
 STATUS=$?
 
-kill "$DRIVER_PID" >/dev/null 2>&1 || true
+kill "$DRIVER_PID" >/dev/null 2>&1
 sleep 2
-kill "$LOG_PID" >/dev/null 2>&1 || true
+kill "$LOG_PID" >/dev/null 2>&1
 
 echo "=== Dart suite output (flutter: log lines matching S7/SETUP) ==="
 grep -E "S7 iOS|SETUP" "$FLUTTER_LOG" || echo "(no matching flutter: log lines captured)"

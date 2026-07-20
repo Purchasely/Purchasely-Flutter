@@ -51,12 +51,13 @@
 // here: this suite is proving the SDK's purchase/restore flow, not Apple's
 // confirmation dialog.
 //
-// CI implication (for Task 7): this suite needs the same TEST_HOST launch
-// this repo previously moved AWAY from for RunnerTests because it SIGSEGV'd
-// on headless CI simulators. It may well hit the same wall in CI even though
-// it works on a local, non-headless simulator session — Task 7 should treat
-// it as best-effort/non-blocking (like the other idb-driven suites in
-// ci_run_e2e_ios.sh) until proven stable on the actual CI runner image.
+// CI implication (for Task 7): RunnerIntegrationTests is a hostless UI-test
+// bundle that launches the app via XCUIApplication().launch(). Unlike the
+// TEST_HOST-based RunnerTests (which SIGSEGV'd on headless CI simulators),
+// this mechanism may behave differently on CI; CI behavior must be observed
+// before trusting it. Task 7 should treat it as best-effort/non-blocking
+// (like the other idb-driven suites in ci_run_e2e_ios.sh) until proven
+// stable on the actual CI runner image.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -134,9 +135,9 @@ void main() {
           'plan.productId=${purchase.plan.productId} '
           'contentId=${capturedInfo?.contentId}');
 
-      // A second concurrent driver (confirm_storekit_purchase_ios.sh) taps the
-      // system StoreKit purchase-confirmation sheet. Await the final outcome
-      // — the SDK auto-dismisses the paywall once the purchase completes.
+      // RunnerIntegrationTests.m sets SKTestSession.disableDialogs = YES, so
+      // the purchase confirmation is auto-accepted (no separate driver needed).
+      // Await the final outcome — the SDK auto-dismisses the paywall once the purchase completes.
       final outcome = await displayFuture.timeout(const Duration(seconds: 90));
 
       expect(outcome, isA<PLYPresentationOutcome>());
