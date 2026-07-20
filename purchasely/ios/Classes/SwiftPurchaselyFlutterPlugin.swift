@@ -371,8 +371,11 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
                 "requestId": requestId,
                 "outcome": self?.outcomeToMap(outcome, presentation: presentation, error: nil, requestId: requestId) as Any?,
             ])
-            // contentId is only read by `presentationToMap` during load/present;
-            // drop it on dismiss so the registry doesn't grow unbounded.
+            // Full-screen dismiss: clear all per-request state so the
+            // registries don't grow unbounded and stale handles aren't
+            // addressable via close/back. Mirrors the inline NativeView cleanup.
+            SwiftPurchaselyFlutterPlugin.loadedPresentations.removeValue(forKey: requestId)
+            SwiftPurchaselyFlutterPlugin.requests.removeValue(forKey: requestId)
             SwiftPurchaselyFlutterPlugin.requestContentIds.removeValue(forKey: requestId)
         }
 
@@ -453,7 +456,11 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
                     "outcome": outcome,
                 ])
                 // Display failed before present/dismiss, so `builder.onDismissed`
-                // never fires — clean up the contentId registry here too.
+                // never fires — clear all per-request state here (a retry with
+                // the same requestId then rebuilds instead of reusing the failed
+                // request). Mirrors the inline NativeView cleanup.
+                SwiftPurchaselyFlutterPlugin.loadedPresentations.removeValue(forKey: requestId)
+                SwiftPurchaselyFlutterPlugin.requests.removeValue(forKey: requestId)
                 SwiftPurchaselyFlutterPlugin.requestContentIds.removeValue(forKey: requestId)
                 result(true)
             } else {
