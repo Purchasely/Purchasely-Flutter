@@ -28,7 +28,7 @@ SPEC CHECKSUMS:
   Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
   integration_test: 4a889634ef21a45d28d50d622cf412dc6d9f586e
   Purchasely: ffb024d48dbb2f381cef14c9e3051d1026b7fbce
-  purchasely_flutter: fa005223aff64c54c1323366e41fa14dddf18fb0
+  purchasely_flutter: 3c2dfce6f4b55f4df9c709932b3169805bf75a33
 
 PODFILE CHECKSUM: 90bf4859e53005cca57842574aa3859124fcaa16
 
