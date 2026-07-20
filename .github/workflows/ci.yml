@@ -290,6 +290,42 @@ jobs:
         run: flutter build ios --debug --simulator --no-codesign
 
   # ============================================
+  # iOS Swift Package Manager Build
+  # ============================================
+  build-ios-swiftpm:
+    name: Build iOS (SwiftPM)
+    runs-on: macos-latest
+    needs: [analyze]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.24.x"
+          channel: "stable"
+          cache: true
+
+      - name: Enable Swift Package Manager
+        run: flutter config --enable-swift-package-manager
+
+      - name: Install dependencies
+        working-directory: purchasely
+        run: flutter pub get
+
+      - name: Prepare SwiftPM example
+        working-directory: purchasely/example/ios
+        run: |
+          pod deintegrate
+          rm -rf Pods Podfile Podfile.lock
+          sed -i '' '/Pods\/Target Support Files\/Pods-Runner\/Pods-Runner\..*\.xcconfig/d' Flutter/Debug.xcconfig Flutter/Release.xcconfig
+
+      - name: Build iOS with SwiftPM (Debug - Simulator)
+        working-directory: purchasely/example
+        run: flutter build ios --debug --simulator --no-codesign
+
+  # ============================================
   # Android Build
   # ============================================
   build-android:
@@ -402,6 +438,7 @@ jobs:
         android-unit-tests,
         ios-unit-tests,
         build-ios,
+        build-ios-swiftpm,
         build-android,
         version-check,
       ]
@@ -427,6 +464,10 @@ jobs:
           fi
           if [[ "${{ needs.build-ios.result }}" != "success" ]]; then
             echo "iOS build job failed"
+            exit 1
+          fi
+          if [[ "${{ needs.build-ios-swiftpm.result }}" != "success" ]]; then
+            echo "iOS SwiftPM build job failed"
             exit 1
           fi
           if [[ "${{ needs.build-android.result }}" != "success" ]]; then
