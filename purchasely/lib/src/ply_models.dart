@@ -33,6 +33,10 @@ class PLYPlan {
   String? offerDuration;
   String? offerPeriod;
 
+  /// Apple commitment installment details (iOS 26.4+ "monthly subscription with
+  /// N-month commitment"). Empty on Android and other platforms — Apple-only.
+  List<PLYCommitmentInfo> commitmentInfo = [];
+
   PLYPlan(
       this.vendorId,
       this.productId,
@@ -107,4 +111,92 @@ class PLYSubscriptionOffer {
 
   PLYSubscriptionOffer(
       this.subscriptionId, this.basePlanId, this.offerToken, this.offerId);
+}
+
+/// Apple billing plan type for a commitment (iOS 26.4+). Apple-only; other
+/// platforms always report [PLYBillingPlanType.unspecified].
+enum PLYBillingPlanType { unspecified, upFront, monthly }
+
+extension PLYBillingPlanTypeWire on PLYBillingPlanType {
+  /// Wire value sent to the native bridge, matching the iOS SDK's wire form.
+  String get wire {
+    switch (this) {
+      case PLYBillingPlanType.upFront:
+        return 'up_front';
+      case PLYBillingPlanType.monthly:
+        return 'monthly';
+      case PLYBillingPlanType.unspecified:
+        return 'unspecified';
+    }
+  }
+}
+
+/// Commitment installment details for an Apple "monthly subscription with
+/// N-month commitment" plan (iOS 26.4+). Apple-only.
+class PLYCommitmentInfo {
+  final PLYBillingPlanType billingPlanType;
+
+  /// Per-billing-cycle price (e.g. 9.99 for a monthly-billed plan).
+  final double? billingPrice;
+
+  /// ISO 8601 duration of each billing cycle, e.g. "P1M".
+  final String? billingPeriod;
+
+  /// Total price over the full commitment (e.g. 119.88 for 12 × 9.99).
+  final double? totalPrice;
+
+  /// ISO 8601 duration of the full commitment, e.g. "P1Y".
+  final String? totalPeriod;
+
+  /// Number of billing cycles in the commitment (1 for up-front, 12 for a
+  /// 12-month monthly commitment).
+  final int? totalDuration;
+
+  PLYCommitmentInfo({
+    required this.billingPlanType,
+    this.billingPrice,
+    this.billingPeriod,
+    this.totalPrice,
+    this.totalPeriod,
+    this.totalDuration,
+  });
+
+  @override
+  String toString() => 'PLYCommitmentInfo('
+      'billingPlanType: $billingPlanType, '
+      'billingPrice: $billingPrice, '
+      'billingPeriod: $billingPeriod, '
+      'totalPrice: $totalPrice, '
+      'totalPeriod: $totalPeriod, '
+      'totalDuration: $totalDuration)';
+}
+
+/// A subscriber's progress through an Apple monthly-commitment plan
+/// (iOS 26.4+). Null on Android and other platforms — Apple-only.
+class PLYCommitmentProgress {
+  /// The current billing period number within the commitment (1-based).
+  final int? billingPeriodNumber;
+
+  /// The total number of billing periods in the commitment.
+  final int? totalBillingPeriods;
+
+  /// ISO 8601 date at which the commitment expires.
+  final String? commitmentExpiresDate;
+
+  /// The price charged for this billing period.
+  final double? commitmentPrice;
+
+  PLYCommitmentProgress({
+    this.billingPeriodNumber,
+    this.totalBillingPeriods,
+    this.commitmentExpiresDate,
+    this.commitmentPrice,
+  });
+
+  @override
+  String toString() => 'PLYCommitmentProgress('
+      'billingPeriodNumber: $billingPeriodNumber, '
+      'totalBillingPeriods: $totalBillingPeriods, '
+      'commitmentExpiresDate: $commitmentExpiresDate, '
+      'commitmentPrice: $commitmentPrice)';
 }

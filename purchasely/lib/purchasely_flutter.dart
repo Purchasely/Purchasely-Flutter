@@ -373,7 +373,9 @@ class Purchasely {
           null,
           null,
           null,
-          null));
+          null)
+        ..commitmentProgress =
+            plyCommitmentProgressFromMap(element['commitmentProgress']));
     });
     return subscriptions;
   }
@@ -413,7 +415,8 @@ class Purchasely {
         element['subscriptionDurationInDays'],
         element['subscriptionDurationInWeeks'],
         element['subscriptionDurationInMonths'],
-      ));
+      )..commitmentProgress =
+          plyCommitmentProgressFromMap(element['commitmentProgress']));
     });
     return subscriptions;
   }
@@ -712,7 +715,8 @@ class Purchasely {
     return await _channel.invokeMethod('setDynamicOffering', <String, dynamic>{
       'reference': offering.reference,
       'planVendorId': offering.planVendorId,
-      'offerVendorId': offering.offerVendorId
+      'offerVendorId': offering.offerVendorId,
+      'billingPlanType': offering.billingPlanType.wire
     });
   }
 
@@ -775,7 +779,10 @@ class Purchasely {
       }
 
       dynamicOfferings.add(PLYDynamicOffering(
-          reference, planVendorId, offering['offerVendorId']));
+          reference,
+          planVendorId,
+          offering['offerVendorId'],
+          plyBillingPlanTypeFromWire(offering['billingPlanType'])));
     });
     return dynamicOfferings;
   }
@@ -1081,6 +1088,10 @@ class PLYSubscription {
   int? subscriptionDurationInWeeks = null;
   int? subscriptionDurationInMonths = null;
 
+  /// Apple monthly-commitment progress (iOS 26.4+). Null on Android and other
+  /// platforms — Apple-only.
+  PLYCommitmentProgress? commitmentProgress;
+
   PLYSubscription(
       this.purchaseToken,
       this.subscriptionSource,
@@ -1238,16 +1249,22 @@ class PLYDynamicOffering {
   String planVendorId;
   String? offerVendorId;
 
-  PLYDynamicOffering(this.reference, this.planVendorId, this.offerVendorId);
+  /// Apple billing plan type to force for this offering (iOS 26.4+). Ignored on
+  /// Android and other platforms. Defaults to [PLYBillingPlanType.unspecified].
+  PLYBillingPlanType billingPlanType;
+
+  PLYDynamicOffering(this.reference, this.planVendorId, this.offerVendorId,
+      [this.billingPlanType = PLYBillingPlanType.unspecified]);
 
   Map<String, dynamic> toJson() => {
         'reference': reference,
         'planVendorId': planVendorId,
         'offerVendorId': offerVendorId,
+        'billingPlanType': billingPlanType.wire,
       };
 
   @override
   String toString() {
-    return 'PLYDynamicOffering(reference: $reference, planVendorId: $planVendorId, offerVendorId: $offerVendorId)';
+    return 'PLYDynamicOffering(reference: $reference, planVendorId: $planVendorId, offerVendorId: $offerVendorId, billingPlanType: $billingPlanType)';
   }
 }

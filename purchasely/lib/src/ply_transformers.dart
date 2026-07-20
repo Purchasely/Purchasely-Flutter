@@ -34,6 +34,35 @@ PLYPlan? plyPlanFromMap(Map<dynamic, dynamic>? plan) {
     offerDuration,
     offerPeriod,
     plan['basePlanId'],
+  )..commitmentInfo = plyCommitmentInfoFromMap(plan['commitmentInfo']);
+}
+
+/// Parses the Apple commitment installment array (iOS 26.4+). Returns an empty
+/// list when absent (Android and other platforms never send it).
+List<PLYCommitmentInfo> plyCommitmentInfoFromMap(dynamic raw) {
+  if (raw is! List) return [];
+  return raw.whereType<Map>().map(_commitmentInfoFromJson).toList();
+}
+
+PLYCommitmentInfo _commitmentInfoFromJson(Map<dynamic, dynamic> json) =>
+    PLYCommitmentInfo(
+      billingPlanType: plyBillingPlanTypeFromWire(json['billingPlanType']),
+      billingPrice: _toDouble(json['billingPrice']),
+      billingPeriod: json['billingPeriod'] as String?,
+      totalPrice: _toDouble(json['totalPrice']),
+      totalPeriod: json['totalPeriod'] as String?,
+      totalDuration: _toInt(json['totalDuration']),
+    );
+
+/// Parses the Apple commitment progress object (iOS 26.4+). Returns null when
+/// absent (Android and other platforms never send it).
+PLYCommitmentProgress? plyCommitmentProgressFromMap(dynamic raw) {
+  if (raw is! Map || raw.isEmpty) return null;
+  return PLYCommitmentProgress(
+    billingPeriodNumber: _toInt(raw['billingPeriodNumber']),
+    totalBillingPeriods: _toInt(raw['totalBillingPeriods']),
+    commitmentExpiresDate: raw['commitmentExpiresDate'] as String?,
+    commitmentPrice: _toDouble(raw['commitmentPrice']),
   );
 }
 
@@ -56,6 +85,26 @@ PLYPlanType plyPlanTypeFromWire(dynamic rawType) {
     }
   }
   return PLYPlanType.unknown;
+}
+
+/// Tolerantly maps the wire `billingPlanType` to [PLYBillingPlanType]. Accepts
+/// the native string form (`"up_front"` / `"monthly"`) and, defensively, the
+/// legacy Int rawValue (0/1/2). Unknown / null falls back to unspecified.
+PLYBillingPlanType plyBillingPlanTypeFromWire(dynamic raw) {
+  if (raw is int && raw >= 0 && raw < PLYBillingPlanType.values.length) {
+    return PLYBillingPlanType.values[raw];
+  }
+  if (raw is String) {
+    switch (raw) {
+      case 'up_front':
+        return PLYBillingPlanType.upFront;
+      case 'monthly':
+        return PLYBillingPlanType.monthly;
+      default:
+        return PLYBillingPlanType.unspecified;
+    }
+  }
+  return PLYBillingPlanType.unspecified;
 }
 
 PLYPromoOffer? plyPromoOfferFromMap(Map<dynamic, dynamic>? offer) {
@@ -90,3 +139,5 @@ double? _toDouble(dynamic value) {
   if (value is num) return value.toDouble();
   return null;
 }
+
+int? _toInt(dynamic value) => value is num ? value.toInt() : null;
