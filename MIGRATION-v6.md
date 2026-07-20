@@ -495,6 +495,43 @@ PLYPresentationView(request: request);
 
 ---
 
+## Apple commitment plans (iOS 26.4+) — new in v6
+
+v6 surfaces Apple's "monthly subscription with N-month commitment" (installment)
+billing. **This is Apple-only**: on Android and other platforms the fields below
+are always empty / null, so guard on them before use.
+
+- `PLYPlan.commitmentInfo` — `List<PLYCommitmentInfo>` (empty when the plan has
+  no commitment). Populated wherever a plan is exposed: `allProducts`,
+  `planWithIdentifier`, the `purchase` interceptor payload, and the presentation
+  outcome plan. Each `PLYCommitmentInfo` carries:
+  `billingPlanType` (`PLYBillingPlanType`: `unspecified` / `upFront` / `monthly`),
+  `billingPrice` (`double?`), `billingPeriod` (ISO 8601 duration, e.g. `"P1M"`),
+  `totalPrice` (`double?`), `totalPeriod` (e.g. `"P1Y"`), `totalDuration` (`int?`,
+  number of billing cycles).
+- `PLYSubscription.commitmentProgress` — `PLYCommitmentProgress?` on
+  `userSubscriptions` / `userSubscriptionsHistory` results:
+  `billingPeriodNumber` (`int?`), `totalBillingPeriods` (`int?`),
+  `commitmentExpiresDate` (ISO 8601 `String?`), `commitmentPrice` (`double?`).
+- `PLYDynamicOffering` gains an optional `billingPlanType`
+  (`PLYBillingPlanType`, defaults to `unspecified`) to force a commitment plan
+  type when calling `setDynamicOffering`.
+
+```dart
+final plan = await Purchasely.planWithIdentifier('my_plan');
+for (final c in plan?.commitmentInfo ?? const []) {
+  print('${c.billingPlanType}: ${c.billingPrice} every ${c.billingPeriod}, '
+      'total ${c.totalPrice} over ${c.totalDuration} cycles');
+}
+
+// Force the monthly-commitment variant of a plan in a placement:
+await Purchasely.setDynamicOffering(
+  PLYDynamicOffering('ref', 'my_plan', null, PLYBillingPlanType.monthly),
+);
+```
+
+---
+
 ## What's unchanged
 
 Only the **paywall surface** (start, display / preload / close / back, and the
