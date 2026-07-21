@@ -1,5 +1,5 @@
 #!/bin/bash
-# Scripted runner for the S7 iOS StoreKit transaction/restore suite
+# Scripted runner for the S7 iOS StoreKit restore-degradation suite
 # (purchase_restore_ios_test.dart / RunnerIntegrationTests). See that Dart
 # file's header comment for the full execution-path rationale.
 #
@@ -50,8 +50,8 @@ LOG_PID=$!
 
 # No background UI driver here: RunnerIntegrationTests owns testmanagerd's
 # automation channel while xcodebuild is active. The separate interceptor
-# suite covers the real CTA; this StoreKit suite seeds the local transaction
-# through SKTestSession so it can focus on the Flutter restore contract.
+# suite covers the real CTA; this StoreKit suite focuses on the bounded Flutter
+# restore-degradation contract for a local receipt against the real backend.
 #
 # Flutter's in-app integration-test binding does not terminate this hostless
 # launch when the Dart tests finish. Watch the authoritative Dart marker and
