@@ -208,7 +208,9 @@ storekit_ok=0
 storekit_apple_sig=0
 storekit_other_failure=0
 storekit_fail_count=0
+storekit_last_attempt=0
 for a in 1 2 3; do
+  storekit_last_attempt="$a"
   echo "::group::SUITE $storekit_logbase attempt $a"
   start_ts=$(date +%s)
   status=0
@@ -234,7 +236,11 @@ for a in 1 2 3; do
   # A Dart result marker proves the app got past SKTestSession setup, so this
   # is never an Apple-only blocker — even if the verbose xcodebuild log also
   # happens to contain the known signature. Explicit Dart evidence wins.
-  if grep -q 'S7-IOS-RESULT:' "$LOGS/${storekit_logbase}_$a.log"; then
+  if grep -q 'S7-IOS-RESULT: FAIL' "$LOGS/${storekit_logbase}_$a.log"; then
+    storekit_other_failure=1
+    echo "=== $storekit_logbase emitted an explicit Dart FAIL; not retrying a deterministic assertion failure ==="
+    break
+  elif grep -q 'S7-IOS-RESULT:' "$LOGS/${storekit_logbase}_$a.log"; then
     storekit_other_failure=1
   elif grep -qE 'SKInternalErrorDomain Code=3|Error saving configuration file' "$LOGS/${storekit_logbase}_$a.log"; then
     storekit_apple_sig=1
@@ -249,8 +255,8 @@ for a in 1 2 3; do
 done
 
 if [ "$storekit_ok" -ne 1 ]; then
-  if ! cp "$LOGS/${storekit_logbase}_3.log" "$LOGS/${storekit_logbase}.log" 2>/dev/null; then
-    echo "[cleanup] failed to copy ${storekit_logbase}_3.log (non-fatal)"
+  if ! cp "$LOGS/${storekit_logbase}_${storekit_last_attempt}.log" "$LOGS/${storekit_logbase}.log" 2>/dev/null; then
+    echo "[cleanup] failed to copy ${storekit_logbase}_${storekit_last_attempt}.log (non-fatal)"
   fi
   if [ "$storekit_apple_sig" -eq 1 ] && [ "$storekit_other_failure" -eq 0 ]; then
     echo "################################################################"

@@ -117,8 +117,16 @@
   // XCUITest host indefinitely even though the Dart suite has completed.
   XCUICoordinate *ctaCenter =
       [cta coordinateWithNormalizedOffset:CGVectorMake(0.5, 0.5)];
-  for (NSUInteger attempt = 1; attempt <= 3; attempt++) {
-    [ctaCenter tap];
+  // Keep the proven idb fallback as a screen-relative coordinate too. On the
+  // CI paywall the AX node is a StaticText; XCTest can report a successful tap
+  // on that text without activating its backing purchase control. The point
+  // below is the same device-independent location used by tap_purchase_ios.sh
+  // (195,648 on a 390x852 logical screen), normalized for any simulator size.
+  XCUICoordinate *purchasePoint =
+      [app coordinateWithNormalizedOffset:CGVectorMake(0.5, 648.0 / 852.0)];
+  for (NSUInteger attempt = 1; attempt <= 4; attempt++) {
+    XCUICoordinate *target = attempt == 1 ? ctaCenter : purchasePoint;
+    [target tap];
     NSLog(@"[RunnerIntegrationTests] purchase CTA tap attempt %lu",
           (unsigned long)attempt);
     [NSThread sleepForTimeInterval:2.0];
