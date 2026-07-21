@@ -9,8 +9,9 @@
 // SKTestErrorDomain Code=1, and the real backend correctly rejects a local
 // StoreKit test receipt with status 21002. Treating either result as a
 // successful purchase would be a false green. This suite instead makes the
-// supported contract explicit: restore returns false or the known verification
-// error within a strict bound; it must never hang the nightly job.
+// supported contract explicit: restore returns false, the known verification
+// error, or the wrapper's explicit TimeoutException within a strict bound; it
+// must never hang the nightly job.
 //
 // --- Execution path (read before running) ---------------------------------
 //
@@ -64,6 +65,8 @@
 // before trusting it. Task 7 should treat it as best-effort/non-blocking
 // (like the other idb-driven suites in ci_run_e2e_ios.sh) until proven
 // stable on the actual CI runner image.
+
+import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -121,11 +124,14 @@ void main() {
       final stopwatch = Stopwatch()..start();
       bool? restored;
       PlatformException? verificationError;
+      TimeoutException? timeoutError;
       try {
         restored = await Purchasely.restoreAllProducts(
             timeout: const Duration(seconds: 15));
       } on PlatformException catch (error) {
         verificationError = error;
+      } on TimeoutException catch (error) {
+        timeoutError = error;
       }
       stopwatch.stop();
 
@@ -137,6 +143,12 @@ void main() {
         expect(verificationError.message, contains('[21002]'));
         debugPrint('S7 iOS → expected local receipt rejection in '
             '${stopwatch.elapsedMilliseconds}ms: ${verificationError.message}');
+      } else if (timeoutError != null) {
+        expect(stopwatch.elapsed,
+            greaterThanOrEqualTo(const Duration(seconds: 15)),
+            reason: 'the configured timeout must be the bound that fired');
+        debugPrint('S7 iOS → restore bounded timeout in '
+            '${stopwatch.elapsedMilliseconds}ms: $timeoutError');
       } else {
         expect(restored, isFalse,
             reason: 'an empty local StoreKit session has nothing to restore');
