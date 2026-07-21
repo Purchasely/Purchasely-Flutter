@@ -143,8 +143,9 @@ void main() {
       }
       expect(presented, isTrue, reason: 'paywall should present');
 
-      // The concurrent driver (tap_purchase_ios.sh) taps the purchase CTA.
-      // Poll for the interceptor to fire with the typed purchase payload.
+      // RunnerIntegrationTests taps the purchase CTA from inside the active
+      // XCUITest session. Poll for the interceptor to fire with the typed
+      // purchase payload.
       final fireSw = Stopwatch()..start();
       while (capturedPayload == null &&
           fireSw.elapsed < const Duration(seconds: 120)) {

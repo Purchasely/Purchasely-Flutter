@@ -109,19 +109,31 @@
     [NSThread sleepForTimeInterval:0.5];
   }
   XCTAssertTrue(cta.isHittable, @"Purchase CTA exists but is not hittable");
-  [cta tap];
-  NSLog(@"[RunnerIntegrationTests] purchase CTA tapped through XCUITest");
+  // Match the proven idb driver behaviour: the paywall may expose a hittable
+  // StaticText before its backing action is interactive. Tap the label centre
+  // and retry while the CTA remains visible. Once the action is accepted,
+  // StoreKit disables/replaces the control and this loop stops naturally.
+  for (NSUInteger attempt = 1; attempt <= 8 && cta.exists; attempt++) {
+    if (!cta.isHittable) {
+      break;
+    }
+    [[cta coordinateWithNormalizedOffset:CGVectorMake(0.5, 0.5)] tap];
+    NSLog(@"[RunnerIntegrationTests] purchase CTA tap attempt %lu",
+          (unsigned long)attempt);
+    [NSThread sleepForTimeInterval:2.0];
+  }
 
   // tools/run_storekit_suite_ios.sh watches the Dart PASS/FAIL marker and
   // terminates the app as soon as the Dart suite finishes. Poll for that
   // bounded termination. If no marker is ever emitted (setup crash/hang),
   // retain this independent timeout so xcodebuild cannot false-green.
   NSDate *deadline = [NSDate dateWithTimeIntervalSinceNow:420.0];
-  while (app.exists && [deadline timeIntervalSinceNow] > 0) {
+  while (app.state != XCUIApplicationStateNotRunning &&
+         [deadline timeIntervalSinceNow] > 0) {
     [NSThread sleepForTimeInterval:1.0];
   }
 
-  if (app.exists) {
+  if (app.state != XCUIApplicationStateNotRunning) {
     XCTFail(@"App did not exit within the 420s poll window — the Dart suite "
             @"never emitted a result marker or the marker watcher could not "
             @"terminate it. Check storekit_ios_flutter.log.");
