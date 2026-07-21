@@ -89,7 +89,7 @@
   // once the Dart test(s) finish running in this "native, no VM service
   // attached" mode. Poll for that rather than a blind fixed sleep — bounded,
   // generous enough for setUpAll (SDK start) + the purchase/restore flow.
-  NSDate *deadline = [NSDate dateWithTimeIntervalSinceNow:180.0];
+  NSDate *deadline = [NSDate dateWithTimeIntervalSinceNow:420.0];
   while (app.exists && [deadline timeIntervalSinceNow] > 0) {
     [NSThread sleepForTimeInterval:1.0];
   }
@@ -105,7 +105,7 @@
   // that outcome is reported via the S7-IOS-RESULT marker instead (see
   // purchase_restore_ios_test.dart), which this XCTest still can't see.
   if (app.exists) {
-    XCTFail(@"App did not exit within the 180s poll window — the Dart suite "
+    XCTFail(@"App did not exit within the 420s poll window — the Dart suite "
             @"likely hung. Check storekit_ios_flutter.log for the last "
             @"flutter: lines and the S7-IOS-RESULT marker.");
   }

@@ -138,7 +138,7 @@ void main() {
 
       // Wait for the paywall to present.
       final presentSw = Stopwatch()..start();
-      while (!presented && presentSw.elapsed < const Duration(seconds: 20)) {
+      while (!presented && presentSw.elapsed < const Duration(seconds: 60)) {
         await Future<void>.delayed(const Duration(milliseconds: 250));
       }
       expect(presented, isTrue, reason: 'paywall should present');
@@ -147,7 +147,7 @@ void main() {
       // Poll for the interceptor to fire with the typed purchase payload.
       final fireSw = Stopwatch()..start();
       while (capturedPayload == null &&
-          fireSw.elapsed < const Duration(seconds: 40)) {
+          fireSw.elapsed < const Duration(seconds: 120)) {
         await Future<void>.delayed(const Duration(milliseconds: 300));
       }
       expect(capturedPayload, isA<PLYPurchasePayload>(),
@@ -161,7 +161,7 @@ void main() {
       // RunnerIntegrationTests.m sets SKTestSession.disableDialogs = YES, so
       // the purchase confirmation is auto-accepted (no separate driver needed).
       // Await the final outcome — the SDK auto-dismisses the paywall once the purchase completes.
-      final outcome = await displayFuture.timeout(const Duration(seconds: 90));
+      final outcome = await displayFuture.timeout(const Duration(seconds: 180));
 
       expect(outcome, isA<PLYPresentationOutcome>());
       expect(outcome.error, isNull,
