@@ -110,14 +110,15 @@
   }
   XCTAssertTrue(cta.isHittable, @"Purchase CTA exists but is not hittable");
   // Match the proven idb driver behaviour: the paywall may expose a hittable
-  // StaticText before its backing action is interactive. Tap the label centre
-  // and retry while the CTA remains visible. Once the action is accepted,
-  // StoreKit disables/replaces the control and this loop stops naturally.
-  for (NSUInteger attempt = 1; attempt <= 8 && cta.exists; attempt++) {
-    if (!cta.isHittable) {
-      break;
-    }
-    [[cta coordinateWithNormalizedOffset:CGVectorMake(0.5, 0.5)] tap];
+  // StaticText before its backing action is interactive. Resolve its centre
+  // once, then retry that coordinate without querying `exists`/`isHittable`
+  // again. Those accessibility queries wait for the app to become idle; once
+  // StoreKit starts processing the first accepted tap, that can block the
+  // XCUITest host indefinitely even though the Dart suite has completed.
+  XCUICoordinate *ctaCenter =
+      [cta coordinateWithNormalizedOffset:CGVectorMake(0.5, 0.5)];
+  for (NSUInteger attempt = 1; attempt <= 3; attempt++) {
+    [ctaCenter tap];
     NSLog(@"[RunnerIntegrationTests] purchase CTA tap attempt %lu",
           (unsigned long)attempt);
     [NSThread sleepForTimeInterval:2.0];
@@ -127,14 +128,10 @@
   // terminates the app as soon as the Dart suite finishes. Poll for that
   // bounded termination. If no marker is ever emitted (setup crash/hang),
   // retain this independent timeout so xcodebuild cannot false-green.
-  NSDate *deadline = [NSDate dateWithTimeIntervalSinceNow:420.0];
-  while (app.state != XCUIApplicationStateNotRunning &&
-         [deadline timeIntervalSinceNow] > 0) {
-    [NSThread sleepForTimeInterval:1.0];
-  }
-
-  if (app.state != XCUIApplicationStateNotRunning) {
-    XCTFail(@"App did not exit within the 420s poll window — the Dart suite "
+  BOOL didStop = [app waitForState:XCUIApplicationStateNotRunning
+                           timeout:420.0];
+  if (!didStop) {
+    XCTFail(@"App did not exit within the 420s wait window — the Dart suite "
             @"never emitted a result marker or the marker watcher could not "
             @"terminate it. Check storekit_ios_flutter.log.");
   }
