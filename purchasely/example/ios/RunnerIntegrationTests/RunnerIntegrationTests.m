@@ -126,12 +126,16 @@
   // (195,648 on a 390x852 logical screen), normalized for any simulator size.
   XCUICoordinate *purchasePoint =
       [app coordinateWithNormalizedOffset:CGVectorMake(0.5, 648.0 / 852.0)];
-  for (NSUInteger attempt = 1; attempt <= 4; attempt++) {
+  for (NSUInteger attempt = 1; attempt <= 8; attempt++) {
     XCUICoordinate *target = attempt == 1 ? ctaCenter : purchasePoint;
-    [target tap];
-    NSLog(@"[RunnerIntegrationTests] purchase CTA tap attempt %lu",
+    // idb's HID press reaches this custom-rendered CTA reliably, while an
+    // instantaneous XCTest tap can be acknowledged by XCTest without the
+    // SDK receiving touch-up-inside. A short press exercises the same touch
+    // path without introducing a long-press gesture.
+    [target pressForDuration:0.15];
+    NSLog(@"[RunnerIntegrationTests] purchase CTA press attempt %lu",
           (unsigned long)attempt);
-    [NSThread sleepForTimeInterval:2.0];
+    [NSThread sleepForTimeInterval:1.0];
   }
 
   // tools/run_storekit_suite_ios.sh watches the Dart PASS/FAIL marker and

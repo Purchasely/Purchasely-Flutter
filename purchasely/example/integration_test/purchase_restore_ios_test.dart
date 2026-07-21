@@ -148,7 +148,7 @@ void main() {
       // purchase payload.
       final fireSw = Stopwatch()..start();
       while (capturedPayload == null &&
-          fireSw.elapsed < const Duration(seconds: 120)) {
+          fireSw.elapsed < const Duration(seconds: 60)) {
         await Future<void>.delayed(const Duration(milliseconds: 300));
       }
       expect(capturedPayload, isA<PLYPurchasePayload>(),
