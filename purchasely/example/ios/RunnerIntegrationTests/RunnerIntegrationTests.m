@@ -65,14 +65,18 @@
             error);
     return;
   }
+  // resetToDefaultState also resets disableDialogs to NO, so reset and clear
+  // before enabling unattended purchases. Doing this in the opposite order
+  // leaves the SDK waiting forever on StoreKit's confirmation sheet in CI.
+  [self.storeKitSession resetToDefaultState];
+  [self.storeKitSession clearTransactions];
+
   // Auto-confirm the purchase (no system confirmation sheet): the test is
   // proving the SDK's purchase/restore flow, not Apple's own confirmation UI,
   // and that sheet lives outside the app process (SpringBoard), which idb's
   // app-scoped `ui describe-all` cannot reliably reach. This is exactly what
   // disableDialogs exists for — unattended StoreKit testing.
   self.storeKitSession.disableDialogs = YES;
-  [self.storeKitSession resetToDefaultState];
-  [self.storeKitSession clearTransactions];
 }
 
 - (void)tearDown {
