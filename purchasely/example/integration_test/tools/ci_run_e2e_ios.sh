@@ -5,7 +5,7 @@
 # Usage: bash ci_run_e2e_ios.sh <simulator-udid>
 #
 # Gating model: ALL suites are HARD gates, with exactly ONE exception: the
-# StoreKit purchase/restore suite (last, see bottom of this file) — non-
+# StoreKit transaction/restore suite (last, see bottom of this file) — non-
 # gating ONLY IF every failed attempt (across all 3 retries) matches the
 # known, currently-open Apple/Xcode platform bug signature
 # (SKInternalErrorDomain Code=3 / "Error saving configuration file",
@@ -191,7 +191,7 @@ else
   echo "=== Targeted manual run: skipping batches 1-6; running StoreKit only ==="
 fi
 
-# --- Batch 7/7: S7 StoreKit purchase + restore ----------------------------
+# --- Batch 7/7: S7 StoreKit transaction + restore -------------------------
 # SPECIAL CASE, not run via run_suite(): purchase_restore_ios_test.dart can
 # only exercise a real local StoreKit2 transaction if the app is launched
 # through the Xcode scheme (Configuration.storekit is wired into the
@@ -211,7 +211,7 @@ fi
 # purchase/restore assertion failure, etc.) the suite gates, even if other
 # attempts in the same run also matched the Apple signature — a mixed run
 # must not let a real regression hide behind an unrelated known-bug match.
-echo "=== Batch 7/7: S7 StoreKit purchase + restore (xcodebuild, RunnerIntegrationTests) — HARD gate (Apple-bug exception) ==="
+echo "=== Batch 7/7: S7 StoreKit transaction + restore (xcodebuild, RunnerIntegrationTests) — HARD gate (Apple-bug exception) ==="
 TIMEOUT="$STOREKIT_TIMEOUT"
 storekit_logbase="storekit-ios"
 storekit_ok=0

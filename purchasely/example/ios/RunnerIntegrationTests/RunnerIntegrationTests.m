@@ -1,4 +1,4 @@
-// Host for the S7 iOS StoreKit purchase/restore suite
+// Host for the S7 iOS StoreKit transaction/restore suite
 // (purchase_restore_ios_test.dart) — see that file's header comment for the
 // full investigation writeup. Short version:
 //
@@ -72,7 +72,7 @@
   [self.storeKitSession clearTransactions];
 
   // Auto-confirm the purchase (no system confirmation sheet): the test is
-  // proving the SDK's purchase/restore flow, not Apple's own confirmation UI,
+  // proving the SDK's restore flow, not Apple's own confirmation UI,
   // and that sheet lives outside the app process (SpringBoard), which idb's
   // app-scoped `ui describe-all` cannot reliably reach. This is exactly what
   // disableDialogs exists for — unattended StoreKit testing.
@@ -86,6 +86,21 @@
 }
 
 - (void)testS7StorekitPurchaseRestoreEntrypointRuns {
+  // A hostless UI-test bundle can keep SKTestSession alive for the app under
+  // test, but a StoreKit purchase initiated from that separate app process
+  // never completes on the Xcode 26 CI runner. Seed the local transaction
+  // through StoreKitTest itself, assert that it exists, then let the Flutter
+  // suite prove that Purchasely.restoreAllProducts() sees it across the bridge.
+  NSError *purchaseError = nil;
+  BOOL didPurchase = [self.storeKitSession
+      buyProductWithIdentifier:@"com.purchasely.plus.monthly"
+                         error:&purchaseError];
+  XCTAssertTrue(didPurchase, @"Failed to seed the local StoreKit transaction: %@",
+                purchaseError);
+  XCTAssertNil(purchaseError);
+  XCTAssertEqual(self.storeKitSession.allTransactions.count, 1U,
+                 @"The local StoreKit transaction was not recorded");
+
   XCUIApplication *app = [[XCUIApplication alloc] init];
   [app launch];
 

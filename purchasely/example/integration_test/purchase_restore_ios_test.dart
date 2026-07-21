@@ -1,11 +1,11 @@
-// E2E (S7 — StoreKit purchase + restore, iOS): performs a real local StoreKit2
-// transaction through Purchasely.purchase(plan:), then asserts that
-// Purchasely.restoreAllProducts() finds it. The separate
+// E2E (S7 — StoreKit restore, iOS): RunnerIntegrationTests creates and verifies
+// a real local StoreKit transaction, then this suite asserts that
+// Purchasely.restoreAllProducts() finds it across the Flutter bridge. The separate
 // interceptor_trigger_ios_test.dart suite owns the real-paywall-tap → typed
-// purchase-interceptor contract; duplicating that UI layer here is not viable
-// because this hostless XCUITest must own testmanagerd in order to keep the
-// SKTestSession alive, and neither a competing idb client nor XCTest's
-// synthetic event activates the custom-rendered CTA on CI.
+// purchase-interceptor contract. A purchase initiated by the app-under-test
+// cannot complete while this hostless XCUITest owns the StoreKitTest session on
+// Xcode 26 CI, so keeping that operation here only adds a deterministic 180s
+// timeout without testing the restore bridge.
 //
 // --- Execution path (read before running) ---------------------------------
 //
@@ -49,7 +49,7 @@
 // system UI outside the app process anyway — idb's app-scoped
 // `ui describe-all` targets the app under test, not SpringBoard, so driving
 // it would need a different (and flakier) mechanism for no additional signal
-// here: this suite is proving the SDK's purchase/restore flow, not Apple's
+// here: this suite is proving the SDK's restore flow, not Apple's
 // confirmation dialog.
 //
 // CI implication (for Task 7): RunnerIntegrationTests is a hostless UI-test
@@ -68,9 +68,6 @@ import 'package:purchasely_flutter/purchasely_flutter.dart';
 import 'helpers/e2e_start.dart';
 
 const String kApiKey = '0ad0594b-3b3d-4fea-8ee1-4b5df91efe87';
-const String kMonthlyPlan = 'monthly';
-const String kMonthlyProduct = 'com.purchasely.plus.monthly';
-
 // Greptile P1 (PR #138): RunnerIntegrationTests.m is a hostless XCTest bundle
 // (see its own header) — xcodebuild's exit code only proves the app launched
 // and exited/timed out, never whether the `expect()`s below actually passed.
@@ -113,28 +110,16 @@ void main() {
   });
 
   testWidgets(
-      'S7 — direct purchase completes a local StoreKit2 transaction → restore',
+      'S7 — restores a pre-seeded local StoreKit transaction through Flutter',
       (tester) async {
     await tester.runAsync(() async {
-      // RunnerIntegrationTests.m created the SKTestSession before launching
-      // this app and disables StoreKit dialogs, so this bridge call completes
-      // against Configuration.storekit without UI automation.
-      final purchasedPlan = await Purchasely.purchaseWithPlanVendorId(
-        vendorId: kMonthlyPlan,
-      ).timeout(const Duration(seconds: 180));
-      expect(purchasedPlan['vendorId'], kMonthlyPlan);
-      expect(purchasedPlan['productId'], kMonthlyProduct,
-          reason: 'the completed purchase must be the local StoreKit product');
-      debugPrint('S7 iOS → local StoreKit2 purchase completed '
-          'plan.vendorId=${purchasedPlan['vendorId']} '
-          'plan.productId=${purchasedPlan['productId']}');
-
-      // restoreAllProducts(): the just-purchased subscription should be found
-      // on restore. Bounded timeout — never hang indefinitely.
+      // RunnerIntegrationTests.m seeded and asserted the local transaction
+      // before launching this app. This bridge call must now find it. Bounded
+      // timeout: a regression fails quickly instead of hanging the batch.
       final restored = await Purchasely.restoreAllProducts(
           timeout: const Duration(seconds: 60));
       expect(restored, isTrue,
-          reason: 'restoreAllProducts should find the just-purchased plan');
+          reason: 'restoreAllProducts should find the seeded StoreKit plan');
       debugPrint('S7 iOS → restoreAllProducts=$restored');
 
       // Last line of the test body, deliberately: see the module-level
