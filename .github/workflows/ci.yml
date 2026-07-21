@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
@@ -79,7 +79,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
@@ -94,7 +94,7 @@ jobs:
 
       - name: Run tests (purchasely)
         working-directory: purchasely
-        run: flutter test --coverage || echo "No tests found, skipping..."
+        run: flutter test --coverage
 
       - name: Override purchasely_flutter dependency to local path
         run: |
@@ -108,7 +108,7 @@ jobs:
 
       - name: Run tests (purchasely_google)
         working-directory: purchasely_google
-        run: flutter test --coverage || echo "No tests found, skipping..."
+        run: flutter test --coverage
 
       - name: Install dependencies (purchasely_android_player)
         working-directory: purchasely_android_player
@@ -116,7 +116,7 @@ jobs:
 
       - name: Run tests (purchasely_android_player)
         working-directory: purchasely_android_player
-        run: flutter test --coverage || echo "No tests found, skipping..."
+        run: flutter test --coverage
 
   # ============================================
   # Android Unit Tests (Kotlin/Java)
@@ -126,7 +126,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Setup Java
         uses: actions/setup-java@v5
@@ -138,7 +138,7 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.24.x"
+          flutter-version: "3.44.0"
           channel: "stable"
           cache: true
 
@@ -178,9 +178,13 @@ jobs:
   ios-unit-tests:
     name: iOS Unit Tests
     runs-on: macos-latest
+    # Safety net: the RunnerTests host launches the Flutter engine; if it ever
+    # stalls waiting on a VM-service connection, fail fast instead of burning the
+    # job's full timeout.
+    timeout-minutes: 20
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
@@ -205,16 +209,37 @@ jobs:
         working-directory: purchasely/example/ios
         run: pod install --repo-update
 
+      - name: Boot iOS Simulator
+        id: boot-sim
+        run: |
+          # macos-latest ships no "iPhone 15,OS=latest" — resolve dynamically.
+          UDID=$(xcrun simctl list devices available | \
+            grep -E "iPhone (17|16|15|14)" | head -1 | \
+            grep -oE '[0-9A-F-]{36}')
+          if [ -z "$UDID" ]; then
+            echo "No iPhone simulator found" >&2
+            xcrun simctl list devices available >&2
+            exit 1
+          fi
+          echo "udid=$UDID" >> "$GITHUB_OUTPUT"
+          xcrun simctl boot "$UDID" || true
+          xcrun simctl bootstatus "$UDID" -b
+
       - name: Run iOS unit tests
         working-directory: purchasely/example/ios
         run: |
+          # RunnerTests is a HOSTLESS logic-test bundle (no TEST_HOST — see the
+          # Podfile/pbxproj), so `test` runs the XCTest cases WITHOUT launching
+          # the full Flutter example app, which SIGSEGVs on headless CI sims.
+          # `set -o pipefail` + no `|| true`: a real failure gates the job.
+          set -o pipefail
           xcodebuild test \
             -workspace Runner.xcworkspace \
             -scheme Runner \
-            -destination 'platform=iOS Simulator,name=iPhone 15,OS=latest' \
+            -destination "id=${{ steps.boot-sim.outputs.udid }}" \
             -only-testing:RunnerTests \
             -resultBundlePath TestResults.xcresult \
-            | xcpretty --color --report junit --output test-results.xml || true
+            | xcpretty --color --report junit --output test-results.xml
 
       - name: Upload test results
         uses: actions/upload-artifact@v7
@@ -235,7 +260,7 @@ jobs:
     needs: [analyze]
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
@@ -265,6 +290,42 @@ jobs:
         run: flutter build ios --debug --simulator --no-codesign
 
   # ============================================
+  # iOS Swift Package Manager Build
+  # ============================================
+  build-ios-swiftpm:
+    name: Build iOS (SwiftPM)
+    runs-on: macos-latest
+    needs: [analyze]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.24.x"
+          channel: "stable"
+          cache: true
+
+      - name: Enable Swift Package Manager
+        run: flutter config --enable-swift-package-manager
+
+      - name: Install dependencies
+        working-directory: purchasely
+        run: flutter pub get
+
+      - name: Prepare SwiftPM example
+        working-directory: purchasely/example/ios
+        run: |
+          pod deintegrate
+          rm -rf Pods Podfile Podfile.lock
+          sed -i '' '/Pods\/Target Support Files\/Pods-Runner\/Pods-Runner\..*\.xcconfig/d' Flutter/Debug.xcconfig Flutter/Release.xcconfig
+
+      - name: Build iOS with SwiftPM (Debug - Simulator)
+        working-directory: purchasely/example
+        run: flutter build ios --debug --simulator --no-codesign
+
+  # ============================================
   # Android Build
   # ============================================
   build-android:
@@ -273,7 +334,7 @@ jobs:
     needs: [analyze]
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Setup Java
         uses: actions/setup-java@v5
@@ -285,7 +346,7 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.24.x"
+          flutter-version: "3.44.0"
           channel: "stable"
           cache: true
 
@@ -316,6 +377,101 @@ jobs:
         run: flutter build appbundle --release
 
   # ============================================
+  # Flutter 3.44 / AGP 9 Compatibility
+  # ============================================
+  flutter-3-44-agp-9:
+    name: Flutter 3.44 / AGP 9
+    runs-on: ubuntu-latest
+    needs: [analyze]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Setup Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: "temurin"
+          java-version: "17"
+          cache: "gradle"
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.44.0"
+          channel: "stable"
+          cache: true
+
+      - name: Install dependencies (purchasely)
+        working-directory: purchasely
+        run: flutter pub get
+
+      - name: Install dependencies (purchasely_google)
+        working-directory: purchasely_google
+        run: flutter pub get
+
+      - name: Install dependencies (purchasely_android_player)
+        working-directory: purchasely_android_player
+        run: flutter pub get
+
+      - name: Check formatting
+        run: |
+          dart format --set-exit-if-changed purchasely
+          dart format --set-exit-if-changed purchasely_google
+          dart format --set-exit-if-changed purchasely_android_player
+
+      - name: Analyze
+        run: |
+          flutter analyze --no-fatal-infos --no-fatal-warnings purchasely
+          flutter analyze --no-fatal-infos --no-fatal-warnings purchasely_google
+          flutter analyze --no-fatal-infos --no-fatal-warnings purchasely_android_player
+
+      - name: Run tests
+        run: |
+          (cd purchasely && flutter test)
+          (cd purchasely_google && flutter test)
+          (cd purchasely_android_player && flutter test)
+
+      - name: Build Android APK (Release)
+        working-directory: purchasely/example
+        run: flutter build apk --release
+
+      - name: Build Android App Bundle (Release)
+        working-directory: purchasely/example
+        run: flutter build appbundle --release
+
+      - name: Build Google extension Android release APK
+        env:
+          EXTENSION_PATH: purchasely_google
+          PROJECT_NAME: purchasely_google_build
+        run: |
+          extension_app="$RUNNER_TEMP/$PROJECT_NAME"
+          flutter create --platforms=android --project-name "$PROJECT_NAME" "$extension_app"
+          # The generated app defaults to AGP 9 built-in Kotlin; the extension opts out
+          # via KGP, so align the throwaway app to the same build model.
+          printf '\nandroid.newDsl=false\nandroid.builtInKotlin=false\n' >> "$extension_app/android/gradle.properties"
+          (
+            cd "$extension_app"
+            flutter pub add purchasely_google --path "$GITHUB_WORKSPACE/$EXTENSION_PATH"
+            flutter build apk --release
+          )
+
+      - name: Build player extension Android release APK
+        env:
+          EXTENSION_PATH: purchasely_android_player
+          PROJECT_NAME: purchasely_android_player_build
+        run: |
+          extension_app="$RUNNER_TEMP/$PROJECT_NAME"
+          flutter create --platforms=android --project-name "$PROJECT_NAME" "$extension_app"
+          # The generated app defaults to AGP 9 built-in Kotlin; the extension opts out
+          # via KGP, so align the throwaway app to the same build model.
+          printf '\nandroid.newDsl=false\nandroid.builtInKotlin=false\n' >> "$extension_app/android/gradle.properties"
+          (
+            cd "$extension_app"
+            flutter pub add purchasely_android_player --path "$GITHUB_WORKSPACE/$EXTENSION_PATH"
+            flutter build apk --release
+          )
+
+  # ============================================
   # Version Consistency Check
   # ============================================
   version-check:
@@ -323,7 +479,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Check version consistency
         run: |
@@ -358,7 +514,7 @@ jobs:
     runs-on: macos-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Validate podspec
         working-directory: purchasely/ios
@@ -377,7 +533,9 @@ jobs:
         android-unit-tests,
         ios-unit-tests,
         build-ios,
+        build-ios-swiftpm,
         build-android,
+        flutter-3-44-agp-9,
         version-check,
       ]
     if: always()
@@ -404,8 +562,16 @@ jobs:
             echo "iOS build job failed"
             exit 1
           fi
+          if [[ "${{ needs.build-ios-swiftpm.result }}" != "success" ]]; then
+            echo "iOS SwiftPM build job failed"
+            exit 1
+          fi
           if [[ "${{ needs.build-android.result }}" != "success" ]]; then
             echo "Android build job failed"
+            exit 1
+          fi
+          if [[ "${{ needs.flutter-3-44-agp-9.result }}" != "success" ]]; then
+            echo "Flutter 3.44 / AGP 9 compatibility job failed"
             exit 1
           fi
           if [[ "${{ needs.version-check.result }}" != "success" ]]; then

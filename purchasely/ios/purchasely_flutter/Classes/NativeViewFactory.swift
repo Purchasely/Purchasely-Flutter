@@ -5,14 +5,9 @@ import Purchasely
 
 class NativeViewFactory: NSObject, FlutterPlatformViewFactory {
     private var messenger: FlutterBinaryMessenger
-    private var channel: FlutterMethodChannel
-
-    let CHANNEL_ID = "native_view_channel"
 
     init(messenger: FlutterBinaryMessenger) {
         self.messenger = messenger
-        self.channel = FlutterMethodChannel(name: CHANNEL_ID,
-                                           binaryMessenger: messenger)
         super.init()
     }
 
@@ -21,12 +16,13 @@ class NativeViewFactory: NSObject, FlutterPlatformViewFactory {
         viewIdentifier viewId: Int64,
         arguments args: Any?
     ) -> FlutterPlatformView {
-        
+        // The inline view surfaces its outcome through the plugin's shared
+        // `purchasely-presentation-events` sink (see NativeView), not a dedicated
+        // MethodChannel, so no per-view channel is needed.
         return NativeView(
             frame: frame,
             viewIdentifier: viewId,
-            arguments: args,
-            channel: channel)
+            arguments: args)
     }
 
     /// Implementing this method is only necessary when the `arguments` in `createWithFrame` is not `nil`.

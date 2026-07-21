@@ -1,0 +1,121 @@
+name: E2E Android
+
+# End-to-end Dart <-> Android tests against the REAL Purchasely backend, run on a
+# real Android emulator. These are NOT part of the PR-gating `ci.yml` (they need an
+# emulator, real network, and the uiautomator drivers) — they run on demand and
+# nightly.
+#
+# Triggers:
+#   * pull_request      — run on PRs targeting main while the v6 migration is in
+#                         flight, so the E2E suite gates the merge. Scoped to
+#                         paths that affect the bridge / native layer / tests.
+#   * workflow_dispatch — manual run (any branch the workflow exists on)
+#   * schedule          — nightly at 03:00 UTC (GitHub only fires schedules from the
+#                         repository's DEFAULT branch, so the nightly run activates
+#                         once this file is merged to main).
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "purchasely/lib/**"
+      - "purchasely/android/**"
+      - "purchasely/example/integration_test/**"
+      - ".github/workflows/e2e-android.yml"
+  workflow_dispatch:
+  schedule:
+    - cron: "0 3 * * *"
+
+concurrency:
+  group: e2e-android-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e-android:
+    name: E2E Android (real backend)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Enable KVM (hardware acceleration for the emulator)
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Setup Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.24.x"
+          channel: stable
+          cache: true
+
+      # The native Purchasely Android SDK (io.purchasely:core / google-play / player)
+      # 6.0.0-rc.3 is published to Maven Central, so Gradle resolves it directly —
+      # no mavenLocal priming needed.
+
+      - name: Cache pub packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.pub-cache
+          key: ${{ runner.os }}-pub-${{ hashFiles('purchasely/pubspec.lock', 'purchasely/example/pubspec.lock') }}
+          restore-keys: ${{ runner.os }}-pub-
+
+      - name: Install Flutter deps (purchasely)
+        working-directory: purchasely
+        run: flutter pub get
+
+      - name: Install Flutter deps (example)
+        working-directory: purchasely/example
+        run: flutter pub get
+
+      - name: AVD cache
+        uses: actions/cache@v4
+        id: avd-cache
+        with:
+          path: |
+            ~/.android/avd/*
+            ~/.android/adb*
+          key: avd-34-google_apis-x86_64-pixel_6
+
+      - name: Create AVD + snapshot for caching
+        if: steps.avd-cache.outputs.cache-hit != 'true'
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          force-avd-creation: false
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          disable-animations: true
+          script: echo "Generated AVD snapshot for caching."
+
+      - name: Run E2E suite on emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          force-avd-creation: false
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          disable-animations: true
+          script: bash purchasely/example/integration_test/tools/ci_run_e2e.sh emulator-5554
+
+      - name: Upload E2E logs
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: e2e-android-logs
+          path: purchasely/example/integration_test/ci-logs/
+          retention-days: 7

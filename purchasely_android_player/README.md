@@ -1,52 +1,39 @@
 ![Purchasely](images/icon.png)
 
-# Purchasely
+# Purchasely Android Player extension
 
-Purchasely is a solution to ease the integration and boost your In-App Purchase & Subscriptions on the App Store, Google Play Store and Huawei App Gallery.
+Android video player extension for the Purchasely Flutter SDK. Add it when your
+presentations contain videos on Android.
 
 ## Installation
 
-```
+Use the exact same version for every Purchasely Flutter package:
+
+```yaml
 dependencies:
-  purchasely_flutter: ^5.1.0
+  purchasely_flutter: 6.0.0
+  purchasely_android_player: 6.0.0
 ```
 
+This package pulls `io.purchasely:player:6.0.1` on Android, published on
+Maven Central, so it resolves directly from the public repository.
+
 ## Usage
+
+Initialize and display presentations through the main package v6 API:
 
 ```dart
 import 'package:purchasely_flutter/purchasely_flutter.dart';
 
-// ...
+await PurchaselyBuilder.apiKey('<YOUR_API_KEY>')
+    .runningMode(PLYRunningMode.full)
+    .stores([PLYStore.google])
+    .start();
 
-bool configured = await Purchasely.start(
-    apiKey: '<YOUR_API_KEY>',
-    androidStores: ['Google, Huawei, Amazon'],
-    storeKit1: false,
-    logLevel: PLYLogLevel.error,
-    runningMode: PLYRunningMode.full,
-    userId: null,
-);
-
-var result = await Purchasely.presentPresentationForPlacement("<YOUR_PLACEMENT_ID>", isFullscreen: true);
-
-switch (result.result) {
-  case PLYPurchaseResult.cancelled:
-  {
-    print("User cancelled purchased");
-  }
-  break;
-  case PLYPurchaseResult.purchased:
-  {
-    print("User purchased ${result.plan?.name}");
-  }
-  break;
-  case PLYPurchaseResult.restored:
-  {
-    print("User restored ${result.plan?.name}");
-  }
-  break;
-}
+final outcome = await PLYPresentationBuilder.placement('<YOUR_PLACEMENT_ID>')
+    .build()
+    .display(const PLYTransition.fullScreen());
 ```
 
-## 🏁 Documentation
-A complete documentation is available on our website [https://docs.purchasely.com](https://docs.purchasely.com)
+See the repository `MIGRATION-v6.md` and `sdk_public_doc.md` for the complete v6
+API mapping.

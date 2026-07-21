@@ -2,14 +2,14 @@ group 'io.purchasely.purchasely_flutter'
 version '1.0-SNAPSHOT'
 
 buildscript {
-    ext.kotlin_version = '2.1.21'
+    ext.kotlin_version = '2.3.21'
     repositories {
         google()
         mavenCentral()
     }
 
     dependencies {
-        classpath 'com.android.tools.build:gradle:8.13.2'
+        classpath 'com.android.tools.build:gradle:9.0.1'
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
     }
 }
@@ -22,27 +22,27 @@ rootProject.allprojects {
 }
 
 apply plugin: 'com.android.library'
+// AGP 9 defaults to built-in Kotlin, which drops src/main/kotlin from library
+// modules and can't be configured via the kotlin {} DSL here. Opt out with
+// android.builtInKotlin=false (consumer gradle.properties) and keep the mature
+// KGP path so the plugin still builds on both AGP 8 and AGP 9.
 apply plugin: 'kotlin-android'
 
 android {
     namespace 'io.purchasely.purchasely_flutter'
-    compileSdkVersion 35
+    compileSdk = 36
 
+    // AGP 9's built-in Kotlin defaults the Kotlin jvmTarget to 17 and no longer
+    // derives it from targetCompatibility, so Java must target 17 too — otherwise
+    // the build fails with "Inconsistent JVM-target between Java and Kotlin tasks".
+    // AGP 9 already requires JDK 17+, so this raises no consumer floor.
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_11
-        targetCompatibility JavaVersion.VERSION_11
-    }
-
-    kotlinOptions {
-        jvmTarget = '11'
-    }
-
-    sourceSets {
-        main.java.srcDirs += 'src/main/kotlin'
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
     }
 
     defaultConfig {
-        minSdkVersion 23
+        minSdk = 23
     }
 
     testOptions {
@@ -53,19 +53,28 @@ android {
     }
 }
 
+kotlin {
+    compilerOptions {
+        jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
+    }
+}
+
 dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
 
     api 'androidx.lifecycle:lifecycle-runtime-ktx:2.4.0'
 
-    api 'io.purchasely:core:5.7.4'
+    // Purchasely 6.0 native SDK — provides the builder/interceptAction/PLYPresentationBase
+    // APIs wired by the single plugin (PurchaselyFlutterPlugin.kt), which compiles the
+    // whole surface against this version.
+    api 'io.purchasely:core:6.0.1'
 
     // Test dependencies
     testImplementation 'junit:junit:4.13.2'
     testImplementation 'org.mockito:mockito-core:5.21.0'
     testImplementation 'org.mockito.kotlin:mockito-kotlin:5.4.0'
-    testImplementation 'io.mockk:mockk:1.14.9'
-    testImplementation 'io.mockk:mockk-agent-jvm:1.14.9'
-    testImplementation 'org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2'
+    testImplementation 'io.mockk:mockk:1.14.11'
+    testImplementation 'io.mockk:mockk-agent-jvm:1.14.11'
+    testImplementation 'org.jetbrains.kotlinx:kotlinx-coroutines-test:1.11.0'
     testImplementation 'org.robolectric:robolectric:4.11.1'
 }

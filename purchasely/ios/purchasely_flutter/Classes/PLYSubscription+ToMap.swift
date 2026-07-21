@@ -26,7 +26,17 @@ extension PLYSubscription {
         if let date = cancelledDate {
             result["cancelledDate"] = dateFormat.string(from:date)
         }
-        
+
+        // Apple monthly-commitment progress (iOS 26.4+). Nil on non-Apple / older iOS.
+        if let progress = commitmentProgress {
+            result["commitmentProgress"] = [
+                "billingPeriodNumber": progress.billingPeriodNumber,
+                "totalBillingPeriods": progress.totalBillingPeriods,
+                "commitmentExpiresDate": dateFormat.string(from: progress.commitmentExpiresDate),
+                "commitmentPrice": progress.commitmentPrice.doubleValue,
+            ]
+        }
+
         return result
     }
 }

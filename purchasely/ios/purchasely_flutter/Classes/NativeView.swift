@@ -7,17 +7,47 @@ import Purchasely
 class NativeView: NSObject, FlutterPlatformView {
     private var _containerView: NativeContainerView
     private var _controller: UIViewController?
+    private let _requestId: String?
+    // Guards against double-emitting onDismissed (the loaded presentation's
+    // onDismissed callback and the `.presentationClosed` event can both fire).
+    private var _didEmitDismissed = false
 
     init(
         frame: CGRect,
         viewIdentifier viewId: Int64,
-        arguments args: Any?,
-        channel: FlutterMethodChannel
+        arguments args: Any?
     ) {
         _containerView = NativeContainerView(frame: frame)
+        _requestId = (args as? [String: Any])?["requestId"] as? String
         super.init()
+
+        // Fallback: if the loaded presentation's `onDismissed` callback (set
+        // below) doesn't fire for the embedded controller, synthesise the
+        // dismissal from the `.presentationClosed` SDK event instead. Uses the
+        // ObjC delegate API (`setEventDelegate`/`PLYEventDelegate`), which is a
+        // separate slot from the closure-based `setEventCallback` that
+        // `SwiftEventHandler` uses to forward EVERY Purchasely event to Dart.
+        // Registering a callback here would clobber that single global closure
+        // slot and silently stop all events flowing to Dart for the view's
+        // lifetime (FLT-W-12); the delegate slot doesn't conflict and is
+        // released via `removeEventDelegate()` on `deinit`.
         Purchasely.setEventDelegate(self)
-        self._controller = SwiftPurchaselyFlutterPlugin.getPresentationController(for: args, with: channel)
+
+        // The inline native view is built from a Presentation that was already
+        // loaded (via `preload`) and is keyed by the Dart requestId.
+        // Creation-param contract: `{ "requestId": <String> }`.
+        self._controller = SwiftPurchaselyFlutterPlugin.presentationController(for: args)
+
+        // Surface the embedded outcome through the SAME presentation-events sink
+        // and envelope shape as the full-screen path, keyed by the request's
+        // `requestId`, so the Dart `onDismissed` callback (and the pending
+        // `display()` future) fire for the inline path too.
+        if let requestId = _requestId,
+           let presentation = SwiftPurchaselyFlutterPlugin.loadedPresentations[requestId] {
+            presentation.onDismissed = { [weak self] outcome in
+                self?.emitDismissed(requestId: requestId, outcome: outcome)
+            }
+        }
 
         if let controller = _controller {
             let childView = controller.view!
@@ -29,6 +59,20 @@ class NativeView: NSObject, FlutterPlatformView {
             if let rootVC = NativeView.findRootViewController() {
                 rootVC.addChild(controller)
                 controller.didMove(toParent: rootVC)
+            }
+
+            // The native SDK fires no `onPresented` for an embedded controller —
+            // synthesise it once the view is mounted so the Dart-side
+            // request/presentation `onPresented` callback fires for the inline
+            // path too (parity with the full-screen path).
+            if let requestId = _requestId,
+               let presentation = SwiftPurchaselyFlutterPlugin.loadedPresentations[requestId] {
+                SwiftPurchaselyFlutterPlugin.emitPresentationEvent([
+                    "event": "onPresented",
+                    "requestId": requestId,
+                    "presentation": SwiftPurchaselyFlutterPlugin.presentationMap(
+                        presentation, requestId: requestId),
+                ])
             }
         }
 
@@ -79,6 +123,24 @@ class NativeView: NSObject, FlutterPlatformView {
         return UIApplication.shared.delegate?.window??.rootViewController
     }
 
+    /// Emits the `onDismissed` envelope once, mirroring the full-screen path.
+    /// Only the loaded handle is dropped: the request and its contentId stay
+    /// registered so a Dart-side re-display() of the same handle keeps its
+    /// original source (placement/screen) — same policy as the full-screen path.
+    private func emitDismissed(requestId: String, outcome: PLYPresentationOutcome) {
+        guard !_didEmitDismissed else { return }
+        _didEmitDismissed = true
+        let presentation = SwiftPurchaselyFlutterPlugin.loadedPresentations[requestId]
+        SwiftPurchaselyFlutterPlugin.emitPresentationEvent([
+            "event": "onDismissed",
+            "requestId": requestId,
+            "outcome": SwiftPurchaselyFlutterPlugin.outcomeMap(
+                outcome, presentation: presentation, error: nil, requestId: requestId
+            ) as Any?,
+        ])
+        SwiftPurchaselyFlutterPlugin.loadedPresentations.removeValue(forKey: requestId)
+    }
+
     private func cleanupController() {
         guard let controller = _controller else { return }
         if controller.parent != nil {
@@ -91,10 +153,35 @@ class NativeView: NSObject, FlutterPlatformView {
         _controller = nil
     }
 
+    /// Fallback handler for the `.presentationClosed` SDK event — see the
+    /// `setEventDelegate` registration in `init`. Idempotent via
+    /// `_didEmitDismissed`.
+    private func handlePresentationClosed() {
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            if let requestId = self._requestId, !self._didEmitDismissed {
+                self.emitDismissed(requestId: requestId, outcome: PLYPresentationOutcome())
+            }
+            self.cleanupController()
+        }
+    }
+
     deinit {
         NotificationCenter.default.removeObserver(self)
         UIDevice.current.endGeneratingDeviceOrientationNotifications()
+        // Clean unregistration (FLT-W-12): release the event delegate so the
+        // SDK stops holding this soon-to-be-deallocated view. This does NOT
+        // touch `SwiftEventHandler`'s independent `setEventCallback` stream, so
+        // event forwarding to Dart keeps working after the inline view is gone.
+        Purchasely.removeEventDelegate()
         cleanupController()
+    }
+}
+
+extension NativeView: PLYEventDelegate {
+    func eventTriggered(_ event: PLYEvent, properties: [String: Any]?) {
+        guard event == .presentationClosed else { return }
+        handlePresentationClosed()
     }
 }
 
@@ -163,15 +250,5 @@ private class NoAnimationTransitionCoordinator: NSObject, UIViewControllerTransi
 
     func notifyWhenInteractionChanges(_ handler: @escaping (any UIViewControllerTransitionCoordinatorContext) -> Void) {
         handler(self)
-    }
-}
-
-extension NativeView: PLYEventDelegate {
-    func eventTriggered(_ event: PLYEvent, properties: [String : Any]?) {
-        if event == .presentationClosed {
-            DispatchQueue.main.async { [weak self] in
-                self?.cleanupController()
-            }
-        }
     }
 }

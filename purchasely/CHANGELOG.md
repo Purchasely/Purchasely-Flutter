@@ -1,3 +1,41 @@
+## 6.0.0
+
+First stable release of Purchasely 6.0.
+- Updated iOS Purchasely SDK to 6.0.0.
+- Updated Android Purchasely Core SDK to 6.0.1.
+- Updated bridge version to 6.0.0.
+Full changelog available at https://docs.purchasely.com/changelog/60-12-month-commitment-and-personalized-tags
+
+## 6.0.0-rc.3
+
+- Aligns the Flutter package and native bridge version with 6.0.0-rc.3.
+- Keeps the iOS and Android Purchasely SDK dependencies pinned to 6.0.0-rc.3.
+
+## 6.0.0-rc.2
+
+First release candidate for Purchasely 6.0. Adapts the Flutter plugin to the
+Purchasely 6.0 native SDKs (iOS `Purchasely 6.0.0-rc.3`, Android
+`io.purchasely:core 6.0.0-rc.3`, both published on public repositories).
+
+Breaking changes are limited to the paywall surface — starting the SDK, the
+presentation lifecycle (display / preload / close), and the action interceptor.
+Highlights:
+
+- **Start** with the fluent builder: `Purchasely.apiKey('…').runningMode(…).start()`.
+- **Default running mode is now `observer`** (was `full`) — pass
+  `.runningMode(PLYRunningMode.full)` to keep Purchasely handling and validating purchases.
+- **Presentations** use `PLYPresentationBuilder.placement(id).build()` then
+  `.preload()` / `.display([PLYTransition])`, resolving to a `PLYPresentationOutcome`.
+- **Action interceptor** is now per-kind: `Purchasely.interceptAction(kind, handler)`
+  returning a `PLYInterceptResult`.
+- **Removed** `presentSubscriptions()` and
+  `displaySubscriptionCancellationInstruction()`.
+- **Kept** `clientPresentationDisplayed(presentation)` /
+  `clientPresentationClosed(presentation)` — same names as v5; pass the
+  `PLYPresentation` returned by `preload()`.
+
+Full migration guide: https://docs.purchasely.com/docs/migrating-from-v5-to-v6-flutter
+
 ## 5.7.3
 - Updated iOS Purchasely SDK to 5.7.4.
 - Updated Android Purchasely Core SDK to 5.7.4.
@@ -165,7 +203,7 @@ Upgraded to Google Play Billing Library v7, ensuring compatibility with the late
 ## 🚀 Campaigns Support
 Introducing our powerful new Campaigns feature, enabling you to launch targeted in-app campaigns for specific audiences or all users right at app launch.
 - Works just like deep links:
-  - Simply set `Purchasely.readyToOpenDeeplink = true` to enable campaigns.
+  - Simply call `Purchasely.allowCampaigns(true)` to enable campaigns.
 - Gain more control over campaign displays:
   - Use `Purchasely.uiHandler` for custom UI management.
 ## 📊 Enhanced Built-in Attributes

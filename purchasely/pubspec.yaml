@@ -1,6 +1,6 @@
 name: purchasely_flutter
 description: Purchasely is a solution to ease the integration and boost your In-App Purchase & Subscriptions on the App Store, Google Play Store and Huawei App Gallery.
-version: 5.7.3
+version: 6.0.0
 homepage: https://www.purchasely.com/
 
 environment:
@@ -30,7 +30,7 @@ flutter:
         package: io.purchasely.purchasely_flutter
         pluginClass: PurchaselyFlutterPlugin
       ios:
-        pluginClass: PurchaselyFlutterPlugin
+        pluginClass: SwiftPurchaselyFlutterPlugin
 
   assets:
     - images/icon.png

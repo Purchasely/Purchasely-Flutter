@@ -1,12 +1,15 @@
 PODS:
   - Flutter (1.0.0)
-  - Purchasely (5.7.4)
-  - purchasely_flutter (1.2.4):
+  - integration_test (0.0.1):
     - Flutter
-    - Purchasely (= 5.7.4)
+  - Purchasely (6.0.0)
+  - purchasely_flutter (6.0.0):
+    - Flutter
+    - Purchasely (= 6.0.0)
 
 DEPENDENCIES:
   - Flutter (from `Flutter`)
+  - integration_test (from `.symlinks/plugins/integration_test/ios`)
   - purchasely_flutter (from `.symlinks/plugins/purchasely_flutter/ios`)
 
 SPEC REPOS:
@@ -16,14 +19,17 @@ SPEC REPOS:
 EXTERNAL SOURCES:
   Flutter:
     :path: Flutter
+  integration_test:
+    :path: ".symlinks/plugins/integration_test/ios"
   purchasely_flutter:
     :path: ".symlinks/plugins/purchasely_flutter/ios"
 
 SPEC CHECKSUMS:
   Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
-  Purchasely: 1d742186c612c6b7e7a6f0e67952762a29d42920
-  purchasely_flutter: 5a3d1fcdab0d2223e16fe7205aa56aca38441655
+  integration_test: 4a889634ef21a45d28d50d622cf412dc6d9f586e
+  Purchasely: 4309bcf9d139c40dcad8ebe3d93751c8d6ae02cd
+  purchasely_flutter: fdcff9a14713ae94a6e6fc262ed91204dbb6dcda
 
-PODFILE CHECKSUM: 4a5d3c75c41739c31c5593a2d45e26f203a0b464
+PODFILE CHECKSUM: 90bf4859e53005cca57842574aa3859124fcaa16
 
 COCOAPODS: 1.16.2

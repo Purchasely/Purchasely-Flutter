@@ -4,19 +4,12 @@ import android.content.Context
 import android.util.Log
 import android.view.View
 import android.widget.FrameLayout
-import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.platform.PlatformView
-import io.purchasely.ext.PLYPresentationProperties
-import io.purchasely.ext.PLYProductViewResult
-import io.purchasely.ext.Purchasely
-import io.purchasely.models.PLYPresentationPlan
-import io.purchasely.models.PLYPlan
 
 internal class NativeView(
     context: Context,
     id: Int,
     creationParams: Map<String?, Any?>?,
-    private val methodChannel: MethodChannel
 ) : PlatformView {
 
     private val layout: FrameLayout
@@ -29,87 +22,46 @@ internal class NativeView(
 
     init {
         layout = FrameLayout(context)
-        val presentationId = creationParams?.get("presentationId") as? String
-        val placementId = creationParams?.get("placementId") as? String
-        val presentationMap = creationParams?.get("presentation") as? Map<String, Any>
-        val presentation = PurchaselyFlutterPlugin.presentationsLoaded.lastOrNull {
-            it.id == presentationMap?.get("id") as? String
-                    && it.placementId == presentationMap?.get(
-                "placementId"
-            ) as? String
-        }
 
-        if (presentation != null) {
-            Log.d("Purchasely", "PLYPresentation found: ${presentation}")
+        // The inline native view is built from a Presentation that was already
+        // loaded (via `preload`) and is keyed by the Dart requestId.
+        val requestId = creationParams?.get("requestId") as? String
+        val presentation = requestId?.let { PurchaselyFlutterPlugin.loadedPresentations[it] }
 
-            // Build the presentation view
-            val presentationView = presentation.buildView(
-                context = context,
-                properties = PLYPresentationProperties(
-                    onClose = { closeCallback() }
-                ),
-                callback = { result, plan ->
-                    methodChannel.invokeMethod(
-                        "onPresentationResult", mapOf(
-                            "result" to result.ordinal,
-                            "plan" to plan?.toMap(),
-                        )
-                    )
-                }
-            )
+        if (requestId != null && presentation != null) {
+            Log.d("Purchasely", "Loaded Presentation found for requestId=$requestId")
+
+            val presentationView = presentation.buildView(context) { outcome ->
+                // Surface the embedded outcome through the SAME presentation-events
+                // sink and envelope shape as the full-screen path, keyed by the
+                // request's `requestId`, so the Dart `onDismissed` callback (and the
+                // pending `display()` future) fire for the inline path too.
+                // Only the loaded handle and display callback are dropped: the
+                // prepared request stays registered so a re-display of the same
+                // Dart handle keeps its original source (same policy as the
+                // full-screen path).
+                PurchaselyFlutterPlugin.loadedPresentations.remove(requestId)
+                PurchaselyFlutterPlugin.displayCallbacks.remove(requestId)
+                PurchaselyFlutterPlugin.emitPresentationEvent(
+                    PurchaselyFlutterPlugin.eventEnvelope("onDismissed", requestId).apply {
+                        put("outcome", PurchaselyFlutterPlugin.outcomeToMap(outcome))
+                    }
+                )
+            }
             Log.d("Purchasely", "Presentation built successfully.")
             layout.addView(presentationView)
-        } else {
-            Log.e("Purchasely", "PLYPresentation not found: using presentationId=$presentationId and placementId=$placementId.")
-            val presentationView = Purchasely.presentationView(
-                context = context,
-                properties = PLYPresentationProperties(
-                    presentationId = presentationId,
-                    placementId = placementId,
-                    onClose = { closeCallback() }
-                ),
-                callback = { result, plan ->
-                    methodChannel.invokeMethod(
-                        "onPresentationResult", mapOf(
-                            "result" to result.ordinal,
-                            "plan" to plan?.toMap(),
-                        )
-                    )
+
+            // The native SDK fires no `onPresented` for an embedded view —
+            // synthesise it once the view is mounted so the Dart-side
+            // request/presentation `onPresented` callback fires for the inline
+            // path too (parity with the full-screen path).
+            PurchaselyFlutterPlugin.emitPresentationEvent(
+                PurchaselyFlutterPlugin.eventEnvelope("onPresented", requestId).apply {
+                    put("presentation", PurchaselyFlutterPlugin.presentationToMap(presentation))
                 }
             )
-            Log.d("Purchasely", "Presentation view created from fallback.")
-
-            layout.addView(presentationView)
-        }
-    }
-
-    private fun closeCallback() {
-        layout.removeAllViews()
-    }
-
-    companion object {
-        fun parsePLYPresentationPlans(plans: List<Map<String, Any>>?): List<PLYPresentationPlan> {
-            val parsedPlans = mutableListOf<PLYPresentationPlan>()
-
-            plans?.forEach { planMap ->
-                val planVendorId = planMap["planVendorId"] as? String
-                val storeProductId = planMap["storeProductId"] as? String
-                val basePlanId = planMap["basePlanId"] as? String
-                val offerId = planMap["offerId"] as? String
-
-                val presentationPlan = PLYPresentationPlan(
-                    planVendorId = planVendorId,
-                    storeProductId = storeProductId,
-                    basePlanId = basePlanId,
-                    storeOfferId = offerId,
-                    offerVendorId = null,
-                    default = false
-                )
-
-                parsedPlans.add(presentationPlan)
-            }
-
-            return parsedPlans
+        } else {
+            Log.e("Purchasely", "Loaded Presentation not found for requestId=$requestId; nothing to display inline.")
         }
     }
 }

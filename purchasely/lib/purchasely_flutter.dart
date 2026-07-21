@@ -3,7 +3,32 @@ import 'dart:developer';
 
 import 'package:flutter/services.dart';
 
-import 'native_view_widget.dart';
+import 'src/action_interceptor.dart'
+    show PLYPresentationActionKind, PLYActionInterceptorHandler;
+import 'src/bridge.dart' show PurchaselyBridge;
+import 'src/ply_models.dart';
+import 'src/ply_transformers.dart';
+import 'src/presentation.dart' show PLYPresentation, PLYPresentationType;
+import 'src/presentation_outcome.dart' show PLYPresentationOutcome;
+import 'src/purchasely_builder.dart' show PLYLogLevel, PurchaselyBuilder;
+
+// --- Purchasely SDK cross-platform API ---
+//
+// The presentation API is exposed from `lib/src/` and re-exported here so
+// callers can `import 'package:purchasely_flutter/purchasely_flutter.dart';`
+// and get both the static `Purchasely` class below (purchases, restore,
+// login/logout, attributes, products/plans, subscriptions, events, offerings,
+// consent, config) and the builder-based presentation API (`PurchaselyBuilder`,
+// `PLYPresentationBuilder`, `PLYPresentation`, `PLYPresentationOutcome`, `PLYTransition`,
+// ActionInterceptor…).
+export 'src/action_interceptor.dart';
+export 'src/ply_models.dart';
+export 'src/presentation.dart';
+export 'src/presentation_builder.dart';
+export 'src/presentation_outcome.dart';
+export 'src/presentation_request.dart';
+export 'src/purchasely_builder.dart';
+export 'src/transition.dart';
 
 class Purchasely {
   static const MethodChannel _channel = const MethodChannel('purchasely');
@@ -14,10 +39,88 @@ class Purchasely {
 
   static UserAttributeListener? _userAttributeListener;
 
-  static var events;
-  static var purchases;
+  static StreamSubscription<dynamic>? events;
+  static StreamSubscription<dynamic>? purchases;
 
-  // --- Public Methods ---
+  // --- SDK initialisation ---
+
+  /// Start the SDK configuration chain.
+  ///
+  /// ```dart
+  /// await Purchasely.apiKey('<YOUR_API_KEY>')
+  ///     .runningMode(PLYRunningMode.full)
+  ///     .logLevel(PLYLogLevel.error)
+  ///     .stores([PLYStore.google])
+  ///     .start();
+  /// ```
+  static PurchaselyBuilder apiKey(String key) => PurchaselyBuilder.apiKey(key);
+
+  // --- Action interceptor ---
+
+  /// Registers a typed interceptor for [kind] actions triggered from a
+  /// PLYPresentation. The handler returns an `PLYInterceptResult` (or a
+  /// `Future<PLYInterceptResult>`). Thin façade over [PurchaselyBridge].
+  static Future<void> interceptAction(
+    PLYPresentationActionKind kind,
+    PLYActionInterceptorHandler handler,
+  ) =>
+      PurchaselyBridge.ensureInstalled().registerInterceptor(kind, handler);
+
+  /// Removes the action interceptor previously registered for [kind].
+  static Future<void> removeActionInterceptor(PLYPresentationActionKind kind) =>
+      PurchaselyBridge.ensureInstalled().removeActionInterceptor(kind);
+
+  /// Removes all registered action interceptors.
+  static Future<void> removeAllActionInterceptors() =>
+      PurchaselyBridge.ensureInstalled().removeAllActionInterceptors();
+
+  /// Registers the global dismiss handler for presentations opened by the SDK
+  /// itself (campaigns, deeplinks, promoted in-app purchases).
+  ///
+  /// The handler receives the rich v6 [PLYPresentationOutcome], including the
+  /// [PLYPresentationOutcome.presentation] field so the app can identify which
+  /// campaign/deeplink presentation was closed.
+  static Future<void> setDefaultPresentationDismissHandler(
+    void Function(PLYPresentationOutcome outcome) handler,
+  ) =>
+      PurchaselyBridge.ensureInstalled()
+          .setDefaultPresentationDismissHandler(handler);
+
+  /// Removes the global dismiss handler previously registered with
+  /// [setDefaultPresentationDismissHandler].
+  static Future<void> removeDefaultPresentationDismissHandler() =>
+      PurchaselyBridge.ensureInstalled()
+          .removeDefaultPresentationDismissHandler();
+
+  /// Closes every currently displayed Purchasely presentation, regardless of
+  /// how it was opened (PAR-19 / FLT-W-02 comment). For closing a single
+  /// [PLYPresentation] instead, prefer [PLYPresentation.close].
+  static Future<void> closeAllScreens() async {
+    await _channel.invokeMethod('closeAllScreens');
+  }
+
+  // --- Client paywalls ---
+
+  /// Notifies Purchasely that a paywall rendered by your own code (a
+  /// presentation of type [PLYPresentationType.client]) is displayed.
+  ///
+  /// Pass the [PLYPresentation] returned by
+  /// `PLYPresentationBuilder…build().preload()`.
+  static Future<void> clientPresentationDisplayed(
+      PLYPresentation presentation) async {
+    return await _channel.invokeMethod('clientPresentationDisplayed',
+        <String, dynamic>{'presentation': presentation.toMap()});
+  }
+
+  /// Notifies Purchasely that a paywall rendered by your own code (a
+  /// presentation of type [PLYPresentationType.client]) is closed.
+  ///
+  /// Pass the same [PLYPresentation] given to [clientPresentationDisplayed].
+  static Future<void> clientPresentationClosed(
+      PLYPresentation presentation) async {
+    return await _channel.invokeMethod('clientPresentationClosed',
+        <String, dynamic>{'presentation': presentation.toMap()});
+  }
 
   /// Removes the user attribute listener
   static void clearUserAttributeListener() {
@@ -60,7 +163,12 @@ class Purchasely {
     }
   }
 
-  /// Maps the type string to the enum
+  /// Maps the native wire type string to [PLYUserAttributeType]. Never
+  /// throws — an unrecognized type (or a genuinely new native case, e.g. the
+  /// real iOS `.dictionary` case) logs and maps to
+  /// [PLYUserAttributeType.unknown] instead of raising an uncaught
+  /// `ArgumentError` inside the listener's `.listen()` callback
+  /// (REC-09 / FLT-W-04 / ENM-08).
   static PLYUserAttributeType mapType(String type) {
     if (type == "STRING") {
       return PLYUserAttributeType.string;
@@ -80,159 +188,52 @@ class Purchasely {
       return PLYUserAttributeType.floatArray;
     } else if (type == "BOOLEAN_ARRAY") {
       return PLYUserAttributeType.boolArray;
+    } else if (type == "DICTIONARY") {
+      return PLYUserAttributeType.dictionary;
     } else {
-      throw ArgumentError('Unknown type: $type');
+      log('Purchasely: unknown user attribute type "$type", mapping to '
+          'PLYUserAttributeType.unknown');
+      return PLYUserAttributeType.unknown;
     }
   }
 
-  static Future<bool> start(
-      {required final String apiKey,
-      final List<String>? androidStores = const ['Google'],
-      required bool storeKit1,
-      final String? userId,
-      final PLYLogLevel logLevel = PLYLogLevel.error,
-      final PLYRunningMode runningMode = PLYRunningMode.full}) async {
-    return await _channel.invokeMethod('start', <String, dynamic>{
-      'apiKey': apiKey,
-      'stores': androidStores,
-      'storeKit1': storeKit1,
-      'userId': userId,
-      'logLevel': logLevel.index,
-      'runningMode': runningMode.index
-    });
+  /// Restores every purchase previously made by the user (App Store /
+  /// Google Play restore flow).
+  ///
+  /// On a device without a working store (e.g. an emulator without Google
+  /// Play), the native call may never resolve — pass [timeout] to fail with a
+  /// [TimeoutException] instead of awaiting forever.
+  static Future<bool> restoreAllProducts({Duration? timeout}) async {
+    final call = _channel.invokeMethod('restoreAllProducts');
+    final dynamic restored =
+        await (timeout == null ? call : call.timeout(timeout));
+    return restored == true;
   }
 
-  static Future<PLYPresentation?> fetchPresentation(String? placementId,
-      {String? presentationId, String? contentId}) async {
-    final result =
-        await _channel.invokeMethod('fetchPresentation', <String, dynamic>{
-      'placementVendorId': placementId,
-      'presentationVendorId': presentationId,
-      'contentId': contentId
-    });
-
-    return transformToPLYPresentation(result);
+  /// Silent variant of [restoreAllProducts] (no store sign-in prompt on iOS).
+  /// Same [timeout] semantics.
+  static Future<bool> silentRestoreAllProducts({Duration? timeout}) async {
+    final call = _channel.invokeMethod('silentRestoreAllProducts');
+    final dynamic restored =
+        await (timeout == null ? call : call.timeout(timeout));
+    return restored == true;
   }
 
-  static Future<PresentPresentationResult> presentPresentation(
-      PLYPresentation? presentation,
-      {bool isFullscreen = false}) async {
-    final result =
-        await _channel.invokeMethod('presentPresentation', <String, dynamic>{
-      'presentation': transformPLYPresentationToMap(presentation),
-      'isFullscreen': isFullscreen
-    });
-    return PresentPresentationResult(PLYPurchaseResult.values[result['result']],
-        transformToPLYPlan(result['plan']));
-  }
-
-  static PLYPresentationView? getPresentationView({
-    PLYPresentation? presentation,
-    String? presentationId,
-    String? placementId,
-    String? contentId,
-    Function(PresentPresentationResult)? callback,
-  }) {
-    return PLYPresentationView(
-        presentation: presentation,
-        presentationId: presentationId,
-        placementId: placementId,
-        contentId: contentId,
-        callback: callback);
-  }
-
-  static Future<void> clientPresentationDisplayed(
-      PLYPresentation presentation) async {
-    return await _channel.invokeMethod(
-        'clientPresentationDisplayed', <String, dynamic>{
-      'presentation': transformPLYPresentationToMap(presentation)
-    });
-  }
-
-  static Future<void> clientPresentationClosed(
-      PLYPresentation presentation) async {
-    return await _channel.invokeMethod(
-        'clientPresentationClosed', <String, dynamic>{
-      'presentation': transformPLYPresentationToMap(presentation)
-    });
-  }
-
-  static Future<PresentPresentationResult> presentPresentationWithIdentifier(
-      String? presentationVendorId,
-      {String? contentId,
-      bool isFullscreen = false}) async {
-    final result = await _channel
-        .invokeMethod('presentPresentationWithIdentifier', <String, dynamic>{
-      'presentationVendorId': presentationVendorId,
-      'contentId': contentId,
-      'isFullscreen': isFullscreen
-    });
-    return PresentPresentationResult(PLYPurchaseResult.values[result['result']],
-        transformToPLYPlan(result['plan']));
-  }
-
-  static Future<PresentPresentationResult> presentPresentationForPlacement(
-      String? placementVendorId,
-      {String? contentId,
-      bool isFullscreen = false}) async {
-    final result = await _channel
-        .invokeMethod('presentPresentationForPlacement', <String, dynamic>{
-      'placementVendorId': placementVendorId,
-      'contentId': contentId,
-      'isFullscreen': isFullscreen
-    });
-    return PresentPresentationResult(PLYPurchaseResult.values[result['result']],
-        transformToPLYPlan(result['plan']));
-  }
-
-  static Future<PresentPresentationResult> presentProductWithIdentifier(
-      String productVendorId,
-      {String? presentationVendorId,
-      String? contentId,
-      bool isFullscreen = false}) async {
-    final result = await _channel
-        .invokeMethod('presentProductWithIdentifier', <String, dynamic>{
-      'productVendorId': productVendorId,
-      'presentationVendorId': presentationVendorId,
-      'contentId': contentId,
-      'isFullscreen': isFullscreen
-    });
-    PLYPlan? plan;
-    if (!result['plan'].isEmpty) plan = transformToPLYPlan(result['plan']);
-
-    return PresentPresentationResult(
-        PLYPurchaseResult.values[result['result']], plan);
-  }
-
-  static Future<PresentPresentationResult> presentPlanWithIdentifier(
-      String planVendorId,
-      {String? presentationVendorId,
-      String? contentId,
-      bool isFullscreen = false}) async {
-    final result = await _channel
-        .invokeMethod('presentPlanWithIdentifier', <String, dynamic>{
-      'planVendorId': planVendorId,
-      'presentationVendorId': presentationVendorId,
-      'contentId': contentId,
-      'isFullscreen': isFullscreen
-    });
-    return PresentPresentationResult(PLYPurchaseResult.values[result['result']],
-        transformToPLYPlan(result['plan']));
-  }
-
-  static Future<bool> restoreAllProducts() async {
-    final bool restored = await _channel.invokeMethod('restoreAllProducts');
-    return restored;
-  }
-
-  static Future<bool> silentRestoreAllProducts() async {
-    final bool restored =
-        await _channel.invokeMethod('silentRestoreAllProducts');
-    return restored;
-  }
-
-  static Future<void> synchronize() async {
-    return await _channel.invokeMethod('synchronize');
+  /// Forces a synchronization of the user's purchases with the Purchasely
+  /// servers.
+  ///
+  /// Since the 6.0 native SDKs expose success/error callbacks on
+  /// `synchronize()`, the returned [Future] resolves with `true` once the
+  /// synchronization actually completes and throws a [PlatformException] if it
+  /// failed — instead of the previous fire-and-forget behaviour. `await` it
+  /// before chaining a follow-up presentation that targets subscribers.
+  ///
+  /// Resolves `false` when the receipt is still pending store/backend
+  /// validation (deferred purchase, Android) — a normal transient state, not
+  /// a failure.
+  static Future<bool> synchronize() async {
+    final result = await _channel.invokeMethod('synchronize');
+    return result == true;
   }
 
   static Future<String> get anonymousUserId async {
@@ -246,28 +247,42 @@ class Purchasely {
     return restored;
   }
 
-  static Future<void> userLogout() async {
-    return await _channel.invokeMethod("userLogout");
+  /// Logs the current user out.
+  ///
+  /// [clearUserAttributes] also clears locally-stored user attributes.
+  /// Defaults to `true`, matching the native default (PAR-30).
+  static Future<void> userLogout({bool clearUserAttributes = true}) async {
+    return await _channel.invokeMethod("userLogout",
+        <String, dynamic>{'clearUserAttributes': clearUserAttributes});
   }
 
+  /// Sets the SDK log level. Wire-encoded as `.name` (e.g. `"debug"`), the
+  /// same encoding [PurchaselyBuilder.logLevel] uses for `start()` — PAR-27,
+  /// standardizing PLYLogLevel's wire format so both entry points agree.
   static Future<bool> setLogLevel(PLYLogLevel logLevel) async {
     final bool restored = await _channel.invokeMethod(
-        'setLogLevel', <String, dynamic>{'logLevel': logLevel.index});
+        'setLogLevel', <String, dynamic>{'logLevel': logLevel.name});
     return restored;
   }
 
-  static Future<void> readyToOpenDeeplink(bool readyToOpenDeeplink) async {
-    _channel.invokeMethod('readyToOpenDeeplink',
-        <String, dynamic>{'readyToOpenDeeplink': readyToOpenDeeplink});
+  static Future<void> allowDeeplink(bool allowDeeplink) async {
+    await _channel.invokeMethod(
+        'allowDeeplink', <String, dynamic>{'allowDeeplink': allowDeeplink});
+  }
+
+  /// Allows or defers automatic campaign presentation display at runtime.
+  ///
+  /// This flag is independent from [allowDeeplink]. It defaults to `true` in
+  /// the native SDKs; pass `false` during startup/onboarding to queue
+  /// campaigns, then `true` when your app is ready to display them.
+  static Future<void> allowCampaigns(bool allowCampaigns) async {
+    await _channel.invokeMethod(
+        'allowCampaigns', <String, dynamic>{'allowCampaigns': allowCampaigns});
   }
 
   static Future<void> setLanguage(String language) async {
     _channel
         .invokeMethod('setLanguage', <String, dynamic>{'language': language});
-  }
-
-  static Future<void> close() async {
-    _channel.invokeMethod('close');
   }
 
   static Future<PLYProduct> productWithIdentifier(String vendorId) async {
@@ -285,6 +300,12 @@ class Purchasely {
     return transformToPLYPlan(result);
   }
 
+  /// Signs a StoreKit promotional offer for `storeProductId`/`storeOfferId`.
+  ///
+  /// iOS-only — StoreKit has no direct Google Play Billing equivalent. On
+  /// Android this is a no-op that resolves with an empty map rather than
+  /// throwing (FLT-W-01 / REC-04); it never rejects, so calling it
+  /// cross-platform is safe, but the result is only meaningful on iOS.
   static Future<Map<dynamic, dynamic>> signPromotionalOffer(
       String storeProductId, String storeOfferId) async {
     final Map<dynamic, dynamic> result = await _channel.invokeMethod(
@@ -319,17 +340,15 @@ class Purchasely {
     return products;
   }
 
-  static Future<void> presentSubscriptions() async {
-    _channel.invokeMethod('presentSubscriptions');
-  }
-
-  static Future<void> displaySubscriptionCancellationInstruction() async {
-    _channel.invokeMethod('displaySubscriptionCancellationInstruction');
-  }
-
-  static Future<List<PLYSubscription>> userSubscriptions() async {
-    final List<dynamic> result =
-        await _channel.invokeMethod('userSubscriptions');
+  /// Fetches the user's active subscriptions.
+  ///
+  /// [invalidateCache] forces a refresh instead of returning a cached result
+  /// (PAR-29). Defaults to `false`, matching the native default.
+  static Future<List<PLYSubscription>> userSubscriptions(
+      {bool invalidateCache = false}) async {
+    final List<dynamic> result = await _channel.invokeMethod(
+        'userSubscriptions',
+        <String, dynamic>{'invalidateCache': invalidateCache});
 
     final List<PLYSubscription> subscriptions = new List.empty(growable: true);
     result.forEach((element) {
@@ -346,7 +365,7 @@ class Purchasely {
 
       subscriptions.add(PLYSubscription(
           element['purchaseToken'],
-          PLYSubscriptionSource.values[element['subscriptionSource']],
+          _subscriptionSourceFromWire(element['subscriptionSource']),
           element['nextRenewalDate'],
           element['cancelledDate'],
           transformToPLYPlan(element['plan']),
@@ -354,14 +373,23 @@ class Purchasely {
           null,
           null,
           null,
-          null));
+          null)
+        ..commitmentProgress =
+            plyCommitmentProgressFromMap(element['commitmentProgress']));
     });
     return subscriptions;
   }
 
-  static Future<List<PLYSubscription>> userSubscriptionsHistory() async {
-    final List<dynamic> result =
-        await _channel.invokeMethod('userSubscriptionsHistory');
+  /// Fetches the user's subscription history (includes cancelled/expired
+  /// subscriptions plus revenue/duration aggregates).
+  ///
+  /// [invalidateCache] forces a refresh instead of returning a cached result
+  /// (PAR-29). Defaults to `false`, matching the native default.
+  static Future<List<PLYSubscription>> userSubscriptionsHistory(
+      {bool invalidateCache = false}) async {
+    final List<dynamic> result = await _channel.invokeMethod(
+        'userSubscriptionsHistory',
+        <String, dynamic>{'invalidateCache': invalidateCache});
 
     final List<PLYSubscription> subscriptions = new List.empty(growable: true);
     result.forEach((element) {
@@ -378,7 +406,7 @@ class Purchasely {
 
       subscriptions.add(PLYSubscription(
         element['purchaseToken'],
-        PLYSubscriptionSource.values[element['subscriptionSource']],
+        _subscriptionSourceFromWire(element['subscriptionSource']),
         element['nextRenewalDate'],
         element['cancelledDate'],
         transformToPLYPlan(element['plan']),
@@ -387,34 +415,56 @@ class Purchasely {
         element['subscriptionDurationInDays'],
         element['subscriptionDurationInWeeks'],
         element['subscriptionDurationInMonths'],
-      ));
+      )..commitmentProgress =
+          plyCommitmentProgressFromMap(element['commitmentProgress']));
     });
     return subscriptions;
   }
 
-  static Future<bool> isDeeplinkHandled(String deepLink) async {
+  /// Maps the wire `subscriptionSource` to [PLYSubscriptionSource]. Android
+  /// sends `null` for a store type outside the 4 known ones (or a missing/
+  /// out-of-range index) — falls back to [PLYSubscriptionSource.none]
+  /// instead of an uncaught `List` index error (REC-09 / FLT-W-07).
+  static PLYSubscriptionSource _subscriptionSourceFromWire(dynamic raw) {
+    if (raw is int && raw >= 0 && raw < PLYSubscriptionSource.values.length) {
+      return PLYSubscriptionSource.values[raw];
+    }
+    return PLYSubscriptionSource.none;
+  }
+
+  /// Hands a deeplink to the SDK; returns `true` when the SDK handled it
+  /// (e.g. by opening the targeted placement/presentation).
+  ///
+  /// A handled deeplink fires `DEEPLINK_OPENED` and `PRESENTATION_LOADED` /
+  /// `PRESENTATION_VIEWED` (never `PRESENTATION_OPENED`), but the relative
+  /// order of `DEEPLINK_OPENED` and `PRESENTATION_LOADED` differs between the
+  /// native SDKs (iOS emits `DEEPLINK_OPENED` first, Android may emit
+  /// `PRESENTATION_LOADED` first) — don't rely on their ordering.
+  static Future<bool> handleDeeplink(String deepLink) async {
     return await _channel.invokeMethod(
-        'isDeeplinkHandled', <String, dynamic>{'deeplink': deepLink});
+        'handleDeeplink', <String, dynamic>{'deeplink': deepLink});
   }
 
   static void listenToEvents(Function(PLYEvent) block) {
     events = _stream.receiveBroadcastStream().listen((event) {
-      PLYEventName eventName = PLYEventName.APP_CONFIGURED;
-      try {
-        eventName = PLYEventName.values
-            .firstWhere((e) => e.toString() == 'PLYEventName.' + event['name']);
-      } catch (e) {
-        print("Error $e because event ${event['name']} is not found");
-      }
-
+      final eventName = _eventNameFromWire(event['name'] as String?);
       block(PLYEvent(
           eventName, transformToPLYEventProperties(event['properties'])));
     });
   }
 
   static void stopListeningToEvents() {
-    events.cancel();
+    events?.cancel();
   }
+
+  /// Alias for [listenToEvents] — `addEventListener`/`removeEventListener`
+  /// are the shared naming anchor across the Purchasely cross-platform
+  /// bridges (REC-18 / PAR-18).
+  static void addEventListener(Function(PLYEvent) block) =>
+      listenToEvents(block);
+
+  /// Alias for [stopListeningToEvents].
+  static void removeEventListener() => stopListeningToEvents();
 
   static void listenToPurchases(Function block) {
     purchases = _purchases.receiveBroadcastStream().listen((event) {
@@ -423,75 +473,12 @@ class Purchasely {
   }
 
   static void stopListeningToPurchases() {
-    purchases.cancel();
+    purchases?.cancel();
   }
 
   static Future<void> setAttribute(PLYAttribute attribute, String value) async {
     return await _channel.invokeMethod('setAttribute',
         <String, dynamic>{'attribute': attribute.index, 'value': value});
-  }
-
-  static Future<PresentPresentationResult>
-      setDefaultPresentationResultHandler() async {
-    final result =
-        await _channel.invokeMethod('setDefaultPresentationResultHandler');
-    print('Default Presentation Result Handler: $result');
-    print(inspect(result));
-    return PresentPresentationResult(PLYPurchaseResult.values[result['result']],
-        transformToPLYPlan(result['plan']));
-  }
-
-  static Future<PaywallActionInterceptorResult>
-      setPaywallActionInterceptor() async {
-    final result = await _channel.invokeMethod('setPaywallActionInterceptor');
-    final Map<dynamic, dynamic>? plan = result['parameters']['plan'];
-    final Map<dynamic, dynamic>? offer = result['parameters']['offer'];
-    final Map<dynamic, dynamic>? subscriptionOffer =
-        result['parameters']['subscriptionOffer'];
-
-    final info = PLYPaywallInfo(
-        result['info']['contentId'],
-        result['info']['presentationId'],
-        result['info']['placementId'],
-        result['info']['abTestId'],
-        result['info']['abTestVariantId']);
-
-    final action = PLYPaywallAction.values.firstWhere(
-        (e) => e.toString() == 'PLYPaywallAction.' + result['action']);
-
-    final parameters = PLYPaywallActionParameters(
-      url: result['parameters']['url'],
-      title: result['parameters']['title'],
-      plan: plan != null ? transformToPLYPlan(plan) : null,
-      offer: offer != null ? transformToPLYPromoOffer(offer) : null,
-      subscriptionOffer: subscriptionOffer != null
-          ? transformToPLYSubscription(subscriptionOffer)
-          : null,
-      presentation: result['parameters']['presentation'],
-      clientReferenceId: result['parameters']['clientReferenceId'],
-      webCheckoutProvider: result['parameters']['webCheckoutProvider'],
-      queryParameterKey: result['parameters']['queryParameterKey'],
-      closeReason: result['parameters']['closeReason'],
-    );
-
-    return PaywallActionInterceptorResult(info, action, parameters);
-  }
-
-  static Future<void> onProcessAction(bool processAction) async {
-    return await _channel.invokeMethod(
-        'onProcessAction', <String, dynamic>{'processAction': processAction});
-  }
-
-  static Future<void> closePresentation() async {
-    return await _channel.invokeMethod('closePresentation');
-  }
-
-  static Future<void> hidePresentation() async {
-    return await _channel.invokeMethod('hidePresentation');
-  }
-
-  static Future<void> showPresentation() async {
-    return await _channel.invokeMethod('showPresentation');
   }
 
   static Future<bool> isAnonymous() async {
@@ -645,8 +632,10 @@ class Purchasely {
 
     try {
       value = DateTime.parse(value);
-    } catch (FormatException) {
-      //do nothing it is not a date
+    } catch (_) {
+      // Not a date: broad catch is intentional — DateTime.parse throws
+      // FormatException on a bad string and TypeError on a non-string value
+      // (int/bool/null). Either way, keep the original value.
     }
 
     return value;
@@ -660,8 +649,10 @@ class Purchasely {
       dynamic attributeValue = value;
       try {
         attributeValue = DateTime.parse(value);
-      } catch (FormatException) {
-        //do nothing it is not a date
+      } catch (_) {
+        // Not a date: broad catch is intentional — DateTime.parse throws
+        // FormatException on a bad string and TypeError on a non-string value
+        // (int/bool/null). Either way, keep the original value.
       }
       return MapEntry(key, attributeValue);
     });
@@ -679,27 +670,39 @@ class Purchasely {
     _channel.invokeMethod('clearBuiltInAttributes');
   }
 
-  static void setDefaultPresentationResultCallback(Function callback) {
-    setDefaultPresentationResultHandler().then((value) {
-      setDefaultPresentationResultCallback(callback);
-      try {
-        callback(value);
-      } catch (e) {
-        print(
-            '[Purchasely] Error with callback for default presentation result handler: $e');
-      }
-    });
+  /// Reads a single built-in (SDK-computed) user attribute by [key] — the
+  /// read counterpart of the built-in attributes the SDK tracks internally
+  /// (PAR-07).
+  static Future<dynamic> getBuiltInAttribute(String key) async {
+    dynamic value = await _channel
+        .invokeMethod('getBuiltInAttribute', <String, dynamic>{'key': key});
+
+    try {
+      value = DateTime.parse(value);
+    } catch (_) {
+      // Not a date: broad catch is intentional — DateTime.parse throws
+      // FormatException on a bad string and TypeError on a non-string value
+      // (int/bool/null). Either way, keep the original value.
+    }
+
+    return value;
   }
 
-  static void setPaywallActionInterceptorCallback(Function callback) {
-    setPaywallActionInterceptor().then((value) {
-      setPaywallActionInterceptorCallback(callback);
+  /// Reads all built-in (SDK-computed) user attributes (PAR-07).
+  static Future<Map<dynamic, dynamic>> getBuiltInAttributes() async {
+    Map<dynamic, dynamic> attributes =
+        await _channel.invokeMethod('getBuiltInAttributes');
+
+    return attributes.map((key, value) {
+      dynamic attributeValue = value;
       try {
-        callback(value);
-      } catch (e) {
-        print(
-            '[Purchasely] Error with callback for paywall action interceptor handler: $e');
+        attributeValue = DateTime.parse(value);
+      } catch (_) {
+        // Not a date: broad catch is intentional — DateTime.parse throws
+        // FormatException on a bad string and TypeError on a non-string value
+        // (int/bool/null). Either way, keep the original value.
       }
+      return MapEntry(key, attributeValue);
     });
   }
 
@@ -712,7 +715,8 @@ class Purchasely {
     return await _channel.invokeMethod('setDynamicOffering', <String, dynamic>{
       'reference': offering.reference,
       'planVendorId': offering.planVendorId,
-      'offerVendorId': offering.offerVendorId
+      'offerVendorId': offering.offerVendorId,
+      'billingPlanType': offering.billingPlanType.wire
     });
   }
 
@@ -746,109 +750,15 @@ class Purchasely {
 
   // -- Private Methods --
 
-  static PLYPlan? transformToPLYPlan(Map<dynamic, dynamic> plan) {
-    if (plan.isEmpty) return null;
+  static PLYPlan? transformToPLYPlan(Map<dynamic, dynamic> plan) =>
+      plyPlanFromMap(plan);
 
-    PLYPlanType type = PLYPlanType.unknown;
-    try {
-      type = PLYPlanType.values[plan['type']];
-    } catch (e) {
-      print(e);
-    }
-    return PLYPlan(
-        plan['vendorId'],
-        plan['productId'],
-        plan['name'],
-        type,
-        plan['amount'],
-        plan['localizedAmount'],
-        plan['currencyCode'],
-        plan['currencySymbol'],
-        plan['price'],
-        plan['period'],
-        plan['hasIntroductoryPrice'],
-        plan['introPrice'],
-        plan['introAmount'],
-        plan['introDuration'],
-        plan['introPeriod'],
-        plan['hasFreeTrial']);
-  }
-
-  static PLYPromoOffer? transformToPLYPromoOffer(Map<dynamic, dynamic> offer) {
-    if (offer.isEmpty) return null;
-
-    return PLYPromoOffer(
-      offer['vendorId'],
-      offer['storeOfferId'],
-    );
-  }
+  static PLYPromoOffer? transformToPLYPromoOffer(Map<dynamic, dynamic> offer) =>
+      plyPromoOfferFromMap(offer);
 
   static PLYSubscriptionOffer? transformToPLYSubscription(
-      Map<dynamic, dynamic> subscriptionOffer) {
-    if (subscriptionOffer.isEmpty) return null;
-
-    return PLYSubscriptionOffer(
-      subscriptionOffer['subscriptionId'],
-      subscriptionOffer['basePlanId'],
-      subscriptionOffer['offerToken'],
-      subscriptionOffer['offerId'],
-    );
-  }
-
-  static PLYPresentation? transformToPLYPresentation(
-      Map<dynamic, dynamic> presentation) {
-    if (presentation.isEmpty) return null;
-
-    PLYPresentationType type = PLYPresentationType.normal;
-    try {
-      type = PLYPresentationType.values[presentation['type']];
-    } catch (e) {
-      print(e);
-    }
-
-    List<PLYPresentationPlan> plans = (presentation['plans'] as List)
-        .map((e) => PLYPresentationPlan(e['planVendorId'], e['storeProductId'],
-            e['basePlanId'], e['offerId']))
-        .toList();
-
-    Map<String, dynamic> metadata = {};
-    presentation['metadata']?.forEach((key, value) {
-      metadata[key] = value;
-    });
-
-    return PLYPresentation(
-        presentation['id'],
-        presentation['placementId'],
-        presentation['audienceId'],
-        presentation['abTestId'],
-        presentation['abTestVariantId'],
-        presentation['language'],
-        presentation['height'] ?? 0,
-        type,
-        plans,
-        metadata);
-  }
-
-  static Map<dynamic, dynamic> transformPLYPresentationToMap(
-      PLYPresentation? presentation) {
-    var presentationMap = new Map();
-
-    presentationMap['id'] = presentation?.id;
-    presentationMap['placementId'] = presentation?.placementId;
-    presentationMap['audienceId'] = presentation?.audienceId;
-    presentationMap['abTestId'] = presentation?.abTestId;
-    presentationMap['abTestVariantId'] = presentation?.abTestVariantId;
-    presentationMap['language'] = presentation?.language;
-    presentationMap['type'] = presentation?.type.index;
-
-    // Need to convert to list of map if we want to send it over to native bridge
-    //presentationMap['plans'] = presentation?.plans;
-
-    // No need to send metadata
-    //presentationMap['metadata'] = presentation?.metadata;
-
-    return presentationMap;
-  }
+          Map<dynamic, dynamic> subscriptionOffer) =>
+      plySubscriptionOfferFromMap(subscriptionOffer);
 
   static List<PLYDynamicOffering> transformToDynamicOfferings(
       List<Map<dynamic, dynamic>>? offerings) {
@@ -869,20 +779,17 @@ class Purchasely {
       }
 
       dynamicOfferings.add(PLYDynamicOffering(
-          reference, planVendorId, offering['offerVendorId']));
+          reference,
+          planVendorId,
+          offering['offerVendorId'],
+          plyBillingPlanTypeFromWire(offering['billingPlanType'])));
     });
     return dynamicOfferings;
   }
 
   static PLYEventProperties transformToPLYEventProperties(
       Map<dynamic, dynamic> properties) {
-    PLYEventName eventName = PLYEventName.APP_CONFIGURED;
-    try {
-      eventName = PLYEventName.values.firstWhere(
-          (e) => e.toString() == 'PLYEventName.' + properties['event_name']);
-    } catch (e) {
-      print(e);
-    }
+    final eventName = _eventNameFromWire(properties['event_name'] as String?);
 
     List<PLYEventPropertyPlan> plans = new List.empty(growable: true);
     properties['purchasable_plans']?.forEach((element) => plans.add(
@@ -939,7 +846,8 @@ class Purchasely {
       properties['anonymous_user_id'],
       plans,
       properties['deeplink_identifier'],
-      properties['source_identifier'],
+      // v6 iOS sends placement_id; v5 sent source_identifier. Accept both.
+      properties['source_identifier'] ?? properties['placement_id'],
       properties['selected_plan'],
       properties['previous_selected_plan'],
       properties['selected_presentation'],
@@ -993,12 +901,33 @@ class Purchasely {
   }
 }
 
+/// Maps a native event name string to [PLYEventName]. Falls back to
+/// [PLYEventName.UNKNOWN] (logging the mismatch) instead of silently
+/// misclassifying an unrecognized event as [PLYEventName.APP_CONFIGURED]
+/// (REC-13 / EVT-01) — shared by [Purchasely.listenToEvents] and
+/// [Purchasely.transformToPLYEventProperties] so the fallback only lives in
+/// one place.
+PLYEventName _eventNameFromWire(String? wire) {
+  for (final name in PLYEventName.values) {
+    if (name.name == wire) return name;
+  }
+  log('Purchasely: unknown event name "$wire", mapping to PLYEventName.UNKNOWN');
+  return PLYEventName.UNKNOWN;
+}
+
 // -- ENUMS --
 
-enum PLYLogLevel { debug, info, warn, error }
-
-enum PLYRunningMode { transactionOnly, observer, paywallObserver, full }
-
+// WARNING: This enum must be strictly identical (same case names, same
+// order) to FlutterPLYAttribute on both native bridges
+// (ios/Classes/SwiftPurchaselyFlutterPlugin.swift and
+// android/.../PurchaselyFlutterPlugin.kt's companion object). All 3 map by
+// case *name* to the native `Purchasely.PLYAttribute`/`Attribute`, never by
+// raw ordinal — the two native SDKs' own attribute enums are NOT
+// ordinal-aligned with each other (iOS has `oneSignalPlayerId`, which this
+// Dart enum deliberately does NOT declare, at a different position; Android
+// has no such case at all), so an ordinal-based bridge mapping would
+// silently cross-wire attributes. Add new cases here AND in both native
+// enums in lockstep (REC-11 / ENM-03).
 enum PLYAttribute {
   firebase_app_instance_id,
   airship_channel_id,
@@ -1021,6 +950,7 @@ enum PLYAttribute {
   moengageUniqueId,
   oneSignalExternalId,
   batchCustomUserId,
+  oneSignalUserId,
 }
 
 enum PLYDataProcessingLegalBasis { essential, optional }
@@ -1036,10 +966,6 @@ enum PLYDataProcessingPurpose {
 
 enum PLYThemeMode { light, dark, system }
 
-enum PLYPurchaseResult { purchased, cancelled, restored }
-
-enum PLYPresentationType { normal, fallback, deactivated, client }
-
 enum PLYSubscriptionSource {
   appleAppStore,
   googlePlayStore,
@@ -1048,28 +974,14 @@ enum PLYSubscriptionSource {
   none
 }
 
-enum PLYPlanType {
-  consumable,
-  nonConsumable,
-  autoRenewingSubscription,
-  nonRenewingSubscription,
-  unknown
-}
-
-enum PLYPaywallAction {
-  close,
-  close_all,
-  login,
-  navigate,
-  purchase,
-  restore,
-  open_presentation,
-  open_placement,
-  promo_code,
-  open_flow_step,
-  web_checkout,
-}
-
+/// Native SDK event names forwarded over the `purchasely-events` channel.
+///
+/// 51 cases: 50 correspond to a real native event name (including
+/// [PLACEMENT_OPENED] and [PURCHASE_FROM_STORE_TAPPED], added for parity —
+/// REC-13 / EVT-01), plus [UNKNOWN] — a Dart-only fallback sentinel never
+/// sent by the native SDKs. Keep this count comment accurate when adding
+/// cases; a stale count here previously masked exactly this kind of gap.
+/// [_eventNameFromWire] matches by exact case name, never by ordinal.
 enum PLYEventName {
   APP_INSTALLED,
   APP_CONFIGURED,
@@ -1091,6 +1003,7 @@ enum PLYEventName {
   PLAN_SELECTED,
   OPTIONS_SELECTED,
   OPTIONS_VALIDATED,
+  PLACEMENT_OPENED,
   PRESENTATION_VIEWED,
   PRESENTATION_OPENED,
   PRESENTATION_SELECTED,
@@ -1098,6 +1011,7 @@ enum PLYEventName {
   PRESENTATION_CLOSED,
   PROMO_CODE_TAPPED,
   PURCHASE_CANCELLED,
+  PURCHASE_FROM_STORE_TAPPED,
   PURCHASE_TAPPED,
   RESTORE_TAPPED,
   RECEIPT_CREATED,
@@ -1118,7 +1032,12 @@ enum PLYEventName {
   WEB_CHECKOUT_OPENED_IN_WEB_BROWSER,
   WEB_CHECKOUT_ERROR,
   WEB_CHECKOUT_TAPPED,
-  WEB_CHECKOUT_TIMED_OUT
+  WEB_CHECKOUT_TIMED_OUT,
+
+  /// Sentinel for a native event name this enum doesn't (yet) declare a case
+  /// for. Never silently misclassified as [APP_CONFIGURED] — see
+  /// [_eventNameFromWire].
+  UNKNOWN,
 }
 
 enum PLYUserAttributeSource {
@@ -1136,63 +1055,18 @@ enum PLYUserAttributeType {
   intArray,
   floatArray,
   boolArray,
+
+  /// Native iOS's `PLYUserAttributeType.dictionary` case (confirmed real,
+  /// not hypothetical — see FLT-W-04). Value is passed through as-is; no
+  /// dedicated Dart model, same as every other case here.
+  dictionary,
+
+  /// Sentinel for a native wire type this enum doesn't (yet) declare a case
+  /// for. [Purchasely.mapType] never throws — see its doc comment.
+  unknown,
 }
 
 // -- CLASSES --
-
-class PLYPlan {
-  String? vendorId;
-  String? productId;
-  String? name;
-  PLYPlanType type;
-  double? amount;
-  String? localizedAmount;
-  String? currencyCode;
-  String? currencySymbol;
-  String? price;
-  String? period;
-  bool? hasIntroductoryPrice;
-  String? introPrice;
-  double? introAmount;
-  String? introDuration;
-  String? introPeriod;
-  bool? hasFreeTrial;
-
-  PLYPlan(
-      this.vendorId,
-      this.productId,
-      this.name,
-      this.type,
-      this.amount,
-      this.localizedAmount,
-      this.currencyCode,
-      this.currencySymbol,
-      this.price,
-      this.period,
-      this.hasIntroductoryPrice,
-      this.introPrice,
-      this.introAmount,
-      this.introDuration,
-      this.introPeriod,
-      this.hasFreeTrial);
-}
-
-class PLYPromoOffer {
-  String? vendorId;
-  String? storeOfferId;
-
-  PLYPromoOffer(this.vendorId, this.storeOfferId);
-}
-
-class PLYSubscriptionOffer {
-  String subscriptionId;
-  String? basePlanId;
-  String? offerToken;
-  String? offerId;
-
-  PLYSubscriptionOffer(
-      this.subscriptionId, this.basePlanId, this.offerToken, this.offerId);
-}
 
 class PLYProduct {
   String name;
@@ -1200,65 +1074,6 @@ class PLYProduct {
   List<PLYPlan> plans;
 
   PLYProduct(this.name, this.vendorId, this.plans);
-}
-
-class PLYPresentationPlan {
-  String? planVendorId;
-  String? storeProductId;
-  String? basePlanId;
-  String? offerId;
-
-  PLYPresentationPlan(
-      this.planVendorId, this.storeProductId, this.basePlanId, this.offerId);
-
-  Map<String, dynamic> toMap() {
-    return {
-      'planVendorId': planVendorId,
-      'storeProductId': storeProductId,
-      'basePlanId': basePlanId,
-      'offerId': offerId,
-    };
-  }
-}
-
-class PLYPresentation {
-  String? id;
-  String? placementId;
-  String? audienceId;
-  String? abTestId;
-  String? abTestVariantId;
-  String language;
-  int height = 0;
-  PLYPresentationType type;
-  List<PLYPresentationPlan>? plans;
-  Map<String, dynamic> metadata;
-
-  PLYPresentation(
-      this.id,
-      this.placementId,
-      this.audienceId,
-      this.abTestId,
-      this.abTestVariantId,
-      this.language,
-      this.height,
-      this.type,
-      this.plans,
-      this.metadata);
-
-  Map<String, dynamic> toMap() {
-    return {
-      'id': id,
-      'placementId': placementId,
-      'audienceId': audienceId,
-      'abTestId': abTestId,
-      'abTestVariantId': abTestVariantId,
-      'language': language,
-      'height': height,
-      'type': type.toString(),
-      'plans': plans?.map((plan) => plan.toMap()).toList(),
-      'metadata': metadata,
-    };
-  }
 }
 
 class PLYSubscription {
@@ -1273,6 +1088,10 @@ class PLYSubscription {
   int? subscriptionDurationInWeeks = null;
   int? subscriptionDurationInMonths = null;
 
+  /// Apple monthly-commitment progress (iOS 26.4+). Null on Android and other
+  /// platforms — Apple-only.
+  PLYCommitmentProgress? commitmentProgress;
+
   PLYSubscription(
       this.purchaseToken,
       this.subscriptionSource,
@@ -1284,57 +1103,6 @@ class PLYSubscription {
       this.subscriptionDurationInDays,
       this.subscriptionDurationInWeeks,
       this.subscriptionDurationInMonths);
-}
-
-class PresentPresentationResult {
-  PLYPurchaseResult result;
-  PLYPlan? plan;
-
-  PresentPresentationResult(this.result, this.plan);
-}
-
-class PaywallActionInterceptorResult {
-  PLYPaywallInfo info;
-  PLYPaywallAction action;
-  PLYPaywallActionParameters parameters;
-
-  PaywallActionInterceptorResult(this.info, this.action, this.parameters);
-}
-
-class PLYPaywallActionParameters {
-  String? url;
-  String? title;
-  PLYPlan? plan;
-  PLYPromoOffer? offer;
-  PLYSubscriptionOffer? subscriptionOffer;
-  String? presentation;
-  String? clientReferenceId;
-  String? queryParameterKey;
-  String? webCheckoutProvider;
-  String? closeReason;
-
-  PLYPaywallActionParameters(
-      {this.url,
-      this.title,
-      this.plan,
-      this.offer,
-      this.subscriptionOffer,
-      this.presentation,
-      this.clientReferenceId,
-      this.queryParameterKey,
-      this.webCheckoutProvider,
-      this.closeReason});
-}
-
-class PLYPaywallInfo {
-  String? contentId;
-  String? presentationId;
-  String? placementId;
-  String? abTestId;
-  String? abTestVariantId;
-
-  PLYPaywallInfo(this.contentId, this.presentationId, this.placementId,
-      this.abTestId, this.abTestVariantId);
 }
 
 class PLYEventPropertyPlan {
@@ -1481,16 +1249,22 @@ class PLYDynamicOffering {
   String planVendorId;
   String? offerVendorId;
 
-  PLYDynamicOffering(this.reference, this.planVendorId, this.offerVendorId);
+  /// Apple billing plan type to force for this offering (iOS 26.4+). Ignored on
+  /// Android and other platforms. Defaults to [PLYBillingPlanType.unspecified].
+  PLYBillingPlanType billingPlanType;
+
+  PLYDynamicOffering(this.reference, this.planVendorId, this.offerVendorId,
+      [this.billingPlanType = PLYBillingPlanType.unspecified]);
 
   Map<String, dynamic> toJson() => {
         'reference': reference,
         'planVendorId': planVendorId,
         'offerVendorId': offerVendorId,
+        'billingPlanType': billingPlanType.wire,
       };
 
   @override
   String toString() {
-    return 'PLYDynamicOffering(reference: $reference, planVendorId: $planVendorId, offerVendorId: $offerVendorId)';
+    return 'PLYDynamicOffering(reference: $reference, planVendorId: $planVendorId, offerVendorId: $offerVendorId, billingPlanType: $billingPlanType)';
   }
 }

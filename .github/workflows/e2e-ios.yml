@@ -1,0 +1,130 @@
+name: E2E iOS
+
+# End-to-end Dart <-> iOS tests against the REAL Purchasely backend, run on an
+# iOS Simulator. These are NOT part of the PR-gating `ci.yml` (they need a
+# simulator and real network) — they run on demand and nightly.
+#
+# Suites:
+#   1/3 — dart_ios_bridge_test.dart       (T1–T20, no native interaction)
+#   2/3 — interceptor_trigger_ios_test    (purchase interceptor; driver taps
+#          ply_action_purchase_* via idb)
+#   3/3 — default_dismiss_handler_ios     (deeplink + default dismiss; driver
+#          taps ply_action_close via idb)
+#
+# Triggers:
+#   * pull_request      — run on PRs targeting main while the v6 migration is in
+#                         flight, so the E2E suite gates the merge. Scoped to
+#                         paths that affect the bridge / native layer / tests.
+#   * workflow_dispatch — manual run (any branch the workflow exists on)
+#   * schedule          — nightly at 04:00 UTC (GitHub only fires schedules from
+#                         the repository's DEFAULT branch, so the nightly run
+#                         activates once this file is merged to main).
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "purchasely/lib/**"
+      - "purchasely/ios/**"
+      - "purchasely/example/integration_test/**"
+      - ".github/workflows/e2e-ios.yml"
+  workflow_dispatch:
+  schedule:
+    - cron: "0 4 * * *"
+
+concurrency:
+  group: e2e-ios-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e-ios:
+    name: E2E iOS (real backend)
+    runs-on: macos-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          # Match the dev toolchain (3.41.x). Flutter 3.24.5 + the macos-latest
+          # Xcode/iOS runtime makes the example app crash on launch on the
+          # simulator (the integration-test harness then times out after 12 min
+          # with setUpAll never running). 3.41.x runs the full suite locally.
+          flutter-version: "3.41.4"
+          channel: stable
+          cache: true
+
+      - name: Cache pub packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.pub-cache
+          key: ${{ runner.os }}-pub-${{ hashFiles('purchasely/pubspec.lock', 'purchasely/example/pubspec.lock') }}
+          restore-keys: ${{ runner.os }}-pub-
+
+      - name: Install Flutter deps (purchasely)
+        working-directory: purchasely
+        run: flutter pub get
+
+      - name: Install Flutter deps (example)
+        working-directory: purchasely/example
+        run: flutter pub get
+
+      - name: Cache CocoaPods
+        uses: actions/cache@v4
+        with:
+          path: |
+            purchasely/example/ios/Pods
+            ~/Library/Caches/CocoaPods
+          key: ${{ runner.os }}-pods-${{ hashFiles('purchasely/example/ios/Podfile.lock') }}
+          restore-keys: ${{ runner.os }}-pods-
+
+      - name: Install CocoaPods deps
+        working-directory: purchasely/example/ios
+        # No --repo-update: the CDN resolves specs without cloning the full repo.
+        run: pod install
+
+      - name: Install idb-companion + idb Python client
+        run: |
+          # idb-companion lives in the facebook/fb tap, not homebrew-core.
+          brew install facebook/fb/idb-companion
+          # macOS runners' Python may be externally-managed (PEP 668).
+          pip3 install fb-idb || pip3 install --break-system-packages fb-idb
+
+      - name: Boot iOS Simulator
+        id: boot-sim
+        run: |
+          # Find an available iPhone simulator (prefer iPhone 16, fall back to 15/14)
+          UDID=$(xcrun simctl list devices available | \
+            grep -E "iPhone (16|15|14)" | head -1 | \
+            grep -oE '[0-9A-F-]{36}')
+          if [ -z "$UDID" ]; then
+            echo "No iPhone simulator found" >&2
+            xcrun simctl list devices available >&2
+            exit 1
+          fi
+          echo "udid=$UDID" >> "$GITHUB_OUTPUT"
+          echo "Booting simulator $UDID"
+          xcrun simctl boot "$UDID" || true
+          xcrun simctl bootstatus "$UDID" -b
+
+      - name: Run E2E suite on iOS Simulator
+        run: bash purchasely/example/integration_test/tools/ci_run_e2e_ios.sh ${{ steps.boot-sim.outputs.udid }}
+
+      - name: Collect simulator crash logs (on failure)
+        if: failure()
+        run: |
+          mkdir -p purchasely/example/integration_test/ci-logs
+          cp -R ~/Library/Logs/DiagnosticReports \
+            purchasely/example/integration_test/ci-logs/DiagnosticReports 2>/dev/null || true
+          xcrun simctl spawn ${{ steps.boot-sim.outputs.udid }} log show --last 5m \
+            --predicate 'processImagePath CONTAINS "Runner" OR senderImagePath CONTAINS "Purchasely"' \
+            > purchasely/example/integration_test/ci-logs/sim_log.txt 2>&1 || true
+
+      - name: Upload E2E logs
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: e2e-ios-logs
+          path: purchasely/example/integration_test/ci-logs/
+          retention-days: 7
