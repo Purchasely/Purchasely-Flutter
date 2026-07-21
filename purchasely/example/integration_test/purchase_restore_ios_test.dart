@@ -1,10 +1,11 @@
-// E2E (S7 — StoreKit purchase + restore, iOS): the purchase action interceptor
-// fires on a real tap, is allowed to PROCEED (PLYInterceptResult.notHandled,
-// the v6 equivalent of the pre-v6 `onProcessAction(true)`) instead of being
-// blocked like interceptor_trigger_ios_test.dart does, and the resulting
-// PLYPresentationOutcome.purchaseResult is asserted to be `.purchased` — a
-// real local StoreKit2 transaction, then `Purchasely.restoreAllProducts()` is
-// asserted to return `true`.
+// E2E (S7 — StoreKit purchase + restore, iOS): performs a real local StoreKit2
+// transaction through Purchasely.purchase(plan:), then asserts that
+// Purchasely.restoreAllProducts() finds it. The separate
+// interceptor_trigger_ios_test.dart suite owns the real-paywall-tap → typed
+// purchase-interceptor contract; duplicating that UI layer here is not viable
+// because this hostless XCUITest must own testmanagerd in order to keep the
+// SKTestSession alive, and neither a competing idb client nor XCTest's
+// synthetic event activates the custom-rendered CTA on CI.
 //
 // --- Execution path (read before running) ---------------------------------
 //
@@ -67,7 +68,8 @@ import 'package:purchasely_flutter/purchasely_flutter.dart';
 import 'helpers/e2e_start.dart';
 
 const String kApiKey = '0ad0594b-3b3d-4fea-8ee1-4b5df91efe87';
-const String kPlacementAudiences = 'integration_test_audiences';
+const String kMonthlyPlan = 'monthly';
+const String kMonthlyProduct = 'com.purchasely.plus.monthly';
 
 // Greptile P1 (PR #138): RunnerIntegrationTests.m is a hostless XCTest bundle
 // (see its own header) — xcodebuild's exit code only proves the app launched
@@ -111,70 +113,21 @@ void main() {
   });
 
   testWidgets(
-      'S7 — purchase interceptor lets the flow proceed → purchased outcome → restore',
+      'S7 — direct purchase completes a local StoreKit2 transaction → restore',
       (tester) async {
     await tester.runAsync(() async {
-      PLYInterceptorInfo? capturedInfo;
-      PLYActionPayload? capturedPayload;
-      var presented = false;
-
-      // notHandled = the v6 equivalent of the removed `onProcessAction(true)`:
-      // the interceptor observes the action but does NOT short-circuit it, so
-      // the native SDK proceeds with its own default purchase flow (a real
-      // StoreKit2 transaction against the local Configuration.storekit).
-      await Purchasely.interceptAction(
-        PLYPresentationActionKind.purchase,
-        (info, payload) async {
-          capturedInfo = info;
-          capturedPayload = payload;
-          return PLYInterceptResult.notHandled;
-        },
-      );
-
-      final request = PLYPresentationBuilder.placement(kPlacementAudiences)
-          .onPresented((p, e) => presented = true)
-          .build();
-      final displayFuture = request.display(const PLYTransition.fullScreen());
-
-      // Wait for the paywall to present.
-      final presentSw = Stopwatch()..start();
-      while (!presented && presentSw.elapsed < const Duration(seconds: 60)) {
-        await Future<void>.delayed(const Duration(milliseconds: 250));
-      }
-      expect(presented, isTrue, reason: 'paywall should present');
-
-      // RunnerIntegrationTests taps the purchase CTA from inside the active
-      // XCUITest session. Poll for the interceptor to fire with the typed
-      // purchase payload.
-      final fireSw = Stopwatch()..start();
-      while (capturedPayload == null &&
-          fireSw.elapsed < const Duration(seconds: 60)) {
-        await Future<void>.delayed(const Duration(milliseconds: 300));
-      }
-      expect(capturedPayload, isA<PLYPurchasePayload>(),
-          reason: 'purchase interceptor should fire on the native tap');
-      final purchase = capturedPayload as PLYPurchasePayload;
-      debugPrint('S7 iOS → interceptor fired (notHandled → proceeding) '
-          'plan.vendorId=${purchase.plan.vendorId} '
-          'plan.productId=${purchase.plan.productId} '
-          'contentId=${capturedInfo?.contentId}');
-
-      // RunnerIntegrationTests.m sets SKTestSession.disableDialogs = YES, so
-      // the purchase confirmation is auto-accepted (no separate driver needed).
-      // Await the final outcome — the SDK auto-dismisses the paywall once the purchase completes.
-      final outcome = await displayFuture.timeout(const Duration(seconds: 180));
-
-      expect(outcome, isA<PLYPresentationOutcome>());
-      expect(outcome.error, isNull,
-          reason: 'a completed purchase must not carry a display error');
-      expect(outcome.purchaseResult, PLYPurchaseResult.purchased,
-          reason: 'the local StoreKit2 transaction should be reported as '
-              'purchased, not cancelled/restored/none');
-      debugPrint('S7 iOS → PLYPresentationOutcome purchaseResult='
-          '${outcome.purchaseResult} plan=${outcome.plan?.vendorId} '
-          'closeReason=${outcome.closeReason}');
-
-      await Purchasely.removeAllActionInterceptors();
+      // RunnerIntegrationTests.m created the SKTestSession before launching
+      // this app and disables StoreKit dialogs, so this bridge call completes
+      // against Configuration.storekit without UI automation.
+      final purchasedPlan = await Purchasely.purchaseWithPlanVendorId(
+        vendorId: kMonthlyPlan,
+      ).timeout(const Duration(seconds: 180));
+      expect(purchasedPlan['vendorId'], kMonthlyPlan);
+      expect(purchasedPlan['productId'], kMonthlyProduct,
+          reason: 'the completed purchase must be the local StoreKit product');
+      debugPrint('S7 iOS → local StoreKit2 purchase completed '
+          'plan.vendorId=${purchasedPlan['vendorId']} '
+          'plan.productId=${purchasedPlan['productId']}');
 
       // restoreAllProducts(): the just-purchased subscription should be found
       // on restore. Bounded timeout — never hang indefinitely.

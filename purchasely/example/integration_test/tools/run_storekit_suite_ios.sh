@@ -48,10 +48,10 @@ xcrun simctl spawn "$UDID" log stream \
   >"$FLUTTER_LOG" 2>&1 &
 LOG_PID=$!
 
-# No background idb driver here: RunnerIntegrationTests owns testmanagerd's
-# automation channel while xcodebuild is active, so an idb tap can report
-# success without reaching the app. RunnerIntegrationTests taps the CTA from
-# inside its own XCUITest session instead.
+# No background UI driver here: RunnerIntegrationTests owns testmanagerd's
+# automation channel while xcodebuild is active. The separate interceptor
+# suite covers the real CTA; this StoreKit suite calls the direct purchase
+# bridge so it can focus on the local transaction + restore contract.
 #
 # Flutter's in-app integration-test binding does not terminate this hostless
 # launch when the Dart tests finish. Watch the authoritative Dart marker and

@@ -85,59 +85,6 @@
   XCUIApplication *app = [[XCUIApplication alloc] init];
   [app launch];
 
-  // Drive the purchase CTA from INSIDE this XCUITest session. A parallel idb
-  // client uses the same testmanagerd automation channel; while xcodebuild
-  // owns that channel, idb can report successful taps that never reach the
-  // app (CI run 29814073898: eight reported taps, zero interceptor callback).
-  NSArray<NSString *> *ctaLabels =
-      @[ @"Continue", @"Continuer", @"Subscribe", @"S'abonner", @"Unlock now" ];
-  NSMutableArray<NSPredicate *> *labelPredicates = [NSMutableArray array];
-  for (NSString *label in ctaLabels) {
-    [labelPredicates
-        addObject:[NSPredicate predicateWithFormat:@"label ==[c] %@", label]];
-  }
-  XCUIElementQuery *accessibleElements =
-      [app descendantsMatchingType:XCUIElementTypeAny];
-  XCUIElement *cta = [accessibleElements
-      elementMatchingPredicate:[NSCompoundPredicate
-                                    orPredicateWithSubpredicates:labelPredicates]];
-  XCTAssertTrue([cta waitForExistenceWithTimeout:120.0],
-                @"Purchase CTA did not appear within 120s");
-
-  NSDate *hittableDeadline = [NSDate dateWithTimeIntervalSinceNow:15.0];
-  while (!cta.isHittable && [hittableDeadline timeIntervalSinceNow] > 0) {
-    [NSThread sleepForTimeInterval:0.5];
-  }
-  XCTAssertTrue(cta.isHittable, @"Purchase CTA exists but is not hittable");
-  NSLog(@"[RunnerIntegrationTests] CTA frame=%@ app frame=%@",
-        NSStringFromCGRect(cta.frame), NSStringFromCGRect(app.frame));
-  // Match the proven idb driver behaviour: the paywall may expose a hittable
-  // StaticText before its backing action is interactive. Resolve its centre
-  // once, then retry that coordinate without querying `exists`/`isHittable`
-  // again. Those accessibility queries wait for the app to become idle; once
-  // StoreKit starts processing the first accepted tap, that can block the
-  // XCUITest host indefinitely even though the Dart suite has completed.
-  XCUICoordinate *ctaCenter =
-      [cta coordinateWithNormalizedOffset:CGVectorMake(0.5, 0.5)];
-  // Keep the proven idb fallback as a screen-relative coordinate too. On the
-  // CI paywall the AX node is a StaticText; XCTest can report a successful tap
-  // on that text without activating its backing purchase control. The point
-  // below is the same device-independent location used by tap_purchase_ios.sh
-  // (195,648 on a 390x852 logical screen), normalized for any simulator size.
-  XCUICoordinate *purchasePoint =
-      [app coordinateWithNormalizedOffset:CGVectorMake(0.5, 648.0 / 852.0)];
-  for (NSUInteger attempt = 1; attempt <= 8; attempt++) {
-    XCUICoordinate *target = attempt == 1 ? ctaCenter : purchasePoint;
-    // idb's HID press reaches this custom-rendered CTA reliably, while an
-    // instantaneous XCTest tap can be acknowledged by XCTest without the
-    // SDK receiving touch-up-inside. A short press exercises the same touch
-    // path without introducing a long-press gesture.
-    [target pressForDuration:0.15];
-    NSLog(@"[RunnerIntegrationTests] purchase CTA press attempt %lu",
-          (unsigned long)attempt);
-    [NSThread sleepForTimeInterval:1.0];
-  }
-
   // tools/run_storekit_suite_ios.sh watches the Dart PASS/FAIL marker and
   // terminates the app as soon as the Dart suite finishes. Poll for that
   // bounded termination. If no marker is ever emitted (setup crash/hang),
