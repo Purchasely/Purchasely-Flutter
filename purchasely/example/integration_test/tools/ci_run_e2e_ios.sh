@@ -18,9 +18,9 @@
 # silent-::warning:: model for the idb-driven suites is forbidden by the
 # mission — a suite that never fails a build is not a test.
 #
-# Per-attempt timeout: each attempt is bounded to $TIMEOUT seconds (default
-# 600, override via env e.g. `TIMEOUT=5 ...` for local debugging of the
-# watchdog itself). macOS runners do NOT ship GNU coreutils' `timeout` by
+# Per-attempt timeout: Flutter batches are bounded to $TIMEOUT seconds (default
+# 300); StoreKit uses $STOREKIT_TIMEOUT (default 600) because its XCTest host
+# has a separate 420-second bound. macOS runners do NOT ship GNU `timeout` by
 # default, so this uses a portable bash watchdog (see run_with_timeout()
 # below) instead of depending on `gtimeout`/coreutils being installed. The
 # existing 3x retry loop applies to a timed-out attempt exactly like any
@@ -28,7 +28,8 @@
 set -uo pipefail
 
 DEV="${1:?usage: $0 <simulator-udid>}"
-TIMEOUT="${TIMEOUT:-600}" # seconds per suite ATTEMPT (not per suite overall)
+TIMEOUT="${TIMEOUT:-300}" # seconds per Flutter batch attempt
+STOREKIT_TIMEOUT="${STOREKIT_TIMEOUT:-600}"
 HERE="$(cd "$(dirname "$0")" && pwd)"
 EXAMPLE_DIR="$(cd "$HERE/../.." && pwd)" # → purchasely/example
 cd "$EXAMPLE_DIR" || exit 1
@@ -158,25 +159,29 @@ run_suite() {
 
 fail=0
 
-echo "=== Batch 1/6: core bridge/deeplink/listener/flow suites — HARD gate ==="
+echo "=== Batch 1/7: core bridge/deeplink/listener/flow suites — HARD gate ==="
 run_suite "core-ios" integration_test/ios_core_batch_test.dart "" core_ios || fail=1
 
-echo "=== Batch 2/6: inline presentation suites — HARD gate ==="
+echo "=== Batch 2/7: inline presentation suites — HARD gate ==="
 run_suite "inline-ios" integration_test/ios_inline_batch_test.dart "" inline_ios || fail=1
 
-echo "=== Batch 3/6: purchase interceptor suites — HARD gate ==="
-run_suite "interceptors-ios" integration_test/ios_interceptor_batch_test.dart \
-  interceptor_batch_driver_ios.sh interceptors_ios || fail=1
+echo "=== Batch 3/7: purchase interceptor suite — HARD gate ==="
+run_suite "purchase-interceptor-ios" integration_test/interceptor_trigger_ios_test.dart \
+  purchase_interceptor_driver_ios.sh purchase_interceptor_ios || fail=1
 
-echo "=== Batch 4/6: default/local dismiss handler suites — HARD gate ==="
+echo "=== Batch 4/7: navigate interceptor suites — HARD gate ==="
+run_suite "navigate-interceptors-ios" integration_test/interceptor_actions_ios_test.dart \
+  interceptor_actions_driver_ios.sh navigate_interceptors_ios || fail=1
+
+echo "=== Batch 5/7: default/local dismiss handler suites — HARD gate ==="
 run_suite "dismiss-ios" integration_test/ios_dismiss_batch_test.dart \
   dismiss_batch_driver_ios.sh dismiss_ios || fail=1
 
-echo "=== Batch 5/6: modal and re-display transition regressions — HARD gate ==="
+echo "=== Batch 6/7: modal and re-display transition regressions — HARD gate ==="
 run_suite "transitions-ios" integration_test/ios_transition_batch_test.dart \
   transition_batch_driver_ios.sh transitions_ios || fail=1
 
-# --- Batch 6/6: S7 StoreKit purchase + restore ----------------------------
+# --- Batch 7/7: S7 StoreKit purchase + restore ----------------------------
 # SPECIAL CASE, not run via run_suite(): purchase_restore_ios_test.dart can
 # only exercise a real local StoreKit2 transaction if the app is launched
 # through the Xcode scheme (Configuration.storekit is wired into the
@@ -196,7 +201,8 @@ run_suite "transitions-ios" integration_test/ios_transition_batch_test.dart \
 # purchase/restore assertion failure, etc.) the suite gates, even if other
 # attempts in the same run also matched the Apple signature — a mixed run
 # must not let a real regression hide behind an unrelated known-bug match.
-echo "=== Batch 6/6: S7 StoreKit purchase + restore (xcodebuild, RunnerIntegrationTests) — HARD gate (Apple-bug exception) ==="
+echo "=== Batch 7/7: S7 StoreKit purchase + restore (xcodebuild, RunnerIntegrationTests) — HARD gate (Apple-bug exception) ==="
+TIMEOUT="$STOREKIT_TIMEOUT"
 storekit_logbase="storekit-ios"
 storekit_ok=0
 storekit_apple_sig=0

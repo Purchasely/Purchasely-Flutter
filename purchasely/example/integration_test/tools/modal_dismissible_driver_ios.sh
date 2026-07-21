@@ -29,7 +29,7 @@ wait_for_suite_marker() {
 
 echo "[modal_dismissible_driver_ios] test 1/2 (dismissible:false, swipe must be a no-op)…"
 wait_for_suite_marker "M1-NONDISMISSIBLE-READY"
-MAX_WAIT_SECONDS=60 bash "$HERE/swipe_dismiss_ios.sh" "$UDID" 2
+SKIP_PAYWALL_DETECTION=1 bash "$HERE/swipe_dismiss_ios.sh" "$UDID" 2
 echo "[modal_dismissible_driver_ios] test 2/2 (dismissible:true, swipe must dismiss)…"
 wait_for_suite_marker "M1-DISMISSIBLE-READY"
-MAX_WAIT_SECONDS=60 bash "$HERE/swipe_dismiss_ios.sh" "$UDID" 2
+SKIP_PAYWALL_DETECTION=1 bash "$HERE/swipe_dismiss_ios.sh" "$UDID" 2

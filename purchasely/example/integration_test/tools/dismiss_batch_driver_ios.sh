@@ -5,7 +5,6 @@ set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 UDID="${1:?usage: $0 <simulator-udid>}"
 
-for scenario in default-handler display-handler local-handler; do
-  echo "[dismiss_batch_driver_ios] closing paywall for $scenario"
-  "$HERE/close_paywall_ios.sh" "$UDID"
+for marker in DISMISS-DEFAULT-READY DISMISS-DISPLAY-READY DISMISS-LOCAL-READY; do
+  "$HERE/swipe_after_marker_ios.sh" "$UDID" "$marker"
 done

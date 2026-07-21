@@ -26,8 +26,8 @@
 //
 // This suite drives TWO display cycles on the same handle, so the driver must
 // run TWICE, chained:
-//   (bash integration_test/tools/close_paywall_ios.sh <sim-udid> ; \
-//    bash integration_test/tools/close_paywall_ios.sh <sim-udid>) &
+//   (SUITE_LOG=/tmp/re-display.log \
+//    bash integration_test/tools/re_display_driver_ios.sh <sim-udid>) &
 //   flutter test integration_test/re_display_ios_test.dart -d <sim-udid>
 
 import 'package:flutter/material.dart';
@@ -108,6 +108,7 @@ void main() {
         await Future<void>.delayed(const Duration(milliseconds: 250));
       }
       expect(presented, isTrue, reason: 'paywall should present (cycle 1)');
+      debugPrint('REDISPLAY-CYCLE-1-READY');
 
       sw = Stopwatch()..start();
       while (firstOutcome == null &&
@@ -118,7 +119,7 @@ void main() {
       expect(firstDisplayError, isNull,
           reason: 'display() must not error on driver-close (cycle 1)');
       expect(firstOutcome, isNotNull,
-          reason: 'driver (close_paywall_ios.sh, 1st invocation) should '
+          reason: 'driver (re_display_driver_ios.sh, cycle 1) should '
               'close the paywall and resolve display()');
       expect(firstOutcome!.error, isNull);
       expect(firstOutcome!.presentation?.screenId, isNotNull);
@@ -151,6 +152,7 @@ void main() {
       }
       expect(presented, isTrue,
           reason: 'paywall should present again on re-display (cycle 2)');
+      debugPrint('REDISPLAY-CYCLE-2-READY');
 
       sw = Stopwatch()..start();
       while (secondOutcome == null &&
@@ -171,7 +173,7 @@ void main() {
           reason: 'display() must not error on driver-close (cycle 2 — '
               're-display)');
       expect(secondOutcome, isNotNull,
-          reason: 'driver (close_paywall_ios.sh, 2nd invocation) should '
+          reason: 'driver (re_display_driver_ios.sh, cycle 2) should '
               'close the re-displayed paywall and resolve display()');
       expect(secondOutcome!.error, isNull);
       expect(

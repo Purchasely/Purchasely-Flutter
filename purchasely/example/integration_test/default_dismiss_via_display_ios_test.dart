@@ -44,6 +44,7 @@ void main() {
       (tester) async {
     await tester.runAsync(() async {
       PLYPresentationOutcome? globalOutcome;
+      var presented = false;
       await Purchasely.setDefaultPresentationDismissHandler((outcome) {
         globalOutcome = outcome;
       });
@@ -54,13 +55,24 @@ void main() {
       // so the dismissal isn't handled locally and must reach the default handler.
       final presentation =
           await PLYPresentationBuilder.placement(kPlacementAudiences)
+              .onPresented((presentation, error) {
+                if (presentation != null) presented = true;
+              })
               .build()
               .preload();
       // Fire-and-forget: intentionally not awaited.
       // ignore: unawaited_futures
       presentation.display();
 
-      // The concurrent driver taps ply_action_close once the paywall renders.
+      final presentedSw = Stopwatch()..start();
+      while (!presented && presentedSw.elapsed < const Duration(seconds: 30)) {
+        await Future<void>.delayed(const Duration(milliseconds: 250));
+      }
+      expect(presented, isTrue,
+          reason: 'fire-and-forget paywall should render before dismissal');
+      debugPrint('DISMISS-DISPLAY-READY');
+
+      // The concurrent driver swipes once the readiness marker is logged.
       // Poll for the default handler to receive the dismissal outcome.
       final sw = Stopwatch()..start();
       while (

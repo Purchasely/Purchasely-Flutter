@@ -56,11 +56,14 @@ void main() {
       // awaits display(): both local channels must receive the outcome and the
       // default handler must NOT fire.
       final request = PLYPresentationBuilder.placement(kPlacementAudiences)
+          .onPresented((presentation, error) {
+            if (presentation != null) debugPrint('DISMISS-LOCAL-READY');
+          })
           .onDismissed((outcome) => localOutcome = outcome)
           .build();
       await request.preload();
 
-      // The concurrent driver taps ply_action_close once the paywall renders,
+      // The concurrent driver waits for the readiness marker and swipes,
       // which resolves the awaited display() future.
       final outcome = await request.display().timeout(
             const Duration(seconds: 50),

@@ -51,9 +51,9 @@
 // step run alongside the tap driver, e.g.:
 //   xcrun simctl launch <sim-udid> com.purchasely.demo
 //
-// Both tests share one real tap on "Login" (tools/tap_label_ios.sh, already
-// created in Task 4 — reused as-is) and diverge only in what the interceptor
-// resolves with:
+// Both tests share one real tap on "Login" after a Dart readiness marker.
+// The host driver scales the control coordinates to the active simulator and
+// the tests diverge only in what the interceptor resolves with:
 //   A. PLYInterceptResult.failed     — the SDK must NOT fall back to its own
 //      default "open the link" handling; the paywall stays up.
 //   B. PLYInterceptResult.notHandled — the SDK proceeds with its own default
@@ -61,9 +61,8 @@
 //
 // Run together with the driver — one tap per test, chained (each test opens
 // its own paywall instance) — and a re-foreground step after the second tap:
-//   (bash .../tap_label_ios.sh <sim-udid> "Login" ; \
-//    bash .../tap_label_ios.sh <sim-udid> "Login" ; \
-//    xcrun simctl launch <sim-udid> com.purchasely.demo) &
+//   (SUITE_LOG=/tmp/interceptors.log \
+//    bash .../interceptor_actions_driver_ios.sh <sim-udid>) &
 //   flutter test integration_test/interceptor_actions_ios_test.dart -d <sim-udid>
 
 import 'package:flutter/material.dart';
@@ -148,8 +147,10 @@ void main() {
 
       final request = PLYPresentationBuilder.screen(kLoginRestoreScreenId)
           .onPresented((p, e) {
-        presented = true;
-        callbackOrder.add('presented');
+        if (p != null) {
+          presented = true;
+          callbackOrder.add('presented');
+        }
       }).onDismissed((o) {
         dismissed = true;
         callbackOrder.add('dismissed(${o.closeReason})');
@@ -183,6 +184,7 @@ void main() {
         await Future<void>.delayed(const Duration(milliseconds: 250));
       }
       expect(presented, isTrue, reason: 'paywall should present');
+      debugPrint('INTERCEPTOR-S5-READY');
 
       // The concurrent driver taps "Login" (a Navigate action, not the
       // built-in `login` kind). Poll for the interceptor to fire.
@@ -194,7 +196,7 @@ void main() {
 
       expect(capturedPayload, isNotNull,
           reason: 'navigate interceptor should fire on a real tap on '
-              '"$kLoginLabel" — driver: tools/tap_label_ios.sh');
+              '"$kLoginLabel" — driver: tools/tap_after_marker_ios.sh');
       expect(capturedPayload, isA<PLYNavigatePayload>(),
           reason: 'the "Login" button is a Navigate action, not built-in '
               'login');
@@ -287,8 +289,10 @@ void main() {
 
       final request = PLYPresentationBuilder.screen(kLoginRestoreScreenId)
           .onPresented((p, e) {
-        presented = true;
-        callbackOrder.add('presented');
+        if (p != null) {
+          presented = true;
+          callbackOrder.add('presented');
+        }
       }).build();
       final presentation = await request.preload();
 
@@ -319,6 +323,7 @@ void main() {
         await Future<void>.delayed(const Duration(milliseconds: 250));
       }
       expect(presented, isTrue, reason: 'paywall should present');
+      debugPrint('INTERCEPTOR-S6-READY');
 
       // The concurrent driver taps "Login" again (this test's own paywall
       // instance). Poll for the interceptor to fire.
@@ -330,7 +335,7 @@ void main() {
 
       expect(capturedPayload, isNotNull,
           reason: 'navigate interceptor should fire on a real tap on '
-              '"$kLoginLabel" — driver: tools/tap_label_ios.sh');
+              '"$kLoginLabel" — driver: tools/tap_after_marker_ios.sh');
       expect(capturedPayload, isA<PLYNavigatePayload>());
       final navigate = capturedPayload! as PLYNavigatePayload;
       expect(navigate.kind, PLYPresentationActionKind.navigate);

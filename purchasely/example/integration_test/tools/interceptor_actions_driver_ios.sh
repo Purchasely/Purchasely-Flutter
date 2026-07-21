@@ -20,7 +20,7 @@ UDID="${1:?usage: $0 <sim-udid>}"
 HERE="$(cd "$(dirname "$0")" && pwd)"
 
 echo "[interceptor_actions_driver_ios] tap 1/2 (S5/failed)…"
-bash "$HERE/tap_label_ios.sh" "$UDID" "Login"
+bash "$HERE/tap_after_marker_ios.sh" "$UDID" INTERCEPTOR-S5-READY 195 790
 
 if [ -n "${SUITE_LOG:-}" ]; then
   echo "[interceptor_actions_driver_ios] waiting for S5 callback-order marker in ${SUITE_LOG}…"
@@ -40,7 +40,7 @@ else
 fi
 
 echo "[interceptor_actions_driver_ios] tap 2/2 (S6/notHandled)…"
-bash "$HERE/tap_label_ios.sh" "$UDID" "Login"
+bash "$HERE/tap_after_marker_ios.sh" "$UDID" INTERCEPTOR-S6-READY 195 790
 
 echo "[interceptor_actions_driver_ios] re-foregrounding app after S6 backgrounds it to Safari…"
 if ! xcrun simctl launch "$UDID" com.purchasely.demo 2>&1; then

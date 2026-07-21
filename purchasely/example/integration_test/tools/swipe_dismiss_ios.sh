@@ -21,6 +21,8 @@
 # Usage: swipe_dismiss_ios.sh <simulator-udid> [n_swipes]
 #   n_swipes defaults to 2.
 #   MAX_WAIT_SECONDS controls the pre-swipe paywall poll (default 60).
+#   SKIP_PAYWALL_DETECTION=1 sends the gesture using 390x852 geometry; use it
+#   only after a Dart readiness marker proves the presentation is visible.
 #
 # Run concurrently with the test:
 #   bash integration_test/tools/swipe_dismiss_ios.sh <sim-udid> 2 &
@@ -77,16 +79,21 @@ paywall_present() {
   [ -n "$(paywall_geometry)" ]
 }
 
-# Wait for the paywall to appear before swiping.
 geom=""
-for i in $(seq 1 "$MAX_WAIT_SECONDS"); do
-  geom=$(paywall_geometry)
-  if [ -n "$geom" ]; then
-    break
-  fi
-  echo "[swipe_dismiss_ios] paywall not detected yet (iter $i/$MAX_WAIT_SECONDS), retrying…"
-  sleep 1
-done
+if [ "${SKIP_PAYWALL_DETECTION:-0}" = "1" ]; then
+  geom="390 852"
+  echo "[swipe_dismiss_ios] Dart readiness marker observed; using ${geom} gesture geometry"
+else
+  # Wait for the paywall to appear before swiping.
+  for i in $(seq 1 "$MAX_WAIT_SECONDS"); do
+    geom=$(paywall_geometry)
+    if [ -n "$geom" ]; then
+      break
+    fi
+    echo "[swipe_dismiss_ios] paywall not detected yet (iter $i/$MAX_WAIT_SECONDS), retrying…"
+    sleep 1
+  done
+fi
 
 if [ -z "$geom" ]; then
   echo "[swipe_dismiss_ios] paywall not detected after $MAX_WAIT_SECONDS s"

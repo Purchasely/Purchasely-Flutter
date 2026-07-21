@@ -10,7 +10,5 @@ set -uo pipefail
 UDID="${1:?usage: $0 <sim-udid>}"
 HERE="$(cd "$(dirname "$0")" && pwd)"
 
-echo "[re_display_driver_ios] cycle 1/2…"
-bash "$HERE/close_paywall_ios.sh" "$UDID"
-echo "[re_display_driver_ios] cycle 2/2…"
-bash "$HERE/close_paywall_ios.sh" "$UDID"
+"$HERE/swipe_after_marker_ios.sh" "$UDID" REDISPLAY-CYCLE-1-READY
+"$HERE/swipe_after_marker_ios.sh" "$UDID" REDISPLAY-CYCLE-2-READY
