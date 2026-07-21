@@ -109,6 +109,8 @@
     [NSThread sleepForTimeInterval:0.5];
   }
   XCTAssertTrue(cta.isHittable, @"Purchase CTA exists but is not hittable");
+  NSLog(@"[RunnerIntegrationTests] CTA frame=%@ app frame=%@",
+        NSStringFromCGRect(cta.frame), NSStringFromCGRect(app.frame));
   // Match the proven idb driver behaviour: the paywall may expose a hittable
   // StaticText before its backing action is interactive. Resolve its centre
   // once, then retry that coordinate without querying `exists`/`isHittable`

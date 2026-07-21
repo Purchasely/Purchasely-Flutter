@@ -15,6 +15,15 @@ name: E2E iOS
 #                         activates once this file is merged to main).
 on:
   workflow_dispatch:
+    inputs:
+      suite:
+        description: Suite to run (use StoreKit only for targeted diagnostics)
+        required: true
+        default: all
+        type: choice
+        options:
+          - all
+          - storekit
   schedule:
     - cron: "0 5 * * *"
 
@@ -104,6 +113,8 @@ jobs:
         # chance to preserve diagnostics instead of the entire job being
         # killed at the 60min job-level cutoff with nothing salvaged.
         timeout-minutes: 35
+        env:
+          E2E_IOS_SUITE: ${{ inputs.suite || 'all' }}
         run: bash purchasely/example/integration_test/tools/ci_run_e2e_ios.sh ${{ steps.boot-sim.outputs.udid }}
 
       - name: Collect simulator crash logs (on failure)

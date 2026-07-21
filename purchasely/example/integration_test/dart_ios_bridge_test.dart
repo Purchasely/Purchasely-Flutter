@@ -316,7 +316,11 @@ void main() {
         presentation.display(const PLYTransition.fullScreen());
 
         await Future<void>.delayed(const Duration(seconds: 3));
-        await presentation.close();
+        await presentation.close().timeout(
+              const Duration(seconds: 20),
+              onTimeout: () => throw StateError(
+                  'T12 presentation.close() timed out after 20s'),
+            );
         await Future<void>.delayed(const Duration(seconds: 2));
 
         expect(interceptorCalled, isFalse,

@@ -157,28 +157,16 @@ void main() {
               '(see native FlowTests.kt FLOW-01)');
       debugPrint('PRESENTATION_VIEWED screens so far: $viewedScreens');
 
-      // --- Close: driver taps the discovered close label, else fallback ---
+      // --- Close ---------------------------------------------------------
+      // The initial "calm" flow step has no close control in its AX tree and
+      // this suite intentionally has no host driver (documented above). Do
+      // not spend 40 seconds waiting for an interaction that cannot happen.
+      await Purchasely.closeAllScreens();
       sw = Stopwatch()..start();
       while (outcome == null &&
           displayError == null &&
-          sw.elapsed < const Duration(seconds: 40)) {
+          sw.elapsed < const Duration(seconds: 20)) {
         await Future<void>.delayed(const Duration(milliseconds: 250));
-      }
-      if (outcome == null) {
-        // Fallback: driver couldn't find/tap a close control (or none was
-        // run). Close programmatically so the suite still proves the
-        // dismiss contract, with an honest note in the log (NOT a silently
-        // invented pass).
-        debugPrint('close control not observed closing the flow within '
-            '40s — falling back to Purchasely.closeAllScreens() '
-            '(programmatic; driver tap was not confirmed)');
-        await Purchasely.closeAllScreens();
-        sw = Stopwatch()..start();
-        while (outcome == null &&
-            displayError == null &&
-            sw.elapsed < const Duration(seconds: 20)) {
-          await Future<void>.delayed(const Duration(milliseconds: 250));
-        }
       }
       expect(displayError, isNull, reason: 'display() must not error on close');
       expect(outcome, isNotNull,

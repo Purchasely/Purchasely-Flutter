@@ -30,6 +30,7 @@ set -uo pipefail
 DEV="${1:?usage: $0 <simulator-udid>}"
 TIMEOUT="${TIMEOUT:-300}" # seconds per Flutter batch attempt
 STOREKIT_TIMEOUT="${STOREKIT_TIMEOUT:-600}"
+E2E_IOS_SUITE="${E2E_IOS_SUITE:-all}"
 HERE="$(cd "$(dirname "$0")" && pwd)"
 EXAMPLE_DIR="$(cd "$HERE/../.." && pwd)" # → purchasely/example
 cd "$EXAMPLE_DIR" || exit 1
@@ -157,29 +158,38 @@ run_suite() {
   return 1
 }
 
+if [ "$E2E_IOS_SUITE" != "all" ] && [ "$E2E_IOS_SUITE" != "storekit" ]; then
+  echo "::error::Unsupported E2E_IOS_SUITE=$E2E_IOS_SUITE (expected all or storekit)"
+  exit 2
+fi
+
 fail=0
 
-echo "=== Batch 1/7: core bridge/deeplink/listener/flow suites — HARD gate ==="
-run_suite "core-ios" integration_test/ios_core_batch_test.dart "" core_ios || fail=1
+if [ "$E2E_IOS_SUITE" = "all" ]; then
+  echo "=== Batch 1/7: core bridge/deeplink/listener/flow suites — HARD gate ==="
+  run_suite "core-ios" integration_test/ios_core_batch_test.dart "" core_ios || fail=1
 
-echo "=== Batch 2/7: inline presentation suites — HARD gate ==="
-run_suite "inline-ios" integration_test/ios_inline_batch_test.dart "" inline_ios || fail=1
+  echo "=== Batch 2/7: inline presentation suites — HARD gate ==="
+  run_suite "inline-ios" integration_test/ios_inline_batch_test.dart "" inline_ios || fail=1
 
-echo "=== Batch 3/7: purchase interceptor suite — HARD gate ==="
-run_suite "purchase-interceptor-ios" integration_test/interceptor_trigger_ios_test.dart \
-  purchase_interceptor_driver_ios.sh purchase_interceptor_ios || fail=1
+  echo "=== Batch 3/7: purchase interceptor suite — HARD gate ==="
+  run_suite "purchase-interceptor-ios" integration_test/interceptor_trigger_ios_test.dart \
+    purchase_interceptor_driver_ios.sh purchase_interceptor_ios || fail=1
 
-echo "=== Batch 4/7: navigate interceptor suites — HARD gate ==="
-run_suite "navigate-interceptors-ios" integration_test/interceptor_actions_ios_test.dart \
-  interceptor_actions_driver_ios.sh navigate_interceptors_ios || fail=1
+  echo "=== Batch 4/7: navigate interceptor suites — HARD gate ==="
+  run_suite "navigate-interceptors-ios" integration_test/interceptor_actions_ios_test.dart \
+    interceptor_actions_driver_ios.sh navigate_interceptors_ios || fail=1
 
-echo "=== Batch 5/7: default/local dismiss handler suites — HARD gate ==="
-run_suite "dismiss-ios" integration_test/ios_dismiss_batch_test.dart \
-  dismiss_batch_driver_ios.sh dismiss_ios || fail=1
+  echo "=== Batch 5/7: default/local dismiss handler suites — HARD gate ==="
+  run_suite "dismiss-ios" integration_test/ios_dismiss_batch_test.dart \
+    dismiss_batch_driver_ios.sh dismiss_ios || fail=1
 
-echo "=== Batch 6/7: modal and re-display transition regressions — HARD gate ==="
-run_suite "transitions-ios" integration_test/ios_transition_batch_test.dart \
-  transition_batch_driver_ios.sh transitions_ios || fail=1
+  echo "=== Batch 6/7: modal and re-display transition regressions — HARD gate ==="
+  run_suite "transitions-ios" integration_test/ios_transition_batch_test.dart \
+    transition_batch_driver_ios.sh transitions_ios || fail=1
+else
+  echo "=== Targeted manual run: skipping batches 1-6; running StoreKit only ==="
+fi
 
 # --- Batch 7/7: S7 StoreKit purchase + restore ----------------------------
 # SPECIAL CASE, not run via run_suite(): purchase_restore_ios_test.dart can
