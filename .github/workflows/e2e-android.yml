@@ -96,6 +96,14 @@ jobs:
             ~/.android/adb*
           key: avd-34-google_apis-x86_64-pixel_6
 
+      # Emulator 36.6.11 can print a successful response to `adb emu kill`
+      # while the adb client itself never exits. android-emulator-runner awaits
+      # that client during cleanup, so a cold-cache job otherwise stalls until
+      # the 60-minute job timeout. Prepend a wrapper that bounds ONLY this adb
+      # subcommand; normal Flutter/Gradle adb operations remain unmodified.
+      - name: Bound emulator shutdown command
+        run: echo "$GITHUB_WORKSPACE/.github/scripts/ci-adb-wrapper" >> "$GITHUB_PATH"
+
       - name: Create AVD + snapshot for caching
         if: steps.avd-cache.outputs.cache-hit != 'true'
         uses: reactivecircus/android-emulator-runner@v2
@@ -108,6 +116,10 @@ jobs:
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           disable-animations: true
           script: echo "Generated AVD snapshot for caching."
+
+      - name: Ensure cache emulator process exited
+        if: steps.avd-cache.outputs.cache-hit != 'true'
+        run: bash .github/scripts/stop-ci-android-emulator.sh
 
       - name: Run E2E suite on emulator
         # Step-level ceiling below the 60min job timeout: ci_run_e2e.sh's own
@@ -128,6 +140,10 @@ jobs:
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           disable-animations: true
           script: bash purchasely/example/integration_test/tools/ci_run_e2e.sh emulator-5554
+
+      - name: Ensure test emulator process exited
+        if: always()
+        run: bash .github/scripts/stop-ci-android-emulator.sh
 
       - name: Upload E2E logs
         if: always()

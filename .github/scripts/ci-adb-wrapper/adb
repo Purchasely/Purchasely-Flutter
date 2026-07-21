@@ -1,0 +1,19 @@
+#!/bin/bash
+# Work around Emulator 36.6.11 / Platform Tools cleanup hangs in
+# reactivecircus/android-emulator-runner. The real adb prints a successful
+# response to `emu kill` but can keep its client process alive indefinitely.
+# Bound only that command; every other adb invocation is exec'd unchanged.
+set -uo pipefail
+
+REAL_ADB="${ANDROID_HOME:?ANDROID_HOME must point to the Android SDK}/platform-tools/adb"
+
+if [ "$#" -ge 2 ] && [ "${*: -2:1}" = "emu" ] && [ "${*: -1}" = "kill" ]; then
+  timeout 15s "$REAL_ADB" "$@"
+  status=$?
+  if [ "$status" -eq 124 ]; then
+    echo "[ci-adb-wrapper] adb emu kill did not exit after 15s; bounded cleanup"
+  fi
+  exit "$status"
+fi
+
+exec "$REAL_ADB" "$@"
