@@ -132,6 +132,8 @@ void main() {
           reason: 'a deeplink open must not emit PRESENTATION_OPENED');
 
       Purchasely.stopListeningToEvents();
+      await Purchasely.closeAllScreens();
+      await Future<void>.delayed(const Duration(seconds: 1));
     });
   });
 }

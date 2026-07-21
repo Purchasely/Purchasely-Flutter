@@ -83,6 +83,10 @@ for i in $(seq 1 90); do
     [ "$taps" -ge 8 ] && exit 0
     sleep 2
   else
+    if [ "$taps" -gt 0 ]; then
+      echo "[tap_purchase_ios] purchase CTA disappeared after $taps tap(s) — interceptor handled it ✓"
+      exit 0
+    fi
     echo "[tap_purchase_ios] purchase CTA not found yet (iter $i/90), retrying…"
     sleep 1
   fi

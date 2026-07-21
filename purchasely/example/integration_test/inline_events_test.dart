@@ -111,6 +111,8 @@ void main() {
       debugPrint('inline event flow OK → ${globalPaywallEvent!.name}');
 
       Purchasely.stopListeningToEvents();
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpAndSettle();
     });
   });
 }

@@ -83,6 +83,9 @@ void main() {
 
       expect(presentation.screenId, isNotNull);
       debugPrint('inline rendered screenId=${presentation.screenId}');
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpAndSettle();
     });
   });
 }

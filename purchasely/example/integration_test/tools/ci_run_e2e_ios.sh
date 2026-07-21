@@ -121,7 +121,7 @@ run_suite() {
       dpid=$!
     fi
     status=0
-    run_with_timeout flutter test "$testfile" -d "$DEV" --reporter expanded 2>&1 | tee "$LOGS/${logbase}_$a.log"
+    run_with_timeout flutter test "$testfile" -d "$DEV" --no-pub --reporter expanded 2>&1 | tee "$LOGS/${logbase}_$a.log"
     status=$?
     end_ts=$(date +%s)
     duration=$((end_ts - start_ts))
@@ -158,73 +158,25 @@ run_suite() {
 
 fail=0
 
-echo "=== Suite 1/14: Dart<->iOS bridge (T1-T20) — HARD gate ==="
-run_suite "bridge-ios" integration_test/dart_ios_bridge_test.dart "" bridge || fail=1
+echo "=== Batch 1/6: core bridge/deeplink/listener/flow suites — HARD gate ==="
+run_suite "core-ios" integration_test/ios_core_batch_test.dart "" core_ios || fail=1
 
-echo "=== Suite 2/14: cold-start deeplink (builder.handleDeeplink -> auto-open) — HARD gate ==="
-# Deterministic: the SDK opens the paywall itself from the cold-start deeplink and
-# the test only asserts on analytics events (no flaky idb driver).
-run_suite "deeplink-cold-start-ios" integration_test/deeplink_cold_start_test.dart "" deeplink_cold_start_ios || fail=1
+echo "=== Batch 2/6: inline presentation suites — HARD gate ==="
+run_suite "inline-ios" integration_test/ios_inline_batch_test.dart "" inline_ios || fail=1
 
-echo "=== Suite 3/14: user-attribute listener (set/removed events) — HARD gate ==="
-# Deterministic: setting/clearing an attribute makes the native SDK emit a change
-# event the listener must receive (no UI interaction, no driver).
-run_suite "user-attribute-listener-ios" integration_test/user_attribute_listener_test.dart "" user_attribute_listener_ios || fail=1
+echo "=== Batch 3/6: purchase interceptor suites — HARD gate ==="
+run_suite "interceptors-ios" integration_test/ios_interceptor_batch_test.dart \
+  interceptor_batch_driver_ios.sh interceptors_ios || fail=1
 
-echo "=== Suite 4/14: interceptor trigger (idb tap) — HARD gate ==="
-run_suite "interceptor-ios" integration_test/interceptor_trigger_ios_test.dart \
-  tap_purchase_ios.sh interceptor_ios || fail=1
+echo "=== Batch 4/6: default/local dismiss handler suites — HARD gate ==="
+run_suite "dismiss-ios" integration_test/ios_dismiss_batch_test.dart \
+  dismiss_batch_driver_ios.sh dismiss_ios || fail=1
 
-echo "=== Suite 5/14: default dismiss handler via deeplink (idb tap close) — HARD gate ==="
-run_suite "dismiss-ios" integration_test/default_dismiss_handler_ios_test.dart \
-  close_paywall_ios.sh dismiss_ios || fail=1
+echo "=== Batch 5/6: modal and re-display transition regressions — HARD gate ==="
+run_suite "transitions-ios" integration_test/ios_transition_batch_test.dart \
+  transition_batch_driver_ios.sh transitions_ios || fail=1
 
-echo "=== Suite 6/14: default dismiss handler via fire-and-forget display() (idb tap close) — HARD gate ==="
-run_suite "dismiss-via-display-ios" integration_test/default_dismiss_via_display_ios_test.dart \
-  close_paywall_ios.sh dismiss_via_display_ios || fail=1
-
-echo "=== Suite 7/14: local dismiss handler wins over default (idb tap close) — HARD gate ==="
-run_suite "local-dismiss-ios" integration_test/local_dismiss_handler_ios_test.dart \
-  close_paywall_ios.sh local_dismiss_ios || fail=1
-
-echo "=== Suite 8/14: inline view keeps the global event stream flowing (FLT-W-12) — HARD gate ==="
-run_suite "inline-events-ios" integration_test/inline_events_test.dart "" inline_events_ios || fail=1
-
-echo "=== Suite 9/14: inline PLYPresentationView render path (preload/mount/present) — HARD gate ==="
-# Same cross-platform file as the Android runner (inline_paywall_test.dart is
-# parametric/platform-agnostic — see its header); no idb driver needed.
-run_suite "inline-paywall-ios" integration_test/inline_paywall_test.dart "" inline_paywall_ios || fail=1
-
-echo "=== Suite 10/14: modal dismissible:false/true swipe-dismiss regression (PR #136 M1) — HARD gate ==="
-# Two independent display() cycles, one idb swipe-driver invocation each,
-# chained — see modal_dismissible_ios_test.dart's header and its own
-# EVIDENCE COUPLING note (Test 1 is only meaningful if Test 2 also passes on
-# the SAME run; flagged as a CI arbitration risk in task-7-report.md).
-run_suite "modal-dismissible-ios" integration_test/modal_dismissible_ios_test.dart \
-  modal_dismissible_driver_ios.sh modal_dismissible_ios || fail=1
-
-echo "=== Suite 11/14: re-display of the same handle keeps the ORIGINAL source (PR #136 M2) — HARD gate ==="
-# Driver must run TWICE, chained (two display cycles on the same handle) —
-# see re_display_ios_test.dart's header. re_display_driver_ios.sh chains it.
-run_suite "re-display-ios" integration_test/re_display_ios_test.dart \
-  re_display_driver_ios.sh re_display_ios || fail=1
-
-echo "=== Suite 12/14: Flow display + dismiss (S2, integration_test_flow) — HARD gate ==="
-# No idb driver: closing is via Purchasely.closeAllScreens() (programmatic) —
-# see flow_dismiss_ios_test.dart's header for why no UI control exists to
-# drive from the flow's initial "calm" step on iOS.
-run_suite "flow-dismiss-ios" integration_test/flow_dismiss_ios_test.dart "" flow_dismiss_ios || fail=1
-
-echo "=== Suite 13/14: action interceptor failed/notHandled on a real tap (S5/S6) — HARD gate ==="
-# Log-driven sync between the two taps (NOT a fixed sleep — see
-# task-5-report.md) plus a re-foreground step after the second tap
-# backgrounds the app to Safari; both handled by
-# interceptor_actions_driver_ios.sh via $SUITE_LOG (exported by run_suite()
-# above).
-run_suite "interceptor-actions-ios" integration_test/interceptor_actions_ios_test.dart \
-  interceptor_actions_driver_ios.sh interceptor_actions_ios || fail=1
-
-# --- Suite 14/14: S7 StoreKit purchase + restore --------------------------
+# --- Batch 6/6: S7 StoreKit purchase + restore ----------------------------
 # SPECIAL CASE, not run via run_suite(): purchase_restore_ios_test.dart can
 # only exercise a real local StoreKit2 transaction if the app is launched
 # through the Xcode scheme (Configuration.storekit is wired into the
@@ -244,7 +196,7 @@ run_suite "interceptor-actions-ios" integration_test/interceptor_actions_ios_tes
 # purchase/restore assertion failure, etc.) the suite gates, even if other
 # attempts in the same run also matched the Apple signature — a mixed run
 # must not let a real regression hide behind an unrelated known-bug match.
-echo "=== Suite 14/14: S7 StoreKit purchase + restore (xcodebuild, RunnerIntegrationTests) — HARD gate (Apple-bug exception) ==="
+echo "=== Batch 6/6: S7 StoreKit purchase + restore (xcodebuild, RunnerIntegrationTests) — HARD gate (Apple-bug exception) ==="
 storekit_logbase="storekit-ios"
 storekit_ok=0
 storekit_apple_sig=0
