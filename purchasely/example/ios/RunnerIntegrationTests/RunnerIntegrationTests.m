@@ -48,6 +48,7 @@
 
 @interface RunnerIntegrationTests : XCTestCase
 @property(nonatomic, strong) SKTestSession *storeKitSession;
+@property(nonatomic, assign) BOOL storeKitOperationTimedOut;
 @end
 
 @implementation RunnerIntegrationTests
@@ -55,6 +56,7 @@
 - (void)setUp {
   [super setUp];
   self.continueAfterFailure = NO;
+  self.storeKitOperationTimedOut = NO;
 
   NSError *error = nil;
   self.storeKitSession =
@@ -80,29 +82,51 @@
 }
 
 - (void)tearDown {
-  [self.storeKitSession clearTransactions];
+  // Do not synchronously re-enter a StoreKitTest session whose background
+  // operation timed out; the xctrunner process teardown will release it.
+  if (!self.storeKitOperationTimedOut) {
+    [self.storeKitSession clearTransactions];
+  }
   self.storeKitSession = nil;
   [super tearDown];
 }
 
 - (void)testS7StorekitPurchaseRestoreEntrypointRuns {
+  XCUIApplication *app = [[XCUIApplication alloc] init];
+  [app launch];
+
   // A hostless UI-test bundle can keep SKTestSession alive for the app under
   // test, but a StoreKit purchase initiated from that separate app process
   // never completes on the Xcode 26 CI runner. Seed the local transaction
-  // through StoreKitTest itself, assert that it exists, then let the Flutter
-  // suite prove that Purchasely.restoreAllProducts() sees it across the bridge.
-  NSError *purchaseError = nil;
-  BOOL didPurchase = [self.storeKitSession
-      buyProductWithIdentifier:@"com.purchasely.plus.monthly"
-                         error:&purchaseError];
+  // through StoreKitTest after its app client is attached, assert that it
+  // exists, then let Flutter prove restoreAllProducts() sees it. The API is
+  // synchronous and has hung on affected Xcode runtimes, so run it off-main
+  // with its own 30s watchdog instead of consuming the workflow timeout.
+  XCTestExpectation *seeded =
+      [self expectationWithDescription:@"local StoreKit transaction seeded"];
+  __block NSError *purchaseError = nil;
+  __block BOOL didPurchase = NO;
+  SKTestSession *session = self.storeKitSession;
+  dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{
+    didPurchase = [session
+        buyProductWithIdentifier:@"com.purchasely.plus.monthly"
+                           error:&purchaseError];
+    [seeded fulfill];
+  });
+
+  XCTWaiterResult seedResult =
+      [XCTWaiter waitForExpectations:@[ seeded ] timeout:30.0];
+  if (seedResult != XCTWaiterResultCompleted) {
+    self.storeKitOperationTimedOut = YES;
+    [app terminate];
+    XCTFail(@"Timed out after 30s while seeding the local StoreKit transaction");
+    return;
+  }
   XCTAssertTrue(didPurchase, @"Failed to seed the local StoreKit transaction: %@",
                 purchaseError);
   XCTAssertNil(purchaseError);
   XCTAssertEqual(self.storeKitSession.allTransactions.count, 1U,
                  @"The local StoreKit transaction was not recorded");
-
-  XCUIApplication *app = [[XCUIApplication alloc] init];
-  [app launch];
 
   // tools/run_storekit_suite_ios.sh watches the Dart PASS/FAIL marker and
   // terminates the app as soon as the Dart suite finishes. Poll for that

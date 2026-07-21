@@ -113,11 +113,18 @@ void main() {
       'S7 — restores a pre-seeded local StoreKit transaction through Flutter',
       (tester) async {
     await tester.runAsync(() async {
-      // RunnerIntegrationTests.m seeded and asserted the local transaction
-      // before launching this app. This bridge call must now find it. Bounded
-      // timeout: a regression fails quickly instead of hanging the batch.
-      final restored = await Purchasely.restoreAllProducts(
-          timeout: const Duration(seconds: 60));
+      // RunnerIntegrationTests.m launches this app, then seeds and asserts the
+      // local transaction. Retry briefly because Dart setup and native seeding
+      // run concurrently. Each bridge call and the whole loop stay bounded.
+      var restored = false;
+      for (var attempt = 1; attempt <= 5 && !restored; attempt++) {
+        restored = await Purchasely.restoreAllProducts(
+            timeout: const Duration(seconds: 10));
+        debugPrint('S7 iOS → restore attempt $attempt: $restored');
+        if (!restored) {
+          await Future<void>.delayed(const Duration(seconds: 2));
+        }
+      }
       expect(restored, isTrue,
           reason: 'restoreAllProducts should find the seeded StoreKit plan');
       debugPrint('S7 iOS → restoreAllProducts=$restored');
