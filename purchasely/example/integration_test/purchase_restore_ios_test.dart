@@ -69,8 +69,31 @@ import 'helpers/e2e_start.dart';
 const String kApiKey = '0ad0594b-3b3d-4fea-8ee1-4b5df91efe87';
 const String kPlacementAudiences = 'integration_test_audiences';
 
+// Greptile P1 (PR #138): RunnerIntegrationTests.m is a hostless XCTest bundle
+// (see its own header) — xcodebuild's exit code only proves the app launched
+// and exited/timed out, never whether the `expect()`s below actually passed.
+// So this suite reports its own result explicitly: `_completedTests` is
+// bumped as the LAST line of each test body (if a test throws — an
+// `expect()` failure or anything else — before reaching that line, it never
+// counts), and `tearDownAll` below prints exactly one grep'able marker line
+// that tools/run_storekit_suite_ios.sh gates the build on.
+int _completedTests = 0;
+// ponytail: hardcoded to the single testWidgets() below; bump this (and add
+// a matching `_completedTests++` as the new test's last line) if a second
+// test is ever added to this file.
+const int _kTotalTests = 1;
+
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
+
+  tearDownAll(() {
+    if (_completedTests == _kTotalTests) {
+      debugPrint('S7-IOS-RESULT: PASS');
+    } else {
+      debugPrint(
+          'S7-IOS-RESULT: FAIL (completed=$_completedTests/$_kTotalTests)');
+    }
+  });
 
   setUpAll(() async {
     debugPrint('SETUP → calling Purchasely.start()…');
@@ -159,6 +182,10 @@ void main() {
       expect(restored, isTrue,
           reason: 'restoreAllProducts should find the just-purchased plan');
       debugPrint('S7 iOS → restoreAllProducts=$restored');
+
+      // Last line of the test body, deliberately: see the module-level
+      // comment on `_completedTests` above.
+      _completedTests++;
     });
   });
 }

@@ -93,6 +93,22 @@
   while (app.exists && [deadline timeIntervalSinceNow] > 0) {
     [NSThread sleepForTimeInterval:1.0];
   }
+
+  // Greptile P1 (PR #138): a timeout used to fall through here silently,
+  // which is exactly the "eventually exited/timed out" case this class'
+  // header warns proves nothing about the Dart suite's own result — but it
+  // still must not report xcodebuild exit 0. If the app is still running,
+  // the Dart suite hung (setUpAll, the purchase flow, or restore never
+  // returned); fail loud so tools/run_storekit_suite_ios.sh's xcodebuild
+  // exit-code check can't be green on a hang. A suite that completes
+  // (pass OR fail) exits the app on its own and never reaches this branch —
+  // that outcome is reported via the S7-IOS-RESULT marker instead (see
+  // purchase_restore_ios_test.dart), which this XCTest still can't see.
+  if (app.exists) {
+    XCTFail(@"App did not exit within the 180s poll window — the Dart suite "
+            @"likely hung. Check storekit_ios_flutter.log for the last "
+            @"flutter: lines and the S7-IOS-RESULT marker.");
+  }
 }
 
 @end
