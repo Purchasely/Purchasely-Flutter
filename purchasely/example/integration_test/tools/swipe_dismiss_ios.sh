@@ -20,6 +20,7 @@
 #
 # Usage: swipe_dismiss_ios.sh <simulator-udid> [n_swipes]
 #   n_swipes defaults to 2.
+#   MAX_WAIT_SECONDS controls the pre-swipe paywall poll (default 60).
 #
 # Run concurrently with the test:
 #   bash integration_test/tools/swipe_dismiss_ios.sh <sim-udid> 2 &
@@ -31,6 +32,7 @@ set -uo pipefail
 
 UDID="${1:?usage: $0 <simulator-udid> [n_swipes]}"
 N_SWIPES="${2:-2}"
+MAX_WAIT_SECONDS="${MAX_WAIT_SECONDS:-60}"
 # Labels that prove a Purchasely paywall is on screen (locale-independent
 # marker first).
 PAYWALL_MARKERS="Powered by Purchasely|Restore purchase|Continue"
@@ -75,19 +77,19 @@ paywall_present() {
   [ -n "$(paywall_geometry)" ]
 }
 
-# Wait for the paywall to appear (up to 60s) before swiping.
+# Wait for the paywall to appear before swiping.
 geom=""
-for i in $(seq 1 60); do
+for i in $(seq 1 "$MAX_WAIT_SECONDS"); do
   geom=$(paywall_geometry)
   if [ -n "$geom" ]; then
     break
   fi
-  echo "[swipe_dismiss_ios] paywall not detected yet (iter $i/60), retrying…"
+  echo "[swipe_dismiss_ios] paywall not detected yet (iter $i/$MAX_WAIT_SECONDS), retrying…"
   sleep 1
 done
 
 if [ -z "$geom" ]; then
-  echo "[swipe_dismiss_ios] paywall not detected after 60 s"
+  echo "[swipe_dismiss_ios] paywall not detected after $MAX_WAIT_SECONDS s"
   echo "PAYWALL_PRESENT=false"
   exit 1
 fi

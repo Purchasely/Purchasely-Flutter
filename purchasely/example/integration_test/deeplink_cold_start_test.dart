@@ -124,6 +124,10 @@ void main() {
       // 5. A deeplink open must NOT emit PRESENTATION_OPENED — that event is
       //    reserved for an in-paywall action button opening another
       //    presentation, not for the SDK auto-opening one via a deeplink.
+      //    Give the asynchronous event channel a short settle window after
+      //    VIEWED; checking immediately at the first complete lifecycle could
+      //    otherwise false-pass if a forbidden event arrived just afterward.
+      await Future<void>.delayed(const Duration(seconds: 2));
       expect(order.contains(PLYEventName.PRESENTATION_OPENED), isFalse,
           reason: 'a deeplink open must not emit PRESENTATION_OPENED');
 

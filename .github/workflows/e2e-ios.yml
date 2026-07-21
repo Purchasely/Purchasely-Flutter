@@ -5,23 +5,20 @@ name: E2E iOS
 # simulator and real network) — they run on demand and nightly.
 #
 # Suites:
-#   1/3 — dart_ios_bridge_test.dart       (T1–T20, no native interaction)
-#   2/3 — interceptor_trigger_ios_test    (purchase interceptor; driver taps
-#          ply_action_purchase_* via idb)
-#   3/3 — default_dismiss_handler_ios     (deeplink + default dismiss; driver
-#          taps ply_action_close via idb)
+#   14 suites — bridge, deeplink, listeners, display/dismiss regressions,
+#               flow/interceptor actions, and StoreKit purchase/restore.
 #
 # Triggers:
-#   * pull_request      — run on PRs targeting main while the v6 migration is in
-#                         flight, so the E2E suite gates the merge. Scoped to
-#                         paths that affect the bridge / native layer / tests.
+#   * pull_request      — run on PRs targeting main or the v6 migration branch,
+#                         so the E2E suite gates the merge. Scoped to paths that
+#                         affect the bridge / native layer / tests.
 #   * workflow_dispatch — manual run (any branch the workflow exists on)
 #   * schedule          — nightly at 04:00 UTC (GitHub only fires schedules from
 #                         the repository's DEFAULT branch, so the nightly run
 #                         activates once this file is merged to main).
 on:
   pull_request:
-    branches: [main]
+    branches: [main, feat/sdk-v6-migration]
     paths:
       - "purchasely/lib/**"
       - "purchasely/ios/**"

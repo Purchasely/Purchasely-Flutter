@@ -31,7 +31,7 @@ DEV="${1:?usage: $0 <simulator-udid>}"
 TIMEOUT="${TIMEOUT:-600}" # seconds per suite ATTEMPT (not per suite overall)
 HERE="$(cd "$(dirname "$0")" && pwd)"
 EXAMPLE_DIR="$(cd "$HERE/../.." && pwd)" # → purchasely/example
-cd "$EXAMPLE_DIR"
+cd "$EXAMPLE_DIR" || exit 1
 
 LOGS="integration_test/ci-logs"
 mkdir -p "$LOGS"
@@ -273,7 +273,12 @@ for a in 1 2 3; do
     break
   fi
   storekit_fail_count=$((storekit_fail_count + 1))
-  if grep -qE 'SKInternalErrorDomain Code=3|Error saving configuration file' "$LOGS/${storekit_logbase}_$a.log"; then
+  # A Dart result marker proves the app got past SKTestSession setup, so this
+  # is never an Apple-only blocker — even if the verbose xcodebuild log also
+  # happens to contain the known signature. Explicit Dart evidence wins.
+  if grep -q 'S7-IOS-RESULT:' "$LOGS/${storekit_logbase}_$a.log"; then
+    storekit_other_failure=1
+  elif grep -qE 'SKInternalErrorDomain Code=3|Error saving configuration file' "$LOGS/${storekit_logbase}_$a.log"; then
     storekit_apple_sig=1
   else
     storekit_other_failure=1

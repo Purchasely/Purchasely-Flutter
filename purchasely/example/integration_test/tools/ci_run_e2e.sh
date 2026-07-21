@@ -35,7 +35,7 @@ DEV="${1:-emulator-5554}"
 TIMEOUT="${TIMEOUT:-600}" # seconds per suite ATTEMPT (not per suite overall)
 HERE="$(cd "$(dirname "$0")" && pwd)"
 EXAMPLE_DIR="$(cd "$HERE/../.." && pwd)" # → purchasely/example
-cd "$EXAMPLE_DIR"
+cd "$EXAMPLE_DIR" || exit 1
 
 LOGS="integration_test/ci-logs"
 mkdir -p "$LOGS"

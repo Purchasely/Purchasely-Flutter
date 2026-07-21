@@ -85,29 +85,46 @@
   XCUIApplication *app = [[XCUIApplication alloc] init];
   [app launch];
 
-  // Flutter's IntegrationTestWidgetsFlutterBinding terminates the process
-  // once the Dart test(s) finish running in this "native, no VM service
-  // attached" mode. Poll for that rather than a blind fixed sleep — bounded,
-  // generous enough for setUpAll (SDK start) + the purchase/restore flow.
+  // Drive the purchase CTA from INSIDE this XCUITest session. A parallel idb
+  // client uses the same testmanagerd automation channel; while xcodebuild
+  // owns that channel, idb can report successful taps that never reach the
+  // app (CI run 29814073898: eight reported taps, zero interceptor callback).
+  NSArray<NSString *> *ctaLabels =
+      @[ @"Continue", @"Continuer", @"Subscribe", @"S'abonner", @"Unlock now" ];
+  NSMutableArray<NSPredicate *> *labelPredicates = [NSMutableArray array];
+  for (NSString *label in ctaLabels) {
+    [labelPredicates
+        addObject:[NSPredicate predicateWithFormat:@"label ==[c] %@", label]];
+  }
+  XCUIElementQuery *accessibleElements =
+      [app descendantsMatchingType:XCUIElementTypeAny];
+  XCUIElement *cta = [accessibleElements
+      elementMatchingPredicate:[NSCompoundPredicate
+                                    orPredicateWithSubpredicates:labelPredicates]];
+  XCTAssertTrue([cta waitForExistenceWithTimeout:120.0],
+                @"Purchase CTA did not appear within 120s");
+
+  NSDate *hittableDeadline = [NSDate dateWithTimeIntervalSinceNow:15.0];
+  while (!cta.isHittable && [hittableDeadline timeIntervalSinceNow] > 0) {
+    [NSThread sleepForTimeInterval:0.5];
+  }
+  XCTAssertTrue(cta.isHittable, @"Purchase CTA exists but is not hittable");
+  [cta tap];
+  NSLog(@"[RunnerIntegrationTests] purchase CTA tapped through XCUITest");
+
+  // tools/run_storekit_suite_ios.sh watches the Dart PASS/FAIL marker and
+  // terminates the app as soon as the Dart suite finishes. Poll for that
+  // bounded termination. If no marker is ever emitted (setup crash/hang),
+  // retain this independent timeout so xcodebuild cannot false-green.
   NSDate *deadline = [NSDate dateWithTimeIntervalSinceNow:420.0];
   while (app.exists && [deadline timeIntervalSinceNow] > 0) {
     [NSThread sleepForTimeInterval:1.0];
   }
 
-  // Greptile P1 (PR #138): a timeout used to fall through here silently,
-  // which is exactly the "eventually exited/timed out" case this class'
-  // header warns proves nothing about the Dart suite's own result — but it
-  // still must not report xcodebuild exit 0. If the app is still running,
-  // the Dart suite hung (setUpAll, the purchase flow, or restore never
-  // returned); fail loud so tools/run_storekit_suite_ios.sh's xcodebuild
-  // exit-code check can't be green on a hang. A suite that completes
-  // (pass OR fail) exits the app on its own and never reaches this branch —
-  // that outcome is reported via the S7-IOS-RESULT marker instead (see
-  // purchase_restore_ios_test.dart), which this XCTest still can't see.
   if (app.exists) {
     XCTFail(@"App did not exit within the 420s poll window — the Dart suite "
-            @"likely hung. Check storekit_ios_flutter.log for the last "
-            @"flutter: lines and the S7-IOS-RESULT marker.");
+            @"never emitted a result marker or the marker watcher could not "
+            @"terminate it. Check storekit_ios_flutter.log.");
   }
 }
 

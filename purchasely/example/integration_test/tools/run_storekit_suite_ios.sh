@@ -4,8 +4,8 @@
 # file's header comment for the full execution-path rationale.
 #
 # RunnerIntegrationTests is a hostless XCUITest bundle (no TEST_HOST): it
-# cannot propagate the Dart test's own pass/fail into xcodebuild's result, it
-# only proves the app launched and eventually exited/timed out. The actual
+# cannot propagate the Dart test's own pass/fail into xcodebuild's result; it
+# only proves the app launched and the UI-test host completed. The actual
 # proof is the Dart suite's debugPrint()/print() output, which reaches the
 # simulator's unified log regardless of which mechanism launched the app —
 # this script captures that concurrently and greps it for the outcome.
@@ -27,7 +27,7 @@ set -uo pipefail
 UDID="${1:?usage: $0 <simulator-udid>}"
 HERE="$(cd "$(dirname "$0")" && pwd)"
 EXAMPLE_DIR="$(cd "$HERE/../.." && pwd)" # → purchasely/example
-cd "$EXAMPLE_DIR"
+cd "$EXAMPLE_DIR" || exit 1
 
 LOGS="integration_test/ci-logs"
 mkdir -p "$LOGS"
@@ -48,15 +48,35 @@ xcrun simctl spawn "$UDID" log stream \
   >"$FLUTTER_LOG" 2>&1 &
 LOG_PID=$!
 
-# Concurrent driver: taps the purchase CTA once the paywall is on screen.
-bash "$HERE/tap_purchase_ios.sh" "$UDID" >"$LOGS/storekit_ios_driver.log" 2>&1 &
-DRIVER_PID=$!
+# No background idb driver here: RunnerIntegrationTests owns testmanagerd's
+# automation channel while xcodebuild is active, so an idb tap can report
+# success without reaching the app. RunnerIntegrationTests taps the CTA from
+# inside its own XCUITest session instead.
+#
+# Flutter's in-app integration-test binding does not terminate this hostless
+# launch when the Dart tests finish. Watch the authoritative Dart marker and
+# terminate the app so the XCUITest host can finish immediately instead of
+# waiting its full 420s hang timeout. PASS vs FAIL is still decided below.
+(
+  while kill -0 "$LOG_PID" 2>/dev/null; do
+    if grep -q "S7-IOS-RESULT:" "$FLUTTER_LOG"; then
+      echo "[storekit marker watcher] Dart result observed; terminating app"
+      if ! xcrun simctl terminate "$UDID" com.purchasely.demo 2>/dev/null; then
+        echo "[storekit marker watcher] app already stopped (non-fatal)"
+      fi
+      exit 0
+    fi
+    sleep 1
+  done
+) &
+MARKER_WATCH_PID=$!
 
 xcodebuild test -workspace ios/Runner.xcworkspace -scheme Runner \
   -only-testing:RunnerIntegrationTests -destination "id=$UDID"
 STATUS=$?
 
-kill "$DRIVER_PID" >/dev/null 2>&1
+kill "$MARKER_WATCH_PID" >/dev/null 2>&1
+wait "$MARKER_WATCH_PID" 2>/dev/null
 
 # Drain: `log stream` buffers internally and the Dart process's final
 # tearDownAll print can race xcodebuild's own teardown — give it a few
@@ -69,9 +89,11 @@ wait "$LOG_PID" 2>/dev/null
 # output around a fast process exit. `log show` is a point-in-time query of
 # the same unified log store, not a race with the kill above — append it as
 # a second, more reliable source before grepping for the marker.
-xcrun simctl spawn "$UDID" log show \
+if ! xcrun simctl spawn "$UDID" log show \
   --predicate 'eventMessage CONTAINS "flutter:"' --last 5m \
-  >>"$FLUTTER_LOG" 2>&1 || true
+  >>"$FLUTTER_LOG" 2>&1; then
+  echo "[cleanup] simulator log fallback failed (non-fatal)"
+fi
 
 echo "=== Dart suite output ($FLUTTER_LOG, last 40 lines) ==="
 tail -n 40 "$FLUTTER_LOG" 2>/dev/null || echo "(log file empty/unreadable)"
@@ -87,8 +109,8 @@ if grep -q "S7-IOS-RESULT:" "$FLUTTER_LOG"; then
   echo "# Dart marker: $(grep "S7-IOS-RESULT:" "$FLUTTER_LOG" | tail -1)"
 else
   echo "# Dart marker: MISSING — the Dart suite likely never reached"
-  echo "# tearDownAll (crash or hang; RunnerIntegrationTests.m now XCTFails"
-  echo "# on its own 180s poll timeout instead of exiting 0 silently)."
+  echo "# tearDownAll (crash or hang; RunnerIntegrationTests.m XCTFails"
+  echo "# on its own 420s poll timeout instead of exiting 0 silently)."
 fi
 echo "################################################################"
 exit 1

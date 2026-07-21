@@ -6,16 +6,16 @@ name: E2E Android
 # nightly.
 #
 # Triggers:
-#   * pull_request      — run on PRs targeting main while the v6 migration is in
-#                         flight, so the E2E suite gates the merge. Scoped to
-#                         paths that affect the bridge / native layer / tests.
+#   * pull_request      — run on PRs targeting main or the v6 migration branch,
+#                         so the E2E suite gates the merge. Scoped to paths that
+#                         affect the bridge / native layer / tests.
 #   * workflow_dispatch — manual run (any branch the workflow exists on)
 #   * schedule          — nightly at 03:00 UTC (GitHub only fires schedules from the
 #                         repository's DEFAULT branch, so the nightly run activates
 #                         once this file is merged to main).
 on:
   pull_request:
-    branches: [main]
+    branches: [main, feat/sdk-v6-migration]
     paths:
       - "purchasely/lib/**"
       - "purchasely/android/**"

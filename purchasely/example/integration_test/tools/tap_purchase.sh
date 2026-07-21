@@ -75,6 +75,8 @@ PY
 )
     if [ -n "$coords" ]; then
       echo "[tap_purchase] found '$DESC' at $coords (iter $i), tapping…"
+      # coords is emitted as two validated integers by the parser above.
+      # shellcheck disable=SC2086
       adb -s "$DEV" shell input tap $coords
       echo "[tap_purchase] tapped ✓"
       exit 0

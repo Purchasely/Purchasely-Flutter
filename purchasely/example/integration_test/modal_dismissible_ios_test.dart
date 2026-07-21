@@ -105,17 +105,19 @@ void main() {
         await Future<void>.delayed(const Duration(milliseconds: 250));
       }
       expect(presented, isTrue, reason: 'modal paywall should present');
+      debugPrint('M1-NONDISMISSIBLE-READY');
 
-      // The concurrent driver (tools/swipe_dismiss_ios.sh) sends 2 interactive
-      // swipe-down gestures around now. PR #136 fixed iOS `parseTransition`
+      // The concurrent driver waits for the readiness marker above, then sends
+      // 2 interactive swipe-down gestures. PR #136 fixed iOS `parseTransition`
       // to forward `dismissible: false` into `.modal(dismissible:)` — before
       // the fix, the transition was ALWAYS `.modal` (swipe-dismissible)
       // regardless of the Dart flag. Give the driver time to act, then assert
-      // nothing moved. (10s, not 5s: the driver's own AX-tree poll runs on a
-      // slower cadence than onPresented, so it needs headroom to notice the
-      // paywall and complete 2 swipe gestures after onPresented already
-      // fired.)
-      await Future<void>.delayed(const Duration(seconds: 10));
+      // nothing moved. The driver's own AX-tree poll runs on a slower cadence
+      // than onPresented, so it gets a full 60s after the readiness marker to
+      // notice the paywall and complete 2 swipe gestures. The 65s wait below
+      // keeps this exact modal alive until that attempt has succeeded or
+      // failed; it cannot drift into the second test's paywall.
+      await Future<void>.delayed(const Duration(seconds: 65));
 
       expect(outcome, isNull,
           reason: 'a non-dismissible modal must ignore the interactive swipe — '
@@ -174,6 +176,7 @@ void main() {
         await Future<void>.delayed(const Duration(milliseconds: 250));
       }
       expect(presented, isTrue, reason: 'modal paywall should present');
+      debugPrint('M1-DISMISSIBLE-READY');
 
       // The concurrent driver (tools/swipe_dismiss_ios.sh) sends 1-2
       // interactive swipe-down gestures. A dismissible modal must let this
