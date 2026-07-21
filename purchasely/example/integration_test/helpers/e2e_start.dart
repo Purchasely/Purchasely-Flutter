@@ -54,7 +54,18 @@ const List<String> _kNetworkNeedles = [
 Future<bool> startWithRetry(Future<bool> Function() start) async {
   for (var attempt = 1; attempt <= _kMaxAttempts; attempt++) {
     try {
-      return await start();
+      // Backstop timeout (Greptile P2, PR #138 review): some callers (e.g.
+      // flow_dismiss_test.dart, dart_android_bridge_test.dart) don't chain
+      // their own `.timeout(...)` on the start() call, unlike the iOS
+      // suites that do — without this, a hung start() is only bounded by
+      // the ~600s CI watchdog. A caller's own tighter `.timeout(...)` still
+      // wins (it fires first). Deliberately left as the *default*
+      // TimeoutException (no onTimeout override): its message doesn't
+      // contain "timed out" or any other _kNetworkNeedles substring, so
+      // _networkMotif treats it as a real failure and rethrows immediately
+      // instead of silently retrying it like a network hiccup — a genuine
+      // hang should surface as a failure, not get masked by the backoff.
+      return await start().timeout(const Duration(seconds: 180));
     } catch (e) {
       final motif = _networkMotif(e);
       if (motif == null || attempt == _kMaxAttempts) rethrow;

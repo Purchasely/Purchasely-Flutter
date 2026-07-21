@@ -133,7 +133,7 @@ run_suite() {
       dpid=$!
     fi
     status=0
-    run_with_timeout flutter test "$testfile" -d "$DEV" 2>&1 | tee "$LOGS/${logbase}_$a.log"
+    run_with_timeout flutter test "$testfile" -d "$DEV" --reporter expanded 2>&1 | tee "$LOGS/${logbase}_$a.log"
     status=$?
     end_ts=$(date +%s)
     duration=$((end_ts - start_ts))

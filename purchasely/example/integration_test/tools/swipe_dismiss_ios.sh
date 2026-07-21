@@ -65,7 +65,9 @@ if any(m in labels for m in markers):
             print(f"{int(round(f.get('width', 390)))} {int(round(f.get('height', 844)))}")
             break
     else:
-        print("390 844")
+        # Fallback: iPhone-15-class default is safer than iPhone-SE-era 390x844
+        # across modern simulators (Pro Max is 430x932; 390x852 is a safe mid-point).
+        print("390 852")
 PY
 }
 
