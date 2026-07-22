@@ -138,11 +138,14 @@ void main() {
       expect(stopwatch.elapsed, lessThan(const Duration(seconds: 20)),
           reason: 'restore must fail fast, never stall the E2E runner');
       if (verificationError != null) {
+        expect(verificationError.code, '-1');
+        expect(verificationError.message, 'Restore failed');
+        expect(verificationError.details, isA<String>());
         expect(
-            verificationError.message, contains('Receipt verification failed'));
-        expect(verificationError.message, contains('[21002]'));
+            verificationError.details, contains('Receipt verification failed'));
+        expect(verificationError.details, contains('[21002]'));
         debugPrint('S7 iOS → expected local receipt rejection in '
-            '${stopwatch.elapsedMilliseconds}ms: ${verificationError.message}');
+            '${stopwatch.elapsedMilliseconds}ms: ${verificationError.details}');
       } else if (timeoutError != null) {
         expect(stopwatch.elapsed,
             greaterThanOrEqualTo(const Duration(seconds: 15)),
