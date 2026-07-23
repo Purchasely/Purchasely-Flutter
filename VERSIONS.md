@@ -50,3 +50,4 @@ This file provides the underlying native SDK versions that the React Native SDK 
 | 5.7.1   | 5.7.1       | 5.7.1           |
 | 5.7.2   | 5.7.2       | 5.7.3           |
 | 5.7.3   | 5.7.4       | 5.7.4           |
+| 5.7.4   | 5.7.7       | 5.7.5           |

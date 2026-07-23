@@ -1,3 +1,9 @@
+## 5.7.4
+- Loosened the iOS `Purchasely` pod dependency to `~> 5.7.7` (was `= 5.7.4`) so it floats to the latest 5.7.x and no longer conflicts with apps that pin a higher 5.7.x native SDK.
+- Updated Android Purchasely Core SDK to 5.7.5.
+- Updated bridge version to 5.7.4.
+Full changelog available at https://docs.purchasely.com/changelog/57
+
 ## 5.7.3
 - Updated iOS Purchasely SDK to 5.7.4.
 - Updated Android Purchasely Core SDK to 5.7.4.
