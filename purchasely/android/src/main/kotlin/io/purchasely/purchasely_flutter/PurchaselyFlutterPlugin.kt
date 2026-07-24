@@ -48,6 +48,7 @@ import io.purchasely.views.presentation.models.PLYTransitionType
 import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicLong
 import kotlin.collections.ArrayList
 import kotlin.collections.HashMap
 import kotlin.reflect.KClass
@@ -213,6 +214,9 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
                 clientPresentationClosed(args?.get("presentation") as? Map<*, *>)
                 result.safeSuccess(true)
             }
+            "executeConnection" -> executeConnection(args, result)
+            "setCustomScreenProvider" -> setCustomScreenProvider(args, result)
+            "removeCustomScreenProvider" -> removeCustomScreenProvider(result)
 
             // --- action interceptor ---
             "registerInterceptor" -> registerInterceptor(args, result)
@@ -709,6 +713,48 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
     private fun clientPresentationClosed(presentationMap: Map<*, *>?) {
         val loaded = clientPresentation(presentationMap, "clientPresentationClosed") ?: return
         Purchasely.clientPresentationClosed(loaded)
+    }
+
+    private fun executeConnection(args: Map<String, Any?>?, result: Result) {
+        val requestId = args?.get("requestId") as? String
+        val connectionId = args?.get("connectionId") as? String
+        val presentation = requestId?.let { loadedPresentations[it] }
+        if (presentation == null) {
+            Log.w("PurchaselyFlutter", "executeConnection: no loaded presentation for requestId=$requestId")
+        } else {
+            executePresentationConnection(presentation, connectionId)
+        }
+        result.safeSuccess(true)
+    }
+
+    private fun setCustomScreenProvider(args: Map<String, Any?>?, result: Result) {
+        val entrypoint = args?.get("entrypoint") as? String
+        if (entrypoint.isNullOrBlank()) {
+            result.safeError("-1", "entrypoint is required", null)
+            return
+        }
+        customScreenEntrypoint = entrypoint
+        customScreenLibraryUri = args["libraryUri"] as? String
+        Purchasely.setCustomScreenProvider(object : PLYCustomScreenProvider {
+            override fun onCustomScreenRequested(
+                presentation: PLYPresentationBase.Loaded,
+            ): PLYCustomScreen {
+                val customScreenId = registerCustomScreenPresentation(presentation)
+                return PLYCustomScreen.Fragment(
+                    PurchaselyCustomScreenFragment.newInstance(
+                        customScreenId,
+                        customScreenEntrypoint,
+                        customScreenLibraryUri,
+                    )
+                )
+            }
+        })
+        result.safeSuccess(true)
+    }
+
+    private fun removeCustomScreenProvider(result: Result) {
+        Purchasely.setCustomScreenProvider(null)
+        result.safeSuccess(true)
     }
     //endregion
 
@@ -1473,6 +1519,57 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
         val loadedPresentations = ConcurrentHashMap<String, PLYPresentationBase.Loaded>()
         val displayCallbacks = ConcurrentHashMap<String, (PLYPresentationOutcome) -> Unit>()
 
+        @Volatile
+        var customScreenEntrypoint: String = "purchaselyCustomScreen"
+            private set
+        @Volatile
+        var customScreenLibraryUri: String? = null
+            private set
+        private val customScreenCounter = AtomicLong(0)
+        val customScreenPresentations = ConcurrentHashMap<String, PLYPresentationBase.Loaded>()
+
+        private fun registerCustomScreenPresentation(presentation: PLYPresentationBase.Loaded): String {
+            val id = "ply_cs_${customScreenCounter.incrementAndGet()}"
+            customScreenPresentations[id] = presentation
+            return id
+        }
+
+        fun removeCustomScreenPresentation(customScreenId: String) {
+            customScreenPresentations.remove(customScreenId)
+        }
+
+        fun customScreenPresentationToMap(customScreenId: String): Map<String, Any?>? {
+            val presentation = customScreenPresentations[customScreenId] ?: return null
+            return presentationToMap(presentation).toMutableMap().apply {
+                put("customScreenId", customScreenId)
+            }
+        }
+
+        fun executeCustomScreenConnection(customScreenId: String, connectionId: String?) {
+            val presentation = customScreenPresentations[customScreenId]
+            if (presentation == null) {
+                Log.w("PurchaselyFlutter", "Custom Screen $customScreenId is no longer available")
+                return
+            }
+            executePresentationConnection(presentation, connectionId)
+        }
+
+        private fun executePresentationConnection(
+            presentation: PLYPresentationBase.Loaded,
+            connectionId: String?,
+        ) {
+            if (connectionId == null) {
+                presentation.execute(null)
+                return
+            }
+            val connection = presentation.connections.firstOrNull { it.id == connectionId }
+            if (connection == null) {
+                Log.w("PurchaselyFlutter", "No connection '$connectionId' on Custom Screen ${presentation.screenId}")
+                return
+            }
+            presentation.execute(connection)
+        }
+
         /**
          * Posts a presentation lifecycle envelope onto the shared
          * `purchasely-presentation-events` sink. Used by the inline NativeView so
@@ -1523,6 +1620,13 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
                 "type" to p.type.ordinal,
                 "height" to p.height,
                 "plans" to p.plans.map { plan -> presentationPlanToMap(plan) },
+                "metadata" to (p.metadata?.keys()?.associateWith { key -> p.metadata?.get(key) } ?: emptyMap()),
+                "connections" to p.connections.map { connection ->
+                    mapOf(
+                        "id" to connection.id,
+                        "isDefault" to connection.default,
+                    )
+                },
             )
         }
 

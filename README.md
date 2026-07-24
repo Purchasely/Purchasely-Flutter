@@ -54,5 +54,33 @@ switch (outcome.purchaseResult) {
 }
 ```
 
+## Custom Screens
+
+Flutter can provide the UI for a CLIENT step inside a Purchasely-managed native
+flow. Register a dedicated entrypoint immediately after `start()`:
+
+```dart
+await Purchasely.setCustomScreenProvider();
+
+@pragma('vm:entry-point')
+void purchaselyCustomScreen(List<String> args) {
+  PurchaselyCustomScreens.run(args, (context, presentation) {
+    return MaterialApp(
+      home: MyCustomStep(
+        onNext: () => presentation.execute(),
+        onBack: presentation.back,
+      ),
+    );
+  });
+}
+```
+
+The custom widget runs in a dedicated Dart isolate: it does not inherit the
+main app's Provider/Bloc/Riverpod state, Navigator, theme, or auto-registered
+app plugins. Pass static configuration through presentation metadata or
+persistent storage. Custom Screen hosting applies to CLIENT steps in native
+flows; it is not supported by the inline `PLYPresentationView` or as a
+standalone native presentation.
+
 ## 🏁 Documentation
 A complete documentation is available on our website [https://docs.purchasely.com](https://docs.purchasely.com)

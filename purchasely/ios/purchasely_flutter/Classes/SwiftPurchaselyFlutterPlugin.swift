@@ -38,6 +38,13 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
     // invocationId -> SDK interceptor completion. Single-shot, removed on resolve.
     private static var pendingInterceptors: [String: (PLYInterceptResult) -> Void] = [:]
 
+    private static let customScreenLock = NSLock()
+    private static var customScreenCounter: UInt64 = 0
+    private static var customScreenPresentations: [String: PLYPresentation] = [:]
+    static var customScreenEntrypoint = "purchaselyCustomScreen"
+    static var customScreenLibraryURI: String?
+    private static var customScreenDelegate: PurchaselyCustomScreenDelegate?
+
     // The live plugin instance, so the inline NativeView can reach the shared
     // `purchasely-presentation-events` sink and surface the same `onDismissed`
     // envelope as the full-screen path.
@@ -148,6 +155,12 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
         case "clientPresentationClosed":
             clientPresentationClosed(arguments)
             result(true)
+        case "executeConnection":
+            executeConnection(arguments, result: result)
+        case "setCustomScreenProvider":
+            setCustomScreenProvider(arguments, result: result)
+        case "removeCustomScreenProvider":
+            removeCustomScreenProvider(result: result)
 
         // --- action interceptor ---
         case "registerInterceptor":
@@ -545,6 +558,38 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
         Purchasely.clientPresentationClosed(with: presentation)
     }
 
+    private func executeConnection(_ args: [String: Any]?, result: @escaping FlutterResult) {
+        let requestId = args?["requestId"] as? String
+        let connectionId = args?["connectionId"] as? String
+        guard let id = requestId,
+              let presentation = Self.loadedPresentations[id] else {
+            print("Purchasely", "executeConnection: no loaded presentation for requestId=\(requestId ?? "nil")")
+            result(true)
+            return
+        }
+        Self.executeConnection(on: presentation, connectionId: connectionId)
+        result(true)
+    }
+
+    private func setCustomScreenProvider(_ args: [String: Any]?, result: @escaping FlutterResult) {
+        guard let entrypoint = args?["entrypoint"] as? String, !entrypoint.isEmpty else {
+            result(FlutterError(code: "ARG_INVALID", message: "entrypoint is required", details: nil))
+            return
+        }
+        Self.customScreenEntrypoint = entrypoint
+        Self.customScreenLibraryURI = args?["libraryUri"] as? String
+        let delegate = PurchaselyCustomScreenDelegate()
+        Self.customScreenDelegate = delegate
+        Purchasely.setCustomScreenViewControllerDelegate(delegate)
+        result(true)
+    }
+
+    private func removeCustomScreenProvider(result: @escaping FlutterResult) {
+        Purchasely.removeCustomScreenViewControllerDelegate()
+        Self.customScreenDelegate = nil
+        result(true)
+    }
+
     // MARK: - Action interceptor
 
     private func registerInterceptor(_ args: [String: Any]?, result: @escaping FlutterResult) {
@@ -640,7 +685,13 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
     }
 
     private func presentationToMap(_ p: PLYPresentation, requestId: String) -> [String: Any] {
-        return [
+        Self.presentationToMap(p, requestId: requestId, customScreenId: nil)
+    }
+
+    static func presentationToMap(_ p: PLYPresentation,
+                                  requestId: String,
+                                  customScreenId: String?) -> [String: Any] {
+        var map: [String: Any] = [
             "requestId": requestId,
             // Native `screenId` → wire `screenId`. The Dart factory tolerates both
             // keys; we send `screenId` for forward compatibility with the
@@ -667,7 +718,63 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
                     "offerId": plan.offerId,
                 ]
             },
+            "metadata": p.metadata?.getRawMetadata() ?? [:],
+            // `p.connections` is a Set; sort by id so the array order handed to
+            // Dart is deterministic across displays (Android sends an ordered List).
+            "connections": p.connections.sorted { ($0.id ?? "") < ($1.id ?? "") }.map { connection in
+                [
+                    "id": connection.id,
+                    // Native iOS does not expose Connection.default publicly yet.
+                    "isDefault": false,
+                ] as [String : Any]
+            },
         ]
+        if let customScreenId = customScreenId {
+            map["customScreenId"] = customScreenId
+        }
+        return map
+    }
+
+    static func registerCustomScreenPresentation(_ presentation: PLYPresentation) -> String {
+        customScreenLock.lock()
+        defer { customScreenLock.unlock() }
+        customScreenCounter += 1
+        let id = "ply_cs_\(customScreenCounter)"
+        customScreenPresentations[id] = presentation
+        return id
+    }
+
+    static func removeCustomScreenPresentation(_ customScreenId: String) {
+        customScreenLock.lock()
+        customScreenPresentations.removeValue(forKey: customScreenId)
+        customScreenLock.unlock()
+    }
+
+    static func customScreenPresentation(_ customScreenId: String) -> PLYPresentation? {
+        customScreenLock.lock()
+        defer { customScreenLock.unlock() }
+        return customScreenPresentations[customScreenId]
+    }
+
+    static func customScreenPresentationMap(_ customScreenId: String) -> [String: Any]? {
+        guard let presentation = customScreenPresentation(customScreenId) else { return nil }
+        return presentationToMap(
+            presentation,
+            requestId: "",
+            customScreenId: customScreenId
+        )
+    }
+
+    static func executeConnection(on presentation: PLYPresentation, connectionId: String?) {
+        if let connectionId = connectionId {
+            guard let connection = presentation.connections.first(where: { $0.id == connectionId }) else {
+                print("Purchasely", "No connection '\(connectionId)' on Custom Screen \(presentation.screenId)")
+                return
+            }
+            presentation.executeConnection(connection)
+        } else {
+            presentation.executeConnection(nil)
+        }
     }
 
     private func outcomeToMap(_ outcome: PLYPresentationOutcome,

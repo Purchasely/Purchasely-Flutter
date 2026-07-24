@@ -29,9 +29,10 @@ guide.
 9. [Custom User Attributes](#custom-user-attributes)
 10. [Event Listeners](#event-listeners)
 11. [Pre-fetching Screens](#pre-fetching-screens)
-12. [Inline Presentations](#inline-presentations)
-13. [Deeplinks Management](#deeplinks-management)
-14. [Platform-Specific Features](#platform-specific-features)
+12. [Custom Screens](#custom-screens)
+13. [Inline Presentations](#inline-presentations)
+14. [Deeplinks Management](#deeplinks-management)
+15. [Platform-Specific Features](#platform-specific-features)
 
 ---
 
@@ -627,6 +628,85 @@ try {
 | `client` | Your own paywall (BYOS) |
 
 ---
+
+## Custom Screens
+
+A Custom Screen is a CLIENT step whose UI is built by your Flutter app while
+the Purchasely native SDK continues to own the surrounding flow, transitions,
+back stack, analytics, and configured connection actions.
+
+Register the provider after the SDK starts and before any flow can be shown:
+
+```dart
+await Purchasely.apiKey('<API_KEY>')
+    .runningMode(PLYRunningMode.full)
+    .stores([PLYStore.google])
+    .start();
+
+await Purchasely.setCustomScreenProvider();
+```
+
+The default entrypoint name is `purchaselyCustomScreen`. It must be top-level,
+kept from tree shaking, accept `List<String>`, and start the Custom Screen
+runtime:
+
+```dart
+@pragma('vm:entry-point')
+void purchaselyCustomScreen(List<String> args) {
+  PurchaselyCustomScreens.run(args, (context, presentation) {
+    return MaterialApp(
+      home: Scaffold(
+        body: Column(
+          children: [
+            Text(presentation.metadata['title'] as String? ?? 'Custom step'),
+            for (final connection in presentation.connections)
+              ElevatedButton(
+                onPressed: () => presentation.execute(connection),
+                child: Text(connection.id ?? 'Continue'),
+              ),
+            TextButton(
+              onPressed: presentation.execute,
+              child: const Text('Use default connection'),
+            ),
+            TextButton(onPressed: presentation.back, child: const Text('Back')),
+            TextButton(onPressed: presentation.close, child: const Text('Close')),
+          ],
+        ),
+      ),
+    );
+  });
+}
+```
+
+If the entrypoint is in another library, provide its package URI:
+
+```dart
+await Purchasely.setCustomScreenProvider(
+  entrypoint: 'myCustomScreenEntrypoint',
+  libraryUri: 'package:my_app/custom_screens.dart',
+);
+```
+
+Call `removeCustomScreenProvider()` to restore the native SDK's no-provider
+behavior.
+
+Important runtime constraints:
+
+- Each Custom Screen uses a secondary Flutter engine and dedicated Dart isolate.
+- App plugins are not auto-registered on that secondary engine; the Custom
+  Screen runtime exposes only the dedicated Purchasely navigation channel.
+- Main-isolate Provider, Bloc, Riverpod, GetIt, Navigator, and inherited themes
+  are unavailable. The builder should provide its own `MaterialApp` or theme.
+- Prefer presentation `metadata`, backend state, or persistent platform storage
+  for configuration shared with the main app.
+- Register on every launch before deeplinks or campaigns can open an eligible
+  flow. Android flow restoration may request the step again.
+- Custom Screen hosting supports CLIENT steps inside native flows only. It does
+  not support `PLYPresentationView` inline hosting or standalone native CLIENT
+  presentations.
+- On the current iOS native SDK, `PLYConnection.isDefault` is reported as
+  `false`; calling `presentation.execute()` without an argument still executes
+  the native default connection.
 
 ## Inline Presentations
 

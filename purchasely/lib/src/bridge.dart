@@ -254,6 +254,19 @@ class PurchaselyBridge {
     );
   }
 
+  Future<void> _execute(
+    PLYPresentation presentation,
+    PLYConnection? connection,
+  ) async {
+    await _method.invokeMethod<dynamic>(
+      'executeConnection',
+      <String, Object?>{
+        'requestId': presentation.requestId,
+        'connectionId': connection?.id,
+      },
+    );
+  }
+
   // --- Interceptor API ----------------------------------------------------
 
   Future<void> registerInterceptor(
@@ -564,6 +577,11 @@ class _BridgePresentationActions extends PLYPresentationActions {
   @override
   Future<void> back(PLYPresentation presentation) =>
       _bridge._back(presentation);
+
+  @override
+  Future<void> execute(
+          PLYPresentation presentation, PLYConnection? connection) =>
+      _bridge._execute(presentation, connection);
 }
 
 class _BridgePresentationRequestActions extends PLYPresentationRequestActions {
@@ -596,6 +614,8 @@ class _UninitialisedPresentationActions extends PLYPresentationActions {
   Future<void> close(_) => throw _err();
   @override
   Future<void> back(_) => throw _err();
+  @override
+  Future<void> execute(_, __) => throw _err();
 }
 
 class _UninitialisedRequestActions extends PLYPresentationRequestActions {
