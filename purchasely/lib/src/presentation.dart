@@ -50,6 +50,31 @@ class PLYPresentationPlan {
       };
 }
 
+/// A named exit from a Purchasely Custom Screen.
+class PLYConnection {
+  /// Connection vendor id configured in the Purchasely Console.
+  final String? id;
+
+  /// Whether this is the presentation's default connection.
+  ///
+  /// The current iOS SDK does not expose this flag publicly, so it is `false`
+  /// on iOS until that native API is available. Calling [PLYPresentation.execute]
+  /// without a connection still executes the native default on both platforms.
+  final bool isDefault;
+
+  const PLYConnection({this.id, this.isDefault = false});
+
+  factory PLYConnection.fromMap(Map<dynamic, dynamic> map) => PLYConnection(
+        id: map['id'] as String?,
+        isDefault: map['isDefault'] as bool? ?? false,
+      );
+
+  Map<String, Object?> toMap() => <String, Object?>{
+        'id': id,
+        'isDefault': isDefault,
+      };
+}
+
 /// Indirection used by [PLYPresentation.display] / [close] / [back] so the
 /// public API can defer to the bridge without creating a circular import.
 abstract class PLYPresentationActions {
@@ -60,6 +85,7 @@ abstract class PLYPresentationActions {
       PLYPresentation presentation, PLYTransition? transition);
   Future<void> close(PLYPresentation presentation);
   Future<void> back(PLYPresentation presentation);
+  Future<void> execute(PLYPresentation presentation, PLYConnection? connection);
 }
 
 class _UninitialisedActions extends PLYPresentationActions {
@@ -72,6 +98,8 @@ class _UninitialisedActions extends PLYPresentationActions {
   Future<void> close(_) => throw _err();
   @override
   Future<void> back(_) => throw _err();
+  @override
+  Future<void> execute(_, __) => throw _err();
 }
 
 /// A loaded presentation. Returned from `PLYPresentationRequest.preload()` and
@@ -100,6 +128,11 @@ class PLYPresentation {
   final PLYPresentationType type;
   final List<PLYPresentationPlan> plans;
   final Map<String, dynamic> metadata;
+  final List<PLYConnection> connections;
+
+  /// Internal id used only while this presentation is hosted as a Custom
+  /// Screen inside a native Purchasely flow.
+  final String? customScreenId;
 
   /// Optional pre-loaded handler — fires once when the presentation has been
   /// shown for the first time (or with an error if display failed).
@@ -130,6 +163,8 @@ class PLYPresentation {
     this.type = PLYPresentationType.normal,
     this.plans = const [],
     this.metadata = const {},
+    this.connections = const [],
+    this.customScreenId,
     this.onPresented,
     this.onCloseRequested,
     this.onDismissed,
@@ -151,6 +186,12 @@ class PLYPresentation {
     (map['metadata'] as Map?)?.forEach((key, value) {
       if (key is String) metadata[key] = value;
     });
+
+    final connections = (map['connections'] as List?)
+            ?.whereType<Map>()
+            .map(PLYConnection.fromMap)
+            .toList() ??
+        const <PLYConnection>[];
 
     final rawType = map['type'];
     final typeIndex = rawType is int
@@ -174,6 +215,8 @@ class PLYPresentation {
       type: _typeFromInt(typeIndex),
       plans: plansList,
       metadata: metadata,
+      connections: connections,
+      customScreenId: map['customScreenId'] as String?,
     );
   }
 
@@ -207,6 +250,9 @@ class PLYPresentation {
         'type': type.index,
         'plans': plans.map((p) => p.toMap()).toList(),
         'metadata': metadata,
+        'connections':
+            connections.map((connection) => connection.toMap()).toList(),
+        if (customScreenId != null) 'customScreenId': customScreenId,
       };
 
   /// Re-display the presentation (matches `display()` on the native SDKs).
@@ -221,6 +267,11 @@ class PLYPresentation {
   /// Navigate to the previous flow step or dismiss the current one
   /// (matches `back()` on Android).
   Future<void> back() => PLYPresentationActions.instance.back(this);
+
+  /// Executes a connection's configured actions. Passing no connection asks
+  /// the native SDK to execute the presentation's default connection.
+  Future<void> execute([PLYConnection? connection]) =>
+      PLYPresentationActions.instance.execute(this, connection);
 }
 
 /// Convenience extension so a preload future can be chained directly to display:

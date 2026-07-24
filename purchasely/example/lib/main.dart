@@ -8,9 +8,22 @@ import 'package:purchasely_flutter/purchasely_flutter.dart';
 
 import 'presentation_screen.dart';
 import 'presentation_demo_screen.dart';
+import 'custom_screens.dart';
 
 void main() {
   runApp(const MyApp());
+}
+
+/// Dedicated entrypoint used by the secondary Flutter engine created for a
+/// CLIENT step inside a native Purchasely flow.
+@pragma('vm:entry-point')
+void purchaselyCustomScreen(List<String> args) {
+  PurchaselyCustomScreens.run(args, (context, presentation) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: CustomScreenStep(presentation: presentation),
+    );
+  });
 }
 
 class MyApp extends StatefulWidget {
@@ -49,6 +62,10 @@ class _MyAppState extends State<MyApp> {
         print('Purchasely SDK not configured');
         return;
       }
+
+      await Purchasely.setCustomScreenProvider(
+        entrypoint: 'purchaselyCustomScreen',
+      );
 
       Purchasely.allowDeeplink(true);
       Purchasely.setLogLevel(PLYLogLevel.debug);
@@ -301,6 +318,19 @@ class _MyAppState extends State<MyApp> {
     }
   }
 
+  Future<void> displayCustomScreenFlow() async {
+    try {
+      // Placement `byos` displays flow `flow_byos`. Its second step is the
+      // client-authored screen `byos`, with `continue`, `close`, and
+      // `close_all` connections configured in the Purchasely Console.
+      final outcome =
+          await PLYPresentationBuilder.placement('byos').build().display();
+      print('BYOS flow dismissed: ${outcome.closeReason}');
+    } catch (e) {
+      print('Unable to display BYOS flow: $e');
+    }
+  }
+
   Future<void> displayPresentationInline(BuildContext context) async {
     // Closing an inline paywall fires BOTH onCloseRequested (the ✕ asks the
     // host to close) and, right after the view is removed, onDismissed. Pop the
@@ -427,6 +457,15 @@ class _MyAppState extends State<MyApp> {
                 displayPresentation();
               },
               child: const Text('Display presentation'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.only(left: 20.0, right: 30.0),
+                backgroundColor: Colors.deepPurple,
+                foregroundColor: Colors.white,
+              ),
+              onPressed: displayCustomScreenFlow,
+              child: const Text('Display BYOS flow (byos)'),
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(

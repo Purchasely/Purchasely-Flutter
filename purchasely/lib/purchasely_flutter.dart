@@ -22,6 +22,7 @@ import 'src/purchasely_builder.dart' show PLYLogLevel, PurchaselyBuilder;
 // `PLYPresentationBuilder`, `PLYPresentation`, `PLYPresentationOutcome`, `PLYTransition`,
 // ActionInterceptor…).
 export 'src/action_interceptor.dart';
+export 'src/custom_screens.dart';
 export 'src/ply_models.dart';
 export 'src/presentation.dart';
 export 'src/presentation_builder.dart';
@@ -41,6 +42,35 @@ class Purchasely {
 
   static StreamSubscription<dynamic>? events;
   static StreamSubscription<dynamic>? purchases;
+
+  // --- Custom Screens ---
+
+  /// Registers the dedicated Dart entrypoint used to render Custom Screen
+  /// steps inside Purchasely-managed native flows.
+  ///
+  /// The entrypoint must be a top-level `@pragma('vm:entry-point')` function
+  /// accepting `List<String>` and calling `PurchaselyCustomScreens.run`.
+  /// Register immediately after [PurchaselyBuilder.start] completes and before
+  /// displaying a flow that can contain a Custom Screen.
+  static Future<void> setCustomScreenProvider({
+    String entrypoint = 'purchaselyCustomScreen',
+    String? libraryUri,
+  }) async {
+    if (entrypoint.isEmpty) {
+      throw ArgumentError.value(entrypoint, 'entrypoint', 'must not be empty');
+    }
+    await _channel.invokeMethod<void>(
+      'setCustomScreenProvider',
+      <String, Object?>{
+        'entrypoint': entrypoint,
+        if (libraryUri != null) 'libraryUri': libraryUri,
+      },
+    );
+  }
+
+  /// Removes the Custom Screen provider and restores native SDK behavior.
+  static Future<void> removeCustomScreenProvider() =>
+      _channel.invokeMethod<void>('removeCustomScreenProvider');
 
   // --- SDK initialisation ---
 

@@ -8,6 +8,11 @@ Full changelog available at https://docs.purchasely.com/changelog/60-12-month-co
 
 ## 6.0.0-rc.3
 
+- Adds Custom Screen support for Flutter-authored CLIENT steps inside native
+  Purchasely flows, including connection execution, back/close navigation,
+  dedicated-isolate hosting, documentation, tests, and an example screen.
+- Aligns the declared minimum Flutter version with the existing Dart 3
+  requirement (`Flutter >= 3.10.0`).
 - Aligns the Flutter package and native bridge version with 6.0.0-rc.3.
 - Keeps the iOS and Android Purchasely SDK dependencies pinned to 6.0.0-rc.3.
 
