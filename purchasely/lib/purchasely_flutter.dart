@@ -1327,7 +1327,13 @@ class PLYEventPropertyRedemptionPurchaseContext {
 ///
 /// Every field is optional: the SDK omits a key it has no value for.
 class PLYEventPropertyRedemption {
-  /// The redemption link token this event reports on.
+  /// The redemption link token this event reports on — the **raw bearer
+  /// credential**, not a redacted form.
+  ///
+  /// If you forward Purchasely events to a third-party analytics stack, exclude
+  /// this field. `DEEPLINK_OPENED` redacts the token to a 6-character prefix and
+  /// [PLYWebRedemptionResult.errorMessage] never contains it, but this field
+  /// does.
   String? token;
   PLYEventPropertyRedemptionReceipt? receipt;
   List<PLYEventPropertyRedemptionSubscription>? subscriptions;

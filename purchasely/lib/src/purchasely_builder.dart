@@ -132,6 +132,11 @@ class PurchaselyBuilder {
   /// **`override: true` splits the user history.** The backend keeps every
   /// event and every purchase under the previous id. Use it only when the app
   /// owns the anonymous identity, e.g. after a cross-device restore.
+  ///
+  /// **Compare an anonymous user id case-insensitively.** An id passed here is
+  /// stored uppercase on both platforms, but an id the SDK *generates* is not
+  /// consistent across them — measured on 6.1.0: uppercase on iOS, lowercase on
+  /// Android. Never `==` a stored id against [Purchasely.anonymousUserId].
   PurchaselyBuilder anonymousUserId(String id, {bool override = false}) {
     _anonymousUserId = id;
     _anonymousUserIdOverride = override;

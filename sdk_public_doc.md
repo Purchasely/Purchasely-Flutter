@@ -190,6 +190,13 @@ holds no anonymous id yet. Pass `override: true` to replace an existing id:
 every purchase under the previous id. Use `true` only when your app owns the
 anonymous identity, for example after a cross-device restore.
 
+> **Compare an anonymous user id case-insensitively.** An id you pass here is
+> stored uppercase on both platforms. An id the SDK generates itself is *not
+> consistent across platforms* — measured on 6.1.0: uppercase on iOS
+> (`1933C4CC-…`), lowercase on Android (`ff394b92-…`). So never compare a stored
+> id to `Purchasely.anonymousUserId` with `==`; use
+> `a.toLowerCase() == b.toLowerCase()`.
+
 ### API proxy (6.1.0)
 
 Route Purchasely API traffic through a proxy instead of `api.purchasely.io`, for
@@ -315,10 +322,41 @@ Three behaviours to know:
   event drops the hint on both platforms, so the listener is the only place it
   appears.
 
+#### A successful redemption also restores the web purchase's user attributes
+
+The built-in and custom user attributes attached to the web purchase are applied
+**before** the entitlements refresh, so every later event and every audience
+already sees them. Read them with the getters you already use
+(`Purchasely.userAttribute`, `Purchasely.userAttributes`) or observe them through
+`Purchasely.setUserAttributeListener`.
+
+`PLYEventPropertyRedemptionPurchaseContext.built_in_attributes` and
+`.custom_attributes` report what the SDK actually applied, not the raw response.
+
+#### ⚠️ The redemption token IS exposed on the analytics events — do not forward it
+
+`PLYEventProperties.redemption.token` carries the **raw bearer token** on both
+`REDEMPTION_CONSUMED` and `REDEMPTION_FAILED`. If you forward Purchasely events
+to a third-party analytics stack, **exclude that field**, or the credential leaves
+the device with your telemetry.
+
+The other channels do not carry it, verified against the 6.1.0 native sources:
+
+| Channel | Token |
+|---|---|
+| `PLYEventProperties.redemption.token` | **raw token** — exclude it from telemetry |
+| `DEEPLINK_OPENED`'s `deeplink_identifier` | redacted to a 6-character prefix |
+| `PLYWebRedemptionResult.errorMessage` | never contains it |
+| SDK logs | never contains it |
+
 The SDK also emits two analytics events for a redemption,
 `PLYEventName.REDEMPTION_CONSUMED` and `PLYEventName.REDEMPTION_FAILED`, with
 their payload on `PLYEventProperties.redemption`. Read them with
 `Purchasely.addEventListener`.
+
+`REDEMPTION_CONSUMED` also fires when the user taps an **already redeemed** link:
+a replay is a success. `properties.redemption?.purchase_context?.replay` tells a
+first redemption from a repeat.
 
 ---
 
