@@ -279,6 +279,22 @@ void main() {
       );
     });
 
+    test('a null product name or vendorId does not throw', () {
+      // `PLYProduct.name`/`vendorId` are non-nullable; the wire values are not, and
+      // this mapper now feeds three paths. A null used to be a TypeError.
+      final subscription = plySubscriptionFromMap(const <String, Object?>{
+        'product': <String, Object?>{
+          'name': null,
+          'vendorId': null,
+          'plans': <String, Object?>{},
+        },
+      });
+
+      expect(subscription.product, isNotNull);
+      expect(subscription.product!.name, '');
+      expect(subscription.product!.vendorId, '');
+    });
+
     test('an explicit null product does not throw', () {
       final subscription = plySubscriptionFromMap(const <String, Object?>{
         'product': null,
