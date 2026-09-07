@@ -29,6 +29,21 @@ class _MyAppState extends State<MyApp> {
     initPurchaselySdk();
   }
 
+  /// 6.1.0. The outcome of a Web2App redemption, registered on the start chain.
+  void _onWebRedemption(PLYWebRedemptionResult result) {
+    if (result.isSuccess) {
+      print('Redemption granted. replay=${result.replay} '
+          'subscription=${result.context?.subscription?.plan?.vendorId}');
+    } else {
+      // errorMessage for an expired link can contain a masked email address,
+      // on BOTH platforms. Show it to the user. Never send it to an analytics
+      // stack or to a crash reporter, and never gate that rule on a platform
+      // check.
+      print('Redemption failed. code=${result.errorCode} '
+          'message=${result.errorMessage}');
+    }
+  }
+
   // Platform messages are asynchronous, so we initialize in an async method.
   Future<void> initPurchaselySdk() async {
     try {
@@ -43,6 +58,38 @@ class _MyAppState extends State<MyApp> {
               .runningMode(PLYRunningMode.full)
               .logLevel(PLYLogLevel.debug)
               .allowDeeplink(true)
+              // 6.1.0, Web2App redemption. On the chain, so the subscription
+              // happens BEFORE start(): a redemption can settle during
+              // start(), from a cold start that the `ply/redeem` link itself
+              // triggered, or from a token that a previous launch left pending.
+              //
+              // A redemption deeplink is not subject to allowDeeplink: the
+              // native SDK intercepts `ply/redeem` before the routing branch
+              // that gate sits behind.
+              //
+              // The second argument is appHandlesRedemptionAlert. false keeps
+              // the SDK's own popin (the native default); pass true to show
+              // your own result screen instead.
+              .webRedemptionListener(_onWebRedemption, false)
+              // 6.1.0. The anonymous user id this device reports. The bridge
+              // parses the string into a native UUID and rejects a value that
+              // is not canonical. The SDK stores it uppercase, and applies it
+              // only when the device holds no anonymous id yet, unless
+              // `override: true`.
+              //
+              // Kept inactive here on purpose: a hardcoded id would pin every
+              // install of this demo app to one anonymous user.
+              // .anonymousUserId('3f2504e0-4f89-11d3-9a0c-0305e82c3301')
+              //
+              // 6.1.0. Route the API traffic through a proxy for a region
+              // where `api.purchasely.io` is unreachable, such as mainland
+              // China. Only https is accepted. `.proxy(null)` is a distinct
+              // call that CLEARS the proxy; never calling it leaves the
+              // current setting untouched.
+              //
+              // Kept inactive here on purpose: this demo app must keep talking
+              // to production.
+              // .proxy('https://svc.purchasely.io')
               .stores([PLYStore.google]).start();
 
       if (!configured) {

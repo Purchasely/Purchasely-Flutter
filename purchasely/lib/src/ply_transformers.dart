@@ -141,3 +141,56 @@ double? _toDouble(dynamic value) {
 }
 
 int? _toInt(dynamic value) => value is num ? value.toInt() : null;
+
+/// Maps the wire `subscriptionSource` to [PLYSubscriptionSource]. Android sends
+/// null for a store type outside the 4 known ones (or a missing / out-of-range
+/// index) — falls back to [PLYSubscriptionSource.none] instead of an uncaught
+/// `List` index error (REC-09 / FLT-W-07).
+PLYSubscriptionSource plySubscriptionSourceFromWire(dynamic raw) {
+  if (raw is int && raw >= 0 && raw < PLYSubscriptionSource.values.length) {
+    return PLYSubscriptionSource.values[raw];
+  }
+  return PLYSubscriptionSource.none;
+}
+
+/// Maps one wire subscription map to a [PLYSubscription].
+///
+/// Shared by `Purchasely.userSubscriptions`,
+/// `Purchasely.userSubscriptionsHistory` and
+/// `PLYWebRedemptionContext.subscription`, whose native counterparts all use the
+/// same mapper, so the three report one subscription shape.
+///
+/// The revenue/duration aggregates are read unconditionally: they are absent
+/// from the iOS wire map, and an absent key reads as null.
+PLYSubscription plySubscriptionFromMap(Map<dynamic, dynamic> element) {
+  final List<PLYPlan?> plans = [];
+
+  PLYProduct? product;
+  final rawProduct = element['product'];
+  if (rawProduct is Map) {
+    (rawProduct['plans'] as Map?)
+        ?.forEach((k, plan) => plans.add(plyPlanFromMap(plan)));
+
+    // `PLYProduct.name`/`vendorId` are non-nullable, but the wire values are
+    // not: neither native mapper guarantees them. A null used to throw a
+    // TypeError here, and this mapper now feeds three paths — including a
+    // redemption context, whose products may not be loaded yet. Empty string
+    // rather than a throw: a caller sees "no name", not a crashed listener.
+    product = PLYProduct(rawProduct['name'] as String? ?? '',
+        rawProduct['vendorId'] as String? ?? '', plans.nonNulls.toList());
+  }
+
+  return PLYSubscription(
+    element['purchaseToken'],
+    plySubscriptionSourceFromWire(element['subscriptionSource']),
+    element['nextRenewalDate'],
+    element['cancelledDate'],
+    plyPlanFromMap(element['plan']),
+    product,
+    _toDouble(element['cumulatedRevenuesInUSD']),
+    _toInt(element['subscriptionDurationInDays']),
+    _toInt(element['subscriptionDurationInWeeks']),
+    _toInt(element['subscriptionDurationInMonths']),
+  )..commitmentProgress =
+      plyCommitmentProgressFromMap(element['commitmentProgress']);
+}

@@ -5,6 +5,7 @@ import 'dart:async';
 import 'package:flutter/services.dart';
 
 import 'bridge.dart';
+import 'web_redemption.dart';
 
 /// Running mode for the SDK.
 ///
@@ -32,6 +33,14 @@ class PurchaselyBuilder {
   bool _allowCampaigns;
   String? _deeplink;
   bool? _automaticDeeplinkHandling;
+  String? _anonymousUserId;
+  bool _anonymousUserIdOverride = false;
+  bool? _appHandlesRedemptionAlert;
+
+  // A nullable field alone cannot tell `proxy(null)` from "never called" — both leave
+  // `_proxyApi` null, and the two mean different things to native. Hence the flag.
+  bool _proxyWasSet = false;
+  String? _proxyApi;
   // Android only
   List<PLYStore> _stores;
   // iOS only
@@ -107,6 +116,99 @@ class PurchaselyBuilder {
     return this;
   }
 
+  /// Set the anonymous user id the SDK reports for this device.
+  ///
+  /// [id] must be a canonical UUID string, e.g.
+  /// `'3f2504e0-4f89-11d3-9a0c-0305e82c3301'`. Dart has no UUID type, so the
+  /// id crosses the bridge as a string and each native bridge parses it. A
+  /// value that is not a canonical UUID is refused with an error log and the
+  /// modifier is skipped — [start] still succeeds.
+  ///
+  /// The SDK stores the id in **uppercase**, on iOS and on Android, and
+  /// applies it at [start] before it sends a network request or an event. The
+  /// SDK applies it only when the device holds no anonymous id yet, unless
+  /// [override] is `true`.
+  ///
+  /// **`override: true` splits the user history.** The backend keeps every
+  /// event and every purchase under the previous id. Use it only when the app
+  /// owns the anonymous identity, e.g. after a cross-device restore.
+  PurchaselyBuilder anonymousUserId(String id, {bool override = false}) {
+    _anonymousUserId = id;
+    _anonymousUserIdOverride = override;
+    return this;
+  }
+
+  /// Route Purchasely API traffic through a proxy instead of
+  /// `api.purchasely.io`, for a region where that host is unreachable, such as
+  /// mainland China.
+  ///
+  /// Only the API host changes; the paywall and tracking hosts stay on production.
+  /// Purchasely operates one at `https://svc.purchasely.io`, or host your own.
+  ///
+  /// [api] must be an `https` base URL with a host and no query, fragment or
+  /// credentials. The native SDK validates that, logs a refusal and keeps the production
+  /// host, so this modifier does not re-check it. Start-time only; no runtime setter.
+  ///
+  /// Three states, and they are not interchangeable:
+  ///
+  /// | Call | Effect |
+  /// | --- | --- |
+  /// | `proxy('https://svc.purchasely.io')` | routes the API host |
+  /// | `proxy(null)` | clears it, back to `api.purchasely.io` |
+  /// | never called | leaves the current setting untouched |
+  ///
+  /// The last call wins, so `proxy(url).proxy(null)` ends cleared.
+  PurchaselyBuilder proxy(String? api) {
+    _proxyApi = api;
+    _proxyWasSet = true;
+    return this;
+  }
+
+  /// Hand the Web2App redemption result screen to the app.
+  ///
+  /// This flag decides who shows the outcome of a redemption, and with it when
+  /// the SDK calls the listener added with
+  /// [Purchasely.addWebRedemptionListener]:
+  ///
+  /// - `false` (the default): the SDK shows its own popin and calls the
+  ///   listener after the user acknowledges the popin.
+  /// - `true`: the SDK shows nothing and calls the listener as soon as the
+  ///   redemption settles. The app must then show its own result screen.
+  ///
+  /// This is a start-time option because it changes what the native SDK
+  /// presents. Set it before [start].
+  PurchaselyBuilder appHandlesRedemptionAlert(bool handles) {
+    _appHandlesRedemptionAlert = handles;
+    return this;
+  }
+
+  /// Register [listener] for the outcome of a Web2App redemption
+  /// (`{scheme}://ply/redeem/{token}`), and optionally hand the result screen
+  /// to the app.
+  ///
+  /// ```dart
+  /// await Purchasely.apiKey('API_KEY')
+  ///     .webRedemptionListener(onRedemption, true)
+  ///     .start();
+  /// ```
+  ///
+  /// **Subscribes here, at chain time — not inside [start].** A redemption can settle
+  /// *during* `start()`, from a cold start the `ply/redeem` link triggered or a token a
+  /// previous launch left pending, so registering later can miss the case the feature
+  /// exists for. [Purchasely.addWebRedemptionListener] is the runtime alternative and
+  /// carries that trade-off.
+  ///
+  /// [appHandlesRedemptionAlert] is a shorthand for the modifier of the same name. Omit
+  /// it to leave the native default (the SDK shows its own popin) in place.
+  PurchaselyBuilder webRedemptionListener(PLYWebRedemptionListener listener,
+      [bool? appHandlesRedemptionAlert]) {
+    addWebRedemptionListener(listener);
+    if (appHandlesRedemptionAlert != null) {
+      _appHandlesRedemptionAlert = appHandlesRedemptionAlert;
+    }
+    return this;
+  }
+
   /// Android-only: stores the SDK is allowed to use (priority order). On iOS
   /// this modifier is a no-op.
   PurchaselyBuilder stores(List<PLYStore> stores) {
@@ -139,6 +241,16 @@ class PurchaselyBuilder {
         if (_deeplink != null) 'deeplink': _deeplink,
         if (_automaticDeeplinkHandling != null)
           'automaticDeeplinkHandling': _automaticDeeplinkHandling,
+        // The native bridges parse `anonymousUserId` into a UUID. An invalid
+        // string is rejected there, with a log, and start() still succeeds.
+        if (_anonymousUserId != null) 'anonymousUserId': _anonymousUserId,
+        if (_anonymousUserId != null)
+          'anonymousUserIdOverride': _anonymousUserIdOverride,
+        // Present-with-null is a clear, absent leaves native alone. The standard codec
+        // preserves a null map value, so both bridges read it with containsKey.
+        if (_proxyWasSet) 'proxy': _proxyApi,
+        if (_appHandlesRedemptionAlert != null)
+          'appHandlesRedemptionAlert': _appHandlesRedemptionAlert,
         'stores': _stores.map((s) => s.name).toList(),
         'storekitVersion': _storekitVersion.name,
       },

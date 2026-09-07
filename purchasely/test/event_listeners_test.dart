@@ -2,6 +2,7 @@
 //   * Purchasely.listenToEvents        (channel 'purchasely-events')
 //   * Purchasely.listenToPurchases     (channel 'purchasely-purchases')
 //   * Purchasely.setUserAttributeListener (channel 'purchasely-user-attributes')
+//   * Purchasely.addWebRedemptionListener (channel 'purchasely-web-redemption')
 //
 // These exercise the Dart-side decoding/dispatch of native events deterministically
 // (no device) by driving each EventChannel with a MockStreamHandler. They close the
@@ -38,6 +39,8 @@ void main() {
         const EventChannel('purchasely-purchases'), null);
     messenger.setMockStreamHandler(
         const EventChannel('purchasely-user-attributes'), null);
+    messenger.setMockStreamHandler(
+        const EventChannel('purchasely-web-redemption'), null);
   });
 
   group('listenToEvents', () {
@@ -167,6 +170,224 @@ void main() {
       expect(Purchasely.purchases, isNotNull);
 
       Purchasely.stopListeningToPurchases();
+    });
+  });
+
+  group('addWebRedemptionListener (6.1.0)', () {
+    test('decodes a granted redemption, subscription included', () async {
+      emitOnListen(const EventChannel('purchasely-web-redemption'), [
+        {
+          'isSuccess': true,
+          'replay': true,
+          'errorCode': null,
+          'errorMessage': null,
+          'context': {
+            'subscription': {
+              'purchaseToken': 'token-1',
+              'subscriptionSource': 1, // googlePlayStore
+              'nextRenewalDate': '2026-10-01T10:00:00Z',
+              'plan': {'vendorId': 'plan_monthly'},
+              'product': {
+                'name': 'Premium',
+                'vendorId': 'product_premium',
+                'plans': <String, dynamic>{},
+              },
+            },
+          },
+        },
+      ]);
+
+      final received = <PLYWebRedemptionResult>[];
+      Purchasely.addWebRedemptionListener(received.add);
+      await pumpEventQueue();
+
+      expect(received, hasLength(1));
+      final result = received.first;
+      expect(result.isSuccess, true);
+      // `replay` is a verdict about the token, and stays independent of success.
+      expect(result.replay, true);
+      expect(result.errorCode, isNull);
+      expect(result.errorMessage, isNull);
+      expect(result.context?.subscription?.purchaseToken, 'token-1');
+      expect(result.context?.subscription?.subscriptionSource,
+          PLYSubscriptionSource.googlePlayStore);
+      expect(result.context?.subscription?.plan?.vendorId, 'plan_monthly');
+      expect(
+          result.context?.subscription?.product?.vendorId, 'product_premium');
+
+      Purchasely.removeWebRedemptionListener();
+    });
+
+    test('a success can carry a context with no subscription', () async {
+      emitOnListen(const EventChannel('purchasely-web-redemption'), [
+        {
+          'isSuccess': true,
+          'replay': false,
+          'context': {'subscription': null},
+          'errorCode': null,
+          'errorMessage': null,
+        },
+      ]);
+
+      final received = <PLYWebRedemptionResult>[];
+      Purchasely.addWebRedemptionListener(received.add);
+      await pumpEventQueue();
+
+      expect(received.first.isSuccess, true);
+      expect(received.first.context, isNotNull);
+      expect(received.first.context?.subscription, isNull);
+
+      Purchasely.removeWebRedemptionListener();
+    });
+
+    test('decodes a failure: no context, replay false, code + message',
+        () async {
+      emitOnListen(const EventChannel('purchasely-web-redemption'), [
+        {
+          'isSuccess': false,
+          'replay': false,
+          'context': null,
+          'errorCode': 'EXPIRED_REDEMPTION_TOKEN',
+          'errorMessage': 'A new link was sent to j***@example.com.',
+        },
+      ]);
+
+      final received = <PLYWebRedemptionResult>[];
+      Purchasely.addWebRedemptionListener(received.add);
+      await pumpEventQueue();
+
+      final result = received.single;
+      expect(result.isSuccess, false);
+      expect(result.context, isNull);
+      expect(result.replay, false);
+      expect(result.errorCode, 'EXPIRED_REDEMPTION_TOKEN');
+      expect(result.errorMessage, 'A new link was sent to j***@example.com.');
+
+      Purchasely.removeWebRedemptionListener();
+    });
+
+    test('removeWebRedemptionListener clears the subscription handle',
+        () async {
+      emitOnListen(const EventChannel('purchasely-web-redemption'), []);
+
+      Purchasely.addWebRedemptionListener((_) {});
+      expect(Purchasely.webRedemptions, isNotNull);
+
+      Purchasely.removeWebRedemptionListener();
+      expect(Purchasely.webRedemptions, isNull);
+    });
+  });
+
+  group('redemption analytics events (6.1.0)', () {
+    test('decodes REDEMPTION_CONSUMED with its redemption payload', () async {
+      emitOnListen(const EventChannel('purchasely-events'), [
+        {
+          'name': 'REDEMPTION_CONSUMED',
+          'properties': {
+            'event_name': 'REDEMPTION_CONSUMED',
+            'event_created_at': '2026-09-07T10:00:00Z',
+            'redemption': {
+              'token': 'tok_abc',
+              'receipt': {
+                'id': 'rcpt_1',
+                'validation_status': 'COMPLETED',
+              },
+              'subscriptions': [
+                {
+                  'public_id': 'subs_1',
+                  'plan_id': 'plan_monthly',
+                  'store_type': 'GOOGLE_PLAY_STORE',
+                  'subscription_status': 'ACTIVE',
+                  'environment': 'PRODUCTION',
+                },
+              ],
+              'purchase_context': {
+                'version': 1,
+                'source': 'web',
+                'sandbox': false,
+                'replay': true,
+                'custom_attributes': [
+                  {'key': 'plan', 'type': 'string', 'value': 'gold'},
+                ],
+              },
+            },
+          },
+        },
+      ]);
+
+      final received = <PLYEvent>[];
+      Purchasely.listenToEvents(received.add);
+      await pumpEventQueue();
+
+      final redemption = received.single.properties.redemption;
+      expect(received.single.name, PLYEventName.REDEMPTION_CONSUMED);
+      expect(redemption?.token, 'tok_abc');
+      expect(redemption?.receipt?.id, 'rcpt_1');
+      expect(redemption?.receipt?.validation_status, 'COMPLETED');
+      expect(redemption?.subscriptions?.single.public_id, 'subs_1');
+      expect(redemption?.subscriptions?.single.store_type, 'GOOGLE_PLAY_STORE');
+      expect(redemption?.purchase_context?.version, 1);
+      expect(redemption?.purchase_context?.replay, true);
+      expect(redemption?.purchase_context?.built_in_attributes, isNull);
+      expect(redemption?.purchase_context?.custom_attributes?.single.value,
+          'gold');
+      expect(redemption?.error_code, isNull);
+
+      Purchasely.stopListeningToEvents();
+    });
+
+    test(
+        'decodes REDEMPTION_FAILED: error_code in the payload, the reason in '
+        'the top-level error_message', () async {
+      emitOnListen(const EventChannel('purchasely-events'), [
+        {
+          'name': 'REDEMPTION_FAILED',
+          'properties': {
+            'event_name': 'REDEMPTION_FAILED',
+            'event_created_at': '2026-09-07T10:00:00Z',
+            'error_message': 'This redemption link has expired.',
+            'redemption': {
+              'token': 'tok_abc',
+              'error_code': 'EXPIRED_REDEMPTION_TOKEN',
+            },
+          },
+        },
+      ]);
+
+      final received = <PLYEvent>[];
+      Purchasely.listenToEvents(received.add);
+      await pumpEventQueue();
+
+      expect(received.single.name, PLYEventName.REDEMPTION_FAILED);
+      expect(received.single.properties.error_message,
+          'This redemption link has expired.');
+      expect(received.single.properties.redemption?.error_code,
+          'EXPIRED_REDEMPTION_TOKEN');
+      expect(received.single.properties.redemption?.receipt, isNull);
+      expect(received.single.properties.redemption?.subscriptions, isNull);
+
+      Purchasely.stopListeningToEvents();
+    });
+
+    test('an event without a redemption block reports a null redemption',
+        () async {
+      emitOnListen(const EventChannel('purchasely-events'), [
+        {
+          'name': 'APP_STARTED',
+          'properties': {
+            'event_name': 'APP_STARTED',
+            'event_created_at': '2026-09-07T10:00:00Z',
+          },
+        },
+      ]);
+
+      final received = <PLYEvent>[];
+      Purchasely.listenToEvents(received.add);
+      await pumpEventQueue();
+
+      expect(received.single.properties.redemption, isNull);
+
+      Purchasely.stopListeningToEvents();
     });
   });
 

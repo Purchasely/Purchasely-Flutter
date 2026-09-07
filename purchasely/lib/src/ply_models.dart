@@ -200,3 +200,81 @@ class PLYCommitmentProgress {
       'commitmentExpiresDate: $commitmentExpiresDate, '
       'commitmentPrice: $commitmentPrice)';
 }
+
+/// Store a subscription was bought from.
+///
+/// **The declaration order is the wire contract.** Both native SDKs send this as
+/// an Int index, and both agree: `appleAppStore` 0, `googlePlayStore` 1,
+/// `amazonAppstore` 2, `huaweiAppGallery` 3, `webCheckoutStripe` 4, `none` 5.
+/// Verified at the released 6.1.0 tags — Android `StoreType` and iOS
+/// `PLYSubscriptionSource`. Never reorder these cases, and never insert one in
+/// the middle: [plySubscriptionSourceFromWire] maps by index.
+enum PLYSubscriptionSource {
+  appleAppStore,
+  googlePlayStore,
+  amazonAppstore,
+  huaweiAppGallery,
+
+  /// A subscription bought through Purchasely web checkout (Stripe).
+  ///
+  /// New in 6.1.0 on the Dart side. Android calls it
+  /// `StoreType.WEB_CHECKOUT_STRIPE`, iOS calls it
+  /// `PLYSubscriptionSource.stripe`; both sit at index 4. Before this case
+  /// existed a web-checkout subscription decoded to [none] on iOS (index 4 used
+  /// to be `none`) and to [none] on Android (the bridge mapped it to null), so
+  /// the source was silently unusable.
+  ///
+  /// A Web2App redemption grants subscriptions from exactly this source, so
+  /// `PLYWebRedemptionContext.subscription` is the payload most likely to carry
+  /// it.
+  webCheckoutStripe,
+  none
+}
+
+class PLYProduct {
+  String name;
+  String vendorId;
+  List<PLYPlan> plans;
+
+  PLYProduct(this.name, this.vendorId, this.plans);
+}
+
+class PLYSubscription {
+  /// **Android-only.** The native iOS `PLYSubscription` has no purchase token
+  /// property, so the iOS bridge cannot emit this key and never did. Read it
+  /// with a null guard: it is always null on iOS, on
+  /// [Purchasely.userSubscriptions] and [Purchasely.userSubscriptionsHistory]
+  /// alike, not only on a redemption context.
+  String? purchaseToken;
+  PLYSubscriptionSource? subscriptionSource;
+
+  /// Null when the subscription has no renewal date. The iOS bridge omits the
+  /// key when the native date is nil, so read it as nullable rather than as an
+  /// empty string.
+  String? nextRenewalDate;
+
+  /// Null when the subscription is not cancelled. See [nextRenewalDate].
+  String? cancelledDate;
+  PLYPlan? plan;
+  PLYProduct? product;
+  double? cumulatedRevenuesInUSD = null;
+  int? subscriptionDurationInDays = null;
+  int? subscriptionDurationInWeeks = null;
+  int? subscriptionDurationInMonths = null;
+
+  /// Apple monthly-commitment progress (iOS 26.4+). Null on Android and other
+  /// platforms — Apple-only.
+  PLYCommitmentProgress? commitmentProgress;
+
+  PLYSubscription(
+      this.purchaseToken,
+      this.subscriptionSource,
+      this.nextRenewalDate,
+      this.cancelledDate,
+      this.plan,
+      this.product,
+      this.cumulatedRevenuesInUSD,
+      this.subscriptionDurationInDays,
+      this.subscriptionDurationInWeeks,
+      this.subscriptionDurationInMonths);
+}

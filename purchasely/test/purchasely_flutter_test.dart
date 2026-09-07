@@ -1194,11 +1194,9 @@ void main() {
     });
 
     test('PLYSubscriptionSource has correct values', () {
-      expect(PLYSubscriptionSource.appleAppStore.index, 0);
-      expect(PLYSubscriptionSource.googlePlayStore.index, 1);
-      expect(PLYSubscriptionSource.amazonAppstore.index, 2);
-      expect(PLYSubscriptionSource.huaweiAppGallery.index, 3);
-      expect(PLYSubscriptionSource.none.index, 4);
+      // The enum order is the wire contract, pinned once in
+      // redemption_review_findings_test.dart. Not repeated here.
+      expect(PLYSubscriptionSource.values, hasLength(6));
     });
 
     test('PLYPlanType has correct values', () {
@@ -1843,11 +1841,9 @@ void main() {
 
   group('Subscription Sources Coverage', () {
     test('all subscription sources are mapped correctly', () {
-      expect(PLYSubscriptionSource.appleAppStore.index, 0);
-      expect(PLYSubscriptionSource.googlePlayStore.index, 1);
-      expect(PLYSubscriptionSource.amazonAppstore.index, 2);
-      expect(PLYSubscriptionSource.huaweiAppGallery.index, 3);
-      expect(PLYSubscriptionSource.none.index, 4);
+      // The enum order is the wire contract, pinned once in
+      // redemption_review_findings_test.dart. Not repeated here.
+      expect(PLYSubscriptionSource.values, hasLength(6));
     });
   });
 
@@ -2090,6 +2086,59 @@ void main() {
 
       final startCall = methodCalls.firstWhere((c) => c.method == 'start');
       expect(startCall.arguments.containsKey('deeplink'), false);
+    });
+
+    test('anonymousUserId forwards the id and its override flag (6.1.0)',
+        () async {
+      await Purchasely.apiKey('test-key')
+          .anonymousUserId('3f2504e0-4f89-11d3-9a0c-0305e82c3301',
+              override: true)
+          .start();
+
+      final startCall = methodCalls.firstWhere((c) => c.method == 'start');
+      expect(startCall.arguments['anonymousUserId'],
+          '3f2504e0-4f89-11d3-9a0c-0305e82c3301');
+      expect(startCall.arguments['anonymousUserIdOverride'], true);
+    });
+
+    test('anonymousUserId defaults override to false (6.1.0)', () async {
+      await Purchasely.apiKey('test-key')
+          .anonymousUserId('3f2504e0-4f89-11d3-9a0c-0305e82c3301')
+          .start();
+
+      final startCall = methodCalls.firstWhere((c) => c.method == 'start');
+      expect(startCall.arguments['anonymousUserIdOverride'], false);
+    });
+
+    test('proxy forwards the API base URL (6.1.0)', () async {
+      await Purchasely.apiKey('test-key')
+          .proxy('https://svc.purchasely.io')
+          .start();
+
+      final startCall = methodCalls.firstWhere((c) => c.method == 'start');
+      expect(startCall.arguments['proxy'], 'https://svc.purchasely.io');
+    });
+
+    test('appHandlesRedemptionAlert forwards the flag (6.1.0)', () async {
+      await Purchasely.apiKey('test-key')
+          .appHandlesRedemptionAlert(true)
+          .start();
+
+      final startCall = methodCalls.firstWhere((c) => c.method == 'start');
+      expect(startCall.arguments['appHandlesRedemptionAlert'], true);
+    });
+
+    test('start omits the 6.1.0 options unless set', () async {
+      await Purchasely.apiKey('test-key').start();
+
+      final startCall = methodCalls.firstWhere((c) => c.method == 'start');
+      // Absent, not null: an omitted key lets each native SDK keep its own
+      // default instead of the bridge asserting one.
+      expect(startCall.arguments.containsKey('anonymousUserId'), false);
+      expect(startCall.arguments.containsKey('anonymousUserIdOverride'), false);
+      expect(startCall.arguments.containsKey('proxy'), false);
+      expect(
+          startCall.arguments.containsKey('appHandlesRedemptionAlert'), false);
     });
 
     test('runtime allowCampaigns forwards the campaign gate', () async {

@@ -4,7 +4,7 @@
 #
 Pod::Spec.new do |s|
   s.name             = 'purchasely_flutter'
-  s.version          = '6.0.0'
+  s.version          = '6.1.0'
   s.summary          = 'Flutter Plugin for Purchasely SDK'
   s.description      = <<-DESC
 Flutter Plugin for Purchasely SDK
@@ -21,10 +21,10 @@ Flutter Plugin for Purchasely SDK
   s.pod_target_xcconfig = { 'DEFINES_MODULE' => 'YES', 'EXCLUDED_ARCHS[sdk=iphonesimulator*]' => 'i386' }
   s.swift_version = '5.0'
 
-  # Pinned to the Purchasely 6.0 SDK — the single Flutter plugin depends on the
+  # Pinned to the Purchasely 6.1 SDK — the single Flutter plugin depends on the
   # v6 builder DSL (Purchasely.apiKey(...).start), PLYPresentationBuilder,
   # PLYPresentationRequest, and the interceptAction(_:handler:) overload.
-  s.dependency 'Purchasely', '6.0.0'
+  s.dependency 'Purchasely', '6.1.0'
   s.static_framework = true
 
 end

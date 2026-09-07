@@ -11,6 +11,12 @@ import 'src/ply_transformers.dart';
 import 'src/presentation.dart' show PLYPresentation, PLYPresentationType;
 import 'src/presentation_outcome.dart' show PLYPresentationOutcome;
 import 'src/purchasely_builder.dart' show PLYLogLevel, PurchaselyBuilder;
+import 'src/web_redemption.dart' as web_redemption
+    show
+        PLYWebRedemptionListener,
+        addWebRedemptionListener,
+        removeWebRedemptionListener,
+        webRedemptionSubscription;
 
 // --- Purchasely SDK cross-platform API ---
 //
@@ -29,6 +35,11 @@ export 'src/presentation_outcome.dart';
 export 'src/presentation_request.dart';
 export 'src/purchasely_builder.dart';
 export 'src/transition.dart';
+export 'src/web_redemption.dart'
+    show
+        PLYWebRedemptionContext,
+        PLYWebRedemptionListener,
+        PLYWebRedemptionResult;
 
 class Purchasely {
   static const MethodChannel _channel = const MethodChannel('purchasely');
@@ -41,6 +52,12 @@ class Purchasely {
 
   static StreamSubscription<dynamic>? events;
   static StreamSubscription<dynamic>? purchases;
+
+  /// The live Web2App redemption subscription, or null when no listener is
+  /// registered. Owned by `src/web_redemption.dart`, which both this class and
+  /// [PurchaselyBuilder.webRedemptionListener] register through.
+  static StreamSubscription<dynamic>? get webRedemptions =>
+      web_redemption.webRedemptionSubscription;
 
   // --- SDK initialisation ---
 
@@ -350,34 +367,10 @@ class Purchasely {
         'userSubscriptions',
         <String, dynamic>{'invalidateCache': invalidateCache});
 
-    final List<PLYSubscription> subscriptions = new List.empty(growable: true);
-    result.forEach((element) {
-      final List<PLYPlan?> plans = new List.empty(growable: true);
-
-      var product = null;
-      if (element['product'] != null) {
-        element['product']['plans']
-            ?.forEach((k, plan) => plans.add(transformToPLYPlan(plan)));
-
-        product = PLYProduct(element['product']['name'],
-            element['product']['vendorId'], plans.nonNulls.toList());
-      }
-
-      subscriptions.add(PLYSubscription(
-          element['purchaseToken'],
-          _subscriptionSourceFromWire(element['subscriptionSource']),
-          element['nextRenewalDate'],
-          element['cancelledDate'],
-          transformToPLYPlan(element['plan']),
-          product,
-          null,
-          null,
-          null,
-          null)
-        ..commitmentProgress =
-            plyCommitmentProgressFromMap(element['commitmentProgress']));
-    });
-    return subscriptions;
+    return result
+        .map((element) =>
+            plySubscriptionFromMap(element as Map<dynamic, dynamic>))
+        .toList();
   }
 
   /// Fetches the user's subscription history (includes cancelled/expired
@@ -391,45 +384,10 @@ class Purchasely {
         'userSubscriptionsHistory',
         <String, dynamic>{'invalidateCache': invalidateCache});
 
-    final List<PLYSubscription> subscriptions = new List.empty(growable: true);
-    result.forEach((element) {
-      final List<PLYPlan?> plans = new List.empty(growable: true);
-
-      var product = null;
-      if (element['product'] != null) {
-        element['product']['plans']
-            ?.forEach((k, plan) => plans.add(transformToPLYPlan(plan)));
-
-        product = PLYProduct(element['product']['name'],
-            element['product']['vendorId'], plans.nonNulls.toList());
-      }
-
-      subscriptions.add(PLYSubscription(
-        element['purchaseToken'],
-        _subscriptionSourceFromWire(element['subscriptionSource']),
-        element['nextRenewalDate'],
-        element['cancelledDate'],
-        transformToPLYPlan(element['plan']),
-        product,
-        element['cumulatedRevenuesInUSD'],
-        element['subscriptionDurationInDays'],
-        element['subscriptionDurationInWeeks'],
-        element['subscriptionDurationInMonths'],
-      )..commitmentProgress =
-          plyCommitmentProgressFromMap(element['commitmentProgress']));
-    });
-    return subscriptions;
-  }
-
-  /// Maps the wire `subscriptionSource` to [PLYSubscriptionSource]. Android
-  /// sends `null` for a store type outside the 4 known ones (or a missing/
-  /// out-of-range index) — falls back to [PLYSubscriptionSource.none]
-  /// instead of an uncaught `List` index error (REC-09 / FLT-W-07).
-  static PLYSubscriptionSource _subscriptionSourceFromWire(dynamic raw) {
-    if (raw is int && raw >= 0 && raw < PLYSubscriptionSource.values.length) {
-      return PLYSubscriptionSource.values[raw];
-    }
-    return PLYSubscriptionSource.none;
+    return result
+        .map((element) =>
+            plySubscriptionFromMap(element as Map<dynamic, dynamic>))
+        .toList();
   }
 
   /// Hands a deeplink to the SDK; returns `true` when the SDK handled it
@@ -465,6 +423,54 @@ class Purchasely {
 
   /// Alias for [stopListeningToEvents].
   static void removeEventListener() => stopListeningToEvents();
+
+  /// Registers [block] for the outcome of a Web2App redemption
+  /// (`{scheme}://ply/redeem/{token}`), replacing any listener already
+  /// registered.
+  ///
+  /// **Prefer [PurchaselyBuilder.webRedemptionListener] on the start chain.**
+  /// This is the secondary, runtime path, for an app that has to replace the
+  /// listener while the SDK already runs. Its trade-off: a redemption that
+  /// settles during `start()` — a cold start the `ply/redeem` link itself
+  /// triggered, or a token a previous launch left pending — is missed, because
+  /// nothing was listening yet. The chain modifier subscribes before `start()`
+  /// is even called, so it cannot miss one.
+  ///
+  /// The SDK calls [block] on the main thread, exactly once per settled
+  /// redemption, on success and on failure alike.
+  ///
+  /// [PurchaselyBuilder.appHandlesRedemptionAlert] decides *when*:
+  ///
+  /// - `false` (the default): the SDK shows its own popin and calls the
+  ///   listener after the user acknowledges it, so the app acts on a screen the
+  ///   user already dismissed.
+  /// - `true`: the SDK shows nothing and calls the listener as soon as the
+  ///   redemption settles. The app must then show its own result screen.
+  ///
+  /// Three more behaviours to know:
+  ///
+  /// - [PLYWebRedemptionResult.replay] is `true` when the **server** reports
+  ///   the token was redeemed before. The SDK keeps no cache and calls the
+  ///   server every time, so this is a verdict about the token, not an
+  ///   observation of the user.
+  /// - A redemption deeplink is **not** subject to `allowDeeplink`. The native
+  ///   SDK intercepts `ply/redeem` out of band, before the routing branch the
+  ///   gate sits behind. A redemption still completes with
+  ///   `allowDeeplink(false)`.
+  /// - [PLYWebRedemptionResult.errorMessage] for an expired link **can carry a
+  ///   masked email address, on both iOS and Android**, so the app can tell the
+  ///   user where the fresh link went. Show that text to the user. **Never**
+  ///   forward it to an analytics stack or to a crash reporter, and do not gate
+  ///   that rule on a platform check — it is personal data on every platform.
+  ///   The analytics event drops the hint, so only this channel carries it.
+  static void addWebRedemptionListener(
+          web_redemption.PLYWebRedemptionListener block) =>
+      web_redemption.addWebRedemptionListener(block);
+
+  /// Removes the listener registered with [addWebRedemptionListener] or with
+  /// [PurchaselyBuilder.webRedemptionListener].
+  static void removeWebRedemptionListener() =>
+      web_redemption.removeWebRedemptionListener();
 
   static void listenToPurchases(Function block) {
     purchases = _purchases.receiveBroadcastStream().listen((event) {
@@ -869,7 +875,53 @@ class Purchasely {
       selectedOptions,
       displayedOptions,
       properties['web_checkout_provider'],
+    )..redemption = _redemptionFromMap(properties['redemption']);
+  }
+
+  /// Maps the `redemption` block of a `REDEMPTION_CONSUMED` /
+  /// `REDEMPTION_FAILED` event. Returns null for any other event, which carries
+  /// no such block.
+  static PLYEventPropertyRedemption? _redemptionFromMap(dynamic raw) {
+    if (raw is! Map) return null;
+
+    final receipt = raw['receipt'];
+    final context = raw['purchase_context'];
+
+    return PLYEventPropertyRedemption(
+      raw['token'] as String?,
+      receipt is Map
+          ? PLYEventPropertyRedemptionReceipt(
+              receipt['id'] as String?, receipt['validation_status'] as String?)
+          : null,
+      (raw['subscriptions'] as List?)
+          ?.whereType<Map>()
+          .map((s) => PLYEventPropertyRedemptionSubscription(
+              s['public_id'] as String?,
+              s['plan_id'] as String?,
+              s['store_type'] as String?,
+              s['subscription_status'] as String?,
+              s['environment'] as String?))
+          .toList(),
+      context is Map
+          ? PLYEventPropertyRedemptionPurchaseContext(
+              context['version'] as int?,
+              context['source'] as String?,
+              context['sandbox'] as bool?,
+              context['replay'] as bool?,
+              _redemptionAttributes(context['built_in_attributes']),
+              _redemptionAttributes(context['custom_attributes']))
+          : null,
+      raw['error_code'] as String?,
     );
+  }
+
+  static List<PLYEventPropertyRedemptionAttribute>? _redemptionAttributes(
+      dynamic raw) {
+    return (raw as List?)
+        ?.whereType<Map>()
+        .map((a) => PLYEventPropertyRedemptionAttribute(
+            a['key'] as String?, a['type'] as String?, a['value']))
+        .toList();
   }
 
   static String mapDataProcessingLegalBasisToString(
@@ -966,17 +1018,9 @@ enum PLYDataProcessingPurpose {
 
 enum PLYThemeMode { light, dark, system }
 
-enum PLYSubscriptionSource {
-  appleAppStore,
-  googlePlayStore,
-  amazonAppstore,
-  huaweiAppGallery,
-  none
-}
-
 /// Native SDK event names forwarded over the `purchasely-events` channel.
 ///
-/// 51 cases: 50 correspond to a real native event name (including
+/// 53 cases: 52 correspond to a real native event name (including
 /// [PLACEMENT_OPENED] and [PURCHASE_FROM_STORE_TAPPED], added for parity —
 /// REC-13 / EVT-01), plus [UNKNOWN] — a Dart-only fallback sentinel never
 /// sent by the native SDKs. Keep this count comment accurate when adding
@@ -1034,6 +1078,16 @@ enum PLYEventName {
   WEB_CHECKOUT_TAPPED,
   WEB_CHECKOUT_TIMED_OUT,
 
+  /// A Web2App redemption granted its content. New in 6.1.0 on both native
+  /// platforms. A replayed link reports this event too — read
+  /// `properties.redemption?.purchase_context?.replay` to tell a first
+  /// redemption from a repeat.
+  REDEMPTION_CONSUMED,
+
+  /// A Web2App redemption failed. New in 6.1.0 on both native platforms. Read
+  /// `properties.redemption?.error_code` and `properties.error_message`.
+  REDEMPTION_FAILED,
+
   /// Sentinel for a native event name this enum doesn't (yet) declare a case
   /// for. Never silently misclassified as [APP_CONFIGURED] — see
   /// [_eventNameFromWire].
@@ -1067,43 +1121,6 @@ enum PLYUserAttributeType {
 }
 
 // -- CLASSES --
-
-class PLYProduct {
-  String name;
-  String vendorId;
-  List<PLYPlan> plans;
-
-  PLYProduct(this.name, this.vendorId, this.plans);
-}
-
-class PLYSubscription {
-  String? purchaseToken;
-  PLYSubscriptionSource? subscriptionSource;
-  String? nextRenewalDate;
-  String? cancelledDate;
-  PLYPlan? plan;
-  PLYProduct? product;
-  double? cumulatedRevenuesInUSD = null;
-  int? subscriptionDurationInDays = null;
-  int? subscriptionDurationInWeeks = null;
-  int? subscriptionDurationInMonths = null;
-
-  /// Apple monthly-commitment progress (iOS 26.4+). Null on Android and other
-  /// platforms — Apple-only.
-  PLYCommitmentProgress? commitmentProgress;
-
-  PLYSubscription(
-      this.purchaseToken,
-      this.subscriptionSource,
-      this.nextRenewalDate,
-      this.cancelledDate,
-      this.plan,
-      this.product,
-      this.cumulatedRevenuesInUSD,
-      this.subscriptionDurationInDays,
-      this.subscriptionDurationInWeeks,
-      this.subscriptionDurationInMonths);
-}
 
 class PLYEventPropertyPlan {
   String? type;
@@ -1186,6 +1203,11 @@ class PLYEventProperties {
   List<String>? displayed_options;
   String? webCheckoutProvider;
 
+  /// Set on `REDEMPTION_CONSUMED` and `REDEMPTION_FAILED`, null otherwise. New
+  /// in 6.1.0. Assigned after construction, like [PLYPlan.commitmentInfo], so
+  /// the positional constructor stays source-compatible.
+  PLYEventPropertyRedemption? redemption;
+
   PLYEventProperties(
       this.sdk_version,
       this.event_name,
@@ -1235,6 +1257,89 @@ class PLYEventPropertySubscription {
   String? product;
 
   PLYEventPropertySubscription(this.plan, this.product);
+}
+
+/// The receipt a redemption validated.
+class PLYEventPropertyRedemptionReceipt {
+  String? id;
+
+  /// Uppercase, e.g. `'COMPLETED'`.
+  String? validation_status;
+
+  PLYEventPropertyRedemptionReceipt(this.id, this.validation_status);
+}
+
+/// One subscription a redemption transferred, as `REDEMPTION_CONSUMED` reports
+/// it. The SDK reports active subscriptions and non-consumables only. An
+/// expired subscription is absent: a redemption grants, it does not report
+/// history.
+class PLYEventPropertyRedemptionSubscription {
+  String? public_id;
+  String? plan_id;
+  String? store_type;
+  String? subscription_status;
+  String? environment;
+
+  PLYEventPropertyRedemptionSubscription(this.public_id, this.plan_id,
+      this.store_type, this.subscription_status, this.environment);
+}
+
+/// One attribute a redemption restored. [value] stays the JSON the backend
+/// sent, so the event reports it exactly as [type] declares it.
+class PLYEventPropertyRedemptionAttribute {
+  String? key;
+  String? type;
+  dynamic value;
+
+  PLYEventPropertyRedemptionAttribute(this.key, this.type, this.value);
+}
+
+/// The web journey behind a redemption. The SDK reports what it applied, not
+/// the raw response: a block the SDK does not consume is absent here too.
+class PLYEventPropertyRedemptionPurchaseContext {
+  int? version;
+  String? source;
+  bool? sandbox;
+
+  /// `true` when the same redemption link is consumed again.
+  bool? replay;
+  List<PLYEventPropertyRedemptionAttribute>? built_in_attributes;
+  List<PLYEventPropertyRedemptionAttribute>? custom_attributes;
+
+  PLYEventPropertyRedemptionPurchaseContext(
+      this.version,
+      this.source,
+      this.sandbox,
+      this.replay,
+      this.built_in_attributes,
+      this.custom_attributes);
+}
+
+/// What a Web2App redemption reports. `REDEMPTION_CONSUMED` carries [token],
+/// [receipt], [subscriptions] and [purchase_context]. `REDEMPTION_FAILED`
+/// carries [token] and [error_code], with the reason in the top-level
+/// [PLYEventProperties.error_message].
+///
+/// The masked email hint of an expired link never reaches this event, on either
+/// platform: both native SDKs drop it when they build `REDEMPTION_FAILED`. The
+/// hint goes to the web redemption listener only — see
+/// [Purchasely.addWebRedemptionListener], and do not log it.
+///
+/// Every field is optional: the SDK omits a key it has no value for.
+class PLYEventPropertyRedemption {
+  /// The redemption link token this event reports on.
+  String? token;
+  PLYEventPropertyRedemptionReceipt? receipt;
+  List<PLYEventPropertyRedemptionSubscription>? subscriptions;
+  PLYEventPropertyRedemptionPurchaseContext? purchase_context;
+
+  /// Backend error code, on `REDEMPTION_FAILED` only. Known values:
+  /// `'EXPIRED_REDEMPTION_TOKEN'`, `'INVALID_REDEMPTION_TOKEN'`. A transport
+  /// failure or a parsing failure carries no code.
+  String? error_code;
+
+  PLYEventPropertyRedemption(this.token, this.receipt, this.subscriptions,
+      this.purchase_context, this.error_code);
 }
 
 abstract class UserAttributeListener {

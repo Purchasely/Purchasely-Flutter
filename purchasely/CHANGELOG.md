@@ -1,3 +1,97 @@
+## 6.1.0
+
+Brings the Flutter plugin to Purchasely 6.1.0: the anonymous user id, the API
+proxy, the Web2App redemption listener and the two redemption analytics
+events. Native SDKs: iOS `Purchasely 6.1.0`, Android
+`io.purchasely:core 6.1.0`.
+
+### Added
+
+- `Purchasely.apiKey(key).anonymousUserId(id, override: false)` — sets the
+  anonymous user id the SDK reports for this device. `id` must be a canonical
+  UUID string; the native bridge parses it and skips the modifier with an error
+  log when it is not, and `start()` still succeeds. The SDK stores the id
+  uppercase and applies it only when the device holds no anonymous id yet,
+  unless `override` is `true`.
+- `Purchasely.apiKey(key).proxy(api)` — routes Purchasely API traffic through a
+  proxy instead of `api.purchasely.io`, for a region where that host is
+  unreachable, such as mainland China. Only the API host changes; the paywall
+  host and the tracking host stay on production. `https` only. `api` is
+  **nullable**, and the three states are distinct: a url routes, `null` clears
+  it back to `api.purchasely.io`, and never calling the modifier leaves the
+  current setting untouched. A string that will not convert to a URL is refused
+  with an error log and the option is skipped — never passed as `null`, which
+  would silently disable a proxy the app asked for.
+- `Purchasely.apiKey(key).appHandlesRedemptionAlert(handles)` — decides who
+  shows the outcome of a Web2App redemption. `false` (the default) keeps the SDK
+  popin; `true` shows nothing so the app renders its own result screen.
+- `Purchasely.apiKey(key).webRedemptionListener(cb, [appHandlesRedemptionAlert])`
+  — reports the outcome of a Web2App redemption
+  (`{scheme}://ply/redeem/{token}`) as a `PLYWebRedemptionResult`. The SDK calls
+  the listener on the main thread, exactly once per settled redemption. The
+  modifier subscribes **at chain time, before `start()` is called**, because a
+  redemption can settle *during* `start()` — from a cold start the
+  `ply/redeem` link itself triggered, or from a token a previous launch left
+  pending. The optional second argument is a shorthand for
+  `appHandlesRedemptionAlert`. A redemption deeplink is not subject to
+  `allowDeeplink`. `errorMessage` for an expired link can carry a masked email
+  address **on both platforms** — show it to the user, never forward it to an
+  analytics stack or a crash reporter, and never gate that rule on a platform
+  check. `REDEMPTION_FAILED` drops the hint on both platforms.
+- `Purchasely.addWebRedemptionListener(cb)` /
+  `Purchasely.removeWebRedemptionListener()` — the same listener, registered at
+  runtime. Secondary path, for an app that has to swap the listener while the
+  SDK already runs; a redemption settling during `start()` is then missed.
+- `PLYEventName.REDEMPTION_CONSUMED` and `PLYEventName.REDEMPTION_FAILED`, with
+  their payload on the new `PLYEventProperties.redemption`. Both are new on the
+  two native platforms in 6.1.0.
+- `PLYSubscriptionSource.webCheckoutStripe` — a subscription bought through
+  Purchasely web checkout. A Web2App redemption grants subscriptions from
+  exactly this source, so `PLYWebRedemptionContext.subscription` is the payload
+  most likely to carry it.
+
+### Breaking
+
+- **`PLYSubscriptionSource` gained a case in the middle, so `none` moved from
+  index 4 to index 5.** The declaration order is the wire contract: both native
+  SDKs send this as an Int index and both put their web-checkout case at 4
+  (Android `StoreType.WEB_CHECKOUT_STRIPE`, iOS `PLYSubscriptionSource.stripe`)
+  with `none` at 5, so Dart had to match. Two consequences for integrators:
+  - An **exhaustive `switch`** over `PLYSubscriptionSource` without a `default`
+    stops compiling until you add a `webCheckoutStripe` arm. This is the good
+    kind of break: it is exactly the code that would otherwise have silently
+    mishandled a web-checkout subscription.
+  - Any value **persisted as `PLYSubscriptionSource.index`** now decodes one
+    case off for `none`. Persist `.name`, not `.index`, if you store it.
+
+  Before this change a web-checkout subscription decoded to `none` on both
+  platforms — index 4 used to be `none` on the Dart side, and the Android bridge
+  mapped that store type to `null`. So the source was silently unusable; it is
+  not a behaviour you can have depended on.
+
+### Changed
+
+- `PLYSubscription`, `PLYProduct` and `PLYSubscriptionSource` moved into the
+  `src/ply_models.dart` library part, and the Web2App redemption types into
+  `src/web_redemption.dart`, so the start builder can register the redemption
+  listener without a circular import. The public API is unchanged: every type is
+  still exported from `package:purchasely_flutter/purchasely_flutter.dart`.
+- `PLYSubscription.purchaseToken`, `nextRenewalDate` and `cancelledDate` are
+  documented as nullable. `purchaseToken` is Android-only: the native iOS
+  `PLYSubscription` has no purchase token property, so the iOS bridge cannot
+  emit the key and never did. This affects `userSubscriptions()` and
+  `userSubscriptionsHistory()`, not only a redemption context. The Dart fields
+  were already declared nullable, so nothing breaks — the documentation now
+  matches the runtime behaviour.
+- The subscription mappers are deduplicated across the three layers, since a
+  redemption context carries the same subscription type as `userSubscriptions`:
+  `plySubscriptionFromMap` in Dart, `transformSubscriptionToMap` in Kotlin, the
+  existing `PLYSubscription.toMap` on iOS. `userSubscriptions()` therefore now
+  reads the revenue/duration aggregates it previously hard-nulled; Android
+  already sent them, since both native calls share one mapper.
+
+Full changelog available at https://docs.purchasely.com/changelog
+
 ## 6.0.0
 
 First stable release of Purchasely 6.0.

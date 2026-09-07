@@ -11,6 +11,7 @@ import io.flutter.plugin.common.MethodChannel.Result
 
 import android.app.Activity
 import android.content.Context
+import android.content.pm.ApplicationInfo
 import android.net.Uri
 import android.os.Build
 import android.os.Handler
@@ -34,6 +35,10 @@ import io.purchasely.ext.presentation.preload
 import io.purchasely.models.PLYPlan
 import io.purchasely.models.PLYPresentationPlan
 import io.purchasely.models.PLYProduct
+import io.purchasely.network.PLYJsonProvider
+import io.purchasely.models.PLYSubscriptionData
+import io.purchasely.models.PLYWebRedemptionContext
+import io.purchasely.models.PLYWebRedemptionResult
 import kotlinx.coroutines.*
 import io.purchasely.ext.Purchasely
 // `Colors` is the (public) type of the public `PLYTransition.backgroundColors`
@@ -66,6 +71,15 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
     private lateinit var purchaseChannel: EventChannel
     private lateinit var userAttributeChannel: EventChannel
     private lateinit var presentationChannel: EventChannel
+    private lateinit var webRedemptionChannel: EventChannel
+
+    /**
+     * The Dart-side `purchasely-web-redemption` sink, or null while no Dart listener is
+     * attached. Written on the platform thread by the stream handler, read on the main thread
+     * by the redemption listener.
+     */
+    @Volatile
+    private var webRedemptionSink: EventChannel.EventSink? = null
 
     private lateinit var context: Context
     private var activity: Activity? = null
@@ -77,6 +91,24 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
 
     override fun onDetachedFromEngine(@NonNull binding: FlutterPlugin.FlutterPluginBinding) {
         channel.setMethodCallHandler(null)
+        // The native redemption listener is registered on the SDK builder at start() and
+        // has no unregister, so it outlives the engine. Clearing the sink here is what
+        // stops it posting onto a dead engine: a cached handle that a second teardown path
+        // leaves non-null is the shape of the React Native bug where a stale handle got
+        // released twice and silenced every event. `setStreamHandler(null)` also releases
+        // the anonymous handler that closes over this instance.
+        webRedemptionSink = null
+        // All four channels, not just the redemption one. Each stream handler closes over
+        // this plugin instance and over an EventSink bound to the engine being detached, so
+        // leaving them registered keeps a dead engine reachable. Symmetric on purpose: the
+        // redemption fix is worthless if the sibling channels keep the same gap.
+        //
+        // `activePresentationSink` is deliberately NOT cleared here: it is a companion-level
+        // static shared with the inline NativeView, which outlives a single attachment.
+        if (::webRedemptionChannel.isInitialized) webRedemptionChannel.setStreamHandler(null)
+        if (::eventChannel.isInitialized) eventChannel.setStreamHandler(null)
+        if (::purchaseChannel.isInitialized) purchaseChannel.setStreamHandler(null)
+        if (::userAttributeChannel.isInitialized) userAttributeChannel.setStreamHandler(null)
         job.cancel()
     }
 
@@ -186,6 +218,34 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
                 presentationSink = null
             }
         })
+
+        // Web2App redemption outcomes (6.1.0). The native listener is registered on the start
+        // chain, not here: a redemption can settle during start(). Dart is documented to add
+        // its listener before start(), and a platform channel delivers `listen` before the
+        // later `start` invocation on the same messenger, so the sink is attached by then.
+        // ponytail: no replay buffer — a listener attached after start() misses an in-flight
+        // redemption, which is exactly what the "add it before start()" contract says.
+        webRedemptionChannel = EventChannel(flutterPluginBinding.binaryMessenger, WEB_REDEMPTION_CHANNEL)
+        webRedemptionChannel.setStreamHandler(object : EventChannel.StreamHandler {
+            override fun onListen(arguments: Any?, events: EventChannel.EventSink?) {
+                webRedemptionSink = events
+            }
+
+            override fun onCancel(arguments: Any?) {
+                webRedemptionSink = null
+            }
+        })
+    }
+
+    /**
+     * Bridges [PLYWebRedemptionListener] to the `purchasely-web-redemption` channel.
+     *
+     * The native SDK calls this on the main thread, once per settled redemption. The sealed
+     * result is flattened to the same 5-field shape the iOS bridge emits, so one Dart listener
+     * drives both platforms.
+     */
+    private val bridgeWebRedemptionListener = PLYWebRedemptionListener { result ->
+        webRedemptionSink?.success(webRedemptionResultToMap(result))
     }
 
     override fun onMethodCall(@NonNull call: MethodCall, @NonNull result: Result) {
@@ -195,6 +255,7 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
         when(call.method) {
             // --- start ---
             "start" -> start(args, result)
+            "debugEmitWebRedemption" -> debugEmitWebRedemption(args, result)
 
             // --- presentation lifecycle ---
             "preload" -> preload(args, result)
@@ -498,6 +559,52 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
         }
     }
 
+    /**
+     * Test-only: pushes a synthetic redemption outcome through the PRODUCTION delivery path.
+     *
+     * Exists because a *successful* redemption needs a valid backend token, so the happy
+     * path of the listener is otherwise unreachable from a test. Deliberately not exposed on
+     * the Dart `Purchasely` API — the E2E suite invokes the method channel directly.
+     *
+     * Fidelity is the point: it builds a real `PLYWebRedemptionResult.Success` from a real
+     * `PLYSubscriptionData` and hands it to [bridgeWebRedemptionListener], so
+     * `webRedemptionResultToMap` and `transformSubscriptionToMap` both run for real. Only
+     * the SDK's own settle logic is bypassed, which is not this bridge's job to test.
+     *
+     * Debuggable builds only: a synthetic "redemption granted" reaching a release app could
+     * unlock content.
+     */
+    private fun debugEmitWebRedemption(args: Map<String, Any?>?, result: Result) {
+        if (context.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE == 0) {
+            result.safeError("-1", "debugEmitWebRedemption is available in debuggable builds only", null)
+            return
+        }
+        val a = args ?: emptyMap()
+        try {
+            val subscriptionJson = a["subscriptionJson"] as? String
+            val subscription = subscriptionJson?.let {
+                PLYJsonProvider.json.decodeFromString(PLYSubscriptionData.serializer(), it)
+            }
+            val outcome = if (a["isSuccess"] as? Boolean != false) {
+                PLYWebRedemptionResult.Success(
+                    context = if (a["hasContext"] as? Boolean ?: (subscriptionJson != null)) {
+                        PLYWebRedemptionContext(subscription = subscription)
+                    } else null,
+                    replay = a["replay"] as? Boolean ?: false,
+                )
+            } else {
+                PLYWebRedemptionResult.Failure(
+                    errorCode = a["errorCode"] as? String,
+                    errorMessage = a["errorMessage"] as? String,
+                )
+            }
+            bridgeWebRedemptionListener.onRedemptionCompleted(outcome)
+            result.safeSuccess(true)
+        } catch (e: Throwable) {
+            result.safeError("-1", "debugEmitWebRedemption failed: ${e.message}", null)
+        }
+    }
+
     private fun start(args: Map<String, Any?>?, result: Result) {
         val a = args ?: emptyMap()
         val apiKey = a["apiKey"] as? String
@@ -513,6 +620,41 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
         val allowCampaigns = a["allowCampaigns"] as? Boolean ?: true
         val deeplink = (a["deeplink"] as? String)?.takeIf { it.isNotBlank() }
         val automaticDeeplinkHandling = a["automaticDeeplinkHandling"] as? Boolean
+        val appHandlesRedemptionAlert = a["appHandlesRedemptionAlert"] as? Boolean ?: false
+
+        // Three proxy states, and they are not interchangeable — see [proxyDecisionFrom].
+        //
+        // Severity for "the value was refused and the modifier was skipped" is a plain
+        // `Log.e` line on both platforms (iOS uses `NSLog`). Neither puts UI in front of
+        // the host app: a skipped option must not read as a crash, and the two bridges
+        // must not differ in how loudly they refuse the same value.
+        //
+        // These are Kotlin string templates, evaluated BEFORE the call, and `Log.e` does
+        // no formatting — so a refused value containing `%s`/`%n` is inert here. Do NOT
+        // convert them to `String.format` or a formatted logger: on iOS the equivalent
+        // (`NSLog(interpolatedString)`) made the caller's value the format string and
+        // crashed inside `__CFStringAppendFormatCore` while reporting that the option had
+        // been skipped. iOS now funnels through `logRefusedOption` / `NSLog("%@", …)`.
+        val proxyDecision = proxyDecisionFrom(a)
+        if (proxyDecision is ProxyDecision.Invalid) {
+            Log.e("Purchasely", "`proxy` must be an https base URL string, for example " +
+                "\"https://svc.purchasely.io\", or null to clear it. Received " +
+                "\"${proxyDecision.raw}\". The proxy is not applied.")
+        }
+
+        // Dart has no UUID type, so the id crosses the bridge as a string and is parsed here.
+        // The native builder takes a `UUID?`, which is where the guarantee used to live; a
+        // string-typed bridge is the only place left to catch a bad value. Reject it loudly and
+        // skip the modifier — the SDK still starts, matching how native treats an unusable
+        // proxy url.
+        val anonymousUserIdString = a["anonymousUserId"] as? String
+        val parsedAnonymousUserId = parseCanonicalUuid(anonymousUserIdString)
+        if (anonymousUserIdString != null && parsedAnonymousUserId == null) {
+            Log.e("Purchasely", "`anonymousUserId` must be a canonical UUID string, for example " +
+                "\"3f2504e0-4f89-11d3-9a0c-0305e82c3301\". Received \"$anonymousUserIdString\". " +
+                "The anonymous user id is not applied.")
+        }
+        val anonymousUserIdOverride = a["anonymousUserIdOverride"] as? Boolean ?: false
 
         Purchasely.Builder(context)
             .apiKey(apiKey)
@@ -529,10 +671,24 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
                 // v6 auto-intercepts Purchasely deeplinks by default; hosts that
                 // route intents themselves can opt out from the Dart builder.
                 automaticDeeplinkHandling?.let { this.automaticDeeplinkHandling(it) }
+                // Route the API host through a proxy, or clear it. `proxy(null)` is a
+                // supported clear, so an absent key must not reach the builder at all —
+                // calling it would turn every start into an implicit clear. The native SDK
+                // refuses a non-https value, a value with no host and a value carrying a
+                // query/fragment/credentials, logs it and keeps the production host, so the
+                // bridge does not re-validate any of that.
+                (proxyDecision as? ProxyDecision.Apply)?.let { this.proxy(it.api) }
+                parsedAnonymousUserId?.let { this.anonymousUserId(it, anonymousUserIdOverride) }
+                // Registered unconditionally: the native SDK has no runtime setter on purpose,
+                // because a redemption can settle during start() (a cold start that the link
+                // itself triggered, or a token left pending by a previous launch). The bridge
+                // emits onto `purchasely-web-redemption`, which reaches no one when Dart added
+                // no listener, so this is behaviour-neutral by default.
+                this.webRedemptionListener(appHandlesRedemptionAlert, bridgeWebRedemptionListener)
             }
             .build()
 
-        Purchasely.sdkBridgeVersion = "6.0.0"
+        Purchasely.sdkBridgeVersion = "6.1.0"
         Purchasely.appTechnology = PLYAppTechnology.FLUTTER
 
         Purchasely.start { error ->
@@ -1098,32 +1254,8 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
         }
     }
 
-    private fun transformSubscriptionsToList(subscriptions: List<io.purchasely.models.PLYSubscriptionData>): ArrayList<MutableMap<String, Any?>> {
-        val list = ArrayList<MutableMap<String, Any?>>()
-        for (data in subscriptions) {
-            val map = data.data.toMap().toMutableMap().apply {
-                this["subscriptionSource"] = when(data.data.storeType) {
-                    StoreType.GOOGLE_PLAY_STORE -> StoreType.GOOGLE_PLAY_STORE.ordinal
-                    StoreType.HUAWEI_APP_GALLERY -> StoreType.HUAWEI_APP_GALLERY.ordinal
-                    StoreType.AMAZON_APP_STORE -> StoreType.AMAZON_APP_STORE.ordinal
-                    StoreType.APPLE_APP_STORE -> StoreType.APPLE_APP_STORE.ordinal
-                    else -> null
-                }
-
-                this["plan"] = transformPlanToMap(data.plan)
-
-                val plans = HashMap<String?, Any>()
-                data.product.plans.map {
-                    plans.put(it.name, transformPlanToMap(it))
-                }
-                this["product"] = data.product.toMap().toMutableMap().apply {
-                    this["plans"] = plans
-                }
-                remove("subscription_status") //TODO add in a future version after checking with iOS
-            }
-            list.add(map)
-        }
-        return list
+    private fun transformSubscriptionsToList(subscriptions: List<PLYSubscriptionData>): ArrayList<MutableMap<String, Any?>> {
+        return ArrayList(subscriptions.map { transformSubscriptionToMap(it) })
     }
 
     private fun setThemeMode(mode: Int?) {
@@ -1444,6 +1576,7 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
 
     companion object {
         private const val PRESENTATION_EVENTS_CHANNEL = "purchasely-presentation-events"
+        private const val WEB_REDEMPTION_CHANNEL = "purchasely-web-redemption"
 
         private lateinit var channel : MethodChannel
 
@@ -1547,6 +1680,48 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
         // can route to the right SDK completion.
         val pendingInterceptors = ConcurrentHashMap<String, (PLYInterceptResult) -> Unit>()
 
+        /**
+         * Maps one [PLYSubscriptionData] to the Dart `PLYSubscription` shape.
+         *
+         * Shared by `userSubscriptions`, `userSubscriptionsHistory` and the web redemption
+         * listener, whose `context.subscription` is the same type, so the three report one
+         * subscription shape. `product.plans` is keyed by plan name because the Dart parser
+         * reads it as a map, not as a list.
+         */
+        internal fun transformSubscriptionToMap(data: PLYSubscriptionData): MutableMap<String, Any?> {
+            return data.data.toMap().toMutableMap().apply {
+                // Exhaustive on purpose, and `when` on the enum without an `else` is what
+                // keeps it that way: a new StoreType then fails to COMPILE here instead of
+                // silently falling into a null the Dart side reads as `none`. That is how
+                // WEB_CHECKOUT_STRIPE was dropped — the very source a Web2App redemption
+                // grants. `null` stays only for NONE, which Dart maps to its own `none`.
+                //
+                // The ordinals are the wire contract and both natives agree on them:
+                // APPLE 0, GOOGLE 1, AMAZON 2, HUAWEI 3, WEB_CHECKOUT_STRIPE 4, NONE 5 —
+                // same order as Dart's PLYSubscriptionSource.
+                this["subscriptionSource"] = when(data.data.storeType) {
+                    StoreType.APPLE_APP_STORE -> StoreType.APPLE_APP_STORE.ordinal
+                    StoreType.GOOGLE_PLAY_STORE -> StoreType.GOOGLE_PLAY_STORE.ordinal
+                    StoreType.AMAZON_APP_STORE -> StoreType.AMAZON_APP_STORE.ordinal
+                    StoreType.HUAWEI_APP_GALLERY -> StoreType.HUAWEI_APP_GALLERY.ordinal
+                    StoreType.WEB_CHECKOUT_STRIPE -> StoreType.WEB_CHECKOUT_STRIPE.ordinal
+                    StoreType.NONE -> StoreType.NONE.ordinal
+                    null -> null
+                }
+
+                this["plan"] = transformPlanToMap(data.plan)
+
+                val plans = HashMap<String?, Any>()
+                data.product.plans.map {
+                    plans.put(it.name, transformPlanToMap(it))
+                }
+                this["product"] = data.product.toMap().toMutableMap().apply {
+                    this["plans"] = plans
+                }
+                remove("subscription_status") //TODO add in a future version after checking with iOS
+            }
+        }
+
         private fun transformPlanToMap(plan: PLYPlan?): Map<String, Any?> {
             if(plan == null) return emptyMap()
 
@@ -1598,4 +1773,83 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
             oneSignalUserId,
         }
     }
+}
+
+/**
+ * `UUID.fromString` is lenient and accepts a short form like `"1-2-3-4-5"` that iOS's
+ * `NSUUID` refuses; the round-trip check makes both platforms agree on "canonical".
+ * Pure — the caller logs the refusal.
+ */
+internal fun parseCanonicalUuid(value: String?): UUID? {
+    if (value == null) return null
+    val parsed = try {
+        UUID.fromString(value)
+    } catch (e: IllegalArgumentException) {
+        return null
+    }
+    return if (parsed.toString().equals(value, ignoreCase = true)) parsed else null
+}
+
+/**
+ * The same 5 keys on both branches, so the Dart shape never changes: a `Failure` still
+ * reports `replay = false` and `context = null`. `context` and `context.subscription` stay
+ * separately nullable.
+ */
+internal fun webRedemptionResultToMap(result: PLYWebRedemptionResult): Map<String, Any?> = when (result) {
+    is PLYWebRedemptionResult.Success -> mapOf(
+        "isSuccess" to true,
+        "context" to result.context?.let { context ->
+            mapOf("subscription" to context.subscription?.let {
+                PurchaselyFlutterPlugin.transformSubscriptionToMap(it)
+            })
+        },
+        "replay" to result.replay,
+        "errorCode" to null,
+        "errorMessage" to null,
+    )
+    is PLYWebRedemptionResult.Failure -> mapOf(
+        "isSuccess" to false,
+        "context" to null,
+        "replay" to false,
+        "errorCode" to result.errorCode,
+        "errorMessage" to result.errorMessage,
+    )
+}
+
+/**
+ * What the `proxy` start option asks the native builder to do.
+ *
+ * Three states, and collapsing any two of them is a defect: treating an absent key as null
+ * turns every start into an implicit clear, and treating null as absent makes an explicit
+ * clear silently do nothing.
+ */
+internal sealed class ProxyDecision {
+    /** No `proxy` key: `proxy()` was never called, so leave the current setting untouched. */
+    object Untouched : ProxyDecision()
+
+    /** `proxy` present: call `proxy(api)`. A null [api] clears it, back to `api.purchasely.io`. */
+    data class Apply(val api: String?) : ProxyDecision()
+
+    /**
+     * `proxy` present but not a string the bridge can forward. Log and SKIP — never pass null,
+     * because null means *clear* on the native builder, so a typo would silently disable a
+     * proxy the app explicitly asked for.
+     */
+    data class Invalid(val raw: Any?) : ProxyDecision()
+}
+
+/**
+ * Reads the three `proxy` states out of the `start` argument map.
+ *
+ * `containsKey` is the only thing that separates "never called" from "cleared": the Flutter
+ * standard codec preserves a null map value, so both arrive as a null `args["proxy"]`.
+ *
+ * Pure, so a JVM unit test can drive every state without an Android logger or an SDK builder.
+ */
+internal fun proxyDecisionFrom(args: Map<String, Any?>): ProxyDecision {
+    if (!args.containsKey("proxy")) return ProxyDecision.Untouched
+    val raw = args["proxy"]
+    if (raw == null) return ProxyDecision.Apply(null)
+    if (raw is String) return ProxyDecision.Apply(raw)
+    return ProxyDecision.Invalid(raw)
 }

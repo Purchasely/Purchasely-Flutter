@@ -52,6 +52,22 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
     let userAttributesChannel: FlutterEventChannel
     let userAttributesHandler: UserAttributesHandler
 
+    // Web2App redemption outcomes (6.1.0). Held as a stored property, not a local
+    // in `start`: `PurchaselyBuilder` retains the delegate only until it is applied,
+    // and the SDK then keeps a weak reference — a local would be released and the
+    // delegate would silently go nil.
+    let webRedemptionChannel: FlutterEventChannel
+    let webRedemptionHandler: WebRedemptionHandler
+
+    /// Process-wide on purpose. The SDK holds `webRedemptionDelegate` **weakly** with no
+    /// runtime setter, and `start()` short-circuits on the static `isStarted`, so a second
+    /// engine never re-registers. A per-instance handler would die with the first engine
+    /// and silently drop every later redemption.
+    ///
+    /// ponytail: one slot, last listener wins. Per-engine multiplexing if two engines ever
+    /// need redemption at once.
+    static let sharedWebRedemptionHandler = WebRedemptionHandler()
+
     // Presentation/interceptor lifecycle events flow over a dedicated stream,
     // discriminated by the `event` key; each carries a `requestId` so Dart can
     // route back.
@@ -75,6 +91,12 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
                                                       binaryMessenger: registrar.messenger())
         self.userAttributesHandler = UserAttributesHandler()
         self.userAttributesChannel.setStreamHandler(self.userAttributesHandler)
+
+        self.webRedemptionChannel = FlutterEventChannel(name: "purchasely-web-redemption",
+                                                        binaryMessenger: registrar.messenger())
+        // The PROCESS-wide handler, not a fresh one — see `sharedWebRedemptionHandler`.
+        self.webRedemptionHandler = SwiftPurchaselyFlutterPlugin.sharedWebRedemptionHandler
+        self.webRedemptionChannel.setStreamHandler(self.webRedemptionHandler)
 
         self.presentationChannel = FlutterEventChannel(name: "purchasely-presentation-events",
                                                        binaryMessenger: registrar.messenger())
@@ -204,6 +226,8 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             allProducts(result)
         case "purchaseWithPlanVendorId":
             purchaseWithPlanVendorId(arguments: arguments, result: result)
+        case "debugEmitWebRedemption":
+            debugEmitWebRedemption(arguments, result: result)
         case "handleDeeplink":
             let parameter = arguments?["deeplink"] as? String
             handleDeeplink(parameter, result: result)
@@ -284,7 +308,94 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
         }
     }
 
+    /// Test-only: pushes a synthetic redemption outcome through the PRODUCTION delivery path.
+    ///
+    /// A *successful* redemption needs a valid backend token, so the happy path of the
+    /// listener is otherwise unreachable from a test. Not exposed on the Dart `Purchasely`
+    /// API — the E2E suite invokes the method channel directly.
+    ///
+    /// Fidelity: the real `webRedemptionBody` and the real sink run. `PLYWebRedemptionResult`
+    /// is bypassed (internal initialiser — exactly why `webRedemptionBody` takes destructured
+    /// fields), as is `PLYSubscription`, whose `init(from:)` resolves its product through
+    /// `ProductRepository` and so cannot take a synthetic value.
+    ///
+    /// `#if DEBUG` only: a synthetic "redemption granted" reaching a release app could
+    /// unlock content.
+    private func debugEmitWebRedemption(_ arguments: [String: Any]?, result: @escaping FlutterResult) {
+        #if DEBUG
+        let args = arguments ?? [:]
+        // An already-mapped subscription, not a `PLYSubscription`: that type's
+        // `init(from:)` resolves its product through `ProductRepository`, so a synthetic
+        // one cannot be decoded — and `PLYSubscription.toMap` is pre-existing plugin code
+        // this release does not touch. What 6.1.0 added here is `webRedemptionBody` and the
+        // sink, and those run for real below.
+        let subscriptionMap = args["subscriptionMap"] as? [String: Any]
+        let isSuccess = (args["isSuccess"] as? Bool) ?? true
+        let hasContext = isSuccess && (args["hasContext"] as? Bool ?? (subscriptionMap != nil))
+        let body = WebRedemptionHandler.webRedemptionBody(
+            isSuccess: isSuccess,
+            hasContext: hasContext,
+            subscription: subscriptionMap,
+            replay: (args["replay"] as? Bool) ?? false,
+            errorCode: args["errorCode"] as? String,
+            errorMessage: args["errorMessage"] as? String)
+        webRedemptionHandler.emit(body)
+        result(true)
+        #else
+        result(FlutterError(code: "-1",
+                            message: "debugEmitWebRedemption is available in DEBUG builds only",
+                            details: nil))
+        #endif
+    }
+
     // MARK: - start
+
+    /// **`NSLog("%@", message)`, never `NSLog(message)`.** `NSLog`'s first argument is a
+    /// printf format, so interpolating a caller's value makes that value the format and a
+    /// `%@`/`%s`/`%n` in it crashes the host app. One funnel so it cannot creep back.
+    static func logRefusedOption(_ message: String) {
+        NSLog("%@", message)
+    }
+
+    /// Pure, so a test can assert the caller's value survives verbatim.
+    static func refusedAnonymousUserIdMessage(_ received: String) -> String {
+        return "[Purchasely] `anonymousUserId` must be a canonical UUID string, for example "
+            + "\"3f2504e0-4f89-11d3-9a0c-0305e82c3301\". Received \"\(received)\". "
+            + "The anonymous user id is not applied."
+    }
+
+    /// See [refusedAnonymousUserIdMessage].
+    static func refusedProxyMessage(_ received: String) -> String {
+        return "[Purchasely] `proxy` must be an https base URL string, for example "
+            + "\"https://svc.purchasely.io\", or null to clear it. Received \"\(received)\". "
+            + "The proxy is not applied."
+    }
+
+    /// The three `proxy` states — see `PurchaselyBuilder.proxy` in Dart for the contract.
+    /// Collapsing any two of them is a silent defect.
+    enum ProxyDecision: Equatable {
+        /// No key: never called, leave the current setting.
+        case untouched
+        /// Call `proxy(api:)`. A nil URL CLEARS the proxy.
+        case apply(URL?)
+        /// Unconvertible: log and skip. Never `.apply(nil)` — that would clear it.
+        case invalid(String)
+    }
+
+    /// Converts, and rejects what will not convert. Scheme/host/query validation is the
+    /// native SDK's job. Pure, so a test drives every state without starting the SDK.
+    /// A Dart null in a map arrives as `NSNull`, hence `keys.contains`.
+    static func proxyDecision(from arguments: [String: Any]) -> ProxyDecision {
+        guard arguments.keys.contains("proxy") else { return .untouched }
+        let raw = arguments["proxy"]
+        if raw == nil || raw is NSNull { return .apply(nil) }
+        guard let api = raw as? String else {
+            return .invalid(String(describing: raw!))
+        }
+        guard let url = URL(string: api) else { return .invalid(api) }
+        return .apply(url)
+    }
+
 
     private func start(arguments: [String: Any]?, result: @escaping FlutterResult) {
 
@@ -300,7 +411,7 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
 
         var builder = Purchasely.apiKey(apiKey)
             .appTechnology(.flutter)
-            .sdkBridgeVersion("6.0.0")
+            .sdkBridgeVersion("6.1.0")
 
         if let userId = (arguments["appUserId"] as? String) ?? (arguments["userId"] as? String), !userId.isEmpty {
             builder = builder.appUserId(userId)
@@ -315,6 +426,33 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
         if let deeplink = arguments["deeplink"] as? String, let url = URL(string: deeplink) {
             builder = builder.handleDeeplink(url)
         }
+
+        // Dart has no UUID type, so the bridge parses the string. A bad value is logged
+        // and skipped; `start()` still succeeds. Severity matches Android's `Log.e`: a log
+        // line, never UI in front of the host app.
+        if let anonymousUserId = arguments["anonymousUserId"] as? String {
+            if let parsed = UUID(uuidString: anonymousUserId) {
+                let override = (arguments["anonymousUserIdOverride"] as? Bool) ?? false
+                builder = builder.appAnonymousUserId(parsed, override: override)
+            } else {
+                Self.logRefusedOption(Self.refusedAnonymousUserIdMessage(anonymousUserId))
+            }
+        }
+
+        switch Self.proxyDecision(from: arguments) {
+        case .untouched:
+            break
+        case .apply(let url):
+            builder = builder.proxy(api: url)
+        case .invalid(let raw):
+            Self.logRefusedOption(Self.refusedProxyMessage(raw))
+        }
+
+        // Unconditional: no runtime setter exists, and a redemption can settle during
+        // `start()`. Emits onto a channel nobody listens to when Dart added no listener.
+        builder = builder.webRedemptionDelegate(
+            webRedemptionHandler,
+            appHandlesRedemptionAlert: (arguments["appHandlesRedemptionAlert"] as? Bool) ?? false)
 
         if let allowDeeplink = arguments["allowDeeplink"] as? Bool {
             Purchasely.allowDeeplink(allowDeeplink)
@@ -1544,6 +1682,92 @@ class SwiftPurchaseHandler: NSObject, FlutterStreamHandler {
         self.eventSink?(nil)
     }
 
+}
+
+/// Bridges `PLYWebRedemptionDelegate` to the `purchasely-web-redemption` channel.
+///
+/// ponytail: no replay buffer. A listener attached after `start()` misses an in-flight
+/// redemption, which is what the "register on the chain" contract already says.
+class WebRedemptionHandler: NSObject, FlutterStreamHandler, PLYWebRedemptionDelegate {
+
+    var eventSink: FlutterEventSink?
+
+    func onListen(withArguments arguments: Any?, eventSink events: @escaping FlutterEventSink) -> FlutterError? {
+        self.eventSink = events
+        return nil
+    }
+
+    func onCancel(withArguments arguments: Any?) -> FlutterError? {
+        self.eventSink = nil
+        return nil
+    }
+
+    /// `PLYWebRedemptionDelegate`. The SDK calls this on the main thread, once per
+    /// settled redemption. Mapped to the flat 5-field shape the Android bridge
+    /// emits, so one Dart listener drives both platforms.
+    ///
+    /// `context` and `context.subscription` are separately nullable, and both stay
+    /// nullable in the emitted body: a success can carry no context at all, and a
+    /// present context can carry no subscription.
+    ///
+    /// `errorMessage` can hold the backend's masked email hint, on BOTH platforms. The
+    /// `REDEMPTION_FAILED` event drops it; this channel keeps it.
+    func webRedemptionCompleted(result: PLYWebRedemptionResult) {
+        let body = Self.webRedemptionBody(
+            isSuccess: result.isSuccess,
+            hasContext: result.context != nil,
+            subscription: result.context?.subscription?.toMap,
+            replay: result.replay,
+            errorCode: result.errorCode,
+            errorMessage: result.errorMessage)
+
+        // No hop of our own: `RedemptionManager` already delivers on main. The else branch
+        // is defensive only, for a FlutterEventSink's platform-thread contract if that ever
+        // changes — and still reads the sink at send time.
+        if Thread.isMainThread {
+            emit(body)
+        } else {
+            DispatchQueue.main.async { [weak self] in self?.emit(body) }
+        }
+    }
+
+    /// Reads the sink at send time. Never capture it ahead of the send: `onCancel` clears
+    /// the property but not a captured copy, and Flutter hands a post-cancel send to the
+    /// next listener.
+    func emit(_ body: [String: Any]) {
+        guard let sink = eventSink else { return }
+        sink(body)
+    }
+
+    /// Takes destructured fields, not a `PLYWebRedemptionResult`, whose initialiser is
+    /// internal to the Purchasely module — so a test can drive this without a native type.
+    ///
+    /// Two invariants: `context` and `context.subscription` are separately nullable (no
+    /// context at all vs a context describing no subscription), and the same five keys
+    /// appear on every branch so the Dart shape never changes.
+    static func webRedemptionBody(isSuccess: Bool,
+                                  hasContext: Bool,
+                                  subscription: [String: Any]?,
+                                  replay: Bool,
+                                  errorCode: String?,
+                                  errorMessage: String?) -> [String: Any] {
+        var context: Any = NSNull()
+        if hasContext {
+            let mappedSubscription: Any = subscription ?? NSNull()
+            context = ["subscription": mappedSubscription]
+        }
+
+        let code: Any = errorCode ?? NSNull()
+        let message: Any = errorMessage ?? NSNull()
+
+        return [
+            "isSuccess": isSuccess,
+            "context": context,
+            "replay": replay,
+            "errorCode": code,
+            "errorMessage": message
+        ]
+    }
 }
 
 class UserAttributesHandler: NSObject, FlutterStreamHandler, PLYUserAttributeDelegate {

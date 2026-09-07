@@ -675,11 +675,9 @@ void main() {
     });
 
     test('PLYSubscriptionSource converts correctly', () {
-      expect(PLYSubscriptionSource.appleAppStore.index, 0);
-      expect(PLYSubscriptionSource.googlePlayStore.index, 1);
-      expect(PLYSubscriptionSource.amazonAppstore.index, 2);
-      expect(PLYSubscriptionSource.huaweiAppGallery.index, 3);
-      expect(PLYSubscriptionSource.none.index, 4);
+      // The enum order is the wire contract, pinned once in
+      // redemption_review_findings_test.dart. Not repeated here.
+      expect(PLYSubscriptionSource.values, hasLength(6));
     });
 
     test('PLYPurchaseResult converts correctly', () {
