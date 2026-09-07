@@ -5,6 +5,7 @@ import 'dart:async';
 import 'package:flutter/services.dart';
 
 import 'bridge.dart';
+import 'web_redemption.dart';
 
 /// Running mode for the SDK.
 ///
@@ -35,6 +36,14 @@ class PurchaselyBuilder {
   String? _anonymousUserId;
   bool _anonymousUserIdOverride = false;
   bool? _appHandlesRedemptionAlert;
+
+  // Three-state proxy. Dart cannot tell `proxy(null)` from "proxy() never
+  // called" from the nullable field alone: both leave `_proxyApi` null. The
+  // native SDKs treat null as *clear the proxy*, so collapsing the two would
+  // turn every start into an implicit clear, or make an explicit clear do
+  // nothing. Hence the separate "was it called" flag; a sentinel default would
+  // work too but costs the parameter its `String?` type.
+  bool _proxyWasSet = false;
   String? _proxyApi;
   // Android only
   List<PLYStore> _stores;
@@ -148,8 +157,19 @@ class PurchaselyBuilder {
   ///
   /// This is a start-time option. Neither native SDK has a runtime setter for
   /// it.
-  PurchaselyBuilder proxy(String api) {
+  ///
+  /// Three states, and they are not interchangeable:
+  ///
+  /// | Call | Effect |
+  /// | --- | --- |
+  /// | `proxy('https://svc.purchasely.io')` | routes the API host |
+  /// | `proxy(null)` | clears it, back to `api.purchasely.io` |
+  /// | never called | leaves the current setting untouched |
+  ///
+  /// The last call wins, so `proxy(url).proxy(null)` ends cleared.
+  PurchaselyBuilder proxy(String? api) {
     _proxyApi = api;
+    _proxyWasSet = true;
     return this;
   }
 
@@ -168,6 +188,41 @@ class PurchaselyBuilder {
   /// presents. Set it before [start].
   PurchaselyBuilder appHandlesRedemptionAlert(bool handles) {
     _appHandlesRedemptionAlert = handles;
+    return this;
+  }
+
+  /// Register [listener] for the outcome of a Web2App redemption
+  /// (`{scheme}://ply/redeem/{token}`), and optionally hand the result screen
+  /// to the app.
+  ///
+  /// ```dart
+  /// await Purchasely.apiKey('API_KEY')
+  ///     .webRedemptionListener(onRedemption, true)
+  ///     .start();
+  /// ```
+  ///
+  /// **The subscription happens here, at chain time — not inside [start].** A
+  /// redemption can settle *during* `start()`, from a cold start that the
+  /// `ply/redeem` link itself triggered, or from a token a previous launch left
+  /// pending. Registering on the chain makes that ordering structurally
+  /// impossible to get wrong, instead of a documentation warning an integrator
+  /// can miss. `Purchasely.addWebRedemptionListener` stays available for the
+  /// runtime case, and carries exactly that trade-off.
+  ///
+  /// The callback never crosses the bridge. Each native bridge registers
+  /// *itself* as the delegate/listener during `start()`, unconditionally, and
+  /// forwards every outcome as an event; this modifier only stores the callback
+  /// and subscribes it locally.
+  ///
+  /// [appHandlesRedemptionAlert] is a shorthand for
+  /// [PurchaselyBuilder.appHandlesRedemptionAlert]. Omit it to leave the flag
+  /// unset, so the native default (the SDK shows its own popin) applies.
+  PurchaselyBuilder webRedemptionListener(PLYWebRedemptionListener listener,
+      [bool? appHandlesRedemptionAlert]) {
+    addWebRedemptionListener(listener);
+    if (appHandlesRedemptionAlert != null) {
+      _appHandlesRedemptionAlert = appHandlesRedemptionAlert;
+    }
     return this;
   }
 
@@ -208,7 +263,11 @@ class PurchaselyBuilder {
         if (_anonymousUserId != null) 'anonymousUserId': _anonymousUserId,
         if (_anonymousUserId != null)
           'anonymousUserIdOverride': _anonymousUserIdOverride,
-        if (_proxyApi != null) 'proxy': _proxyApi,
+        // Present-with-null is an explicit clear; absent leaves the native
+        // setting alone. `_proxyApi` alone cannot express that — see
+        // `_proxyWasSet`. The standard codec preserves a null map value, so
+        // both bridges read the difference with a containsKey check.
+        if (_proxyWasSet) 'proxy': _proxyApi,
         if (_appHandlesRedemptionAlert != null)
           'appHandlesRedemptionAlert': _appHandlesRedemptionAlert,
         'stores': _stores.map((s) => s.name).toList(),

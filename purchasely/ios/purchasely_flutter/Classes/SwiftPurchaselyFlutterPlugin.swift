@@ -298,6 +298,42 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
 
     // MARK: - start
 
+    /// What the `proxy` start option asks the native builder to do.
+    ///
+    /// Three states, and collapsing any two of them is a defect: treating an absent key
+    /// as nil turns every start into an implicit clear, and treating nil as absent makes
+    /// an explicit clear silently do nothing.
+    enum ProxyDecision: Equatable {
+        /// No `proxy` key: `proxy()` was never called, so leave the current setting.
+        case untouched
+        /// `proxy` present: call `proxy(api:)`. A nil URL clears it, back to `api.purchasely.io`.
+        case apply(URL?)
+        /// `proxy` present but not convertible. Log and SKIP — never pass nil, because nil
+        /// means *clear* on the native builder, so a typo would silently disable a proxy
+        /// the app explicitly asked for.
+        case invalid(String)
+    }
+
+    /// Reads the three `proxy` states out of the `start` argument map.
+    ///
+    /// The bridge only converts the string and rejects what will not convert. The native
+    /// SDK refuses a non-https value, a value with no host and a value carrying a
+    /// query/fragment/credentials, logs it and keeps the production host, and it drops a
+    /// trailing slash — none of that is re-checked here.
+    ///
+    /// `static` and pure, so a unit test can drive every state without starting the SDK.
+    static func proxyDecision(from arguments: [String: Any]) -> ProxyDecision {
+        guard arguments.keys.contains("proxy") else { return .untouched }
+        let raw = arguments["proxy"]
+        if raw == nil || raw is NSNull { return .apply(nil) }
+        guard let api = raw as? String else {
+            return .invalid(String(describing: raw!))
+        }
+        guard let url = URL(string: api) else { return .invalid(api) }
+        return .apply(url)
+    }
+
+
     private func start(arguments: [String: Any]?, result: @escaping FlutterResult) {
 
         guard let arguments = arguments, let apiKey = arguments["apiKey"] as? String, !apiKey.isEmpty else {
@@ -333,6 +369,12 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
         // guarantee used to live; a string-typed bridge is the only place left to
         // catch a bad value. Reject it loudly and skip the modifier — the SDK still
         // starts, matching how Android treats an unusable proxy url.
+        // Severity, deliberately matched to Android's `Log.e`: a plain log line and
+        // nothing else. `NSLog` never puts UI in front of the host app — unlike React
+        // Native's `RCTLogError`, which renders a full-screen redbox in a debug build and
+        // makes a *skipped* option look like a crash. A third-party SDK must not interrupt
+        // someone else's app over an option it chose to ignore, and the two platforms must
+        // not differ in how loudly they refuse the same value.
         if let anonymousUserId = arguments["anonymousUserId"] as? String {
             if let parsed = UUID(uuidString: anonymousUserId) {
                 let override = (arguments["anonymousUserIdOverride"] as? Bool) ?? false
@@ -344,20 +386,19 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             }
         }
 
-        // The native modifier takes a `URL?`, and a `nil` there means "turn the
-        // proxy off", not "ignore this value". So a string `URL` cannot parse must
-        // skip the modifier entirely rather than pass nil, which would silently
-        // disable a proxy the app asked for. Native validates the rest (https,
-        // host, no query/fragment) and keeps the production host on a bad value,
-        // so the bridge does not re-check those.
-        if let proxyApi = arguments["proxy"] as? String {
-            if let proxyUrl = URL(string: proxyApi) {
-                builder = builder.proxy(api: proxyUrl)
-            } else {
-                NSLog("[Purchasely] `proxy` must be an https base URL, for example "
-                    + "\"https://svc.purchasely.io\". Received \"\(proxyApi)\". "
-                    + "The proxy is not applied.")
-            }
+        // Three proxy states, and they are not interchangeable — see
+        // `Self.proxyDecision(from:)`. A Dart null in a map decodes to `NSNull`
+        // here, so `keys.contains` is what separates "cleared" from "never
+        // called".
+        switch Self.proxyDecision(from: arguments) {
+        case .untouched:
+            break
+        case .apply(let url):
+            builder = builder.proxy(api: url)
+        case .invalid(let raw):
+            NSLog("[Purchasely] `proxy` must be an https base URL string, for example "
+                + "\"https://svc.purchasely.io\", or null to clear it. Received \"\(raw)\". "
+                + "The proxy is not applied.")
         }
 
         // Registered unconditionally: the native SDK has no runtime setter on
@@ -1634,7 +1675,9 @@ class WebRedemptionHandler: NSObject, FlutterStreamHandler, PLYWebRedemptionDele
     ///
     /// `errorMessage` can hold the backend's masked email hint for an expired link.
     /// The `REDEMPTION_FAILED` event drops that hint on purpose; this channel keeps
-    /// it, so the app can tell the user where the fresh link went.
+    /// it, so the app can tell the user where the fresh link went. Android does the
+    /// same in `RedemptionOutcome.Expired.toResult()` — the hint is NOT iOS-only,
+    /// and the Dart docs must not say it is.
     func webRedemptionCompleted(result: PLYWebRedemptionResult) {
         guard let eventSink = self.eventSink else { return }
 

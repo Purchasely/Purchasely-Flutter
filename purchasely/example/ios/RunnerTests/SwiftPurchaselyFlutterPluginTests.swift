@@ -66,13 +66,84 @@ class SwiftPurchaselyFlutterPluginTests: XCTestCase {
     }
 
     func testInitBuilderAcceptsAProxyUrl() {
-        // MOB-308 landed in iOS 6.1.0, so `proxy` is not Android-only. The native
-        // parameter is a `URL?` where nil turns the proxy OFF, which is why the
-        // bridge skips the modifier on an unparsable string instead of passing nil.
+        // MOB-308 landed in iOS 6.1.0, so `proxy` is not Android-only. Compiling both
+        // arities proves the signatures the bridge depends on, including the `URL?` that
+        // makes nil a CLEAR rather than an "ignore".
         let builder = Purchasely.apiKey("test-api-key")
             .appTechnology(.flutter)
             .proxy(api: URL(string: "https://svc.purchasely.io")!)
         XCTAssertNotNil(builder)
+
+        let cleared = Purchasely.apiKey("test-api-key")
+            .appTechnology(.flutter)
+            .proxy(api: nil)
+        XCTAssertNotNil(cleared)
+    }
+
+    // MARK: - proxy: the three states (6.1.0)
+
+    // `proxy(api: nil)` is a supported CLEAR on the native builder, so the bridge has to
+    // keep "never called", "cleared" and "set" apart. Collapsing either pair is silent: an
+    // absent key read as nil turns every start into an implicit clear, and a nil read as
+    // absent makes an explicit clear do nothing. A Dart null inside a map decodes to
+    // `NSNull` here, which is why the decision keys off `keys.contains`, not off a cast.
+
+    func testProxyDecisionUntouchedWhenTheKeyIsAbsent() {
+        XCTAssertEqual(
+            SwiftPurchaselyFlutterPlugin.proxyDecision(from: ["apiKey": "k"]),
+            .untouched)
+    }
+
+    func testProxyDecisionClearsOnAnExplicitNSNull() {
+        // This is exactly what a Dart `proxy(null)` arrives as.
+        XCTAssertEqual(
+            SwiftPurchaselyFlutterPlugin.proxyDecision(from: ["proxy": NSNull()]),
+            .apply(nil))
+    }
+
+    func testProxyDecisionAppliesAUrl() {
+        XCTAssertEqual(
+            SwiftPurchaselyFlutterPlugin.proxyDecision(from: ["proxy": "https://svc.purchasely.io"]),
+            .apply(URL(string: "https://svc.purchasely.io")))
+    }
+
+    func testProxyDecisionDoesNotValidateTheSchemeOrTheHost() {
+        // The native SDK refuses a non-https value, a value with no host and a value
+        // carrying a query/fragment/credentials, logs it and keeps the production host.
+        // The bridge must not pre-judge any of that, or the two platforms disagree.
+        XCTAssertEqual(
+            SwiftPurchaselyFlutterPlugin.proxyDecision(from: ["proxy": "http://insecure.example"]),
+            .apply(URL(string: "http://insecure.example")))
+    }
+
+    func testProxyDecisionSkipsAnUnconvertibleStringRatherThanClearing() {
+        // The whole trap: passing nil here would silently disable a proxy the app asked
+        // for, because of a typo. It must be `.invalid`, never `.apply(nil)`.
+        //
+        // Modern Foundation's `URL(string:)` is lenient — it percent-encodes a bare space
+        // and even accepts "://" — so the strings it really rejects are the empty one and
+        // one with a space inside the authority. Both are realistic typos.
+        for typo in ["", "https://svc purchasely.io", "ht tp://svc.purchasely.io"] {
+            let decision = SwiftPurchaselyFlutterPlugin.proxyDecision(from: ["proxy": typo])
+            XCTAssertEqual(decision, .invalid(typo), "\(typo) should be refused, not applied")
+            XCTAssertNotEqual(decision, .apply(nil), "a typo must never clear the proxy")
+        }
+    }
+
+    func testProxyDecisionSkipsANonStringValue() {
+        let decision = SwiftPurchaselyFlutterPlugin.proxyDecision(from: ["proxy": 42])
+        guard case .invalid = decision else {
+            return XCTFail("a non-string proxy must be .invalid, got \(decision)")
+        }
+        XCTAssertNotEqual(decision, .apply(nil))
+    }
+
+    func testProxyDecisionKeepsNeverCalledAndClearedDistinguishable() {
+        // Asserted against each other, because that is the pair a collapsing bridge
+        // renders identical.
+        XCTAssertNotEqual(
+            SwiftPurchaselyFlutterPlugin.proxyDecision(from: [:]),
+            SwiftPurchaselyFlutterPlugin.proxyDecision(from: ["proxy": NSNull()]))
     }
 
     func testWebRedemptionHandlerConformsToTheDelegate() {

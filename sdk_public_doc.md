@@ -207,47 +207,74 @@ your own.
 The SDK overrides the API host only. The paywall host and the tracking host
 always stay on production. `api` must be an `https` base URL with a host, and it
 must carry no query, no fragment and no credentials. The native SDK refuses any
-other value with an error log and keeps the production host.
+other value with an error log and keeps the production host, and it drops a
+trailing slash.
 
 This is a start-time option on both platforms. Neither native SDK has a runtime
 setter for it.
+
+#### The three states are not interchangeable
+
+`proxy` takes a nullable value, because both native SDKs treat `null` as *clear
+the proxy and return to `api.purchasely.io`*. That is a supported operation, not
+an error case. So there are three distinct states:
+
+| Call | Effect |
+|------|--------|
+| `.proxy('https://svc.purchasely.io')` | routes the API host through the proxy |
+| `.proxy(null)` | clears it, back to `api.purchasely.io` |
+| never called | leaves the current setting untouched |
+
+The last call wins, so `.proxy(url).proxy(null)` ends cleared.
+
+A string the bridge cannot convert to a URL is refused with an error log and the
+option is **skipped**, not passed as `null` — a typo must never silently disable
+a proxy your app asked for.
 
 ### Web2App redemption (6.1.0)
 
 Listen to the outcome of a Web2App redemption (`{scheme}://ply/redeem/{token}`).
 
-**Add the listener before `start()`.** A redemption can settle during `start()`,
-from a cold start that the link itself triggered, or from a token that a previous
-launch left pending. A listener that you add after `start()` misses exactly the
-case it is most needed for.
+**Register the listener on the start chain.** A redemption can settle *during*
+`start()`, from a cold start that the `ply/redeem` link itself triggered, or from
+a token that a previous launch left pending. The chain modifier subscribes before
+`start()` is even called, so it cannot miss one.
 
 ```dart
 import 'package:purchasely_flutter/purchasely_flutter.dart';
 
-// Add the listener FIRST.
-Purchasely.addWebRedemptionListener((result) {
-  if (result.isSuccess) {
-    print('Redemption granted: ${result.context?.subscription?.plan?.vendorId}');
-    if (result.replay) {
-      print('The server reports this token was redeemed before');
-    }
-  } else {
-    print('Redemption failed: ${result.errorCode} ${result.errorMessage}');
-  }
-});
-
-// Then start the SDK.
 await PurchaselyBuilder.apiKey('<YOUR_API_KEY>')
-    .appHandlesRedemptionAlert(false) // default: the SDK shows its own popin
+    .webRedemptionListener((result) {
+      if (result.isSuccess) {
+        print('Redemption granted: ${result.context?.subscription?.plan?.vendorId}');
+        if (result.replay) {
+          print('The server reports this token was redeemed before');
+        }
+      } else {
+        print('Redemption failed: ${result.errorCode} ${result.errorMessage}');
+      }
+    }, false) // optional: appHandlesRedemptionAlert
     .start();
 ```
 
-Call `Purchasely.removeWebRedemptionListener()` to remove it.
+The optional second argument is a shorthand for `appHandlesRedemptionAlert`.
+Omit it to leave the flag unset, so the native default applies. The separate
+`.appHandlesRedemptionAlert(bool)` modifier stays available.
 
 The SDK calls the listener on the main thread, exactly once per settled
 redemption, on success and on failure alike.
 
-`appHandlesRedemptionAlert` decides *when* the SDK calls the listener:
+#### Replacing the listener at runtime
+
+`Purchasely.addWebRedemptionListener(cb)` and
+`Purchasely.removeWebRedemptionListener()` register the same listener at any
+time. This is the **secondary** path, for an app that has to swap the listener
+while the SDK already runs. Its trade-off: a redemption that settles during
+`start()` is missed, because nothing was listening yet. Prefer the chain
+modifier for the initial registration.
+
+`appHandlesRedemptionAlert` decides *when* the SDK calls the listener, on either
+path:
 
 | Value | The SDK shows | The SDK calls the listener |
 |-------|---------------|----------------------------|
@@ -273,10 +300,16 @@ Three behaviours to know:
 - A redemption deeplink is **not** subject to `allowDeeplink`. The native SDK
   intercepts `ply/redeem` out of band, so a redemption still completes with
   `allowDeeplink(false)`.
-- **On iOS only**, `errorMessage` for an expired link can contain a masked email
-  address, so you can tell the user where the fresh link went. Show that text to
-  the user. Do not send it to an analytics stack or to a crash reporter. The
-  `REDEMPTION_FAILED` event drops it.
+- `errorMessage` for an expired link can contain a **masked email address**, so
+  you can tell the user where the fresh link went. **This happens on both iOS
+  and Android** — Android's `RedemptionOutcome.Expired.toResult()` and iOS's
+  `.expired(emailHint:)` branch append the same hint, and the Android source
+  labels that field "masked email = PII".
+  **Show that text to the user. Never send it to an analytics stack or to a
+  crash reporter, and never gate that rule behind a platform check** — doing so
+  ships personal data on the platform you excluded. The `REDEMPTION_FAILED`
+  event drops the hint on both platforms, so the listener is the only place it
+  appears.
 
 The SDK also emits two analytics events for a redemption,
 `PLYEventName.REDEMPTION_CONSUMED` and `PLYEventName.REDEMPTION_FAILED`, with
@@ -592,6 +625,17 @@ Expired subscriptions are available via `Purchasely.userSubscriptionsHistory()`.
 > **Note**: There is a **few seconds delay** for `Purchasely.userSubscriptions()`
 > to be updated after a purchase or restoration. If you rely on this method right
 > after a purchase, **wait for 3 seconds** before calling it.
+
+#### Three `PLYSubscription` fields are nullable, and one is Android-only
+
+Read these with a null guard, on both entry points above and on
+`PLYWebRedemptionContext.subscription`, which shares the same mapper:
+
+| Field | When it is null |
+|-------|-----------------|
+| `purchaseToken` | **Always on iOS.** The native iOS `PLYSubscription` has no purchase token property, so the iOS bridge cannot emit the key and never did. Android-only in practice |
+| `nextRenewalDate` | the subscription has no renewal date; the iOS bridge omits the key when the native date is nil |
+| `cancelledDate` | the subscription is not cancelled; same omission rule |
 
 ---
 

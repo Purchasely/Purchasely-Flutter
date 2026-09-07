@@ -679,7 +679,12 @@ void main() {
       expect(PLYSubscriptionSource.googlePlayStore.index, 1);
       expect(PLYSubscriptionSource.amazonAppstore.index, 2);
       expect(PLYSubscriptionSource.huaweiAppGallery.index, 3);
-      expect(PLYSubscriptionSource.none.index, 4);
+      // 6.1.0: webCheckoutStripe sits at 4 on BOTH natives (Android
+      // StoreType.WEB_CHECKOUT_STRIPE, iOS PLYSubscriptionSource.stripe), which
+      // pushes `none` to 5. Index 4 used to decode to `none`, so a web-checkout
+      // subscription silently reported no source.
+      expect(PLYSubscriptionSource.webCheckoutStripe.index, 4);
+      expect(PLYSubscriptionSource.none.index, 5);
     });
 
     test('PLYPurchaseResult converts correctly', () {

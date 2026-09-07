@@ -88,6 +88,16 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
 
     override fun onDetachedFromEngine(@NonNull binding: FlutterPlugin.FlutterPluginBinding) {
         channel.setMethodCallHandler(null)
+        // The native redemption listener is registered on the SDK builder at start() and
+        // has no unregister, so it outlives the engine. Clearing the sink here is what
+        // stops it posting onto a dead engine: a cached handle that a second teardown path
+        // leaves non-null is the shape of the React Native bug where a stale handle got
+        // released twice and silenced every event. `setStreamHandler(null)` also releases
+        // the anonymous handler that closes over this instance.
+        webRedemptionSink = null
+        if (::webRedemptionChannel.isInitialized) {
+            webRedemptionChannel.setStreamHandler(null)
+        }
         job.cancel()
     }
 
@@ -552,8 +562,20 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
         val allowCampaigns = a["allowCampaigns"] as? Boolean ?: true
         val deeplink = (a["deeplink"] as? String)?.takeIf { it.isNotBlank() }
         val automaticDeeplinkHandling = a["automaticDeeplinkHandling"] as? Boolean
-        val proxyApi = a["proxy"] as? String
         val appHandlesRedemptionAlert = a["appHandlesRedemptionAlert"] as? Boolean ?: false
+
+        // Three proxy states, and they are not interchangeable — see [proxyDecisionFrom].
+        //
+        // Severity for "the value was refused and the modifier was skipped" is a plain
+        // `Log.e` line on both platforms (iOS uses `NSLog`). Neither puts UI in front of
+        // the host app: a skipped option must not read as a crash, and the two bridges
+        // must not differ in how loudly they refuse the same value.
+        val proxyDecision = proxyDecisionFrom(a)
+        if (proxyDecision is ProxyDecision.Invalid) {
+            Log.e("Purchasely", "`proxy` must be an https base URL string, for example " +
+                "\"https://svc.purchasely.io\", or null to clear it. Received " +
+                "\"${proxyDecision.raw}\". The proxy is not applied.")
+        }
 
         // Dart has no UUID type, so the id crosses the bridge as a string and is parsed here.
         // The native builder takes a `UUID?`, which is where the guarantee used to live; a
@@ -584,9 +606,13 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
                 // v6 auto-intercepts Purchasely deeplinks by default; hosts that
                 // route intents themselves can opt out from the Dart builder.
                 automaticDeeplinkHandling?.let { this.automaticDeeplinkHandling(it) }
-                // Route the API host through a proxy. The native SDK ignores a non-https
-                // value with an error log, so the bridge does not re-validate it.
-                proxyApi?.let { this.proxy(it) }
+                // Route the API host through a proxy, or clear it. `proxy(null)` is a
+                // supported clear, so an absent key must not reach the builder at all —
+                // calling it would turn every start into an implicit clear. The native SDK
+                // refuses a non-https value, a value with no host and a value carrying a
+                // query/fragment/credentials, logs it and keeps the production host, so the
+                // bridge does not re-validate any of that.
+                (proxyDecision as? ProxyDecision.Apply)?.let { this.proxy(it.api) }
                 parsedAnonymousUserId?.let { this.anonymousUserId(it, anonymousUserIdOverride) }
                 // Registered unconditionally: the native SDK has no runtime setter on purpose,
                 // because a redemption can settle during start() (a cold start that the link
@@ -1599,12 +1625,23 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
          */
         internal fun transformSubscriptionToMap(data: PLYSubscriptionData): MutableMap<String, Any?> {
             return data.data.toMap().toMutableMap().apply {
+                // Exhaustive on purpose, and `when` on the enum without an `else` is what
+                // keeps it that way: a new StoreType then fails to COMPILE here instead of
+                // silently falling into a null the Dart side reads as `none`. That is how
+                // WEB_CHECKOUT_STRIPE was dropped — the very source a Web2App redemption
+                // grants. `null` stays only for NONE, which Dart maps to its own `none`.
+                //
+                // The ordinals are the wire contract and both natives agree on them:
+                // APPLE 0, GOOGLE 1, AMAZON 2, HUAWEI 3, WEB_CHECKOUT_STRIPE 4, NONE 5 —
+                // same order as Dart's PLYSubscriptionSource.
                 this["subscriptionSource"] = when(data.data.storeType) {
-                    StoreType.GOOGLE_PLAY_STORE -> StoreType.GOOGLE_PLAY_STORE.ordinal
-                    StoreType.HUAWEI_APP_GALLERY -> StoreType.HUAWEI_APP_GALLERY.ordinal
-                    StoreType.AMAZON_APP_STORE -> StoreType.AMAZON_APP_STORE.ordinal
                     StoreType.APPLE_APP_STORE -> StoreType.APPLE_APP_STORE.ordinal
-                    else -> null
+                    StoreType.GOOGLE_PLAY_STORE -> StoreType.GOOGLE_PLAY_STORE.ordinal
+                    StoreType.AMAZON_APP_STORE -> StoreType.AMAZON_APP_STORE.ordinal
+                    StoreType.HUAWEI_APP_GALLERY -> StoreType.HUAWEI_APP_GALLERY.ordinal
+                    StoreType.WEB_CHECKOUT_STRIPE -> StoreType.WEB_CHECKOUT_STRIPE.ordinal
+                    StoreType.NONE -> StoreType.NONE.ordinal
+                    null -> null
                 }
 
                 this["plan"] = transformPlanToMap(data.plan)
@@ -1723,4 +1760,42 @@ internal fun webRedemptionResultToMap(result: PLYWebRedemptionResult): Map<Strin
         "errorCode" to result.errorCode,
         "errorMessage" to result.errorMessage,
     )
+}
+
+/**
+ * What the `proxy` start option asks the native builder to do.
+ *
+ * Three states, and collapsing any two of them is a defect: treating an absent key as null
+ * turns every start into an implicit clear, and treating null as absent makes an explicit
+ * clear silently do nothing.
+ */
+internal sealed class ProxyDecision {
+    /** No `proxy` key: `proxy()` was never called, so leave the current setting untouched. */
+    object Untouched : ProxyDecision()
+
+    /** `proxy` present: call `proxy(api)`. A null [api] clears it, back to `api.purchasely.io`. */
+    data class Apply(val api: String?) : ProxyDecision()
+
+    /**
+     * `proxy` present but not a string the bridge can forward. Log and SKIP — never pass null,
+     * because null means *clear* on the native builder, so a typo would silently disable a
+     * proxy the app explicitly asked for.
+     */
+    data class Invalid(val raw: Any?) : ProxyDecision()
+}
+
+/**
+ * Reads the three `proxy` states out of the `start` argument map.
+ *
+ * `containsKey` is the only thing that separates "never called" from "cleared": the Flutter
+ * standard codec preserves a null map value, so both arrive as a null `args["proxy"]`.
+ *
+ * Pure, so a JVM unit test can drive every state without an Android logger or an SDK builder.
+ */
+internal fun proxyDecisionFrom(args: Map<String, Any?>): ProxyDecision {
+    if (!args.containsKey("proxy")) return ProxyDecision.Untouched
+    val raw = args["proxy"]
+    if (raw == null) return ProxyDecision.Apply(null)
+    if (raw is String) return ProxyDecision.Apply(raw)
+    return ProxyDecision.Invalid(raw)
 }

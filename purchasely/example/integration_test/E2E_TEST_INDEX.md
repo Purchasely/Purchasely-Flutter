@@ -95,6 +95,8 @@ handler carries 5 fields on every wrapper:
 
 Files:
 - `dart_android_bridge_test.dart` — T1–T8 (pure-Dart round-trips + local dismiss)
+- `redemption_identity_test.dart` — R1–R4 (6.1.0: anonymousUserId, cleared proxy, redemption listener)
+- `proxy_invalid_test.dart` — P1–P2 (6.1.0: an unconvertible proxy string is skipped)
 - `interceptor_trigger_test.dart` — T9 (interceptor fired by a real native tap)
 - `default_dismiss_handler_test.dart` — T10 (global dismiss handler via deeplink + back)
 
@@ -205,6 +207,30 @@ Files:
 - **Port:**
   - RN: identical builder JS with `onDismissed` set + `await display()`; reuse the same drivers; assert the default handler did not fire.
   - Cordova: the imperative `presentPresentationForPlacement(...)` success callback is the per-presentation dismiss outcome — assert it fires and the default handler does not.
+
+### R1–R4 — 6.1.0: anonymousUserId, proxy(null), Web2App redemption listener
+- **File:** `redemption_identity_test.dart` (both platforms; no UI driver).
+- **Start chain:** `.anonymousUserId('3f2504e0-4f89-11d3-9a0c-0305e82c3301', override: true).proxy(null).webRedemptionListener(collect)`.
+- **R1 — `anonymousUserId`:** the SDK reports back the pinned UUID **uppercased**, and the same value appears on `PLYEventProperties.anonymous_user_id`. `override: true` is required — the device already holds an SDK-generated id from an earlier run.
+- **R2 — `proxy(null)`:** an explicit **clear** is a supported operation on both native SDKs. Asserted indirectly, by the SDK still resolving `integration_test_audiences` and `allProducts()` from production — the resolved API host itself is SDK-internal state no harness can read.
+- **R3 — chain ordering:** `Purchasely.webRedemptions != null` is snapshotted **between building the chain and calling `start()`**, so the test proves the subscription happens at chain time. That is the point of the modifier: a redemption can settle *during* `start()`.
+- **R4 — live failure path:** `handleDeeplink('ply://ply/redeem/<bogus>')` with `allowDeeplink(false)` still settles (a redemption deeplink bypasses that gate) and the listener receives `isSuccess: false`, `context: null`, `replay: false`, and an `errorCode` of `INVALID_REDEMPTION_TOKEN` / `EXPIRED_REDEMPTION_TOKEN` (or `null` on a transport failure), **exactly once**. Then `removeWebRedemptionListener()` and assert nothing is delivered.
+- **Port:**
+  - RN: identical — `builder(key).anonymousUserId(...).proxy(null).webRedemptionListener(cb).start()`, then `Purchasely.handleDeeplink(...)`.
+  - Cordova: only if the bridge exposes the three options and a redemption event.
+
+### P1–P2 — 6.1.0: an unconvertible proxy string is skipped, not fatal
+- **File:** `proxy_invalid_test.dart` — **its own app process**, because the SDK starts once and this suite needs a different proxy state than R1–R4.
+- **Start chain:** `.proxy('https://svc purchasely.io')` — a space in the authority, which `URL(string:)` rejects on iOS.
+- **P1:** `start()` still resolves `true`. The bridge logs an error and skips the modifier; a bad proxy is a warning, never a boot failure.
+- **P2:** the placement and the catalogue still load from production, which is what proves the typo neither cleared the proxy (the iOS trap: nil means *clear*) nor redirected the host.
+- **Port:** RN/Cordova identical, with each bridge's own log assertion if it has one.
+
+> **Scope limit for both suites.** They assert the SDK still behaves against
+> production after each proxy state, and that the redemption listener is wired
+> end to end. They do **not** assert the native SDK's resolved API host, which is
+> internal state. Neither suite ever sets a *live* proxy: that would move the
+> example app off production.
 
 ---
 
