@@ -17,6 +17,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:purchasely_flutter/purchasely_flutter.dart';
 
+import 'helpers/e2e_start.dart';
+
 const String kApiKey = '0ad0594b-3b3d-4fea-8ee1-4b5df91efe87';
 const String kPlacementAudiences = 'integration_test_audiences';
 
@@ -25,21 +27,15 @@ void main() {
 
   setUpAll(() async {
     debugPrint('SETUP → calling Purchasely.start()…');
-    bool configured = false;
-    try {
-      configured = await Purchasely.apiKey(kApiKey)
-          .runningMode(PLYRunningMode.full)
-          .logLevel(PLYLogLevel.debug)
-          .allowDeeplink(true)
-          .storekitVersion(PLYStorekitVersion.storeKit2)
-          .start()
-          .timeout(const Duration(seconds: 120),
-              onTimeout: () =>
-                  throw StateError('Purchasely.start() timed out after 120s'));
-    } catch (e) {
-      debugPrint('SETUP → start() error: $e');
-      rethrow;
-    }
+    final configured = await startWithRetry(() => Purchasely.apiKey(kApiKey)
+        .runningMode(PLYRunningMode.full)
+        .logLevel(PLYLogLevel.debug)
+        .allowDeeplink(true)
+        .storekitVersion(PLYStorekitVersion.storeKit2)
+        .start()
+        .timeout(const Duration(seconds: 120),
+            onTimeout: () =>
+                throw StateError('Purchasely.start() timed out after 120s')));
     debugPrint('SETUP → configured=$configured');
     expect(configured, isTrue);
   });
@@ -60,11 +56,14 @@ void main() {
       // awaits display(): both local channels must receive the outcome and the
       // default handler must NOT fire.
       final request = PLYPresentationBuilder.placement(kPlacementAudiences)
+          .onPresented((presentation, error) {
+            if (presentation != null) debugPrint('DISMISS-LOCAL-READY');
+          })
           .onDismissed((outcome) => localOutcome = outcome)
           .build();
       await request.preload();
 
-      // The concurrent driver taps ply_action_close once the paywall renders,
+      // The concurrent driver waits for the readiness marker and swipes,
       // which resolves the awaited display() future.
       final outcome = await request.display().timeout(
             const Duration(seconds: 50),

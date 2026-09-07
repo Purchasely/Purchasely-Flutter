@@ -6,24 +6,22 @@ name: E2E Android
 # nightly.
 #
 # Triggers:
-#   * pull_request      — run on PRs targeting main while the v6 migration is in
-#                         flight, so the E2E suite gates the merge. Scoped to
-#                         paths that affect the bridge / native layer / tests.
-#   * workflow_dispatch — manual run (any branch the workflow exists on)
-#   * schedule          — nightly at 03:00 UTC (GitHub only fires schedules from the
+#   * workflow_dispatch — explicit manual run (any branch the workflow exists on)
+#   * schedule          — nightly at 05:00 UTC (GitHub only fires schedules from the
 #                         repository's DEFAULT branch, so the nightly run activates
 #                         once this file is merged to main).
 on:
+  # Kept on purpose. This PR originally dropped the PR trigger because it was added
+  # "while the v6 migration is in flight"; experience since says otherwise. On #153 the
+  # PR-triggered E2E caught a deterministic 3/3 failure (a listener never firing because
+  # appHandlesRedemptionAlert defaults to false, so the SDK waits for a popin nobody
+  # acknowledges) that no unit test and no local run saw. Without it, that class of bug
+  # only surfaces on the nightly, i.e. after merge.
   pull_request:
     branches: [main]
-    paths:
-      - "purchasely/lib/**"
-      - "purchasely/android/**"
-      - "purchasely/example/integration_test/**"
-      - ".github/workflows/e2e-android.yml"
   workflow_dispatch:
   schedule:
-    - cron: "0 3 * * *"
+    - cron: "0 5 * * *"
 
 concurrency:
   group: e2e-android-${{ github.ref }}
@@ -33,7 +31,12 @@ jobs:
   e2e-android:
     name: E2E Android (real backend)
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    # 90, not 60. This branch consolidated the iOS suites into batches precisely to fit
+    # the old budget, and #153 added two more suites on top. A single flaky app launch
+    # costs a 600s per-suite timeout plus a retry, and one such retry on an early batch
+    # is enough to run the job out of wall clock before the last suite starts — which is
+    # how this looked like a suite failure when the suite had simply never been reached.
+    timeout-minutes: 90
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
@@ -52,18 +55,18 @@ jobs:
           java-version: "17"
           cache: gradle
 
-      # 3.44.0, NOT 3.24.x. The AGP 9 / Gradle 9 migration (PR #130) bumped the
-      # Android jobs in ci.yml to 3.44.0 and missed this workflow, so every
-      # E2E Android run since then has died at Gradle startup with
-      #   flutter.groovy: 8: unable to resolve class groovy.xml.QName
-      # from Flutter 3.24.5's own Gradle plugin, which Gradle 9 no longer puts
-      # groovy.xml on the classpath for. The app never built, so each suite then
-      # burned the integration_test harness's 12-minute timeout waiting for an
-      # app that was never installed, and the job hit its 60-minute cap.
-      # e2e-ios.yml is on 3.41.4 for the same class of reason.
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
+          # 3.44.0: matches the post-AGP9 toolchain (#130) the example app's
+          # Android build now requires (Gradle 9.1.0 / AGP 9.0.1). The
+          # previous "3.24.x" pin bundled a flutter.groovy that imports
+          # groovy.xml.QName, an API Groovy 4 (Gradle 9) no longer exposes —
+          # compileGroovy failed on every attempt, surfaced only via
+          # flutter_tools' generic 12-minute per-test timeout (see Task 7's
+          # CI-hang diagnosis). This is the one workflow file #130 forgot to
+          # touch; see ci.yml's "Flutter 3.44 / AGP 9 Compatibility" job,
+          # which already validates this exact combination.
           flutter-version: "3.44.0"
           channel: stable
           cache: true
@@ -96,6 +99,14 @@ jobs:
             ~/.android/adb*
           key: avd-34-google_apis-x86_64-pixel_6
 
+      # Emulator 36.6.11 can print a successful response to `adb emu kill`
+      # while the adb client itself never exits. android-emulator-runner awaits
+      # that client during cleanup, so a cold-cache job otherwise stalls until
+      # the 60-minute job timeout. Prepend a wrapper that bounds ONLY this adb
+      # subcommand; normal Flutter/Gradle adb operations remain unmodified.
+      - name: Bound emulator shutdown command
+        run: echo "$GITHUB_WORKSPACE/.github/scripts/ci-adb-wrapper" >> "$GITHUB_PATH"
+
       - name: Create AVD + snapshot for caching
         if: steps.avd-cache.outputs.cache-hit != 'true'
         uses: reactivecircus/android-emulator-runner@v2
@@ -109,7 +120,19 @@ jobs:
           disable-animations: true
           script: echo "Generated AVD snapshot for caching."
 
+      - name: Ensure cache emulator process exited
+        if: steps.avd-cache.outputs.cache-hit != 'true'
+        run: bash .github/scripts/stop-ci-android-emulator.sh
+
       - name: Run E2E suite on emulator
+        # Step-level ceiling below the 60min job timeout: ci_run_e2e.sh's own
+        # per-suite watchdog (600s x 3 attempts x 12 suites) already fails
+        # fast on any single hang, but this bounds the WHOLE step so that,
+        # even in a worst case, the "Upload E2E logs" step (which runs
+        # `if: always()`) still gets a chance to preserve the per-suite logs
+        # instead of the entire job (including that upload) being killed at
+        # the 60min job-level cutoff with nothing salvaged.
+        timeout-minutes: 50
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 34
@@ -120,6 +143,10 @@ jobs:
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           disable-animations: true
           script: bash purchasely/example/integration_test/tools/ci_run_e2e.sh emulator-5554
+
+      - name: Ensure test emulator process exited
+        if: always()
+        run: bash .github/scripts/stop-ci-android-emulator.sh
 
       - name: Upload E2E logs
         if: always()

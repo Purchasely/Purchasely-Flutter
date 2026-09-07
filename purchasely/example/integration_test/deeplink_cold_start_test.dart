@@ -26,6 +26,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:purchasely_flutter/purchasely_flutter.dart';
 
+import 'helpers/e2e_start.dart';
+
 const String kApiKey = '0ad0594b-3b3d-4fea-8ee1-4b5df91efe87';
 const String kPlacementAudiences = 'integration_test_audiences';
 const String kColdStartDeeplink = 'ply://ply/placements/$kPlacementAudiences';
@@ -42,10 +44,18 @@ void main() {
       // DEEPLINK_OPENED -> PRESENTATION_LOADED -> PRESENTATION_VIEWED.
       final order = <PLYEventName>[];
       final byName = <PLYEventName, PLYEvent>{};
-      const tracked = {
+      const expectedLifecycle = {
         PLYEventName.DEEPLINK_OPENED,
         PLYEventName.PRESENTATION_LOADED,
         PLYEventName.PRESENTATION_VIEWED,
+      };
+      // PRESENTATION_OPENED is watched too, but it is NOT part of the
+      // lifecycle we wait for — it must never fire for a deeplink-only open
+      // (that event is reserved for in-paywall action buttons opening
+      // another presentation). See assertion 5 below.
+      const tracked = {
+        ...expectedLifecycle,
+        PLYEventName.PRESENTATION_OPENED,
       };
 
       // Subscribe BEFORE start: the cold-start deeplink resolves right after the
@@ -59,18 +69,20 @@ void main() {
 
       // The whole point of the feature: the deeplink is passed to the builder,
       // NOT replayed by a manual Purchasely.handleDeeplink(...) call.
-      final configured = await Purchasely.apiKey(kApiKey)
+      final configured = await startWithRetry(() => Purchasely.apiKey(kApiKey)
           .runningMode(PLYRunningMode.full)
           .logLevel(PLYLogLevel.debug)
           .allowDeeplink(true)
           .handleDeeplink(kColdStartDeeplink)
-          .stores([PLYStore.google]).start();
+          .stores([PLYStore.google]).start());
       expect(configured, isTrue,
           reason: 'SDK should configure against the real backend');
 
-      // Poll until the full chain arrived (network fetch + render take a moment).
+      // Poll until the full lifecycle arrived (network fetch + render take a
+      // moment). PRESENTATION_OPENED is deliberately excluded from the wait
+      // condition since it must never fire.
       final sw = Stopwatch()..start();
-      while (byName.length < tracked.length &&
+      while (!expectedLifecycle.every(byName.containsKey) &&
           sw.elapsed < const Duration(seconds: 60)) {
         await Future<void>.delayed(const Duration(milliseconds: 250));
       }
@@ -79,7 +91,7 @@ void main() {
           '${order.map((e) => e.toString().split('.').last).join(' → ')}');
 
       // 1. All three lifecycle events fired.
-      expect(byName.keys.toSet(), containsAll(tracked),
+      expect(byName.keys.toSet(), containsAll(expectedLifecycle),
           reason: 'cold-start deeplink must produce the full lifecycle '
               '{DEEPLINK_OPENED, PRESENTATION_LOADED, PRESENTATION_VIEWED}, '
               'got: $order');
@@ -109,7 +121,19 @@ void main() {
       expect(viewed.properties.sdk_version, isNotNull);
       expect(viewed.properties.sdk_version, isNotEmpty);
 
+      // 5. A deeplink open must NOT emit PRESENTATION_OPENED — that event is
+      //    reserved for an in-paywall action button opening another
+      //    presentation, not for the SDK auto-opening one via a deeplink.
+      //    Give the asynchronous event channel a short settle window after
+      //    VIEWED; checking immediately at the first complete lifecycle could
+      //    otherwise false-pass if a forbidden event arrived just afterward.
+      await Future<void>.delayed(const Duration(seconds: 2));
+      expect(order.contains(PLYEventName.PRESENTATION_OPENED), isFalse,
+          reason: 'a deeplink open must not emit PRESENTATION_OPENED');
+
       Purchasely.stopListeningToEvents();
+      await Purchasely.closeAllScreens();
+      await Future<void>.delayed(const Duration(seconds: 1));
     });
   });
 }

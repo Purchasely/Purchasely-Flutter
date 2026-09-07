@@ -1,19 +1,20 @@
 // E2E: action interceptor is actually TRIGGERED by a real tap on the native
 // paywall, and the typed payload is delivered to Dart.
 //
-// Mirror of interceptor_trigger_test.dart for iOS. Uses PLYStore.apple and
-// a concurrent host-side driver (tools/tap_purchase_ios.sh) that uses idb to
-// tap the purchase button by its accessibility identifier
-// (ply_action_purchase_<planVendorId>).
+// Mirror of interceptor_trigger_test.dart for iOS. A concurrent host-side
+// driver waits for the Dart readiness marker before tapping the purchase CTA.
 //
 // Run together with the driver:
-//   (bash .../tap_purchase_ios.sh <sim-udid> &) ; \
+//   (SUITE_LOG=/tmp/interceptor.log \
+//    bash .../purchase_interceptor_driver_ios.sh <sim-udid> &) ; \
 //   flutter test integration_test/interceptor_trigger_ios_test.dart -d <sim-udid>
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:purchasely_flutter/purchasely_flutter.dart';
+
+import 'helpers/e2e_start.dart';
 
 const String kApiKey = '0ad0594b-3b3d-4fea-8ee1-4b5df91efe87';
 const String kPlacementAudiences = 'integration_test_audiences';
@@ -23,20 +24,14 @@ void main() {
 
   setUpAll(() async {
     debugPrint('SETUP → calling Purchasely.start()…');
-    bool configured = false;
-    try {
-      configured = await Purchasely.apiKey(kApiKey)
-          .runningMode(PLYRunningMode.full)
-          .logLevel(PLYLogLevel.debug)
-          .storekitVersion(PLYStorekitVersion.storeKit2)
-          .start()
-          .timeout(const Duration(seconds: 120),
-              onTimeout: () =>
-                  throw StateError('Purchasely.start() timed out after 120s'));
-    } catch (e) {
-      debugPrint('SETUP → start() error: $e');
-      rethrow;
-    }
+    final configured = await startWithRetry(() => Purchasely.apiKey(kApiKey)
+        .runningMode(PLYRunningMode.full)
+        .logLevel(PLYLogLevel.debug)
+        .storekitVersion(PLYStorekitVersion.storeKit2)
+        .start()
+        .timeout(const Duration(seconds: 120),
+            onTimeout: () =>
+                throw StateError('Purchasely.start() timed out after 120s')));
     debugPrint('SETUP → configured=$configured');
     expect(configured, isTrue);
   });
@@ -77,8 +72,10 @@ void main() {
         await Future<void>.delayed(const Duration(milliseconds: 250));
       }
       expect(presented, isTrue, reason: 'paywall should present');
+      debugPrint('INTERCEPTOR-PURCHASE-READY');
 
-      // The concurrent driver taps the purchase button. Poll for interceptor.
+      // The concurrent driver waits for the readiness marker, then taps the
+      // purchase button. Poll for the interceptor callback.
       final fireSw = Stopwatch()..start();
       while (capturedPayload == null &&
           fireSw.elapsed < const Duration(seconds: 40)) {
@@ -98,6 +95,8 @@ void main() {
           'contentId=${capturedInfo!.contentId}');
 
       await Purchasely.removeAllActionInterceptors();
+      await Purchasely.closeAllScreens();
+      await Future<void>.delayed(const Duration(seconds: 1));
     });
   });
 }

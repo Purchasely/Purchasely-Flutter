@@ -4,32 +4,36 @@ name: E2E iOS
 # iOS Simulator. These are NOT part of the PR-gating `ci.yml` (they need a
 # simulator and real network) — they run on demand and nightly.
 #
-# Suites:
-#   1/3 — dart_ios_bridge_test.dart       (T1–T20, no native interaction)
-#   2/3 — interceptor_trigger_ios_test    (purchase interceptor; driver taps
-#          ply_action_purchase_* via idb)
-#   3/3 — default_dismiss_handler_ios     (deeplink + default dismiss; driver
-#          taps ply_action_close via idb)
+# Execution:
+#   7 app launches — compatible suites are batched to avoid rebuilding and
+#                    reinstalling the same app for every Dart test file.
 #
 # Triggers:
-#   * pull_request      — run on PRs targeting main while the v6 migration is in
-#                         flight, so the E2E suite gates the merge. Scoped to
-#                         paths that affect the bridge / native layer / tests.
-#   * workflow_dispatch — manual run (any branch the workflow exists on)
-#   * schedule          — nightly at 04:00 UTC (GitHub only fires schedules from
+#   * workflow_dispatch — explicit manual run (any branch the workflow exists on)
+#   * schedule          — nightly at 05:00 UTC (GitHub only fires schedules from
 #                         the repository's DEFAULT branch, so the nightly run
 #                         activates once this file is merged to main).
 on:
+  # Kept on purpose. This PR originally dropped the PR trigger because it was added
+  # "while the v6 migration is in flight"; experience since says otherwise. On #153 the
+  # PR-triggered E2E caught a deterministic 3/3 failure (a listener never firing because
+  # appHandlesRedemptionAlert defaults to false, so the SDK waits for a popin nobody
+  # acknowledges) that no unit test and no local run saw. Without it, that class of bug
+  # only surfaces on the nightly, i.e. after merge.
   pull_request:
     branches: [main]
-    paths:
-      - "purchasely/lib/**"
-      - "purchasely/ios/**"
-      - "purchasely/example/integration_test/**"
-      - ".github/workflows/e2e-ios.yml"
   workflow_dispatch:
+    inputs:
+      suite:
+        description: Suite to run (use StoreKit only for targeted diagnostics)
+        required: true
+        default: all
+        type: choice
+        options:
+          - all
+          - storekit
   schedule:
-    - cron: "0 4 * * *"
+    - cron: "0 5 * * *"
 
 concurrency:
   group: e2e-ios-${{ github.ref }}
@@ -39,7 +43,12 @@ jobs:
   e2e-ios:
     name: E2E iOS (real backend)
     runs-on: macos-latest
-    timeout-minutes: 60
+    # 90, not 60. This branch consolidated the iOS suites into batches precisely to fit
+    # the old budget, and #153 added two more suites on top. A single flaky app launch
+    # costs a 600s per-suite timeout plus a retry, and one such retry on an early batch
+    # is enough to run the job out of wall clock before the last suite starts — which is
+    # how this looked like a suite failure when the suite had simply never been reached.
+    timeout-minutes: 90
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
@@ -109,6 +118,16 @@ jobs:
           xcrun simctl bootstatus "$UDID" -b
 
       - name: Run E2E suite on iOS Simulator
+        # Step-level ceiling below the 60min job timeout: ci_run_e2e_ios.sh's
+        # own watchdogs (300s for Flutter batches, 600s for StoreKit) already
+        # fails fast on any single hang, but this bounds the WHOLE step so
+        # that, even in a worst case, the "Collect simulator crash logs" and
+        # "Upload E2E logs" steps (which run on failure/always) still get a
+        # chance to preserve diagnostics instead of the entire job being
+        # killed at the 60min job-level cutoff with nothing salvaged.
+        timeout-minutes: 35
+        env:
+          E2E_IOS_SUITE: ${{ inputs.suite || 'all' }}
         run: bash purchasely/example/integration_test/tools/ci_run_e2e_ios.sh ${{ steps.boot-sim.outputs.udid }}
 
       - name: Collect simulator crash logs (on failure)

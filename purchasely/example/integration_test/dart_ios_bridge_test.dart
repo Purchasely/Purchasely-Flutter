@@ -5,7 +5,7 @@
 //
 // Tests requiring a host driver (T8, T9):
 //   T8 — (bash integration_test/tools/tap_purchase_ios.sh &)   # idb tap
-//   T9 — (bash integration_test/tools/swipe_dismiss_ios.sh &)  # idb swipe
+//   T9 — (bash integration_test/tools/close_paywall_ios.sh &)  # idb swipe
 //
 // Run with:
 //   flutter test integration_test/dart_ios_bridge_test.dart \
@@ -16,6 +16,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:purchasely_flutter/purchasely_flutter.dart';
 
+import 'helpers/e2e_start.dart';
+
 const String kApiKey = '0ad0594b-3b3d-4fea-8ee1-4b5df91efe87';
 const String kPlacementAudiences = 'integration_test_audiences';
 
@@ -24,20 +26,14 @@ void main() {
 
   setUpAll(() async {
     debugPrint('SETUP → calling Purchasely.start()…');
-    bool configured = false;
-    try {
-      configured = await Purchasely.apiKey(kApiKey)
-          .runningMode(PLYRunningMode.full)
-          .logLevel(PLYLogLevel.debug)
-          .storekitVersion(PLYStorekitVersion.storeKit2)
-          .start()
-          .timeout(const Duration(seconds: 120),
-              onTimeout: () =>
-                  throw StateError('Purchasely.start() timed out after 120s'));
-    } catch (e) {
-      debugPrint('SETUP → start() error: $e');
-      rethrow;
-    }
+    final configured = await startWithRetry(() => Purchasely.apiKey(kApiKey)
+        .runningMode(PLYRunningMode.full)
+        .logLevel(PLYLogLevel.debug)
+        .storekitVersion(PLYStorekitVersion.storeKit2)
+        .start()
+        .timeout(const Duration(seconds: 120),
+            onTimeout: () =>
+                throw StateError('Purchasely.start() timed out after 120s')));
     debugPrint('SETUP → configured=$configured');
     expect(configured, isTrue,
         reason: 'SDK should configure against the real backend');
@@ -189,7 +185,7 @@ void main() {
   // Covered by integration_test/interceptor_trigger_ios_test.dart
 
   // T9 — Default dismiss handler + deeplink + swipe-dismiss
-  // Host driver: integration_test/tools/swipe_dismiss_ios.sh (idb swipe)
+  // Host driver: integration_test/tools/close_paywall_ios.sh (idb swipe)
   // Covered by integration_test/default_dismiss_handler_ios_test.dart
 
   // T10 — addEventListener → PRESENTATION_VIEWED
@@ -320,7 +316,11 @@ void main() {
         presentation.display(const PLYTransition.fullScreen());
 
         await Future<void>.delayed(const Duration(seconds: 3));
-        await presentation.close();
+        await presentation.close().timeout(
+              const Duration(seconds: 20),
+              onTimeout: () => throw StateError(
+                  'T12 presentation.close() timed out after 20s'),
+            );
         await Future<void>.delayed(const Duration(seconds: 2));
 
         expect(interceptorCalled, isFalse,

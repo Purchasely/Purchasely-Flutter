@@ -31,6 +31,8 @@ import 'package:integration_test/integration_test.dart';
 import 'package:purchasely_flutter/native_view_widget.dart';
 import 'package:purchasely_flutter/purchasely_flutter.dart';
 
+import 'helpers/e2e_start.dart';
+
 const String kApiKey = String.fromEnvironment('PLY_KEY',
     defaultValue: 'fcb39be4-2ba4-4db7-bde3-2a5a1e20745d');
 const String kPlacement =
@@ -40,11 +42,11 @@ void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
   setUpAll(() async {
-    final configured = await Purchasely.apiKey(kApiKey)
+    final configured = await startWithRetry(() => Purchasely.apiKey(kApiKey)
         .runningMode(PLYRunningMode.full)
         .logLevel(PLYLogLevel.debug)
         .allowDeeplink(true)
-        .stores([PLYStore.google]).start();
+        .stores([PLYStore.google]).start());
     expect(configured, isTrue);
   });
 
@@ -109,6 +111,8 @@ void main() {
       debugPrint('inline event flow OK → ${globalPaywallEvent!.name}');
 
       Purchasely.stopListeningToEvents();
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpAndSettle();
     });
   });
 }

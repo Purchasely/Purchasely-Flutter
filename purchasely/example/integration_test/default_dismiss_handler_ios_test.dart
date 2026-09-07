@@ -16,6 +16,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:purchasely_flutter/purchasely_flutter.dart';
 
+import 'helpers/e2e_start.dart';
+
 const String kApiKey = '0ad0594b-3b3d-4fea-8ee1-4b5df91efe87';
 const String kPlacementAudiences = 'integration_test_audiences';
 
@@ -24,21 +26,15 @@ void main() {
 
   setUpAll(() async {
     debugPrint('SETUP → calling Purchasely.start()…');
-    bool configured = false;
-    try {
-      configured = await Purchasely.apiKey(kApiKey)
-          .runningMode(PLYRunningMode.full)
-          .logLevel(PLYLogLevel.debug)
-          .allowDeeplink(true)
-          .storekitVersion(PLYStorekitVersion.storeKit2)
-          .start()
-          .timeout(const Duration(seconds: 120),
-              onTimeout: () =>
-                  throw StateError('Purchasely.start() timed out after 120s'));
-    } catch (e) {
-      debugPrint('SETUP → start() error: $e');
-      rethrow;
-    }
+    final configured = await startWithRetry(() => Purchasely.apiKey(kApiKey)
+        .runningMode(PLYRunningMode.full)
+        .logLevel(PLYLogLevel.debug)
+        .allowDeeplink(true)
+        .storekitVersion(PLYStorekitVersion.storeKit2)
+        .start()
+        .timeout(const Duration(seconds: 120),
+            onTimeout: () =>
+                throw StateError('Purchasely.start() timed out after 120s')));
     debugPrint('SETUP → configured=$configured');
     expect(configured, isTrue);
   });
@@ -48,8 +44,14 @@ void main() {
       (tester) async {
     await tester.runAsync(() async {
       PLYPresentationOutcome? globalOutcome;
+      var presentationViewed = false;
       await Purchasely.setDefaultPresentationDismissHandler((outcome) {
         globalOutcome = outcome;
+      });
+      Purchasely.listenToEvents((event) {
+        if (event.name == PLYEventName.PRESENTATION_VIEWED) {
+          presentationViewed = true;
+        }
       });
 
       // The SDK opens the presentation itself (deeplink) — its dismissal is
@@ -58,7 +60,16 @@ void main() {
           'ply://ply/placements/$kPlacementAudiences');
       expect(handled, isTrue, reason: 'deeplink route should be handled');
 
-      // The concurrent driver taps ply_action_close once the paywall renders.
+      final viewedSw = Stopwatch()..start();
+      while (!presentationViewed &&
+          viewedSw.elapsed < const Duration(seconds: 30)) {
+        await Future<void>.delayed(const Duration(milliseconds: 250));
+      }
+      expect(presentationViewed, isTrue,
+          reason: 'deeplink paywall should render before dismissal');
+      debugPrint('DISMISS-DEFAULT-READY');
+
+      // The concurrent driver swipes once the readiness marker is logged.
       // Poll for the default handler to receive the dismissal outcome.
       final sw = Stopwatch()..start();
       while (
@@ -79,6 +90,7 @@ void main() {
       debugPrint('default dismiss handler → '
           'closeReason=${globalOutcome!.closeReason} '
           'presentation=${globalOutcome!.presentation?.screenId}');
+      Purchasely.stopListeningToEvents();
     });
   });
 }
