@@ -32,6 +32,10 @@ class PurchaselyBuilder {
   bool _allowCampaigns;
   String? _deeplink;
   bool? _automaticDeeplinkHandling;
+  String? _anonymousUserId;
+  bool _anonymousUserIdOverride = false;
+  bool? _appHandlesRedemptionAlert;
+  String? _proxyApi;
   // Android only
   List<PLYStore> _stores;
   // iOS only
@@ -107,6 +111,66 @@ class PurchaselyBuilder {
     return this;
   }
 
+  /// Set the anonymous user id the SDK reports for this device.
+  ///
+  /// [id] must be a canonical UUID string, e.g.
+  /// `'3f2504e0-4f89-11d3-9a0c-0305e82c3301'`. Dart has no UUID type, so the
+  /// id crosses the bridge as a string and each native bridge parses it. A
+  /// value that is not a canonical UUID is refused with an error log and the
+  /// modifier is skipped — [start] still succeeds.
+  ///
+  /// The SDK stores the id in **uppercase**, on iOS and on Android, and
+  /// applies it at [start] before it sends a network request or an event. The
+  /// SDK applies it only when the device holds no anonymous id yet, unless
+  /// [override] is `true`.
+  ///
+  /// **`override: true` splits the user history.** The backend keeps every
+  /// event and every purchase under the previous id. Use it only when the app
+  /// owns the anonymous identity, e.g. after a cross-device restore.
+  PurchaselyBuilder anonymousUserId(String id, {bool override = false}) {
+    _anonymousUserId = id;
+    _anonymousUserIdOverride = override;
+    return this;
+  }
+
+  /// Route Purchasely API traffic through a proxy instead of
+  /// `api.purchasely.io`, for a region where that host is unreachable, such as
+  /// mainland China.
+  ///
+  /// Only the API host changes: the paywall host and the tracking host always
+  /// stay on production. Purchasely operates a proxy at
+  /// `https://svc.purchasely.io`; you can also host your own.
+  ///
+  /// [api] must be an `https` base URL with a host, and it must carry no query,
+  /// no fragment and no credentials. The native SDK refuses any other value
+  /// with an error log and keeps the production host, so this modifier does not
+  /// validate it again. Each native SDK drops a trailing slash.
+  ///
+  /// This is a start-time option. Neither native SDK has a runtime setter for
+  /// it.
+  PurchaselyBuilder proxy(String api) {
+    _proxyApi = api;
+    return this;
+  }
+
+  /// Hand the Web2App redemption result screen to the app.
+  ///
+  /// This flag decides who shows the outcome of a redemption, and with it when
+  /// the SDK calls the listener added with
+  /// [Purchasely.addWebRedemptionListener]:
+  ///
+  /// - `false` (the default): the SDK shows its own popin and calls the
+  ///   listener after the user acknowledges the popin.
+  /// - `true`: the SDK shows nothing and calls the listener as soon as the
+  ///   redemption settles. The app must then show its own result screen.
+  ///
+  /// This is a start-time option because it changes what the native SDK
+  /// presents. Set it before [start].
+  PurchaselyBuilder appHandlesRedemptionAlert(bool handles) {
+    _appHandlesRedemptionAlert = handles;
+    return this;
+  }
+
   /// Android-only: stores the SDK is allowed to use (priority order). On iOS
   /// this modifier is a no-op.
   PurchaselyBuilder stores(List<PLYStore> stores) {
@@ -139,6 +203,14 @@ class PurchaselyBuilder {
         if (_deeplink != null) 'deeplink': _deeplink,
         if (_automaticDeeplinkHandling != null)
           'automaticDeeplinkHandling': _automaticDeeplinkHandling,
+        // The native bridges parse `anonymousUserId` into a UUID. An invalid
+        // string is rejected there, with a log, and start() still succeeds.
+        if (_anonymousUserId != null) 'anonymousUserId': _anonymousUserId,
+        if (_anonymousUserId != null)
+          'anonymousUserIdOverride': _anonymousUserIdOverride,
+        if (_proxyApi != null) 'proxy': _proxyApi,
+        if (_appHandlesRedemptionAlert != null)
+          'appHandlesRedemptionAlert': _appHandlesRedemptionAlert,
         'stores': _stores.map((s) => s.name).toList(),
         'storekitVersion': _storekitVersion.name,
       },

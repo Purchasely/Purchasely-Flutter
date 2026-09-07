@@ -51,7 +51,7 @@ Add the Purchasely Flutter SDK to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  purchasely_flutter: 6.0.0
+  purchasely_flutter: 6.1.0
 ```
 
 Then run:
@@ -73,8 +73,8 @@ Google Play Billing extension:
 
 ```yaml
 dependencies:
-  purchasely_flutter: 6.0.0
-  purchasely_google: 6.0.0
+  purchasely_flutter: 6.1.0
+  purchasely_google: 6.1.0
 ```
 
 #### Video Player (Required for Video Paywalls)
@@ -83,14 +83,14 @@ If your presentations contain videos, add the Android video player extension:
 
 ```yaml
 dependencies:
-  purchasely_android_player: 6.0.0
+  purchasely_android_player: 6.1.0
 ```
 
 > ⚠️ **All Purchasely packages must be at the exact same version.** Mismatched
 > versions will cause runtime errors or unexpected behavior.
 
-> **Native dependency.** This release targets the Purchasely 6.0 native SDKs
-> (iOS `Purchasely 6.0.0`, Android `io.purchasely:core 6.0.1`), published on the
+> **Native dependency.** This release targets the Purchasely 6.1 native SDKs
+> (iOS `Purchasely 6.1.0`, Android `io.purchasely:core 6.1.0`), published on the
 > CocoaPods trunk and Maven Central — so the project builds from the public
 > repositories.
 
@@ -164,6 +164,124 @@ try {
 > **Default running mode changed.** With the 6.0 native SDK the default
 > `PLYRunningMode` is `PLYRunningMode.observer`. Pass `.runningMode(PLYRunningMode.full)`
 > to let Purchasely own the purchase flow.
+
+### Anonymous user id (6.1.0)
+
+Set the anonymous user id the SDK reports for this device.
+
+```dart
+await PurchaselyBuilder.apiKey('<YOUR_API_KEY>')
+    .anonymousUserId('3f2504e0-4f89-11d3-9a0c-0305e82c3301')
+    .start();
+```
+
+`id` must be a canonical UUID string. Dart has no UUID type, so the native
+bridge parses the string. The bridge logs an error and skips the option when the
+string is not a canonical UUID. The SDK still starts.
+
+The SDK stores the id in uppercase. The SDK applies the id only when the device
+holds no anonymous id yet. Pass `override: true` to replace an existing id:
+
+```dart
+.anonymousUserId('3f2504e0-4f89-11d3-9a0c-0305e82c3301', override: true)
+```
+
+**`override: true` splits the user history.** The backend keeps every event and
+every purchase under the previous id. Use `true` only when your app owns the
+anonymous identity, for example after a cross-device restore.
+
+### API proxy (6.1.0)
+
+Route Purchasely API traffic through a proxy instead of `api.purchasely.io`, for
+a region where that host is unreachable, such as mainland China.
+
+```dart
+await PurchaselyBuilder.apiKey('<YOUR_API_KEY>')
+    .proxy('https://svc.purchasely.io')
+    .start();
+```
+
+Purchasely operates a proxy at `https://svc.purchasely.io`. You can also host
+your own.
+
+The SDK overrides the API host only. The paywall host and the tracking host
+always stay on production. `api` must be an `https` base URL with a host, and it
+must carry no query, no fragment and no credentials. The native SDK refuses any
+other value with an error log and keeps the production host.
+
+This is a start-time option on both platforms. Neither native SDK has a runtime
+setter for it.
+
+### Web2App redemption (6.1.0)
+
+Listen to the outcome of a Web2App redemption (`{scheme}://ply/redeem/{token}`).
+
+**Add the listener before `start()`.** A redemption can settle during `start()`,
+from a cold start that the link itself triggered, or from a token that a previous
+launch left pending. A listener that you add after `start()` misses exactly the
+case it is most needed for.
+
+```dart
+import 'package:purchasely_flutter/purchasely_flutter.dart';
+
+// Add the listener FIRST.
+Purchasely.addWebRedemptionListener((result) {
+  if (result.isSuccess) {
+    print('Redemption granted: ${result.context?.subscription?.plan?.vendorId}');
+    if (result.replay) {
+      print('The server reports this token was redeemed before');
+    }
+  } else {
+    print('Redemption failed: ${result.errorCode} ${result.errorMessage}');
+  }
+});
+
+// Then start the SDK.
+await PurchaselyBuilder.apiKey('<YOUR_API_KEY>')
+    .appHandlesRedemptionAlert(false) // default: the SDK shows its own popin
+    .start();
+```
+
+Call `Purchasely.removeWebRedemptionListener()` to remove it.
+
+The SDK calls the listener on the main thread, exactly once per settled
+redemption, on success and on failure alike.
+
+`appHandlesRedemptionAlert` decides *when* the SDK calls the listener:
+
+| Value | The SDK shows | The SDK calls the listener |
+|-------|---------------|----------------------------|
+| `false` (default) | its own result popin | after the user acknowledges the popin |
+| `true` | nothing | as soon as the redemption settles |
+
+Use `true` when your app shows its own result screen.
+
+`PLYWebRedemptionResult` has five fields:
+
+| Field | Description |
+|-------|-------------|
+| `isSuccess` | `true` for a granted redemption, `false` for a failed one |
+| `context` | What the redemption granted, or `null`. `context.subscription` is separately nullable |
+| `replay` | `true` when the server reports the token was redeemed before |
+| `errorCode` | `'EXPIRED_REDEMPTION_TOKEN'`, `'INVALID_REDEMPTION_TOKEN'`, or `null` |
+| `errorMessage` | Human-readable reason, or `null` |
+
+Three behaviours to know:
+
+- `replay` is a verdict about the **token**, not an observation of the user. The
+  SDK keeps no cache and calls the server on every attempt.
+- A redemption deeplink is **not** subject to `allowDeeplink`. The native SDK
+  intercepts `ply/redeem` out of band, so a redemption still completes with
+  `allowDeeplink(false)`.
+- **On iOS only**, `errorMessage` for an expired link can contain a masked email
+  address, so you can tell the user where the fresh link went. Show that text to
+  the user. Do not send it to an analytics stack or to a crash reporter. The
+  `REDEMPTION_FAILED` event drops it.
+
+The SDK also emits two analytics events for a redemption,
+`PLYEventName.REDEMPTION_CONSUMED` and `PLYEventName.REDEMPTION_FAILED`, with
+their payload on `PLYEventProperties.redemption`. Read them with
+`Purchasely.addEventListener`.
 
 ---
 

@@ -52,6 +52,13 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
     let userAttributesChannel: FlutterEventChannel
     let userAttributesHandler: UserAttributesHandler
 
+    // Web2App redemption outcomes (6.1.0). Held as a stored property, not a local
+    // in `start`: `PurchaselyBuilder` retains the delegate only until it is applied,
+    // and the SDK then keeps a weak reference — a local would be released and the
+    // delegate would silently go nil.
+    let webRedemptionChannel: FlutterEventChannel
+    let webRedemptionHandler: WebRedemptionHandler
+
     // Presentation/interceptor lifecycle events flow over a dedicated stream,
     // discriminated by the `event` key; each carries a `requestId` so Dart can
     // route back.
@@ -75,6 +82,11 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
                                                       binaryMessenger: registrar.messenger())
         self.userAttributesHandler = UserAttributesHandler()
         self.userAttributesChannel.setStreamHandler(self.userAttributesHandler)
+
+        self.webRedemptionChannel = FlutterEventChannel(name: "purchasely-web-redemption",
+                                                        binaryMessenger: registrar.messenger())
+        self.webRedemptionHandler = WebRedemptionHandler()
+        self.webRedemptionChannel.setStreamHandler(self.webRedemptionHandler)
 
         self.presentationChannel = FlutterEventChannel(name: "purchasely-presentation-events",
                                                        binaryMessenger: registrar.messenger())
@@ -300,7 +312,7 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
 
         var builder = Purchasely.apiKey(apiKey)
             .appTechnology(.flutter)
-            .sdkBridgeVersion("6.0.0")
+            .sdkBridgeVersion("6.1.0")
 
         if let userId = (arguments["appUserId"] as? String) ?? (arguments["userId"] as? String), !userId.isEmpty {
             builder = builder.appUserId(userId)
@@ -315,6 +327,48 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
         if let deeplink = arguments["deeplink"] as? String, let url = URL(string: deeplink) {
             builder = builder.handleDeeplink(url)
         }
+
+        // Dart has no UUID type, so the id crosses the bridge as a string and is
+        // parsed here. The native builder takes a `UUID?`, which is where the
+        // guarantee used to live; a string-typed bridge is the only place left to
+        // catch a bad value. Reject it loudly and skip the modifier — the SDK still
+        // starts, matching how Android treats an unusable proxy url.
+        if let anonymousUserId = arguments["anonymousUserId"] as? String {
+            if let parsed = UUID(uuidString: anonymousUserId) {
+                let override = (arguments["anonymousUserIdOverride"] as? Bool) ?? false
+                builder = builder.appAnonymousUserId(parsed, override: override)
+            } else {
+                NSLog("[Purchasely] `anonymousUserId` must be a canonical UUID string, for example "
+                    + "\"3f2504e0-4f89-11d3-9a0c-0305e82c3301\". Received \"\(anonymousUserId)\". "
+                    + "The anonymous user id is not applied.")
+            }
+        }
+
+        // The native modifier takes a `URL?`, and a `nil` there means "turn the
+        // proxy off", not "ignore this value". So a string `URL` cannot parse must
+        // skip the modifier entirely rather than pass nil, which would silently
+        // disable a proxy the app asked for. Native validates the rest (https,
+        // host, no query/fragment) and keeps the production host on a bad value,
+        // so the bridge does not re-check those.
+        if let proxyApi = arguments["proxy"] as? String {
+            if let proxyUrl = URL(string: proxyApi) {
+                builder = builder.proxy(api: proxyUrl)
+            } else {
+                NSLog("[Purchasely] `proxy` must be an https base URL, for example "
+                    + "\"https://svc.purchasely.io\". Received \"\(proxyApi)\". "
+                    + "The proxy is not applied.")
+            }
+        }
+
+        // Registered unconditionally: the native SDK has no runtime setter on
+        // purpose, because a redemption can settle during `start()` (a cold start
+        // that the link itself triggered, or a token left pending by a previous
+        // launch). The bridge emits onto `purchasely-web-redemption`, which reaches
+        // no one when Dart added no listener, so this is behaviour-neutral by
+        // default.
+        builder = builder.webRedemptionDelegate(
+            webRedemptionHandler,
+            appHandlesRedemptionAlert: (arguments["appHandlesRedemptionAlert"] as? Bool) ?? false)
 
         if let allowDeeplink = arguments["allowDeeplink"] as? Bool {
             Purchasely.allowDeeplink(allowDeeplink)
@@ -1544,6 +1598,65 @@ class SwiftPurchaseHandler: NSObject, FlutterStreamHandler {
         self.eventSink?(nil)
     }
 
+}
+
+/// Bridges `PLYWebRedemptionDelegate` to the `purchasely-web-redemption` channel
+/// (6.1.0).
+///
+/// The delegate is registered on the start chain, not in `onListen`: a redemption
+/// can settle during `start()`. Dart is documented to add its listener before
+/// `start()`, and a platform channel delivers `listen` before the later `start`
+/// invocation on the same messenger, so the sink is attached by then.
+/// ponytail: no replay buffer — a listener attached after `start()` misses an
+/// in-flight redemption, which is exactly what the "add it before start()"
+/// contract says.
+class WebRedemptionHandler: NSObject, FlutterStreamHandler, PLYWebRedemptionDelegate {
+
+    var eventSink: FlutterEventSink?
+
+    func onListen(withArguments arguments: Any?, eventSink events: @escaping FlutterEventSink) -> FlutterError? {
+        self.eventSink = events
+        return nil
+    }
+
+    func onCancel(withArguments arguments: Any?) -> FlutterError? {
+        self.eventSink = nil
+        return nil
+    }
+
+    /// `PLYWebRedemptionDelegate`. The SDK calls this on the main thread, once per
+    /// settled redemption. Mapped to the flat 5-field shape the Android bridge
+    /// emits, so one Dart listener drives both platforms.
+    ///
+    /// `context` and `context.subscription` are separately nullable, and both stay
+    /// nullable in the emitted body: a success can carry no context at all, and a
+    /// present context can carry no subscription.
+    ///
+    /// `errorMessage` can hold the backend's masked email hint for an expired link.
+    /// The `REDEMPTION_FAILED` event drops that hint on purpose; this channel keeps
+    /// it, so the app can tell the user where the fresh link went.
+    func webRedemptionCompleted(result: PLYWebRedemptionResult) {
+        guard let eventSink = self.eventSink else { return }
+
+        var context: Any = NSNull()
+        if let resultContext = result.context {
+            let subscription: Any = resultContext.subscription?.toMap ?? NSNull()
+            context = ["subscription": subscription]
+        }
+
+        let errorCode: Any = result.errorCode ?? NSNull()
+        let errorMessage: Any = result.errorMessage ?? NSNull()
+
+        DispatchQueue.main.async {
+            eventSink([
+                "isSuccess": result.isSuccess,
+                "context": context,
+                "replay": result.replay,
+                "errorCode": errorCode,
+                "errorMessage": errorMessage
+            ])
+        }
+    }
 }
 
 class UserAttributesHandler: NSObject, FlutterStreamHandler, PLYUserAttributeDelegate {

@@ -1,3 +1,40 @@
+## 6.1.0
+
+Brings the Flutter plugin to Purchasely 6.1.0: the anonymous user id, the API
+proxy, the Web2App redemption listener and the two redemption analytics
+events. Native SDKs: iOS `Purchasely 6.1.0`, Android
+`io.purchasely:core 6.1.0`.
+
+### Added
+
+- `Purchasely.apiKey(key).anonymousUserId(id, override: false)` — sets the
+  anonymous user id the SDK reports for this device. `id` must be a canonical
+  UUID string; the native bridge parses it and skips the modifier with an error
+  log when it is not, and `start()` still succeeds. The SDK stores the id
+  uppercase and applies it only when the device holds no anonymous id yet,
+  unless `override` is `true`.
+- `Purchasely.apiKey(key).proxy(api)` — routes Purchasely API traffic through a
+  proxy instead of `api.purchasely.io`, for a region where that host is
+  unreachable, such as mainland China. Only the API host changes; the paywall
+  host and the tracking host stay on production. `https` only.
+- `Purchasely.apiKey(key).appHandlesRedemptionAlert(handles)` — decides who
+  shows the outcome of a Web2App redemption. `false` (the default) keeps the SDK
+  popin; `true` shows nothing so the app renders its own result screen.
+- `Purchasely.addWebRedemptionListener(cb)` /
+  `Purchasely.removeWebRedemptionListener()` — reports the outcome of a Web2App
+  redemption (`{scheme}://ply/redeem/{token}`) as a `PLYWebRedemptionResult`.
+  The SDK calls the listener on the main thread, exactly once per settled
+  redemption. **Add the listener before `start()`**: a redemption can settle
+  during `start()`, from a cold start that the link triggered or from a token a
+  previous launch left pending. A redemption deeplink is not subject to
+  `allowDeeplink`. On iOS only, `errorMessage` for an expired link can carry a
+  masked email address — show it to the user, do not forward it to an analytics
+  stack or a crash reporter.
+- `PLYEventName.REDEMPTION_CONSUMED` and `PLYEventName.REDEMPTION_FAILED`, with
+  their payload on the new `PLYEventProperties.redemption`.
+
+Full changelog available at https://docs.purchasely.com/changelog
+
 ## 6.0.0
 
 First stable release of Purchasely 6.0.

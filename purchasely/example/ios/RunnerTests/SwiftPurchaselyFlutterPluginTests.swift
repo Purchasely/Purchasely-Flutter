@@ -27,7 +27,7 @@ class SwiftPurchaselyFlutterPluginTests: XCTestCase {
         // Mirrors the chain used by `SwiftPurchaselyFlutterPlugin.start(...)`.
         let builder = Purchasely.apiKey("test-api-key")
             .appTechnology(.flutter)
-            .sdkBridgeVersion("6.0.0")
+            .sdkBridgeVersion("6.1.0")
             .runningMode(.full)
             .logLevel(.debug)
             .storekitSettings(.storeKit2)
@@ -50,6 +50,48 @@ class SwiftPurchaselyFlutterPluginTests: XCTestCase {
             .appTechnology(.flutter)
             .handleDeeplink(url)
         XCTAssertNotNil(builder)
+    }
+
+    // MARK: - Web2App redemption + anonymous user id (6.1.0)
+
+    func testInitBuilderAcceptsAnonymousUserIdAndOverride() {
+        // Mirrors the exact call `SwiftPurchaselyFlutterPlugin.start(...)` makes
+        // once it parsed the Dart string into a UUID. Compiling this proves the
+        // native signature the bridge depends on (UUID, override: Bool).
+        let id = UUID(uuidString: "3f2504e0-4f89-11d3-9a0c-0305e82c3301")!
+        let builder = Purchasely.apiKey("test-api-key")
+            .appTechnology(.flutter)
+            .appAnonymousUserId(id, override: true)
+        XCTAssertNotNil(builder)
+    }
+
+    func testInitBuilderAcceptsAProxyUrl() {
+        // MOB-308 landed in iOS 6.1.0, so `proxy` is not Android-only. The native
+        // parameter is a `URL?` where nil turns the proxy OFF, which is why the
+        // bridge skips the modifier on an unparsable string instead of passing nil.
+        let builder = Purchasely.apiKey("test-api-key")
+            .appTechnology(.flutter)
+            .proxy(api: URL(string: "https://svc.purchasely.io")!)
+        XCTAssertNotNil(builder)
+    }
+
+    func testWebRedemptionHandlerConformsToTheDelegate() {
+        // The bridge registers the handler on the start chain
+        // (`webRedemptionDelegate(_:appHandlesRedemptionAlert:)`), so it must
+        // conform — and the builder must accept it with that label.
+        let handler = WebRedemptionHandler()
+        let builder = Purchasely.apiKey("test-api-key")
+            .appTechnology(.flutter)
+            .webRedemptionDelegate(handler, appHandlesRedemptionAlert: true)
+        XCTAssertNotNil(builder)
+    }
+
+    func testRedemptionEventsExistOnTheNativeSdk() {
+        // The two 6.1.0 analytics events the Dart `PLYEventName` enum now declares.
+        // A native rename breaks this at compile time, before it reaches Dart as an
+        // `UNKNOWN` event.
+        XCTAssertEqual(PLYEvent.redemptionConsumed.name, "REDEMPTION_CONSUMED")
+        XCTAssertEqual(PLYEvent.redemptionFailed.name, "REDEMPTION_FAILED")
     }
 
     // MARK: - Presentation builder factories (v6)

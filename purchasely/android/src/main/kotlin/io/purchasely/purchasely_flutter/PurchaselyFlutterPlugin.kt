@@ -34,6 +34,8 @@ import io.purchasely.ext.presentation.preload
 import io.purchasely.models.PLYPlan
 import io.purchasely.models.PLYPresentationPlan
 import io.purchasely.models.PLYProduct
+import io.purchasely.models.PLYSubscriptionData
+import io.purchasely.models.PLYWebRedemptionResult
 import kotlinx.coroutines.*
 import io.purchasely.ext.Purchasely
 // `Colors` is the (public) type of the public `PLYTransition.backgroundColors`
@@ -66,6 +68,15 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
     private lateinit var purchaseChannel: EventChannel
     private lateinit var userAttributeChannel: EventChannel
     private lateinit var presentationChannel: EventChannel
+    private lateinit var webRedemptionChannel: EventChannel
+
+    /**
+     * The Dart-side `purchasely-web-redemption` sink, or null while no Dart listener is
+     * attached. Written on the platform thread by the stream handler, read on the main thread
+     * by the redemption listener.
+     */
+    @Volatile
+    private var webRedemptionSink: EventChannel.EventSink? = null
 
     private lateinit var context: Context
     private var activity: Activity? = null
@@ -186,6 +197,34 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
                 presentationSink = null
             }
         })
+
+        // Web2App redemption outcomes (6.1.0). The native listener is registered on the start
+        // chain, not here: a redemption can settle during start(). Dart is documented to add
+        // its listener before start(), and a platform channel delivers `listen` before the
+        // later `start` invocation on the same messenger, so the sink is attached by then.
+        // ponytail: no replay buffer — a listener attached after start() misses an in-flight
+        // redemption, which is exactly what the "add it before start()" contract says.
+        webRedemptionChannel = EventChannel(flutterPluginBinding.binaryMessenger, WEB_REDEMPTION_CHANNEL)
+        webRedemptionChannel.setStreamHandler(object : EventChannel.StreamHandler {
+            override fun onListen(arguments: Any?, events: EventChannel.EventSink?) {
+                webRedemptionSink = events
+            }
+
+            override fun onCancel(arguments: Any?) {
+                webRedemptionSink = null
+            }
+        })
+    }
+
+    /**
+     * Bridges [PLYWebRedemptionListener] to the `purchasely-web-redemption` channel.
+     *
+     * The native SDK calls this on the main thread, once per settled redemption. The sealed
+     * result is flattened to the same 5-field shape the iOS bridge emits, so one Dart listener
+     * drives both platforms.
+     */
+    private val bridgeWebRedemptionListener = PLYWebRedemptionListener { result ->
+        webRedemptionSink?.success(webRedemptionResultToMap(result))
     }
 
     override fun onMethodCall(@NonNull call: MethodCall, @NonNull result: Result) {
@@ -513,6 +552,22 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
         val allowCampaigns = a["allowCampaigns"] as? Boolean ?: true
         val deeplink = (a["deeplink"] as? String)?.takeIf { it.isNotBlank() }
         val automaticDeeplinkHandling = a["automaticDeeplinkHandling"] as? Boolean
+        val proxyApi = a["proxy"] as? String
+        val appHandlesRedemptionAlert = a["appHandlesRedemptionAlert"] as? Boolean ?: false
+
+        // Dart has no UUID type, so the id crosses the bridge as a string and is parsed here.
+        // The native builder takes a `UUID?`, which is where the guarantee used to live; a
+        // string-typed bridge is the only place left to catch a bad value. Reject it loudly and
+        // skip the modifier — the SDK still starts, matching how native treats an unusable
+        // proxy url.
+        val anonymousUserIdString = a["anonymousUserId"] as? String
+        val parsedAnonymousUserId = parseCanonicalUuid(anonymousUserIdString)
+        if (anonymousUserIdString != null && parsedAnonymousUserId == null) {
+            Log.e("Purchasely", "`anonymousUserId` must be a canonical UUID string, for example " +
+                "\"3f2504e0-4f89-11d3-9a0c-0305e82c3301\". Received \"$anonymousUserIdString\". " +
+                "The anonymous user id is not applied.")
+        }
+        val anonymousUserIdOverride = a["anonymousUserIdOverride"] as? Boolean ?: false
 
         Purchasely.Builder(context)
             .apiKey(apiKey)
@@ -529,10 +584,20 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
                 // v6 auto-intercepts Purchasely deeplinks by default; hosts that
                 // route intents themselves can opt out from the Dart builder.
                 automaticDeeplinkHandling?.let { this.automaticDeeplinkHandling(it) }
+                // Route the API host through a proxy. The native SDK ignores a non-https
+                // value with an error log, so the bridge does not re-validate it.
+                proxyApi?.let { this.proxy(it) }
+                parsedAnonymousUserId?.let { this.anonymousUserId(it, anonymousUserIdOverride) }
+                // Registered unconditionally: the native SDK has no runtime setter on purpose,
+                // because a redemption can settle during start() (a cold start that the link
+                // itself triggered, or a token left pending by a previous launch). The bridge
+                // emits onto `purchasely-web-redemption`, which reaches no one when Dart added
+                // no listener, so this is behaviour-neutral by default.
+                this.webRedemptionListener(appHandlesRedemptionAlert, bridgeWebRedemptionListener)
             }
             .build()
 
-        Purchasely.sdkBridgeVersion = "6.0.0"
+        Purchasely.sdkBridgeVersion = "6.1.0"
         Purchasely.appTechnology = PLYAppTechnology.FLUTTER
 
         Purchasely.start { error ->
@@ -1098,32 +1163,8 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
         }
     }
 
-    private fun transformSubscriptionsToList(subscriptions: List<io.purchasely.models.PLYSubscriptionData>): ArrayList<MutableMap<String, Any?>> {
-        val list = ArrayList<MutableMap<String, Any?>>()
-        for (data in subscriptions) {
-            val map = data.data.toMap().toMutableMap().apply {
-                this["subscriptionSource"] = when(data.data.storeType) {
-                    StoreType.GOOGLE_PLAY_STORE -> StoreType.GOOGLE_PLAY_STORE.ordinal
-                    StoreType.HUAWEI_APP_GALLERY -> StoreType.HUAWEI_APP_GALLERY.ordinal
-                    StoreType.AMAZON_APP_STORE -> StoreType.AMAZON_APP_STORE.ordinal
-                    StoreType.APPLE_APP_STORE -> StoreType.APPLE_APP_STORE.ordinal
-                    else -> null
-                }
-
-                this["plan"] = transformPlanToMap(data.plan)
-
-                val plans = HashMap<String?, Any>()
-                data.product.plans.map {
-                    plans.put(it.name, transformPlanToMap(it))
-                }
-                this["product"] = data.product.toMap().toMutableMap().apply {
-                    this["plans"] = plans
-                }
-                remove("subscription_status") //TODO add in a future version after checking with iOS
-            }
-            list.add(map)
-        }
-        return list
+    private fun transformSubscriptionsToList(subscriptions: List<PLYSubscriptionData>): ArrayList<MutableMap<String, Any?>> {
+        return ArrayList(subscriptions.map { transformSubscriptionToMap(it) })
     }
 
     private fun setThemeMode(mode: Int?) {
@@ -1444,6 +1485,7 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
 
     companion object {
         private const val PRESENTATION_EVENTS_CHANNEL = "purchasely-presentation-events"
+        private const val WEB_REDEMPTION_CHANNEL = "purchasely-web-redemption"
 
         private lateinit var channel : MethodChannel
 
@@ -1547,6 +1589,37 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
         // can route to the right SDK completion.
         val pendingInterceptors = ConcurrentHashMap<String, (PLYInterceptResult) -> Unit>()
 
+        /**
+         * Maps one [PLYSubscriptionData] to the Dart `PLYSubscription` shape.
+         *
+         * Shared by `userSubscriptions`, `userSubscriptionsHistory` and the web redemption
+         * listener, whose `context.subscription` is the same type, so the three report one
+         * subscription shape. `product.plans` is keyed by plan name because the Dart parser
+         * reads it as a map, not as a list.
+         */
+        internal fun transformSubscriptionToMap(data: PLYSubscriptionData): MutableMap<String, Any?> {
+            return data.data.toMap().toMutableMap().apply {
+                this["subscriptionSource"] = when(data.data.storeType) {
+                    StoreType.GOOGLE_PLAY_STORE -> StoreType.GOOGLE_PLAY_STORE.ordinal
+                    StoreType.HUAWEI_APP_GALLERY -> StoreType.HUAWEI_APP_GALLERY.ordinal
+                    StoreType.AMAZON_APP_STORE -> StoreType.AMAZON_APP_STORE.ordinal
+                    StoreType.APPLE_APP_STORE -> StoreType.APPLE_APP_STORE.ordinal
+                    else -> null
+                }
+
+                this["plan"] = transformPlanToMap(data.plan)
+
+                val plans = HashMap<String?, Any>()
+                data.product.plans.map {
+                    plans.put(it.name, transformPlanToMap(it))
+                }
+                this["product"] = data.product.toMap().toMutableMap().apply {
+                    this["plans"] = plans
+                }
+                remove("subscription_status") //TODO add in a future version after checking with iOS
+            }
+        }
+
         private fun transformPlanToMap(plan: PLYPlan?): Map<String, Any?> {
             if(plan == null) return emptyMap()
 
@@ -1598,4 +1671,56 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
             oneSignalUserId,
         }
     }
+}
+
+/**
+ * Parses a canonical UUID string, or returns null.
+ *
+ * Dart has no UUID type, so an anonymous user id crosses the bridge as a string.
+ * `UUID.fromString` is lenient and accepts a short form such as `"1-2-3-4-5"` that the iOS
+ * `NSUUID` parser refuses. The round-trip check makes both platforms agree on what "canonical"
+ * means, so one id string is accepted, or refused, on both.
+ *
+ * The caller logs the refusal. This function stays pure so a unit test can drive it without an
+ * Android logger.
+ */
+internal fun parseCanonicalUuid(value: String?): UUID? {
+    if (value == null) return null
+    val parsed = try {
+        UUID.fromString(value)
+    } catch (e: IllegalArgumentException) {
+        return null
+    }
+    return if (parsed.toString().equals(value, ignoreCase = true)) parsed else null
+}
+
+/**
+ * Flattens a [PLYWebRedemptionResult] to the shape the Dart listener receives.
+ *
+ * The sealed Kotlin result and the flat iOS `PLYWebRedemptionResult` object both map to the same
+ * 5 keys, so one Dart listener drives both platforms. A `Failure` still reports `replay = false`
+ * and `context = null`, which keeps the Dart shape stable.
+ *
+ * `context` and `context.subscription` stay separately nullable: a success can carry no context
+ * at all, and a present context can carry no subscription.
+ */
+internal fun webRedemptionResultToMap(result: PLYWebRedemptionResult): Map<String, Any?> = when (result) {
+    is PLYWebRedemptionResult.Success -> mapOf(
+        "isSuccess" to true,
+        "context" to result.context?.let { context ->
+            mapOf("subscription" to context.subscription?.let {
+                PurchaselyFlutterPlugin.transformSubscriptionToMap(it)
+            })
+        },
+        "replay" to result.replay,
+        "errorCode" to null,
+        "errorMessage" to null,
+    )
+    is PLYWebRedemptionResult.Failure -> mapOf(
+        "isSuccess" to false,
+        "context" to null,
+        "replay" to false,
+        "errorCode" to result.errorCode,
+        "errorMessage" to result.errorMessage,
+    )
 }

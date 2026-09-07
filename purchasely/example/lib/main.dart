@@ -38,11 +38,53 @@ class _MyAppState extends State<MyApp> {
         inspect(event);
       });*/
 
+      // 6.1.0, Web2App redemption. Add the listener BEFORE start(): a
+      // redemption can settle during start(), from a cold start that the
+      // `ply/redeem` link itself triggered, or from a token that a previous
+      // launch left pending. A listener added after start() misses it.
+      //
+      // A redemption deeplink is not subject to allowDeeplink: the native SDK
+      // intercepts `ply/redeem` before the routing branch that gate sits
+      // behind.
+      Purchasely.addWebRedemptionListener((result) {
+        if (result.isSuccess) {
+          print('Redemption granted. replay=${result.replay} '
+              'subscription=${result.context?.subscription?.plan?.vendorId}');
+        } else {
+          // On iOS, errorMessage for an expired link can contain a masked
+          // email address. Show it to the user. Do not send it to an analytics
+          // stack or to a crash reporter.
+          print('Redemption failed. code=${result.errorCode} '
+              'message=${result.errorMessage}');
+        }
+      });
+
       bool configured =
           await Purchasely.apiKey('fcb39be4-2ba4-4db7-bde3-2a5a1e20745d')
               .runningMode(PLYRunningMode.full)
               .logLevel(PLYLogLevel.debug)
               .allowDeeplink(true)
+              // 6.1.0. The anonymous user id this device reports. The bridge
+              // parses the string into a native UUID and rejects a value that
+              // is not canonical. The SDK stores it uppercase, and applies it
+              // only when the device holds no anonymous id yet, unless
+              // `override: true`.
+              //
+              // Kept inactive here on purpose: a hardcoded id would pin every
+              // install of this demo app to one anonymous user.
+              // .anonymousUserId('3f2504e0-4f89-11d3-9a0c-0305e82c3301')
+              //
+              // 6.1.0. Route the API traffic through a proxy for a region
+              // where `api.purchasely.io` is unreachable, such as mainland
+              // China. Only https is accepted.
+              //
+              // Kept inactive here on purpose: this demo app must keep talking
+              // to production.
+              // .proxy('https://svc.purchasely.io')
+              //
+              // 6.1.0. Keep the SDK's own redemption popin (the default). Pass
+              // true to show your own result screen instead.
+              .appHandlesRedemptionAlert(false)
               .stores([PLYStore.google]).start();
 
       if (!configured) {

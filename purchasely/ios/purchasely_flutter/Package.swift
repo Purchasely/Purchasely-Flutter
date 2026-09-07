@@ -14,7 +14,7 @@ let package = Package(
     dependencies: [
         .package(
             url: "https://github.com/Purchasely/Purchasely-iOS.git",
-            exact: "6.0.0"
+            exact: "6.1.0"
         )
     ],
     targets: [

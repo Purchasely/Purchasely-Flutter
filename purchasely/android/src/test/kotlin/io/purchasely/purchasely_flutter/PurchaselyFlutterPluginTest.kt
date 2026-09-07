@@ -20,9 +20,16 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
+import io.purchasely.models.PLYWebRedemptionContext
+import io.purchasely.models.PLYWebRedemptionResult
 import org.junit.After
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import java.util.UUID
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class PurchaselyFlutterPluginTest {
@@ -217,4 +224,82 @@ class PurchaselyFlutterPluginTest {
 
         verify { mockResult.error(eq("-1"), any(), any()) }
     }
+
+    // region Web2App redemption + anonymous user id (6.1.0)
+
+    @Test
+    fun `parseCanonicalUuid accepts a canonical uuid, case-insensitively`() {
+        val lower = "3f2504e0-4f89-11d3-9a0c-0305e82c3301"
+        assertEquals(UUID.fromString(lower), parseCanonicalUuid(lower))
+        assertEquals(UUID.fromString(lower), parseCanonicalUuid(lower.uppercase()))
+    }
+
+    @Test
+    fun `parseCanonicalUuid refuses the short form UUID fromString accepts`() {
+        // `UUID.fromString` is lenient and parses this; `NSUUID` on iOS refuses it.
+        // The round-trip check makes both bridges agree on what "canonical" means.
+        assertNull(parseCanonicalUuid("1-2-3-4-5"))
+    }
+
+    @Test
+    fun `parseCanonicalUuid refuses junk and null`() {
+        assertNull(parseCanonicalUuid("not-a-uuid"))
+        assertNull(parseCanonicalUuid(""))
+        assertNull(parseCanonicalUuid(null))
+    }
+
+    @Test
+    fun `webRedemptionResultToMap flattens a success with no context`() {
+        val map = webRedemptionResultToMap(
+            PLYWebRedemptionResult.Success(context = null, replay = true)
+        )
+
+        assertEquals(true, map["isSuccess"])
+        assertNull(map["context"])
+        assertEquals(true, map["replay"])
+        assertNull(map["errorCode"])
+        assertNull(map["errorMessage"])
+    }
+
+    @Test
+    fun `webRedemptionResultToMap keeps a present context with a null subscription`() {
+        // A success can carry a context that describes no subscription: the receipt
+        // validated but the response carried none. Both levels stay separately nullable.
+        val map = webRedemptionResultToMap(
+            PLYWebRedemptionResult.Success(
+                context = PLYWebRedemptionContext(subscription = null),
+                replay = false,
+            )
+        )
+
+        @Suppress("UNCHECKED_CAST")
+        val context = map["context"] as Map<String, Any?>?
+        assertNotNull(context)
+        assertTrue(context!!.containsKey("subscription"))
+        assertNull(context["subscription"])
+        assertEquals(false, map["replay"])
+    }
+
+    @Test
+    fun `webRedemptionResultToMap flattens a failure to the same 5 keys`() {
+        val map = webRedemptionResultToMap(
+            PLYWebRedemptionResult.Failure(
+                errorCode = "EXPIRED_REDEMPTION_TOKEN",
+                errorMessage = "A new link was sent to j***@example.com.",
+            )
+        )
+
+        assertEquals(false, map["isSuccess"])
+        assertNull(map["context"])
+        // A failure still reports `replay = false`, which keeps the Dart shape stable.
+        assertEquals(false, map["replay"])
+        assertEquals("EXPIRED_REDEMPTION_TOKEN", map["errorCode"])
+        assertEquals("A new link was sent to j***@example.com.", map["errorMessage"])
+        assertEquals(
+            setOf("isSuccess", "context", "replay", "errorCode", "errorMessage"),
+            map.keys,
+        )
+    }
+
+    // endregion
 }
