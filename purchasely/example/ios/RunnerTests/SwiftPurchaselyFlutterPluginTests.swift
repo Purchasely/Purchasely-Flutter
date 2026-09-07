@@ -116,6 +116,73 @@ class SwiftPurchaselyFlutterPluginTests: XCTestCase {
             .apply(URL(string: "http://insecure.example")))
     }
 
+    // MARK: - Redemption handler lifecycle (6.1.0)
+
+    func testTheRedemptionHandlerIsProcessWideNotPerEngine() {
+        // `PurchaselyImplementation.webRedemptionDelegate` is weak and has NO runtime
+        // setter, and `start()` short-circuits on the process-wide `isStarted`. So a
+        // second engine's plugin never reaches the registration call. A per-instance
+        // handler would then be released with the first engine, nil the SDK's weak
+        // delegate, and drop every later redemption while `start()` still returned true.
+        //
+        // Identity across accesses is what proves the handler survives engine teardown.
+        let first = SwiftPurchaselyFlutterPlugin.sharedWebRedemptionHandler
+        let second = SwiftPurchaselyFlutterPlugin.sharedWebRedemptionHandler
+        XCTAssertTrue(first === second,
+                      "the redemption handler must be one process-wide instance")
+    }
+
+    func testEmitDropsTheBodyAfterCancel() {
+        // The bug: the delegate captured `eventSink` before a `DispatchQueue.main.async`
+        // hop, so a cancel landing in that window could not stop the send. Flutter then
+        // buffered the message and handed it to the NEXT listener.
+        let handler = WebRedemptionHandler()
+        var received: [[String: Any]] = []
+        _ = handler.onListen(withArguments: nil) { body in
+            if let body = body as? [String: Any] { received.append(body) }
+        }
+
+        _ = handler.onCancel(withArguments: nil)
+        handler.emit(["isSuccess": true])
+
+        XCTAssertTrue(received.isEmpty,
+                      "a settled redemption must not be delivered after cancel")
+    }
+
+    func testEmitDeliversWhileListening() {
+        let handler = WebRedemptionHandler()
+        var received: [[String: Any]] = []
+        _ = handler.onListen(withArguments: nil) { body in
+            if let body = body as? [String: Any] { received.append(body) }
+        }
+
+        handler.emit(["isSuccess": false, "errorCode": "INVALID_REDEMPTION_TOKEN"])
+
+        XCTAssertEqual(received.count, 1)
+        XCTAssertEqual(received.first?["errorCode"] as? String, "INVALID_REDEMPTION_TOKEN")
+    }
+
+    func testEmitGoesToTheReplacementSinkNotTheOldOne() {
+        // The consequence the reviewer reproduced: a stale outcome reaching a later
+        // listener. After a re-listen, only the current sink may receive.
+        let handler = WebRedemptionHandler()
+        var first: [[String: Any]] = []
+        var second: [[String: Any]] = []
+
+        _ = handler.onListen(withArguments: nil) { body in
+            if let body = body as? [String: Any] { first.append(body) }
+        }
+        _ = handler.onCancel(withArguments: nil)
+        _ = handler.onListen(withArguments: nil) { body in
+            if let body = body as? [String: Any] { second.append(body) }
+        }
+
+        handler.emit(["isSuccess": true])
+
+        XCTAssertTrue(first.isEmpty, "the replaced sink must receive nothing")
+        XCTAssertEqual(second.count, 1, "the current sink must receive exactly once")
+    }
+
     // MARK: - Refused-option diagnostics must not be format strings
 
     // `NSLog` treats its first argument as a printf format string. Interpolating a

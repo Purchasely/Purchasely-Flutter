@@ -59,6 +59,29 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
     let webRedemptionChannel: FlutterEventChannel
     let webRedemptionHandler: WebRedemptionHandler
 
+    /// One redemption handler for the whole process, deliberately outliving any single
+    /// Flutter engine.
+    ///
+    /// `PurchaselyImplementation.webRedemptionDelegate` is **weak** and has **no runtime
+    /// setter** — it can only be registered on the start builder. `start()` short-circuits
+    /// on the process-wide `isStarted`, so when an app tears down its engine and builds a
+    /// new one, the replacement plugin never reaches the registration call at all.
+    ///
+    /// With a per-instance handler that combination is silently fatal: destroying the first
+    /// engine releases the only strong reference, the SDK's weak delegate becomes nil, and
+    /// every later redemption is dropped — while `start()` still returns `true`, so nothing
+    /// looks wrong. Reproduced as two successful starts and zero callbacks.
+    ///
+    /// A `static let` keeps one handler alive for the process, so the SDK's weak reference
+    /// stays valid across engine recreation. Each engine points its own channel at it and
+    /// swaps the sink through `onListen`/`onCancel`.
+    ///
+    /// ponytail: single slot, last listener wins — the same model the Dart side already
+    /// has. Two engines using redemption *simultaneously* would need per-engine
+    /// multiplexing; nothing asks for that, and the single slot is what the native
+    /// no-runtime-setter design implies anyway.
+    static let sharedWebRedemptionHandler = WebRedemptionHandler()
+
     // Presentation/interceptor lifecycle events flow over a dedicated stream,
     // discriminated by the `event` key; each carries a `requestId` so Dart can
     // route back.
@@ -85,7 +108,8 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
 
         self.webRedemptionChannel = FlutterEventChannel(name: "purchasely-web-redemption",
                                                         binaryMessenger: registrar.messenger())
-        self.webRedemptionHandler = WebRedemptionHandler()
+        // The PROCESS-wide handler, not a fresh one — see `sharedWebRedemptionHandler`.
+        self.webRedemptionHandler = SwiftPurchaselyFlutterPlugin.sharedWebRedemptionHandler
         self.webRedemptionChannel.setStreamHandler(self.webRedemptionHandler)
 
         self.presentationChannel = FlutterEventChannel(name: "purchasely-presentation-events",
@@ -1709,8 +1733,6 @@ class WebRedemptionHandler: NSObject, FlutterStreamHandler, PLYWebRedemptionDele
     /// same in `RedemptionOutcome.Expired.toResult()` — the hint is NOT iOS-only,
     /// and the Dart docs must not say it is.
     func webRedemptionCompleted(result: PLYWebRedemptionResult) {
-        guard let eventSink = self.eventSink else { return }
-
         let body = Self.webRedemptionBody(
             isSuccess: result.isSuccess,
             hasContext: result.context != nil,
@@ -1719,9 +1741,33 @@ class WebRedemptionHandler: NSObject, FlutterStreamHandler, PLYWebRedemptionDele
             errorCode: result.errorCode,
             errorMessage: result.errorMessage)
 
-        DispatchQueue.main.async {
-            eventSink(body)
+        // No hop of our own. `RedemptionManager` already delivers this from a
+        // `DispatchQueue.main.async` block, deliberately, so the delegate lands behind the
+        // matching `REDEMPTION_*` event — so we are on main already and there is nothing
+        // to serialize.
+        //
+        // The hop was also actively harmful: the old code captured `eventSink` into the
+        // async block, and a cancel landing in that window could not invalidate a captured
+        // sink. It sent anyway, Flutter buffered the message, and the NEXT listener
+        // received a stale outcome. `emit` re-reads the sink at send time instead.
+        if Thread.isMainThread {
+            emit(body)
+        } else {
+            // Defensive only: a FlutterEventSink must be called on the platform thread. If
+            // the SDK's delivery thread ever changes, keep that contract — and still read
+            // the sink at send time, through a weak self.
+            DispatchQueue.main.async { [weak self] in self?.emit(body) }
         }
+    }
+
+    /// Sends on the sink that is live **right now**, or drops the body.
+    ///
+    /// Never capture `eventSink` ahead of the send: `onCancel` clears the property but
+    /// cannot invalidate a copy already captured in a closure, and a send after cancel is
+    /// buffered by Flutter and handed to whichever listener subscribes next.
+    func emit(_ body: [String: Any]) {
+        guard let sink = eventSink else { return }
+        sink(body)
     }
 
     /// Builds the `purchasely-web-redemption` event body.
