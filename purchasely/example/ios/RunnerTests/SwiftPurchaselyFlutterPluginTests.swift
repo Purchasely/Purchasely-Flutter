@@ -157,6 +157,24 @@ class SwiftPurchaselyFlutterPluginTests: XCTestCase {
         XCTAssertNotNil(builder)
     }
 
+    // MARK: - Subscription source wire contract (6.1.0)
+
+    func testSubscriptionSourceRawValuesMatchTheDartEnumOrder() {
+        // `PLYSubscription+ToMap.swift` forwards `subscriptionSource.rawValue` straight to
+        // Dart, which maps it by INDEX. So these raw values are the wire contract and a
+        // native reorder must break a test here rather than silently cross-wire two stores.
+        //
+        // `stripe` at 4 is the one that was missing on the Dart side: index 4 used to decode
+        // to `none`, so a web-checkout subscription — exactly what a Web2App redemption
+        // grants — reported no usable source.
+        XCTAssertEqual(PLYSubscriptionSource.appleAppStore.rawValue, 0)
+        XCTAssertEqual(PLYSubscriptionSource.googlePlayStore.rawValue, 1)
+        XCTAssertEqual(PLYSubscriptionSource.amazonAppstore.rawValue, 2)
+        XCTAssertEqual(PLYSubscriptionSource.huaweiAppGallery.rawValue, 3)
+        XCTAssertEqual(PLYSubscriptionSource.stripe.rawValue, 4)
+        XCTAssertEqual(PLYSubscriptionSource.none.rawValue, 5)
+    }
+
     func testRedemptionEventsExistOnTheNativeSdk() {
         // The two 6.1.0 analytics events the Dart `PLYEventName` enum now declares.
         // A native rename breaks this at compile time, before it reaches Dart as an
