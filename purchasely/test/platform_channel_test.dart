@@ -675,16 +675,9 @@ void main() {
     });
 
     test('PLYSubscriptionSource converts correctly', () {
-      expect(PLYSubscriptionSource.appleAppStore.index, 0);
-      expect(PLYSubscriptionSource.googlePlayStore.index, 1);
-      expect(PLYSubscriptionSource.amazonAppstore.index, 2);
-      expect(PLYSubscriptionSource.huaweiAppGallery.index, 3);
-      // 6.1.0: webCheckoutStripe sits at 4 on BOTH natives (Android
-      // StoreType.WEB_CHECKOUT_STRIPE, iOS PLYSubscriptionSource.stripe), which
-      // pushes `none` to 5. Index 4 used to decode to `none`, so a web-checkout
-      // subscription silently reported no source.
-      expect(PLYSubscriptionSource.webCheckoutStripe.index, 4);
-      expect(PLYSubscriptionSource.none.index, 5);
+      // The enum order is the wire contract, pinned once in
+      // redemption_review_findings_test.dart. Not repeated here.
+      expect(PLYSubscriptionSource.values, hasLength(6));
     });
 
     test('PLYPurchaseResult converts correctly', () {

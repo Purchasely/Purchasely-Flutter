@@ -37,12 +37,8 @@ class PurchaselyBuilder {
   bool _anonymousUserIdOverride = false;
   bool? _appHandlesRedemptionAlert;
 
-  // Three-state proxy. Dart cannot tell `proxy(null)` from "proxy() never
-  // called" from the nullable field alone: both leave `_proxyApi` null. The
-  // native SDKs treat null as *clear the proxy*, so collapsing the two would
-  // turn every start into an implicit clear, or make an explicit clear do
-  // nothing. Hence the separate "was it called" flag; a sentinel default would
-  // work too but costs the parameter its `String?` type.
+  // A nullable field alone cannot tell `proxy(null)` from "never called" — both leave
+  // `_proxyApi` null, and the two mean different things to native. Hence the flag.
   bool _proxyWasSet = false;
   String? _proxyApi;
   // Android only
@@ -146,17 +142,12 @@ class PurchaselyBuilder {
   /// `api.purchasely.io`, for a region where that host is unreachable, such as
   /// mainland China.
   ///
-  /// Only the API host changes: the paywall host and the tracking host always
-  /// stay on production. Purchasely operates a proxy at
-  /// `https://svc.purchasely.io`; you can also host your own.
+  /// Only the API host changes; the paywall and tracking hosts stay on production.
+  /// Purchasely operates one at `https://svc.purchasely.io`, or host your own.
   ///
-  /// [api] must be an `https` base URL with a host, and it must carry no query,
-  /// no fragment and no credentials. The native SDK refuses any other value
-  /// with an error log and keeps the production host, so this modifier does not
-  /// validate it again. Each native SDK drops a trailing slash.
-  ///
-  /// This is a start-time option. Neither native SDK has a runtime setter for
-  /// it.
+  /// [api] must be an `https` base URL with a host and no query, fragment or
+  /// credentials. The native SDK validates that, logs a refusal and keeps the production
+  /// host, so this modifier does not re-check it. Start-time only; no runtime setter.
   ///
   /// Three states, and they are not interchangeable:
   ///
@@ -201,22 +192,14 @@ class PurchaselyBuilder {
   ///     .start();
   /// ```
   ///
-  /// **The subscription happens here, at chain time — not inside [start].** A
-  /// redemption can settle *during* `start()`, from a cold start that the
-  /// `ply/redeem` link itself triggered, or from a token a previous launch left
-  /// pending. Registering on the chain makes that ordering structurally
-  /// impossible to get wrong, instead of a documentation warning an integrator
-  /// can miss. `Purchasely.addWebRedemptionListener` stays available for the
-  /// runtime case, and carries exactly that trade-off.
+  /// **Subscribes here, at chain time — not inside [start].** A redemption can settle
+  /// *during* `start()`, from a cold start the `ply/redeem` link triggered or a token a
+  /// previous launch left pending, so registering later can miss the case the feature
+  /// exists for. [Purchasely.addWebRedemptionListener] is the runtime alternative and
+  /// carries that trade-off.
   ///
-  /// The callback never crosses the bridge. Each native bridge registers
-  /// *itself* as the delegate/listener during `start()`, unconditionally, and
-  /// forwards every outcome as an event; this modifier only stores the callback
-  /// and subscribes it locally.
-  ///
-  /// [appHandlesRedemptionAlert] is a shorthand for
-  /// [PurchaselyBuilder.appHandlesRedemptionAlert]. Omit it to leave the flag
-  /// unset, so the native default (the SDK shows its own popin) applies.
+  /// [appHandlesRedemptionAlert] is a shorthand for the modifier of the same name. Omit
+  /// it to leave the native default (the SDK shows its own popin) in place.
   PurchaselyBuilder webRedemptionListener(PLYWebRedemptionListener listener,
       [bool? appHandlesRedemptionAlert]) {
     addWebRedemptionListener(listener);
@@ -263,10 +246,8 @@ class PurchaselyBuilder {
         if (_anonymousUserId != null) 'anonymousUserId': _anonymousUserId,
         if (_anonymousUserId != null)
           'anonymousUserIdOverride': _anonymousUserIdOverride,
-        // Present-with-null is an explicit clear; absent leaves the native
-        // setting alone. `_proxyApi` alone cannot express that — see
-        // `_proxyWasSet`. The standard codec preserves a null map value, so
-        // both bridges read the difference with a containsKey check.
+        // Present-with-null is a clear, absent leaves native alone. The standard codec
+        // preserves a null map value, so both bridges read it with containsKey.
         if (_proxyWasSet) 'proxy': _proxyApi,
         if (_appHandlesRedemptionAlert != null)
           'appHandlesRedemptionAlert': _appHandlesRedemptionAlert,

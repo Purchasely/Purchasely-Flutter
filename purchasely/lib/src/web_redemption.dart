@@ -1,10 +1,7 @@
 // Purchasely SDK — Web2App redemption outcome (6.1.0).
 //
-// Its own module on purpose. `purchasely_builder.dart` needs the listener so
-// `PurchaselyBuilder.webRedemptionListener(...)` can subscribe at chain time,
-// and `purchasely_flutter.dart` needs it for the standalone
-// `Purchasely.addWebRedemptionListener(...)` runtime path. Both import this
-// file; importing the package entry point from the builder would be a cycle.
+// Its own module because both `purchasely_builder.dart` and the package entry point need
+// it, and builder -> entry point would be an import cycle.
 
 import 'dart:async';
 import 'dart:developer';
@@ -92,10 +89,8 @@ class PLYWebRedemptionResult {
 /// Callback signature for a settled Web2App redemption.
 typedef PLYWebRedemptionListener = void Function(PLYWebRedemptionResult result);
 
-/// A `const EventChannel` is inert: it holds a name and a codec and sends
-/// nothing. The `listen` platform message goes out only on the first
-/// `receiveBroadcastStream().listen(...)`, so merely importing this module
-/// costs nothing and needs no platform channel in a unit test.
+/// `const` is inert — the `listen` message goes out only on the first
+/// `receiveBroadcastStream().listen(...)`, so importing this costs a unit test nothing.
 const EventChannel _channel = EventChannel('purchasely-web-redemption');
 
 StreamSubscription<dynamic>? _subscription;
@@ -105,28 +100,18 @@ StreamSubscription<dynamic>? _subscription;
 /// `Purchasely.purchases`.
 StreamSubscription<dynamic>? get webRedemptionSubscription => _subscription;
 
-/// Registers [listener] for the outcome of a Web2App redemption
-/// (`{scheme}://ply/redeem/{token}`), replacing any listener already
-/// registered.
+/// Registers [listener] for a Web2App redemption outcome, replacing any existing one.
 ///
-/// Prefer `PurchaselyBuilder.webRedemptionListener(...)` on the start chain.
-/// This standalone entry point exists for the runtime case, where an app has to
-/// replace the listener while the SDK already runs. Its trade-off: a redemption
-/// that settles during `start()` — a cold start the `ply/redeem` link itself
-/// triggered, or a token a previous launch left pending — is missed, because
-/// nothing was listening yet.
-///
-/// The SDK calls [listener] on the main thread, exactly once per settled
-/// redemption, on success and on failure alike.
+/// Prefer `PurchaselyBuilder.webRedemptionListener(...)`: this runtime path misses a
+/// redemption that settles during `start()`. The SDK calls [listener] on the main
+/// thread, exactly once per settled redemption.
 void addWebRedemptionListener(PLYWebRedemptionListener listener) {
   _subscription?.cancel();
   _subscription = _channel.receiveBroadcastStream().listen(
     (event) =>
         listener(webRedemptionResultFromMap(event as Map<dynamic, dynamic>)),
-    // Without this a `PlatformException` on the channel becomes an uncaught
-    // async error in the host app's zone. A redemption outcome is not
-    // recoverable from here, so log and keep the subscription alive rather than
-    // tear it down: the next redemption must still be delivered.
+    // Otherwise a PlatformException becomes an uncaught async error in the host's zone.
+    // Keep the subscription alive — the next redemption must still arrive.
     onError: (Object error, StackTrace stack) {
       log('Purchasely: web redemption channel error: $error');
     },
@@ -140,12 +125,8 @@ void removeWebRedemptionListener() {
   _subscription = null;
 }
 
-/// Maps the wire body of a `purchasely-web-redemption` event to a
-/// [PLYWebRedemptionResult].
-///
-/// The two levels stay separately nullable: a `context` key holding null is a
-/// success with nothing to describe, and a `context` holding a null
-/// `subscription` is a success that granted no subscription.
+/// The two nullability levels stay separate: a null `context` is a success with nothing
+/// to describe; a `context` with a null `subscription` granted none.
 PLYWebRedemptionResult webRedemptionResultFromMap(Map<dynamic, dynamic> body) {
   final rawContext = body['context'];
   return PLYWebRedemptionResult(

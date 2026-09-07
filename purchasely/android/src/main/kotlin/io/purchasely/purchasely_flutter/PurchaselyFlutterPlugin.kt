@@ -1726,15 +1726,9 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
 }
 
 /**
- * Parses a canonical UUID string, or returns null.
- *
- * Dart has no UUID type, so an anonymous user id crosses the bridge as a string.
- * `UUID.fromString` is lenient and accepts a short form such as `"1-2-3-4-5"` that the iOS
- * `NSUUID` parser refuses. The round-trip check makes both platforms agree on what "canonical"
- * means, so one id string is accepted, or refused, on both.
- *
- * The caller logs the refusal. This function stays pure so a unit test can drive it without an
- * Android logger.
+ * `UUID.fromString` is lenient and accepts a short form like `"1-2-3-4-5"` that iOS's
+ * `NSUUID` refuses; the round-trip check makes both platforms agree on "canonical".
+ * Pure — the caller logs the refusal.
  */
 internal fun parseCanonicalUuid(value: String?): UUID? {
     if (value == null) return null
@@ -1747,14 +1741,9 @@ internal fun parseCanonicalUuid(value: String?): UUID? {
 }
 
 /**
- * Flattens a [PLYWebRedemptionResult] to the shape the Dart listener receives.
- *
- * The sealed Kotlin result and the flat iOS `PLYWebRedemptionResult` object both map to the same
- * 5 keys, so one Dart listener drives both platforms. A `Failure` still reports `replay = false`
- * and `context = null`, which keeps the Dart shape stable.
- *
- * `context` and `context.subscription` stay separately nullable: a success can carry no context
- * at all, and a present context can carry no subscription.
+ * The same 5 keys on both branches, so the Dart shape never changes: a `Failure` still
+ * reports `replay = false` and `context = null`. `context` and `context.subscription` stay
+ * separately nullable.
  */
 internal fun webRedemptionResultToMap(result: PLYWebRedemptionResult): Map<String, Any?> = when (result) {
     is PLYWebRedemptionResult.Success -> mapOf(

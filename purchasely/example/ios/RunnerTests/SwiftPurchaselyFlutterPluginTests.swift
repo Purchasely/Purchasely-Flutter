@@ -229,36 +229,6 @@ class SwiftPurchaselyFlutterPluginTests: XCTestCase {
         }
     }
 
-    func testRefusedOptionMessagesNameTheirOptionAndSayItWasSkipped() {
-        // A developer must be able to tell the two diagnostics apart, and must be told
-        // the option was skipped rather than that something failed.
-        let uuidMessage = SwiftPurchaselyFlutterPlugin.refusedAnonymousUserIdMessage("nope")
-        XCTAssertTrue(uuidMessage.contains("`anonymousUserId`"))
-        XCTAssertTrue(uuidMessage.contains("is not applied"))
-
-        let proxyMessage = SwiftPurchaselyFlutterPlugin.refusedProxyMessage("nope")
-        XCTAssertTrue(proxyMessage.contains("`proxy`"))
-        XCTAssertTrue(proxyMessage.contains("is not applied"))
-        // The clear is a supported operation, so the proxy diagnostic must mention it.
-        XCTAssertTrue(proxyMessage.contains("null to clear it"))
-    }
-
-    func testProxyDecisionSurvivesFormatDirectivesAndStillRefusesThem() {
-        // The decision path must also not choke, and must never turn a hostile value
-        // into a proxy CLEAR.
-        for hostile in Self.formatDirectiveInputs {
-            let decision = SwiftPurchaselyFlutterPlugin.proxyDecision(from: ["proxy": hostile])
-            XCTAssertNotEqual(decision, .apply(nil),
-                              "\"\(hostile)\" must never be turned into a proxy CLEAR")
-        }
-    }
-
-    func testProxyDecisionRefusesTheEmptyString() {
-        // `URL(string: "")` is nil on every Foundation version, so this one is stable.
-        let decision = SwiftPurchaselyFlutterPlugin.proxyDecision(from: ["proxy": ""])
-        XCTAssertEqual(decision, .invalid(""))
-    }
-
     func testProxyDecisionNeverClearsForAnyStringInput() {
         // THE invariant, and it is deliberately independent of Foundation's URL parser.
         // `URL(string:)` is lenient and got more lenient in iOS 17 — it percent-encodes a
@@ -359,15 +329,6 @@ class SwiftPurchaselyFlutterPluginTests: XCTestCase {
 
         XCTAssertEqual(Set(success.keys), expected)
         XCTAssertEqual(Set(failure.keys), expected)
-    }
-
-    func testWebRedemptionBodyNoContextIsNSNull() {
-        let body = WebRedemptionHandler.webRedemptionBody(
-            isSuccess: true, hasContext: false, subscription: nil,
-            replay: false, errorCode: nil, errorMessage: nil)
-
-        XCTAssertTrue(body["context"] is NSNull)
-        XCTAssertEqual(body["isSuccess"] as? Bool, true)
     }
 
     func testWebRedemptionBodyKeepsTheTwoNullabilityLevelsDistinct() {

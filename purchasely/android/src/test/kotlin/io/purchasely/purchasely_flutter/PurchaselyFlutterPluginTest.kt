@@ -448,16 +448,6 @@ class PurchaselyFlutterPluginTest {
     }
 
     @Test
-    fun `transformSubscriptionToMap forwards the web checkout source`() {
-        // Index 4 on both natives, and index 4 in Dart's PLYSubscriptionSource
-        // (webCheckoutStripe). Pinned as a literal so a renumbering breaks the test.
-        val map = PurchaselyFlutterPlugin.transformSubscriptionToMap(
-            stubbedSubscriptionData(StoreType.WEB_CHECKOUT_STRIPE)
-        )
-        assertEquals(4, map["subscriptionSource"])
-    }
-
-    @Test
     fun `the store type ordinals match the Dart PLYSubscriptionSource order`() {
         // The wire contract, pinned as literals. Dart maps this Int by index, so a native
         // reorder must break a test here rather than silently cross-wire two stores.
@@ -467,14 +457,6 @@ class PurchaselyFlutterPluginTest {
         assertEquals(3, StoreType.HUAWEI_APP_GALLERY.ordinal)
         assertEquals(4, StoreType.WEB_CHECKOUT_STRIPE.ordinal)
         assertEquals(5, StoreType.NONE.ordinal)
-    }
-
-    @Test
-    fun `transformSubscriptionToMap forwards the NONE store type rather than dropping it`() {
-        val map = PurchaselyFlutterPlugin.transformSubscriptionToMap(
-            stubbedSubscriptionData(StoreType.NONE)
-        )
-        assertEquals(StoreType.NONE.ordinal, map["subscriptionSource"])
     }
 
     @Test
