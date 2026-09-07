@@ -10,7 +10,8 @@
 //   R3 — webRedemptionListener on the chain subscribes BEFORE start(), so a
 //        redemption settling during start() cannot be missed.
 //   R4 — a `ply/redeem/<bogus>` deeplink round-trips to the server and the
-//        listener receives a Failure, on the main thread, exactly once.
+//        listener receives a Failure, on the main thread, exactly once. Requires
+//        `appHandlesRedemptionAlert: true` — see the chain below.
 //
 // Same API key and placements as the native Android `integration-tests` module.
 //
@@ -58,7 +59,18 @@ void main() {
         // the native `proxy(nil)` / `proxy(null)` code path for real.
         .proxy(null)
         // R3 — on the chain, so the subscription happens here, not in start().
-        .webRedemptionListener(redemptions.add)
+        //
+        // The `true` is NOT decoration: it is `appHandlesRedemptionAlert`, and a
+        // headless test cannot work without it. With the native default (false)
+        // the SDK shows its own popin and calls the listener only once the user
+        // ACKNOWLEDGES it — so in CI, where nobody taps OK, the listener never
+        // fires and R4 fails with an empty list. `true` suppresses the popin and
+        // delivers as soon as the redemption settles.
+        //
+        // Consequence for coverage, stated plainly: the default popin path is
+        // NOT covered end to end, because it is not observable without driving
+        // native UI. Only the `true` path is.
+        .webRedemptionListener(redemptions.add, true)
         .stores([PLYStore.google]);
 
     // Read the state the chain left behind, BEFORE start() runs.
@@ -176,7 +188,9 @@ void main() {
 
         expect(redemptions, isNotEmpty,
             reason: 'the SDK must call the listener once the redemption '
-                'settles, even with allowDeeplink(false)');
+                'settles, even with allowDeeplink(false). An empty list here '
+                'with appHandlesRedemptionAlert unset means the SDK is waiting '
+                'for someone to acknowledge its popin — pass true instead.');
 
         final result = redemptions.first;
         expect(result.isSuccess, isFalse,

@@ -283,6 +283,10 @@ path:
 
 Use `true` when your app shows its own result screen.
 
+> **Writing an automated test?** Pass `true`. With `false` the listener fires only
+> after a human acknowledges the SDK's popin, so a headless test never receives a
+> result.
+
 `PLYWebRedemptionResult` has five fields:
 
 | Field | Description |
