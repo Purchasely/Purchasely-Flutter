@@ -333,10 +333,21 @@ already sees them. Read them with the getters you already use
 `PLYEventPropertyRedemptionPurchaseContext.built_in_attributes` and
 `.custom_attributes` report what the SDK actually applied, not the raw response.
 
-#### The redemption token never reaches your app
+#### ⚠️ The redemption token IS exposed on the analytics events — do not forward it
 
-Not through the listener, not in a log line, not in an analytics event. It is a
-bearer credential; `PLYWebRedemptionResult.errorMessage` never contains it.
+`PLYEventProperties.redemption.token` carries the **raw bearer token** on both
+`REDEMPTION_CONSUMED` and `REDEMPTION_FAILED`. If you forward Purchasely events
+to a third-party analytics stack, **exclude that field**, or the credential leaves
+the device with your telemetry.
+
+The other channels do not carry it, verified against the 6.1.0 native sources:
+
+| Channel | Token |
+|---|---|
+| `PLYEventProperties.redemption.token` | **raw token** — exclude it from telemetry |
+| `DEEPLINK_OPENED`'s `deeplink_identifier` | redacted to a 6-character prefix |
+| `PLYWebRedemptionResult.errorMessage` | never contains it |
+| SDK logs | never contains it |
 
 The SDK also emits two analytics events for a redemption,
 `PLYEventName.REDEMPTION_CONSUMED` and `PLYEventName.REDEMPTION_FAILED`, with
