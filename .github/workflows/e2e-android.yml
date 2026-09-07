@@ -52,10 +52,19 @@ jobs:
           java-version: "17"
           cache: gradle
 
+      # 3.44.0, NOT 3.24.x. The AGP 9 / Gradle 9 migration (PR #130) bumped the
+      # Android jobs in ci.yml to 3.44.0 and missed this workflow, so every
+      # E2E Android run since then has died at Gradle startup with
+      #   flutter.groovy: 8: unable to resolve class groovy.xml.QName
+      # from Flutter 3.24.5's own Gradle plugin, which Gradle 9 no longer puts
+      # groovy.xml on the classpath for. The app never built, so each suite then
+      # burned the integration_test harness's 12-minute timeout waiting for an
+      # app that was never installed, and the job hit its 60-minute cap.
+      # e2e-ios.yml is on 3.41.4 for the same class of reason.
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.24.x"
+          flutter-version: "3.44.0"
           channel: stable
           cache: true
 
