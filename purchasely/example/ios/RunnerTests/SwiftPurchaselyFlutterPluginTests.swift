@@ -116,6 +116,76 @@ class SwiftPurchaselyFlutterPluginTests: XCTestCase {
             .apply(URL(string: "http://insecure.example")))
     }
 
+    // MARK: - Refused-option diagnostics must not be format strings
+
+    // `NSLog` treats its first argument as a printf format string. Interpolating a
+    // caller-supplied value into it made that value the format, so an `anonymousUserId`
+    // or `proxy` containing `%@`/`%s`/`%n` crashed inside `__CFStringAppendFormatCore`
+    // instead of being skipped — the opposite of the contract, which is that a refused
+    // option is logged and `start()` still succeeds.
+
+    /// Format directives that make `NSLog` read arguments that were never passed.
+    private static let formatDirectiveInputs = [
+        "%@",
+        "%@%@%@%@%@%@%@%@",
+        "%s%s%s%s",
+        "%n",
+        "%1$@ %2$@",
+        "%x %p %d",
+        "3f2504e0-4f89-11d3-9a0c-%@%@",
+    ]
+
+    func testRefusedOptionLoggingSurvivesFormatDirectives() {
+        // This is the crash reproducer. On the old code — `NSLog(interpolatedString)` —
+        // this kills the whole test process, so the run fails rather than reporting a
+        // failure. It passing is the proof that the `%@` form is in place.
+        for hostile in Self.formatDirectiveInputs {
+            SwiftPurchaselyFlutterPlugin.logRefusedOption(
+                SwiftPurchaselyFlutterPlugin.refusedAnonymousUserIdMessage(hostile))
+            SwiftPurchaselyFlutterPlugin.logRefusedOption(
+                SwiftPurchaselyFlutterPlugin.refusedProxyMessage(hostile))
+        }
+        // Reached only if none of the above crashed.
+        XCTAssertTrue(true)
+    }
+
+    func testRefusedOptionMessagesCarryTheValueVerbatim() {
+        // No expansion while BUILDING the message either: the directives must still be
+        // there, unexpanded, so a developer sees exactly what they passed.
+        for hostile in Self.formatDirectiveInputs {
+            let uuidMessage = SwiftPurchaselyFlutterPlugin.refusedAnonymousUserIdMessage(hostile)
+            let proxyMessage = SwiftPurchaselyFlutterPlugin.refusedProxyMessage(hostile)
+            XCTAssertTrue(uuidMessage.contains(hostile),
+                          "the anonymousUserId diagnostic must quote \(hostile) verbatim")
+            XCTAssertTrue(proxyMessage.contains(hostile),
+                          "the proxy diagnostic must quote \(hostile) verbatim")
+        }
+    }
+
+    func testRefusedOptionMessagesNameTheirOptionAndSayItWasSkipped() {
+        // A developer must be able to tell the two diagnostics apart, and must be told
+        // the option was skipped rather than that something failed.
+        let uuidMessage = SwiftPurchaselyFlutterPlugin.refusedAnonymousUserIdMessage("nope")
+        XCTAssertTrue(uuidMessage.contains("`anonymousUserId`"))
+        XCTAssertTrue(uuidMessage.contains("is not applied"))
+
+        let proxyMessage = SwiftPurchaselyFlutterPlugin.refusedProxyMessage("nope")
+        XCTAssertTrue(proxyMessage.contains("`proxy`"))
+        XCTAssertTrue(proxyMessage.contains("is not applied"))
+        // The clear is a supported operation, so the proxy diagnostic must mention it.
+        XCTAssertTrue(proxyMessage.contains("null to clear it"))
+    }
+
+    func testProxyDecisionSurvivesFormatDirectivesAndStillRefusesThem() {
+        // The decision path must also not choke, and must never turn a hostile value
+        // into a proxy CLEAR.
+        for hostile in Self.formatDirectiveInputs {
+            let decision = SwiftPurchaselyFlutterPlugin.proxyDecision(from: ["proxy": hostile])
+            XCTAssertNotEqual(decision, .apply(nil),
+                              "\"\(hostile)\" must never be turned into a proxy CLEAR")
+        }
+    }
+
     func testProxyDecisionRefusesTheEmptyString() {
         // `URL(string: "")` is nil on every Foundation version, so this one is stable.
         let decision = SwiftPurchaselyFlutterPlugin.proxyDecision(from: ["proxy": ""])

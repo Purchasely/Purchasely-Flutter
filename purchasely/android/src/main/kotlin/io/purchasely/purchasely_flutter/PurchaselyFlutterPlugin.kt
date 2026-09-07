@@ -578,6 +578,13 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
         // `Log.e` line on both platforms (iOS uses `NSLog`). Neither puts UI in front of
         // the host app: a skipped option must not read as a crash, and the two bridges
         // must not differ in how loudly they refuse the same value.
+        //
+        // These are Kotlin string templates, evaluated BEFORE the call, and `Log.e` does
+        // no formatting — so a refused value containing `%s`/`%n` is inert here. Do NOT
+        // convert them to `String.format` or a formatted logger: on iOS the equivalent
+        // (`NSLog(interpolatedString)`) made the caller's value the format string and
+        // crashed inside `__CFStringAppendFormatCore` while reporting that the option had
+        // been skipped. iOS now funnels through `logRefusedOption` / `NSLog("%@", …)`.
         val proxyDecision = proxyDecisionFrom(a)
         if (proxyDecision is ProxyDecision.Invalid) {
             Log.e("Purchasely", "`proxy` must be an https base URL string, for example " +

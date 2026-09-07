@@ -298,6 +298,40 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
 
     // MARK: - start
 
+    /// Logs a refused start option.
+    ///
+    /// **`NSLog("%@", message)`, never `NSLog(message)`.** `NSLog` treats its first
+    /// argument as a printf format string, so interpolating a caller-supplied value
+    /// into it makes that value the format. An `anonymousUserId` or `proxy` string
+    /// containing `%@`/`%s`/`%n` then sends `NSLog` reading arguments that were never
+    /// passed — reproduced as a crash inside `__CFStringAppendFormatCore`. Crashing
+    /// the host app while reporting that an option was *skipped* is the exact opposite
+    /// of this code's contract, which is that `start()` still succeeds.
+    ///
+    /// One funnel on purpose: every refusal goes through here, so the unsafe form
+    /// cannot creep back in at an individual call site.
+    static func logRefusedOption(_ message: String) {
+        NSLog("%@", message)
+    }
+
+    /// The diagnostic for a non-canonical `anonymousUserId`.
+    ///
+    /// Pure and separate from the logging so a test can assert the caller's value is
+    /// carried verbatim — proving no format expansion happens while building it either.
+    static func refusedAnonymousUserIdMessage(_ received: String) -> String {
+        return "[Purchasely] `anonymousUserId` must be a canonical UUID string, for example "
+            + "\"3f2504e0-4f89-11d3-9a0c-0305e82c3301\". Received \"\(received)\". "
+            + "The anonymous user id is not applied."
+    }
+
+    /// The diagnostic for a `proxy` value the bridge cannot convert. See
+    /// [refusedAnonymousUserIdMessage].
+    static func refusedProxyMessage(_ received: String) -> String {
+        return "[Purchasely] `proxy` must be an https base URL string, for example "
+            + "\"https://svc.purchasely.io\", or null to clear it. Received \"\(received)\". "
+            + "The proxy is not applied."
+    }
+
     /// What the `proxy` start option asks the native builder to do.
     ///
     /// Three states, and collapsing any two of them is a defect: treating an absent key
@@ -380,9 +414,7 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
                 let override = (arguments["anonymousUserIdOverride"] as? Bool) ?? false
                 builder = builder.appAnonymousUserId(parsed, override: override)
             } else {
-                NSLog("[Purchasely] `anonymousUserId` must be a canonical UUID string, for example "
-                    + "\"3f2504e0-4f89-11d3-9a0c-0305e82c3301\". Received \"\(anonymousUserId)\". "
-                    + "The anonymous user id is not applied.")
+                Self.logRefusedOption(Self.refusedAnonymousUserIdMessage(anonymousUserId))
             }
         }
 
@@ -396,9 +428,7 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
         case .apply(let url):
             builder = builder.proxy(api: url)
         case .invalid(let raw):
-            NSLog("[Purchasely] `proxy` must be an https base URL string, for example "
-                + "\"https://svc.purchasely.io\", or null to clear it. Received \"\(raw)\". "
-                + "The proxy is not applied.")
+            Self.logRefusedOption(Self.refusedProxyMessage(raw))
         }
 
         // Registered unconditionally: the native SDK has no runtime setter on
