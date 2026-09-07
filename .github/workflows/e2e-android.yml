@@ -31,7 +31,12 @@ jobs:
   e2e-android:
     name: E2E Android (real backend)
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    # 90, not 60. This branch consolidated the iOS suites into batches precisely to fit
+    # the old budget, and #153 added two more suites on top. A single flaky app launch
+    # costs a 600s per-suite timeout plus a retry, and one such retry on an early batch
+    # is enough to run the job out of wall clock before the last suite starts — which is
+    # how this looked like a suite failure when the suite had simply never been reached.
+    timeout-minutes: 90
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
