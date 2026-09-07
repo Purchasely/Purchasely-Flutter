@@ -226,6 +226,8 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             allProducts(result)
         case "purchaseWithPlanVendorId":
             purchaseWithPlanVendorId(arguments: arguments, result: result)
+        case "debugEmitWebRedemption":
+            debugEmitWebRedemption(arguments, result: result)
         case "handleDeeplink":
             let parameter = arguments?["deeplink"] as? String
             handleDeeplink(parameter, result: result)
@@ -304,6 +306,46 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
         default:
             result(FlutterMethodNotImplemented)
         }
+    }
+
+    /// Test-only: pushes a synthetic redemption outcome through the PRODUCTION delivery path.
+    ///
+    /// A *successful* redemption needs a valid backend token, so the happy path of the
+    /// listener is otherwise unreachable from a test. Not exposed on the Dart `Purchasely`
+    /// API — the E2E suite invokes the method channel directly.
+    ///
+    /// Fidelity: the real `webRedemptionBody` and the real sink run. `PLYWebRedemptionResult`
+    /// is bypassed (internal initialiser — exactly why `webRedemptionBody` takes destructured
+    /// fields), as is `PLYSubscription`, whose `init(from:)` resolves its product through
+    /// `ProductRepository` and so cannot take a synthetic value.
+    ///
+    /// `#if DEBUG` only: a synthetic "redemption granted" reaching a release app could
+    /// unlock content.
+    private func debugEmitWebRedemption(_ arguments: [String: Any]?, result: @escaping FlutterResult) {
+        #if DEBUG
+        let args = arguments ?? [:]
+        // An already-mapped subscription, not a `PLYSubscription`: that type's
+        // `init(from:)` resolves its product through `ProductRepository`, so a synthetic
+        // one cannot be decoded — and `PLYSubscription.toMap` is pre-existing plugin code
+        // this release does not touch. What 6.1.0 added here is `webRedemptionBody` and the
+        // sink, and those run for real below.
+        let subscriptionMap = args["subscriptionMap"] as? [String: Any]
+        let isSuccess = (args["isSuccess"] as? Bool) ?? true
+        let hasContext = isSuccess && (args["hasContext"] as? Bool ?? (subscriptionMap != nil))
+        let body = WebRedemptionHandler.webRedemptionBody(
+            isSuccess: isSuccess,
+            hasContext: hasContext,
+            subscription: subscriptionMap,
+            replay: (args["replay"] as? Bool) ?? false,
+            errorCode: args["errorCode"] as? String,
+            errorMessage: args["errorMessage"] as? String)
+        webRedemptionHandler.emit(body)
+        result(true)
+        #else
+        result(FlutterError(code: "-1",
+                            message: "debugEmitWebRedemption is available in DEBUG builds only",
+                            details: nil))
+        #endif
     }
 
     // MARK: - start

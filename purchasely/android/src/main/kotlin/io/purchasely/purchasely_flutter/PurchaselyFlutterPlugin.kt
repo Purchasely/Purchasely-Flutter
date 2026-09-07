@@ -11,6 +11,7 @@ import io.flutter.plugin.common.MethodChannel.Result
 
 import android.app.Activity
 import android.content.Context
+import android.content.pm.ApplicationInfo
 import android.net.Uri
 import android.os.Build
 import android.os.Handler
@@ -34,7 +35,9 @@ import io.purchasely.ext.presentation.preload
 import io.purchasely.models.PLYPlan
 import io.purchasely.models.PLYPresentationPlan
 import io.purchasely.models.PLYProduct
+import io.purchasely.network.PLYJsonProvider
 import io.purchasely.models.PLYSubscriptionData
+import io.purchasely.models.PLYWebRedemptionContext
 import io.purchasely.models.PLYWebRedemptionResult
 import kotlinx.coroutines.*
 import io.purchasely.ext.Purchasely
@@ -252,6 +255,7 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
         when(call.method) {
             // --- start ---
             "start" -> start(args, result)
+            "debugEmitWebRedemption" -> debugEmitWebRedemption(args, result)
 
             // --- presentation lifecycle ---
             "preload" -> preload(args, result)
@@ -552,6 +556,52 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
                 else -> PLYRunningMode.Observer
             }
             else -> PLYRunningMode.Observer
+        }
+    }
+
+    /**
+     * Test-only: pushes a synthetic redemption outcome through the PRODUCTION delivery path.
+     *
+     * Exists because a *successful* redemption needs a valid backend token, so the happy
+     * path of the listener is otherwise unreachable from a test. Deliberately not exposed on
+     * the Dart `Purchasely` API — the E2E suite invokes the method channel directly.
+     *
+     * Fidelity is the point: it builds a real `PLYWebRedemptionResult.Success` from a real
+     * `PLYSubscriptionData` and hands it to [bridgeWebRedemptionListener], so
+     * `webRedemptionResultToMap` and `transformSubscriptionToMap` both run for real. Only
+     * the SDK's own settle logic is bypassed, which is not this bridge's job to test.
+     *
+     * Debuggable builds only: a synthetic "redemption granted" reaching a release app could
+     * unlock content.
+     */
+    private fun debugEmitWebRedemption(args: Map<String, Any?>?, result: Result) {
+        if (context.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE == 0) {
+            result.safeError("-1", "debugEmitWebRedemption is available in debuggable builds only", null)
+            return
+        }
+        val a = args ?: emptyMap()
+        try {
+            val subscriptionJson = a["subscriptionJson"] as? String
+            val subscription = subscriptionJson?.let {
+                PLYJsonProvider.json.decodeFromString(PLYSubscriptionData.serializer(), it)
+            }
+            val outcome = if (a["isSuccess"] as? Boolean != false) {
+                PLYWebRedemptionResult.Success(
+                    context = if (a["hasContext"] as? Boolean ?: (subscriptionJson != null)) {
+                        PLYWebRedemptionContext(subscription = subscription)
+                    } else null,
+                    replay = a["replay"] as? Boolean ?: false,
+                )
+            } else {
+                PLYWebRedemptionResult.Failure(
+                    errorCode = a["errorCode"] as? String,
+                    errorMessage = a["errorMessage"] as? String,
+                )
+            }
+            bridgeWebRedemptionListener.onRedemptionCompleted(outcome)
+            result.safeSuccess(true)
+        } catch (e: Throwable) {
+            result.safeError("-1", "debugEmitWebRedemption failed: ${e.message}", null)
         }
     }
 

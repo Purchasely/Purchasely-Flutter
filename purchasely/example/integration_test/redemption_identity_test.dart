@@ -9,6 +9,8 @@
 //        what proves the API host stayed on `api.purchasely.io`.
 //   R3 — webRedemptionListener on the chain subscribes BEFORE start(), so a
 //        redemption settling during start() cannot be missed.
+//   R5 — a GRANTED redemption crosses the bridge intact, context.subscription
+//        included, via `debugEmitWebRedemption` (the happy path needs a real token).
 //   R4 — a `ply/redeem/<bogus>` deeplink round-trips to the server and the
 //        listener receives a Failure, on the main thread, exactly once. Requires
 //        `appHandlesRedemptionAlert: true` — see the chain below.
@@ -19,6 +21,7 @@
 //   flutter test integration_test/redemption_identity_test.dart -d emulator-5554
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:purchasely_flutter/purchasely_flutter.dart';
@@ -161,6 +164,119 @@ void main() {
       expect(Purchasely.webRedemptions, isNotNull,
           reason: 'the subscription must survive start()');
       debugPrint('R3 → subscribed before start ✓');
+    });
+  });
+
+  group('R5 — a GRANTED redemption crosses the bridge intact', () {
+    // The happy path needs a valid backend token, so it is unreachable from a test with a
+    // real deeplink. `debugEmitWebRedemption` pushes a synthetic outcome through the
+    // PRODUCTION delivery path instead — on Android a real
+    // `PLYWebRedemptionResult.Success` built from a real `PLYSubscriptionData`, on iOS a
+    // real `PLYSubscription` decoded into the SDK type and mapped by the real
+    // `PLYSubscription.toMap`. Every line of bridge mapping runs for real; only the SDK's
+    // own settle logic is bypassed, which is not this bridge's job to test.
+    const channel = MethodChannel('purchasely');
+
+    // The listener is a SINGLE slot: `addWebRedemptionListener` replaces whatever the
+    // chain registered in setUpAll. So each test here displaces the suite's listener and
+    // must hand it back, or R4 — which waits on `redemptions` — gets an empty list.
+    // Restoring in tearDown keeps this group independent of file order.
+    tearDown(() => Purchasely.addWebRedemptionListener(redemptions.add));
+
+    // A subscription in each native SDK's own wire shape (snake_case, as their
+    // `@Serializable` / `Decodable` models declare it).
+    const subscriptionJson = '{'
+        '"data":{"id":"subs_e2e_1","store_type":"GOOGLE_PLAY_STORE",'
+        '"purchase_token":"e2e-purchase-token"},'
+        '"plan":{"id":"plan_e2e","vendor_id":"monthly","name":"Monthly"},'
+        '"product":{"id":"prod_e2e","vendor_id":"PURCHASELY_PLUS","name":"Plus"}'
+        '}';
+
+    testWidgets('isSuccess true, replay, and a mapped context.subscription',
+        (tester) async {
+      await tester.runAsync(() async {
+        final received = <PLYWebRedemptionResult>[];
+        Purchasely.addWebRedemptionListener(received.add);
+        await Future<void>.delayed(const Duration(milliseconds: 300));
+
+        // One payload, both shapes. Android decodes `subscriptionJson` into a real
+        // `PLYSubscriptionData` so its own mapper runs; iOS takes the already-mapped
+        // `subscriptionMap`, because `PLYSubscription.init(from:)` resolves its product
+        // through `ProductRepository` and cannot take a synthetic value. Each side
+        // exercises the mapper 6.1.0 actually added to it.
+        await channel.invokeMethod('debugEmitWebRedemption', <String, Object?>{
+          'isSuccess': true,
+          'replay': true,
+          'hasContext': true,
+          'subscriptionJson': subscriptionJson,
+          'subscriptionMap': <String, Object?>{
+            'purchaseToken': 'e2e-purchase-token',
+            'subscriptionSource': 1, // googlePlayStore
+            'plan': <String, Object?>{'vendorId': 'monthly', 'name': 'Monthly'},
+            'product': <String, Object?>{
+              'name': 'Plus',
+              'vendorId': 'PURCHASELY_PLUS',
+              'plans': <String, Object?>{},
+            },
+          },
+        });
+
+        final sw = Stopwatch()..start();
+        while (received.isEmpty && sw.elapsed < const Duration(seconds: 10)) {
+          await Future<void>.delayed(const Duration(milliseconds: 100));
+        }
+
+        expect(received, hasLength(1),
+            reason: 'a granted redemption must reach the Dart listener');
+        final result = received.single;
+        expect(result.isSuccess, isTrue);
+        expect(result.errorCode, isNull);
+        expect(result.errorMessage, isNull);
+        expect(result.replay, isTrue,
+            reason: 'replay must survive the crossing');
+
+        // The part that had never run: context.subscription mapped by the native
+        // subscription mapper and parsed by plySubscriptionFromMap.
+        expect(result.context, isNotNull);
+        final subscription = result.context!.subscription;
+        expect(subscription, isNotNull,
+            reason: 'the granted subscription must cross the bridge');
+        expect(subscription!.plan?.vendorId, equals('monthly'));
+        expect(subscription.product?.vendorId, equals('PURCHASELY_PLUS'));
+        expect(subscription.subscriptionSource,
+            equals(PLYSubscriptionSource.googlePlayStore));
+        debugPrint('R5 → granted: plan=${subscription.plan?.vendorId} '
+            'product=${subscription.product?.vendorId} '
+            'source=${subscription.subscriptionSource} '
+            'token=${subscription.purchaseToken} replay=${result.replay}');
+      });
+    });
+
+    testWidgets('a success with a context but no subscription stays a success',
+        (tester) async {
+      await tester.runAsync(() async {
+        final received = <PLYWebRedemptionResult>[];
+        Purchasely.addWebRedemptionListener(received.add);
+        await Future<void>.delayed(const Duration(milliseconds: 300));
+
+        // The two nullability levels are independent: a context describing no
+        // subscription is still a success. Asserted across the real channel.
+        await channel.invokeMethod('debugEmitWebRedemption', <String, Object?>{
+          'isSuccess': true,
+          'replay': false,
+          'hasContext': true,
+        });
+
+        final sw = Stopwatch()..start();
+        while (received.isEmpty && sw.elapsed < const Duration(seconds: 10)) {
+          await Future<void>.delayed(const Duration(milliseconds: 100));
+        }
+
+        expect(received, hasLength(1));
+        expect(received.single.isSuccess, isTrue);
+        expect(received.single.context?.subscription, isNull);
+        debugPrint('R5 → success, no subscription: still a success ✓');
+      });
     });
   });
 
