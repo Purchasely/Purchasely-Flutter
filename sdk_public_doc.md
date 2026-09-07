@@ -190,6 +190,13 @@ holds no anonymous id yet. Pass `override: true` to replace an existing id:
 every purchase under the previous id. Use `true` only when your app owns the
 anonymous identity, for example after a cross-device restore.
 
+> **Compare an anonymous user id case-insensitively.** An id you pass here is
+> stored uppercase on both platforms. An id the SDK generates itself is *not
+> consistent across platforms* — measured on 6.1.0: uppercase on iOS
+> (`1933C4CC-…`), lowercase on Android (`ff394b92-…`). So never compare a stored
+> id to `Purchasely.anonymousUserId` with `==`; use
+> `a.toLowerCase() == b.toLowerCase()`.
+
 ### API proxy (6.1.0)
 
 Route Purchasely API traffic through a proxy instead of `api.purchasely.io`, for
@@ -315,10 +322,30 @@ Three behaviours to know:
   event drops the hint on both platforms, so the listener is the only place it
   appears.
 
+#### A successful redemption also restores the web purchase's user attributes
+
+The built-in and custom user attributes attached to the web purchase are applied
+**before** the entitlements refresh, so every later event and every audience
+already sees them. Read them with the getters you already use
+(`Purchasely.userAttribute`, `Purchasely.userAttributes`) or observe them through
+`Purchasely.setUserAttributeListener`.
+
+`PLYEventPropertyRedemptionPurchaseContext.built_in_attributes` and
+`.custom_attributes` report what the SDK actually applied, not the raw response.
+
+#### The redemption token never reaches your app
+
+Not through the listener, not in a log line, not in an analytics event. It is a
+bearer credential; `PLYWebRedemptionResult.errorMessage` never contains it.
+
 The SDK also emits two analytics events for a redemption,
 `PLYEventName.REDEMPTION_CONSUMED` and `PLYEventName.REDEMPTION_FAILED`, with
 their payload on `PLYEventProperties.redemption`. Read them with
 `Purchasely.addEventListener`.
+
+`REDEMPTION_CONSUMED` also fires when the user taps an **already redeemed** link:
+a replay is a success. `properties.redemption?.purchase_context?.replay` tells a
+first redemption from a repeat.
 
 ---
 
