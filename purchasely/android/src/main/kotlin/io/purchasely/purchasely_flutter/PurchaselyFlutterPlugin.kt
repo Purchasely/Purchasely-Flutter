@@ -95,9 +95,17 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
         // released twice and silenced every event. `setStreamHandler(null)` also releases
         // the anonymous handler that closes over this instance.
         webRedemptionSink = null
-        if (::webRedemptionChannel.isInitialized) {
-            webRedemptionChannel.setStreamHandler(null)
-        }
+        // All four channels, not just the redemption one. Each stream handler closes over
+        // this plugin instance and over an EventSink bound to the engine being detached, so
+        // leaving them registered keeps a dead engine reachable. Symmetric on purpose: the
+        // redemption fix is worthless if the sibling channels keep the same gap.
+        //
+        // `activePresentationSink` is deliberately NOT cleared here: it is a companion-level
+        // static shared with the inline NativeView, which outlives a single attachment.
+        if (::webRedemptionChannel.isInitialized) webRedemptionChannel.setStreamHandler(null)
+        if (::eventChannel.isInitialized) eventChannel.setStreamHandler(null)
+        if (::purchaseChannel.isInitialized) purchaseChannel.setStreamHandler(null)
+        if (::userAttributeChannel.isInitialized) userAttributeChannel.setStreamHandler(null)
         job.cancel()
     }
 

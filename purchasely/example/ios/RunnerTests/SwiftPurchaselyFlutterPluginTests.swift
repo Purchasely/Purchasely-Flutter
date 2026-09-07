@@ -116,17 +116,41 @@ class SwiftPurchaselyFlutterPluginTests: XCTestCase {
             .apply(URL(string: "http://insecure.example")))
     }
 
-    func testProxyDecisionSkipsAnUnconvertibleStringRatherThanClearing() {
-        // The whole trap: passing nil here would silently disable a proxy the app asked
-        // for, because of a typo. It must be `.invalid`, never `.apply(nil)`.
-        //
-        // Modern Foundation's `URL(string:)` is lenient — it percent-encodes a bare space
-        // and even accepts "://" — so the strings it really rejects are the empty one and
-        // one with a space inside the authority. Both are realistic typos.
-        for typo in ["", "https://svc purchasely.io", "ht tp://svc.purchasely.io"] {
-            let decision = SwiftPurchaselyFlutterPlugin.proxyDecision(from: ["proxy": typo])
-            XCTAssertEqual(decision, .invalid(typo), "\(typo) should be refused, not applied")
-            XCTAssertNotEqual(decision, .apply(nil), "a typo must never clear the proxy")
+    func testProxyDecisionRefusesTheEmptyString() {
+        // `URL(string: "")` is nil on every Foundation version, so this one is stable.
+        let decision = SwiftPurchaselyFlutterPlugin.proxyDecision(from: ["proxy": ""])
+        XCTAssertEqual(decision, .invalid(""))
+    }
+
+    func testProxyDecisionNeverClearsForAnyStringInput() {
+        // THE invariant, and it is deliberately independent of Foundation's URL parser.
+        // `URL(string:)` is lenient and got more lenient in iOS 17 — it percent-encodes a
+        // bare space and even accepts "://" — so asserting WHICH strings it rejects makes a
+        // test hostage to the simulator image. What must hold regardless: a non-nil string
+        // never produces `.apply(nil)`, because nil means CLEAR on the native builder and a
+        // typo must not silently disable a proxy the app asked for. Either the string
+        // converts and is forwarded, or it is refused and skipped — never a clear.
+        let inputs = [
+            "",
+            "https://svc purchasely.io",
+            "ht tp://svc.purchasely.io",
+            "://",
+            "not-a-proxy",
+            "http://insecure.example",
+            "https://svc.purchasely.io",
+        ]
+        for input in inputs {
+            let decision = SwiftPurchaselyFlutterPlugin.proxyDecision(from: ["proxy": input])
+            XCTAssertNotEqual(decision, .apply(nil),
+                              "\"\(input)\" must never be turned into a proxy CLEAR")
+            switch decision {
+            case .apply(let url):
+                XCTAssertNotNil(url)
+            case .invalid:
+                break
+            case .untouched:
+                XCTFail("a present key must never read as never-called")
+            }
         }
     }
 
@@ -173,6 +197,108 @@ class SwiftPurchaselyFlutterPluginTests: XCTestCase {
         XCTAssertEqual(PLYSubscriptionSource.huaweiAppGallery.rawValue, 3)
         XCTAssertEqual(PLYSubscriptionSource.stripe.rawValue, 4)
         XCTAssertEqual(PLYSubscriptionSource.none.rawValue, 5)
+    }
+
+    // MARK: - Web redemption payload policy (6.1.0)
+
+    // `PLYWebRedemptionResult`'s initialiser is internal to the Purchasely module, so no test
+    // can construct one and no test can drive `webRedemptionCompleted(result:)` directly.
+    // `webRedemptionBody(...)` is extracted precisely so the payload policy IS testable: it
+    // takes the destructured fields, with `subscription` already mapped, so these tests need
+    // no native type at all. Without it, the iOS encoding step — the one place the two
+    // nullability levels could collapse — would be covered only by E2E.
+
+    func testWebRedemptionBodyAlwaysHasTheSameFiveKeys() {
+        // The Dart shape must never change between branches, or a caller's null checks
+        // become branch-dependent.
+        let expected: Set<String> = ["isSuccess", "context", "replay", "errorCode", "errorMessage"]
+
+        let success = WebRedemptionHandler.webRedemptionBody(
+            isSuccess: true, hasContext: true, subscription: ["purchaseToken": "t"],
+            replay: false, errorCode: nil, errorMessage: nil)
+        let failure = WebRedemptionHandler.webRedemptionBody(
+            isSuccess: false, hasContext: false, subscription: nil,
+            replay: false, errorCode: "INVALID_REDEMPTION_TOKEN", errorMessage: "nope")
+
+        XCTAssertEqual(Set(success.keys), expected)
+        XCTAssertEqual(Set(failure.keys), expected)
+    }
+
+    func testWebRedemptionBodyNoContextIsNSNull() {
+        let body = WebRedemptionHandler.webRedemptionBody(
+            isSuccess: true, hasContext: false, subscription: nil,
+            replay: false, errorCode: nil, errorMessage: nil)
+
+        XCTAssertTrue(body["context"] is NSNull)
+        XCTAssertEqual(body["isSuccess"] as? Bool, true)
+    }
+
+    func testWebRedemptionBodyKeepsTheTwoNullabilityLevelsDistinct() {
+        // The invariant that matters most. "No context at all" and "a context describing no
+        // subscription" are different outcomes, and collapsing them loses information the
+        // app needs: the second one still validated a receipt.
+        let noContext = WebRedemptionHandler.webRedemptionBody(
+            isSuccess: true, hasContext: false, subscription: nil,
+            replay: false, errorCode: nil, errorMessage: nil)
+        let emptyContext = WebRedemptionHandler.webRedemptionBody(
+            isSuccess: true, hasContext: true, subscription: nil,
+            replay: false, errorCode: nil, errorMessage: nil)
+
+        XCTAssertTrue(noContext["context"] is NSNull)
+
+        let context = emptyContext["context"] as? [String: Any]
+        XCTAssertNotNil(context, "a present context must be a dictionary, not NSNull")
+        XCTAssertTrue(context?["subscription"] is NSNull,
+                      "the nested subscription must be NSNull, and the key must exist")
+    }
+
+    func testWebRedemptionBodyForwardsAMappedSubscription() {
+        let body = WebRedemptionHandler.webRedemptionBody(
+            isSuccess: true, hasContext: true,
+            subscription: ["purchaseToken": "token-1", "subscriptionSource": 4],
+            replay: false, errorCode: nil, errorMessage: nil)
+
+        let context = body["context"] as? [String: Any]
+        let subscription = context?["subscription"] as? [String: Any]
+        XCTAssertEqual(subscription?["purchaseToken"] as? String, "token-1")
+        // 4 = stripe / WEB_CHECKOUT_STRIPE, the source a Web2App redemption grants.
+        XCTAssertEqual(subscription?["subscriptionSource"] as? Int, 4)
+    }
+
+    func testWebRedemptionBodyForwardsReplay() {
+        // `replay` is a verdict about the token, independent of success.
+        for replay in [true, false] {
+            let body = WebRedemptionHandler.webRedemptionBody(
+                isSuccess: true, hasContext: true, subscription: nil,
+                replay: replay, errorCode: nil, errorMessage: nil)
+            XCTAssertEqual(body["replay"] as? Bool, replay)
+        }
+    }
+
+    func testWebRedemptionBodyFailureBranch() {
+        // A failure reports replay false and context NSNull, so the shape holds, and it
+        // carries the code and message verbatim — the message can hold the masked email
+        // hint on BOTH platforms, so it must not be truncated or scrubbed here.
+        let hint = "Redemption link has expired. A new link was sent to j***@example.com."
+        let body = WebRedemptionHandler.webRedemptionBody(
+            isSuccess: false, hasContext: false, subscription: nil,
+            replay: false, errorCode: "EXPIRED_REDEMPTION_TOKEN", errorMessage: hint)
+
+        XCTAssertEqual(body["isSuccess"] as? Bool, false)
+        XCTAssertTrue(body["context"] is NSNull)
+        XCTAssertEqual(body["replay"] as? Bool, false)
+        XCTAssertEqual(body["errorCode"] as? String, "EXPIRED_REDEMPTION_TOKEN")
+        XCTAssertEqual(body["errorMessage"] as? String, hint)
+    }
+
+    func testWebRedemptionBodyNilCodeAndMessageBecomeNSNull() {
+        // Never an empty string: a caller's null check must work.
+        let body = WebRedemptionHandler.webRedemptionBody(
+            isSuccess: true, hasContext: true, subscription: nil,
+            replay: false, errorCode: nil, errorMessage: nil)
+
+        XCTAssertTrue(body["errorCode"] is NSNull)
+        XCTAssertTrue(body["errorMessage"] is NSNull)
     }
 
     func testRedemptionEventsExistOnTheNativeSdk() {

@@ -1681,24 +1681,57 @@ class WebRedemptionHandler: NSObject, FlutterStreamHandler, PLYWebRedemptionDele
     func webRedemptionCompleted(result: PLYWebRedemptionResult) {
         guard let eventSink = self.eventSink else { return }
 
-        var context: Any = NSNull()
-        if let resultContext = result.context {
-            let subscription: Any = resultContext.subscription?.toMap ?? NSNull()
-            context = ["subscription": subscription]
-        }
-
-        let errorCode: Any = result.errorCode ?? NSNull()
-        let errorMessage: Any = result.errorMessage ?? NSNull()
+        let body = Self.webRedemptionBody(
+            isSuccess: result.isSuccess,
+            hasContext: result.context != nil,
+            subscription: result.context?.subscription?.toMap,
+            replay: result.replay,
+            errorCode: result.errorCode,
+            errorMessage: result.errorMessage)
 
         DispatchQueue.main.async {
-            eventSink([
-                "isSuccess": result.isSuccess,
-                "context": context,
-                "replay": result.replay,
-                "errorCode": errorCode,
-                "errorMessage": errorMessage
-            ])
+            eventSink(body)
         }
+    }
+
+    /// Builds the `purchasely-web-redemption` event body.
+    ///
+    /// Extracted from the delegate callback, and taking the already-destructured
+    /// fields instead of a `PLYWebRedemptionResult`, because that type's
+    /// initialiser is `internal` to the Purchasely module: a test target cannot
+    /// construct one. `subscription` arrives already mapped, so a test needs no
+    /// native type at all. This is the only way to unit-test the payload policy
+    /// below, which is otherwise reachable only from a real redemption.
+    ///
+    /// Two invariants it exists to pin:
+    ///
+    /// - `context` and `context.subscription` are separately nullable, and the
+    ///   two nulls mean different things: no context at all, versus a context
+    ///   that describes no subscription. Both stay distinguishable in Dart.
+    /// - The same five keys on every branch, so the Dart shape never changes
+    ///   between a success and a failure.
+    static func webRedemptionBody(isSuccess: Bool,
+                                  hasContext: Bool,
+                                  subscription: [String: Any]?,
+                                  replay: Bool,
+                                  errorCode: String?,
+                                  errorMessage: String?) -> [String: Any] {
+        var context: Any = NSNull()
+        if hasContext {
+            let mappedSubscription: Any = subscription ?? NSNull()
+            context = ["subscription": mappedSubscription]
+        }
+
+        let code: Any = errorCode ?? NSNull()
+        let message: Any = errorMessage ?? NSNull()
+
+        return [
+            "isSuccess": isSuccess,
+            "context": context,
+            "replay": replay,
+            "errorCode": code,
+            "errorMessage": message
+        ]
     }
 }
 

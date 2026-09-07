@@ -41,7 +41,15 @@ android {
         applicationId "com.purchasely.demo"
         // The purchasely_flutter plugin requires minSdk 23; flutter.minSdkVersion
         // varies by Flutter version (21 on 3.24, 24 on 3.41+), so pin explicitly.
-        minSdkVersion = flutter.minSdkVersion
+        //
+        // WARNING: `flutter build` runs a "Upgrading build.gradle" migration that
+        // rewrites this line back to `minSdkVersion = flutter.minSdkVersion` every
+        // time, silently. On Flutter 3.24.x that resolves to 21, below the
+        // plugin's 23, and Android manifest merging then fails. If you built
+        // locally, check `git diff` on this file before committing — and the
+        // `Version Consistency` CI job asserts this exact line, so a clobber
+        // fails the build instead of shipping.
+        minSdk = 23
         targetSdk = 34
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName

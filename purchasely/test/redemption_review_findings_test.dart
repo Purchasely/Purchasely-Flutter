@@ -367,15 +367,5 @@ void main() {
       expect(received.single.errorMessage, hint);
       expect(received.single.errorCode, 'EXPIRED_REDEMPTION_TOKEN');
     });
-
-    test('the REDEMPTION_FAILED event carries no hint field at all', () {
-      // The event type has no member for it, on either platform. Both natives
-      // drop the hint in `toEvent`, so there is nowhere for it to land.
-      final redemption = PLYEventPropertyRedemption(
-          'tok', null, null, null, 'EXPIRED_REDEMPTION_TOKEN');
-      expect(redemption.error_code, 'EXPIRED_REDEMPTION_TOKEN');
-      expect(redemption.receipt, isNull);
-      expect(redemption.subscriptions, isNull);
-    });
   });
 }

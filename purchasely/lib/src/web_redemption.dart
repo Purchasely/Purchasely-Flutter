@@ -7,6 +7,7 @@
 // file; importing the package entry point from the builder would be a cycle.
 
 import 'dart:async';
+import 'dart:developer';
 
 import 'package:flutter/services.dart';
 
@@ -119,8 +120,17 @@ StreamSubscription<dynamic>? get webRedemptionSubscription => _subscription;
 /// redemption, on success and on failure alike.
 void addWebRedemptionListener(PLYWebRedemptionListener listener) {
   _subscription?.cancel();
-  _subscription = _channel.receiveBroadcastStream().listen((event) =>
-      listener(webRedemptionResultFromMap(event as Map<dynamic, dynamic>)));
+  _subscription = _channel.receiveBroadcastStream().listen(
+    (event) =>
+        listener(webRedemptionResultFromMap(event as Map<dynamic, dynamic>)),
+    // Without this a `PlatformException` on the channel becomes an uncaught
+    // async error in the host app's zone. A redemption outcome is not
+    // recoverable from here, so log and keep the subscription alive rather than
+    // tear it down: the next redemption must still be delivered.
+    onError: (Object error, StackTrace stack) {
+      log('Purchasely: web redemption channel error: $error');
+    },
+  );
 }
 
 /// Removes the listener registered with [addWebRedemptionListener] or with

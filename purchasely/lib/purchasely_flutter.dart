@@ -14,10 +14,8 @@ import 'src/purchasely_builder.dart' show PLYLogLevel, PurchaselyBuilder;
 import 'src/web_redemption.dart' as web_redemption
     show
         PLYWebRedemptionListener,
-        PLYWebRedemptionResult,
         addWebRedemptionListener,
         removeWebRedemptionListener,
-        webRedemptionResultFromMap,
         webRedemptionSubscription;
 
 // --- Purchasely SDK cross-platform API ---
@@ -473,13 +471,6 @@ class Purchasely {
   /// [PurchaselyBuilder.webRedemptionListener].
   static void removeWebRedemptionListener() =>
       web_redemption.removeWebRedemptionListener();
-
-  /// Maps the wire body of a `purchasely-web-redemption` event to a
-  /// [PLYWebRedemptionResult]. Exposed for a host that captured a body itself;
-  /// the listeners above are the normal entry points.
-  static web_redemption.PLYWebRedemptionResult webRedemptionResultFromMap(
-          Map<dynamic, dynamic> body) =>
-      web_redemption.webRedemptionResultFromMap(body);
 
   static void listenToPurchases(Function block) {
     purchases = _purchases.receiveBroadcastStream().listen((event) {

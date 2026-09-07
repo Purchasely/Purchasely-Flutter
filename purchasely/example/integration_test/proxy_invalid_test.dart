@@ -29,9 +29,19 @@ import 'package:purchasely_flutter/purchasely_flutter.dart';
 const String kApiKey = '0ad0594b-3b3d-4fea-8ee1-4b5df91efe87';
 const String kPlacementAudiences = 'integration_test_audiences';
 
-/// A realistic typo: a space inside the authority. `URL(string:)` on iOS
-/// rejects it, so the iOS bridge takes its skip branch.
-const String kUnconvertibleProxy = 'https://svc purchasely.io';
+/// A realistic typo: a bare hostname, no scheme.
+///
+/// Chosen because its OUTCOME is stable whichever way Foundation's `URL(string:)`
+/// happens to parse it, and that parser got more lenient in iOS 17:
+///
+/// - if it returns nil, the iOS bridge logs and SKIPS the modifier;
+/// - if it returns a relative URL, the modifier is forwarded and the native SDK
+///   refuses it (not `https`, no host), logs, and keeps the production host.
+///
+/// Either way the SDK stays on `api.purchasely.io`, which is what P2 asserts. A
+/// value that depended on the parser rejecting it would make this suite hostage
+/// to the simulator image.
+const String kUnconvertibleProxy = 'svc.purchasely.io';
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();

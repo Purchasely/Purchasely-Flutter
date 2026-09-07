@@ -6,7 +6,7 @@
 // SDK's resolved API host actually changed, or that a real redemption was
 // delivered: that is SDK-internal state a Dart test harness cannot observe.
 // The native unit suites cover each bridge's own decoding, and
-// `example/integration_test/redemption_proxy_identity_test.dart` covers the
+// `example/integration_test/redemption_identity_test.dart` covers the
 // live path.
 //
 // The three proxy states get the most attention on purpose. Collapsing

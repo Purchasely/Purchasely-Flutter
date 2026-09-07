@@ -45,6 +45,29 @@ events. Native SDKs: iOS `Purchasely 6.1.0`, Android
 - `PLYEventName.REDEMPTION_CONSUMED` and `PLYEventName.REDEMPTION_FAILED`, with
   their payload on the new `PLYEventProperties.redemption`. Both are new on the
   two native platforms in 6.1.0.
+- `PLYSubscriptionSource.webCheckoutStripe` — a subscription bought through
+  Purchasely web checkout. A Web2App redemption grants subscriptions from
+  exactly this source, so `PLYWebRedemptionContext.subscription` is the payload
+  most likely to carry it.
+
+### Breaking
+
+- **`PLYSubscriptionSource` gained a case in the middle, so `none` moved from
+  index 4 to index 5.** The declaration order is the wire contract: both native
+  SDKs send this as an Int index and both put their web-checkout case at 4
+  (Android `StoreType.WEB_CHECKOUT_STRIPE`, iOS `PLYSubscriptionSource.stripe`)
+  with `none` at 5, so Dart had to match. Two consequences for integrators:
+  - An **exhaustive `switch`** over `PLYSubscriptionSource` without a `default`
+    stops compiling until you add a `webCheckoutStripe` arm. This is the good
+    kind of break: it is exactly the code that would otherwise have silently
+    mishandled a web-checkout subscription.
+  - Any value **persisted as `PLYSubscriptionSource.index`** now decodes one
+    case off for `none`. Persist `.name`, not `.index`, if you store it.
+
+  Before this change a web-checkout subscription decoded to `none` on both
+  platforms — index 4 used to be `none` on the Dart side, and the Android bridge
+  mapped that store type to `null`. So the source was silently unusable; it is
+  not a behaviour you can have depended on.
 
 ### Changed
 

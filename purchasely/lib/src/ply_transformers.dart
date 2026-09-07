@@ -171,8 +171,13 @@ PLYSubscription plySubscriptionFromMap(Map<dynamic, dynamic> element) {
     (rawProduct['plans'] as Map?)
         ?.forEach((k, plan) => plans.add(plyPlanFromMap(plan)));
 
-    product = PLYProduct(
-        rawProduct['name'], rawProduct['vendorId'], plans.nonNulls.toList());
+    // `PLYProduct.name`/`vendorId` are non-nullable, but the wire values are
+    // not: neither native mapper guarantees them. A null used to throw a
+    // TypeError here, and this mapper now feeds three paths — including a
+    // redemption context, whose products may not be loaded yet. Empty string
+    // rather than a throw: a caller sees "no name", not a crashed listener.
+    product = PLYProduct(rawProduct['name'] as String? ?? '',
+        rawProduct['vendorId'] as String? ?? '', plans.nonNulls.toList());
   }
 
   return PLYSubscription(

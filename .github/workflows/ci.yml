@@ -504,6 +504,21 @@ jobs:
             echo "::warning::Version $PURCHASELY_VERSION not found in CHANGELOG.md"
           fi
 
+          # `flutter build` runs an "Upgrading build.gradle" migration that silently
+          # rewrites the example app's explicit `minSdk = 23` to
+          # `minSdkVersion = flutter.minSdkVersion`. On Flutter 3.24.x that is 21,
+          # below the plugin's own minSdk 23, and the manifest merge then fails. It
+          # already reached a pushed branch once, undetected, because every Android
+          # CI job runs 3.44.0 where the migrated value happens to be 24.
+          if ! grep -qE '^\s*minSdk = 23\s*$' purchasely/example/android/app/build.gradle; then
+            echo "::error::purchasely/example/android/app/build.gradle lost its explicit 'minSdk = 23'."
+            echo "::error::A local 'flutter build' rewrites it to 'minSdkVersion = flutter.minSdkVersion'."
+            echo "::error::Restore the line and commit. Current androidDefaultConfig:"
+            grep -nE 'minSdk' purchasely/example/android/app/build.gradle || true
+            exit 1
+          fi
+          echo "Example app minSdk pin: OK"
+
           echo "Version check completed!"
 
   # ============================================

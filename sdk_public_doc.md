@@ -641,6 +641,21 @@ Read these with a null guard, on both entry points above and on
 | `nextRenewalDate` | the subscription has no renewal date; the iOS bridge omits the key when the native date is nil |
 | `cancelledDate` | the subscription is not cancelled; same omission rule |
 
+#### `PLYSubscriptionSource` gained a case in 6.1.0 (breaking)
+
+`subscriptionSource` can now be `PLYSubscriptionSource.webCheckoutStripe` — a
+subscription bought through Purchasely web checkout, which is what a Web2App
+redemption grants. The case sits at index 4 to match both native SDKs, so
+**`none` moved from index 4 to index 5**.
+
+- An exhaustive `switch` without a `default` stops compiling until you handle
+  `webCheckoutStripe`. That is the point: such code would otherwise have
+  mishandled a web-checkout subscription silently.
+- If you persist the source, store `.name`, not `.index`.
+
+Before 6.1.0 a web-checkout subscription decoded to `none` on both platforms, so
+the source was unusable rather than merely differently-numbered.
+
 ---
 
 ## Custom User Attributes
