@@ -400,17 +400,14 @@ class PurchaselyFlutterPluginTest {
     // region subscription mapping shared by userSubscriptions and the redemption context
 
     /** A [PLYSubscriptionData] whose three parts are stubbed, so no org.json is needed. */
-    private fun stubbedSubscriptionData(
-        storeType: StoreType,
-        planFromData: PLYPlan? = null,
-    ): PLYSubscriptionData {
+    private fun stubbedSubscriptionData(storeType: StoreType): PLYSubscriptionData {
         val subscription = mockk<io.purchasely.models.PLYSubscription>(relaxed = true)
         every { subscription.toMap() } returns mapOf(
             "purchaseToken" to "token-1",
             "subscription_status" to "ACTIVE",
         )
         every { subscription.storeType } returns storeType
-        every { subscription.plan } returns planFromData
+        every { subscription.plan } returns null
 
         val resolvedPlan = mockk<PLYPlan>(relaxed = true)
         every { resolvedPlan.vendorId } returns "plan_monthly"

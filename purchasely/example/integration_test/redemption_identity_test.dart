@@ -46,9 +46,6 @@ void main() {
   /// building the chain and calling start(). R3 asserts on it.
   late bool subscribedBeforeStart;
 
-  /// Whether any `start` MethodChannel call had been made at that same moment.
-  late bool startCalledBeforeSubscription;
-
   setUpAll(() async {
     final builder = Purchasely.apiKey(kApiKey)
         .runningMode(PLYRunningMode.full)
@@ -66,7 +63,6 @@ void main() {
 
     // Read the state the chain left behind, BEFORE start() runs.
     subscribedBeforeStart = Purchasely.webRedemptions != null;
-    startCalledBeforeSubscription = false;
 
     final configured = await builder.start();
     expect(configured, isTrue,
@@ -150,7 +146,6 @@ void main() {
       expect(subscribedBeforeStart, isTrue,
           reason: 'webRedemptionListener() on the chain must subscribe at '
               'chain time — a redemption can settle during start()');
-      expect(startCalledBeforeSubscription, isFalse);
       expect(Purchasely.webRedemptions, isNotNull,
           reason: 'the subscription must survive start()');
       debugPrint('R3 → subscribed before start ✓');
