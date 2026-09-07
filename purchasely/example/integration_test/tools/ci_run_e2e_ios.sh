@@ -166,32 +166,32 @@ fi
 fail=0
 
 if [ "$E2E_IOS_SUITE" = "all" ]; then
-  echo "=== Batch 1/7: core bridge/deeplink/listener/flow suites — HARD gate ==="
+  echo "=== Batch 1/9: core bridge/deeplink/listener/flow suites — HARD gate ==="
   run_suite "core-ios" integration_test/ios_core_batch_test.dart "" core_ios || fail=1
 
-  echo "=== Batch 2/7: inline presentation suites — HARD gate ==="
+  echo "=== Batch 2/9: inline presentation suites — HARD gate ==="
   run_suite "inline-ios" integration_test/ios_inline_batch_test.dart "" inline_ios || fail=1
 
-  echo "=== Batch 3/7: purchase interceptor suite — HARD gate ==="
+  echo "=== Batch 3/9: purchase interceptor suite — HARD gate ==="
   run_suite "purchase-interceptor-ios" integration_test/interceptor_trigger_ios_test.dart \
     purchase_interceptor_driver_ios.sh purchase_interceptor_ios || fail=1
 
-  echo "=== Batch 4/7: navigate interceptor suites — HARD gate ==="
+  echo "=== Batch 4/9: navigate interceptor suites — HARD gate ==="
   run_suite "navigate-interceptors-ios" integration_test/interceptor_actions_ios_test.dart \
     interceptor_actions_driver_ios.sh navigate_interceptors_ios || fail=1
 
-  echo "=== Batch 5/7: default/local dismiss handler suites — HARD gate ==="
+  echo "=== Batch 5/9: default/local dismiss handler suites — HARD gate ==="
   run_suite "dismiss-ios" integration_test/ios_dismiss_batch_test.dart \
     dismiss_batch_driver_ios.sh dismiss_ios || fail=1
 
-  echo "=== Batch 6/7: modal and re-display transition regressions — HARD gate ==="
+  echo "=== Batch 6/9: modal and re-display transition regressions — HARD gate ==="
   run_suite "transitions-ios" integration_test/ios_transition_batch_test.dart \
     transition_batch_driver_ios.sh transitions_ios || fail=1
 else
   echo "=== Targeted manual run: skipping batches 1-6; running StoreKit only ==="
 fi
 
-# --- Batch 7/7: S7 StoreKit restore degradation ---------------------------
+# --- Batch 7/9: S7 StoreKit restore degradation ---------------------------
 # SPECIAL CASE, not run via run_suite(): purchase_restore_ios_test.dart can
 # only exercise a real local StoreKit2 transaction if the app is launched
 # through the Xcode scheme (Configuration.storekit is wired into the
@@ -211,7 +211,7 @@ fi
 # purchase/restore assertion failure, etc.) the suite gates, even if other
 # attempts in the same run also matched the Apple signature — a mixed run
 # must not let a real regression hide behind an unrelated known-bug match.
-echo "=== Batch 7/7: S7 StoreKit restore degradation (xcodebuild, RunnerIntegrationTests) — HARD gate (Apple-bug exception) ==="
+echo "=== Batch 7/9: S7 StoreKit restore degradation (xcodebuild, RunnerIntegrationTests) — HARD gate (Apple-bug exception) ==="
 TIMEOUT="$STOREKIT_TIMEOUT"
 storekit_logbase="storekit-ios"
 storekit_ok=0
@@ -282,6 +282,20 @@ if [ "$storekit_ok" -ne 1 ]; then
     fail=1
   fi
 fi
+
+echo "=== Batch 8/9: 6.1.0 identity + cleared proxy + redemption listener — HARD gate ==="
+# From #153. Deterministic, no idb driver: asserts the pinned anonymousUserId round-trips
+# uppercased and reaches analytics, that an explicit proxy(null) clear leaves the SDK on
+# production, that the chain listener subscribed before start(), that a bogus `ply/redeem`
+# token settles as a Failure with the backend's own code, and that a GRANTED redemption
+# crosses the bridge with its subscription mapped. Kept as its own suite rather than folded
+# into a batch: it starts the SDK with a distinct proxy/identity state.
+run_suite "redemption_identity" integration_test/redemption_identity_test.dart "" redemption_identity || fail=1
+
+echo "=== Batch 9/9: 6.1.0 unconvertible proxy is skipped, not fatal — HARD gate ==="
+# From #153. Must be its own app process: the SDK starts once, and this needs a different
+# proxy state than batch 8. Asserts a typo neither clears the proxy nor breaks start().
+run_suite "proxy_invalid" integration_test/proxy_invalid_test.dart "" proxy_invalid || fail=1
 
 echo "=== E2E iOS finished (gating fail=$fail) ==="
 exit $fail

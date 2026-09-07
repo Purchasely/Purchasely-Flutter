@@ -170,51 +170,51 @@ run_suite() {
 
 fail=0
 
-echo "=== Suite 1/12: Dart<->Android bridge (T1-T20) — HARD gate ==="
+echo "=== Suite 1/14: Dart<->Android bridge (T1-T20) — HARD gate ==="
 run_suite "bridge" integration_test/dart_android_bridge_test.dart "" bridge || fail=1
 
-echo "=== Suite 2/12: cold-start deeplink (builder.handleDeeplink -> auto-open) — HARD gate ==="
+echo "=== Suite 2/14: cold-start deeplink (builder.handleDeeplink -> auto-open) — HARD gate ==="
 # Deterministic: the SDK opens the paywall itself from the cold-start deeplink and
 # the test only asserts on analytics events (no flaky uiautomator driver).
 run_suite "deeplink_cold_start" integration_test/deeplink_cold_start_test.dart "" deeplink_cold_start || fail=1
 
-echo "=== Suite 3/12: user-attribute listener (set/removed events) — HARD gate ==="
+echo "=== Suite 3/14: user-attribute listener (set/removed events) — HARD gate ==="
 # Deterministic: setting/clearing an attribute makes the native SDK emit a change
 # event the listener must receive (no UI interaction, no driver).
 run_suite "user_attribute_listener" integration_test/user_attribute_listener_test.dart "" user_attribute_listener || fail=1
 
-echo "=== Suite 4/12: interceptor trigger (uiautomator tap) — HARD gate ==="
+echo "=== Suite 4/14: interceptor trigger (uiautomator tap) — HARD gate ==="
 run_suite "interceptor" integration_test/interceptor_trigger_test.dart \
   tap_purchase.sh interceptor || fail=1
 
-echo "=== Suite 5/12: default dismiss handler via deeplink (system BACK) — HARD gate ==="
+echo "=== Suite 5/14: default dismiss handler via deeplink (system BACK) — HARD gate ==="
 run_suite "dismiss" integration_test/default_dismiss_handler_test.dart \
   press_back.sh dismiss || fail=1
 
-echo "=== Suite 6/12: default dismiss handler via fire-and-forget display() (system BACK) — HARD gate ==="
+echo "=== Suite 6/14: default dismiss handler via fire-and-forget display() (system BACK) — HARD gate ==="
 run_suite "dismiss_via_display" integration_test/default_dismiss_via_display_test.dart \
   press_back.sh dismiss_via_display || fail=1
 
-echo "=== Suite 7/12: local dismiss handler wins over default (system BACK) — HARD gate ==="
+echo "=== Suite 7/14: local dismiss handler wins over default (system BACK) — HARD gate ==="
 run_suite "local_dismiss" integration_test/local_dismiss_handler_test.dart \
   press_back.sh local_dismiss || fail=1
 
-echo "=== Suite 8/12: inline view keeps the global event stream flowing (FLT-W-12) — HARD gate ==="
+echo "=== Suite 8/14: inline view keeps the global event stream flowing (FLT-W-12) — HARD gate ==="
 run_suite "inline_events" integration_test/inline_events_test.dart "" inline_events || fail=1
 
-echo "=== Suite 9/12: inline PLYPresentationView render path (preload/mount/present) — HARD gate ==="
+echo "=== Suite 9/14: inline PLYPresentationView render path (preload/mount/present) — HARD gate ==="
 # No native driver — deterministic once the inline platform view renders (see
 # inline_paywall_test.dart's own header for why the close/x flow is verified
 # separately, in the real app, not here).
 run_suite "inline_paywall" integration_test/inline_paywall_test.dart "" inline_paywall || fail=1
 
-echo "=== Suite 10/12: re-display of the same handle keeps the ORIGINAL source (PR #136 M2) — HARD gate ==="
+echo "=== Suite 10/14: re-display of the same handle keeps the ORIGINAL source (PR #136 M2) — HARD gate ==="
 # Driver must run TWICE, chained (two display cycles on the same handle) —
 # see re_display_test.dart's header. re_display_driver.sh does the chaining.
 run_suite "re_display" integration_test/re_display_test.dart \
   re_display_driver.sh re_display || fail=1
 
-echo "=== Suite 11/12: Flow display + dismiss (S2, integration_test_flow) — HARD gate ==="
+echo "=== Suite 11/14: Flow display + dismiss (S2, integration_test_flow) — HARD gate ==="
 # flow_close_all.sh drives pattern (A) (direct action:close_all tap from
 # "calm"); the Dart suite self-recovers via Purchasely.closeAllScreens() if
 # navigation happens first or the tap isn't observed — see that file's
@@ -222,13 +222,25 @@ echo "=== Suite 11/12: Flow display + dismiss (S2, integration_test_flow) — HA
 run_suite "flow_dismiss" integration_test/flow_dismiss_test.dart \
   flow_close_all.sh flow_dismiss || fail=1
 
-echo "=== Suite 12/12: S7 purchase interceptor + restore, honest degradation (no Play Billing) — HARD gate ==="
+echo "=== Suite 12/14: S7 purchase interceptor + restore, honest degradation (no Play Billing) — HARD gate ==="
 # Structurally cannot complete a real purchase on this emulator (no Play
 # Store); proves the interceptor fires on a real tap and restoreAllProducts
 # degrades cleanly within its own bound — see purchase_restore_android_test.dart
 # header and task-6-report.md. Deterministic, ~70s wall time.
 run_suite "purchase_restore_android" integration_test/purchase_restore_android_test.dart \
   tap_purchase.sh purchase_restore_android || fail=1
+
+echo "=== Suite 13/14: 6.1.0 identity + cleared proxy + redemption listener — HARD gate ==="
+# From #153. Deterministic, no UI driver: asserts the pinned anonymousUserId round-trips,
+# that an explicit proxy(null) clear leaves the SDK on production, that the chain listener
+# subscribed before start(), that a bogus `ply/redeem` token settles as a Failure, and that
+# a GRANTED redemption crosses the bridge with its subscription mapped.
+run_suite "redemption_identity" integration_test/redemption_identity_test.dart "" redemption_identity || fail=1
+
+echo "=== Suite 14/14: 6.1.0 unconvertible proxy is skipped, not fatal — HARD gate ==="
+# From #153. Its own app process: the SDK starts once and this suite needs a different proxy
+# state than suite 13. Asserts a typo neither clears the proxy nor breaks start().
+run_suite "proxy_invalid" integration_test/proxy_invalid_test.dart "" proxy_invalid || fail=1
 
 echo "=== E2E Android finished (gating fail=$fail) ==="
 exit $fail

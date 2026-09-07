@@ -14,6 +14,14 @@ name: E2E iOS
 #                         the repository's DEFAULT branch, so the nightly run
 #                         activates once this file is merged to main).
 on:
+  # Kept on purpose. This PR originally dropped the PR trigger because it was added
+  # "while the v6 migration is in flight"; experience since says otherwise. On #153 the
+  # PR-triggered E2E caught a deterministic 3/3 failure (a listener never firing because
+  # appHandlesRedemptionAlert defaults to false, so the SDK waits for a popin nobody
+  # acknowledges) that no unit test and no local run saw. Without it, that class of bug
+  # only surfaces on the nightly, i.e. after merge.
+  pull_request:
+    branches: [main]
   workflow_dispatch:
     inputs:
       suite:
