@@ -55,8 +55,14 @@ jobs:
     steps:
       # GitHub raises no `labeled` event for a label that is already present, so the label
       # has to go before it can trigger the next run.
+      #
+      # Same-repository pull requests only. A `pull_request` from a fork gets a read-only
+      # token, so this DELETE would 403 and `continue-on-error` would bury it. On a fork PR
+      # remove the label by hand to ask for another run — one click, not a dead end.
       - name: Consume the run-ci label
-        if: github.event.action == 'labeled'
+        if: >-
+          github.event.action == 'labeled' &&
+          github.event.pull_request.head.repo.full_name == github.repository
         continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
