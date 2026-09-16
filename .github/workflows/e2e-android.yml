@@ -2,35 +2,46 @@ name: E2E Android
 
 # End-to-end Dart <-> Android tests against the REAL Purchasely backend, run on a
 # real Android emulator. These are NOT part of the PR-gating `ci.yml` (they need an
-# emulator, real network, and the uiautomator drivers) — they run on demand and
-# nightly.
+# emulator, real network, and the uiautomator drivers) — they run when a pull request
+# opens, and on demand.
 #
 # Triggers:
 #   * workflow_dispatch — explicit manual run (any branch the workflow exists on)
-#   * schedule          — nightly at 05:00 UTC (GitHub only fires schedules from the
-#                         repository's DEFAULT branch, so the nightly run activates
-#                         once this file is merged to main).
+#   * pull_request      — on open/reopen/ready-for-review, and on the `run-ci` label
 on:
-  # Kept on purpose. This PR originally dropped the PR trigger because it was added
-  # "while the v6 migration is in flight"; experience since says otherwise. On #153 the
-  # PR-triggered E2E caught a deterministic 3/3 failure (a listener never firing because
-  # appHandlesRedemptionAlert defaults to false, so the SDK waits for a popin nobody
-  # acknowledges) that no unit test and no local run saw. Without it, that class of bug
-  # only surfaces on the nightly, i.e. after merge.
+  # Kept on purpose. This is the only automatic run left, so it is the only thing standing
+  # between a bad bridge and main. On #153 it caught a deterministic 3/3 failure (a listener
+  # never firing because appHandlesRedemptionAlert defaults to false, so the SDK waits for a
+  # popin nobody acknowledges) that no unit test and no local run saw.
   pull_request:
     branches: [main]
+    # No `synchronize`: a push to an open pull request does not rebuild. It runs once when
+    # the PR opens and then only on request — add the `run-ci` label (PR sidebar, or
+    # `gh pr edit N --add-label run-ci`).
+    types: [opened, reopened, ready_for_review, labeled]
   workflow_dispatch:
-  schedule:
-    - cron: "0 5 * * *"
 
+# A `labeled` event for any other label must not land in this group: with
+# `cancel-in-progress` it would kill a running job, and the replacement run skips the work,
+# so the check ends up "skipped" and the requested validation is lost. Dependabot makes that
+# concrete — it opens a PR and then applies its own labels to it. Those events get a group
+# of their own and cancel nothing.
 concurrency:
-  group: e2e-android-${{ github.ref }}
+  group: >-
+    e2e-android-${{ github.ref }}-${{
+      (github.event.action == 'labeled' && github.event.label.name != 'run-ci')
+      && format('label-{0}', github.event.label.name) || 'run' }}
   cancel-in-progress: true
 
 jobs:
   e2e-android:
     name: E2E Android (real backend)
     runs-on: ubuntu-latest
+    # `labeled` fires for every label; only `run-ci` means "build this".
+    if: >-
+      github.event_name != 'pull_request' ||
+      github.event.action != 'labeled' ||
+      github.event.label.name == 'run-ci'
     # 90, not 60. This branch consolidated the iOS suites into batches precisely to fit
     # the old budget, and #153 added two more suites on top. A single flaky app launch
     # costs a 600s per-suite timeout plus a retry, and one such retry on an early batch
@@ -38,6 +49,25 @@ jobs:
     # how this looked like a suite failure when the suite had simply never been reached.
     timeout-minutes: 90
     steps:
+      # GitHub raises no `labeled` event for a label that is already present, so the label
+      # has to go before it can trigger the next run.
+      #
+      # Only where the token can actually write. A `pull_request` from a fork and a
+      # Dependabot PR both run with a read-only token, so this DELETE would 403 and
+      # `continue-on-error` would bury it. On those PRs take the label off by hand to ask
+      # for another run — one click, not a dead end.
+      - name: Consume the run-ci label
+        if: >-
+          github.event.action == 'labeled' &&
+          github.event.pull_request.head.repo.full_name == github.repository &&
+          github.event.pull_request.user.login != 'dependabot[bot]'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api -X DELETE \
+            "repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/labels/run-ci"
+
       - name: Checkout repository
         uses: actions/checkout@v7
 
