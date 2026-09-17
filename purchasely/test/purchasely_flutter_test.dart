@@ -529,6 +529,29 @@ void main() {
       expect(
           methodCalls.first.arguments['purposes'], ['ANALYTICS', 'CAMPAIGNS']);
     });
+
+    test('revokeDataProcessingConsent maps refundHandling', () {
+      Purchasely.revokeDataProcessingConsent(
+          [PLYDataProcessingPurpose.refundHandling]);
+
+      expect(methodCalls.first.arguments['purposes'], ['REFUND_HANDLING']);
+    });
+
+    test('revokeDataProcessingConsent preserves combined purposes', () {
+      Purchasely.revokeDataProcessingConsent([
+        PLYDataProcessingPurpose.allNonEssentials,
+        PLYDataProcessingPurpose.refundHandling
+      ]);
+
+      expect(methodCalls.first.arguments['purposes'],
+          ['ALL_NON_ESSENTIALS', 'REFUND_HANDLING']);
+    });
+
+    test('revokeDataProcessingConsent clears all purposes', () {
+      Purchasely.revokeDataProcessingConsent([]);
+
+      expect(methodCalls.first.arguments['purposes'], []);
+    });
   });
 
   group('Transformation Methods', () {
@@ -877,6 +900,10 @@ void main() {
           Purchasely.mapDataProcessingPurposeToString(
               PLYDataProcessingPurpose.thirdPartyIntegrations),
           'THIRD_PARTY_INTEGRATIONS');
+      expect(
+          Purchasely.mapDataProcessingPurposeToString(
+              PLYDataProcessingPurpose.refundHandling),
+          'REFUND_HANDLING');
     });
   });
 
@@ -1239,6 +1266,7 @@ void main() {
       expect(PLYDataProcessingPurpose.campaigns.index, 3);
       expect(PLYDataProcessingPurpose.personalization.index, 4);
       expect(PLYDataProcessingPurpose.thirdPartyIntegrations.index, 5);
+      expect(PLYDataProcessingPurpose.refundHandling.index, 6);
     });
 
     test('PLYUserAttributeSource has correct values', () {

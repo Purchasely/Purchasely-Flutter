@@ -1,3 +1,16 @@
+## Unreleased
+
+### Added
+
+- Added `PLYDataProcessingPurpose.refundHandling` for iOS (requires Purchasely
+  iOS 6.2.0). It carries the revoked refund-handling consent flag to the
+  backend.
+
+### Fixed
+
+- On iOS, combining `allNonEssentials` with other data processing purposes no
+  longer collapses the additional purposes.
+
 ## 6.1.0
 
 Brings the Flutter plugin to Purchasely 6.1.0: the anonymous user id, the API
