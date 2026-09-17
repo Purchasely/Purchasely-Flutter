@@ -698,6 +698,7 @@ void main() {
       expect(PLYDataProcessingPurpose.campaigns.index, 3);
       expect(PLYDataProcessingPurpose.personalization.index, 4);
       expect(PLYDataProcessingPurpose.thirdPartyIntegrations.index, 5);
+      expect(PLYDataProcessingPurpose.refundHandling.index, 6);
     });
   });
 

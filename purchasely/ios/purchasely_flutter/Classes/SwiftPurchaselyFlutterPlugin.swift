@@ -1557,20 +1557,18 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
         guard let arguments, let purposesArg = arguments["purposes"] as? [String] else {
             return
         }
-        let purposes: Set<PLYDataProcessingPurpose> = if purposesArg.contains("ALL_NON_ESSENTIALS") {
-            Set([PLYDataProcessingPurpose.allNonEssentials])
-        } else {
-            Set(purposesArg.compactMap { (value: String) -> PLYDataProcessingPurpose? in
-                switch value {
-                    case "ANALYTICS": .analytics
-                    case "IDENTIFIED_ANALYTICS": .identifiedAnalytics
-                    case "CAMPAIGNS": .campaigns
-                    case "PERSONALIZATION": .personalization
-                    case "THIRD_PARTY_INTEGRATIONS": .thirdPartyIntegrations
-                    default: nil
-                }
-            })
-        }
+        let purposes: Set<PLYDataProcessingPurpose> = Set(purposesArg.compactMap { (value: String) -> PLYDataProcessingPurpose? in
+            switch value {
+                case "ALL_NON_ESSENTIALS": .allNonEssentials
+                case "ANALYTICS": .analytics
+                case "IDENTIFIED_ANALYTICS": .identifiedAnalytics
+                case "CAMPAIGNS": .campaigns
+                case "PERSONALIZATION": .personalization
+                case "THIRD_PARTY_INTEGRATIONS": .thirdPartyIntegrations
+                case "REFUND_HANDLING": .refundHandling
+                default: nil
+            }
+        })
         Purchasely.revokeDataProcessingConsent(for: purposes)
     }
 

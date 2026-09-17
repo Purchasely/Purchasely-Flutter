@@ -740,6 +740,13 @@ class Purchasely {
     _channel.invokeMethod('clearDynamicOfferings');
   }
 
+  /// Replaces the persisted set of revoked purposes; it does not merge.
+  ///
+  /// Pass the complete list every time. Passing `[]` grants everything back.
+  /// On iOS, `allNonEssentials` is analytics, campaigns, personalization, and
+  /// thirdPartyIntegrations; it excludes identifiedAnalytics and refundHandling,
+  /// which must be added explicitly when needed. On Android, `allNonEssentials`
+  /// includes identifiedAnalytics, and refundHandling is ignored.
   static void revokeDataProcessingConsent(
       List<PLYDataProcessingPurpose> purposes) {
     List<String> mappedPurposes = purposes
@@ -949,6 +956,8 @@ class Purchasely {
         return "PERSONALIZATION";
       case PLYDataProcessingPurpose.thirdPartyIntegrations:
         return "THIRD_PARTY_INTEGRATIONS";
+      case PLYDataProcessingPurpose.refundHandling:
+        return "REFUND_HANDLING";
     }
   }
 }
@@ -1013,7 +1022,13 @@ enum PLYDataProcessingPurpose {
   identifiedAnalytics,
   campaigns,
   personalization,
-  thirdPartyIntegrations
+  thirdPartyIntegrations,
+
+  /// iOS only (Purchasely iOS >= 6.2.0); ignored on Android. Carries the
+  /// revoked-consent flag as `refund-handling` in the
+  /// `X-PRIVACY-CONSENT-REVOKED-FEATURES` header for refusal of consumption
+  /// data processing attached to a refund request. Gates no SDK behaviour.
+  refundHandling
 }
 
 enum PLYThemeMode { light, dark, system }
