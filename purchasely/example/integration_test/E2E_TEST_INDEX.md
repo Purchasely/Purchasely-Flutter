@@ -233,6 +233,15 @@ Files:
 > internal state. Neither suite ever sets a *live* proxy: that would move the
 > example app off production.
 
+### T31 — 6.1.1 (iOS): a Console drawer closed by a real tap
+- **File:** `drawer_close_ios_test.dart`, run as the last group of `ios_transition_batch_test.dart` (CI batch 6). Port of React Native T31.
+- **Guards:** Purchasely-iOS#790, fixed in iOS SDK 6.1.2. Before it, a drawer closed by its button or by a tap on the scrim left the SDK window invisible on top of the app (no more taps), and `PRESENTATION_CLOSED` never fired.
+- **Action:** placement `integration_test_drawer` (a 70% Console drawer with a close ✕), `preload()` + `display()` **with no transition**, as a client app does. Two passes: the driver taps the ✕ (`T31-DRAWER-READY:button`), then the scrim (`T31-DRAWER-READY:outside`). After each close the test shows a full-screen Flutter probe and the driver taps the screen centre by coordinates (`T31-PROBE-READY:<n>`).
+- **Assert:** `PRESENTATION_CLOSED`, the probe receives the OS tap, `display()` resolves; `closeReason == button` for the ✕ pass.
+- **Observed (local, iPhone 17 / iOS 26.5):** 6.1.2 → pass, `button=button`, `outside=backSystem`. 6.1.0 → fail: no `PRESENTATION_CLOSED`, probe tap blocked.
+- **Flutter trap:** the live test binding drops real OS taps. The file sets `shouldPropagateDevicePointerEvents = true` in `main()`, not in the test body: the binding asserts the value is unchanged when the body ends.
+- **Driver:** `tools/drawer_close_driver_ios.sh`, fixed coordinates (the iOS a11y tree has no label for the ✕). Android: not run (iOS-only bug).
+
 ---
 
 ## 4. Host-side UI drivers
