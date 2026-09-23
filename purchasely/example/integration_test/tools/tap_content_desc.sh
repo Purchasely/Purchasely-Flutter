@@ -70,15 +70,42 @@ try:
     xml = open(path, encoding='utf-8').read()
 except Exception:
     sys.exit(0)
-for m in re.finditer(r'<node\b[^>]*>', xml):
-    tag = m.group(0)
-    cd = re.search(r'content-desc="([^"]*)"', tag)
-    if cd and desc in cd.group(1):
-        b = re.search(r'bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"', tag)
-        if b:
-            x1, y1, x2, y2 = map(int, b.groups())
-            print((x1 + x2) // 2, (y1 + y2) // 2)
-            break
+def attr(tag, k):
+    m = re.search(k + r'="([^"]*)"', tag)
+    return m.group(1) if m else ''
+
+def bounds(tag):
+    b = re.search(r'bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"', tag)
+    return tuple(map(int, b.groups())) if b else None
+
+nodes = [m.group(0) for m in re.finditer(r'<node\b[^>]*>', xml)]
+# Up to Android SDK 6.1.0 the content-desc holds "<label>, action:...". From
+# 6.1.1 (MOB-471) the action metadata is a view tag uiautomator cannot read and
+# a visible label is only in `text`, so match both attributes.
+for tag in nodes:
+    b = bounds(tag)
+    if b and (desc in attr(tag, 'content-desc') or desc in attr(tag, 'text')):
+        print((b[0] + b[2]) // 2, (b[1] + b[3]) // 2)
+        sys.exit(0)
+
+# 6.1.1 fallback for a close action: the SDK's `button_container`, the ✕ of
+# the screen (the smallest one, if the screen has several).
+# ponytail: it cannot tell a ✕ from another button_container. A wrong tap does
+# NOT fail flow_dismiss_test.dart: after 40 s it closes the flow with
+# closeAllScreens() and logs "close_all button not observed". Check the log
+# for that line; a keyed test hook would remove the ambiguity.
+if desc in ('action:close', 'action:close_all'):
+    best = None
+    for tag in nodes:
+        b = bounds(tag)
+        if b and attr(tag, 'resource-id').endswith('/button_container'):
+            area = (b[2] - b[0]) * (b[3] - b[1])
+            if best is None or area < best[0]:
+                best = (area, b)
+    if best:
+        b = best[1]
+        sys.stderr.write(f"[tap_content_desc] fallback: button_container {b}\n")
+        print((b[0] + b[2]) // 2, (b[1] + b[3]) // 2)
 PY
 )
     if [ -n "$coords" ]; then

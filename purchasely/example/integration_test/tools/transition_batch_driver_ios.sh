@@ -7,3 +7,4 @@ UDID="${1:?usage: $0 <simulator-udid>}"
 
 "$HERE/modal_dismissible_driver_ios.sh" "$UDID"
 "$HERE/re_display_driver_ios.sh" "$UDID"
+"$HERE/drawer_close_driver_ios.sh" "$UDID"

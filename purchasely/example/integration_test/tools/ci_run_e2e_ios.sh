@@ -184,7 +184,7 @@ if [ "$E2E_IOS_SUITE" = "all" ]; then
   run_suite "dismiss-ios" integration_test/ios_dismiss_batch_test.dart \
     dismiss_batch_driver_ios.sh dismiss_ios || fail=1
 
-  echo "=== Batch 6/9: modal and re-display transition regressions — HARD gate ==="
+  echo "=== Batch 6/9: modal, re-display and Console drawer close regressions — HARD gate ==="
   run_suite "transitions-ios" integration_test/ios_transition_batch_test.dart \
     transition_batch_driver_ios.sh transitions_ios || fail=1
 else
