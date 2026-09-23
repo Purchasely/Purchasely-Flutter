@@ -90,8 +90,10 @@ for tag in nodes:
 
 # 6.1.1 fallback for a close action: the SDK's `button_container`, the ✕ of
 # the screen (the smallest one, if the screen has several).
-# ponytail: it cannot tell a ✕ from another button_container; the Dart suite
-# asserts the close outcome, so a wrong tap fails the test, never passes it.
+# ponytail: it cannot tell a ✕ from another button_container. A wrong tap does
+# NOT fail flow_dismiss_test.dart: after 40 s it closes the flow with
+# closeAllScreens() and logs "close_all button not observed". Check the log
+# for that line; a keyed test hook would remove the ambiguity.
 if desc in ('action:close', 'action:close_all'):
     best = None
     for tag in nodes:
