@@ -1,3 +1,16 @@
+## 6.1.1
+
+Native SDKs: iOS `Purchasely 6.1.2`, Android `io.purchasely:core 6.1.1`. No
+Dart API change.
+
+### Fixed
+
+- iOS: a drawer, popin or modal closed by its close button, a close action or
+  a tap on the background now removes the SDK window and sends
+  `PRESENTATION_CLOSED` (iOS SDK 6.1.2, Purchasely-iOS#790). With 6.1.0, a
+  transparent window stayed over the app and blocked every tap, and the close
+  event never fired.
+
 ## 6.1.0
 
 Brings the Flutter plugin to Purchasely 6.1.0: the anonymous user id, the API
