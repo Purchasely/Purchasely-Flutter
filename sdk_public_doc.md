@@ -743,6 +743,18 @@ Purchasely.clearUserAttributes();
 
 > **Note**: `Purchasely.userLogout()` clears all custom user attributes.
 
+### Custom Events (6.2.0)
+
+`Purchasely.emit` sends a custom analytics event declared in the Console.
+
+```dart
+await Purchasely.emit('level_up', {'level': 3, 'mode': 'hard'});
+```
+
+The SDK does not check the property types. The backend casts each value to the
+type declared in the Console. Use `String`, `num`, `bool`, `List`, `Map` or
+`null`. Pass dates as ISO 8601 strings: a `DateTime` makes the call fail.
+
 ---
 
 ## Event Listeners
@@ -1029,6 +1041,23 @@ Android 6.0 renamed introductory-price helpers to offer-price helpers. Flutter
 exposes the v6 names on `PLYPlan` (`hasOfferPrice`, `offerPrice`, `offerAmount`,
 `offerDuration`, `offerPeriod`) and keeps the old `intro*` fields populated as
 deprecated compatibility aliases.
+
+### Promotional Offer Signature (iOS, 6.2.0)
+
+`Purchasely.signPromotionalOfferWithToken` signs a promotional offer over a purchase context token.
+It replaces `signPromotionalOffer`, which is deprecated and signs over the anonymous user id.
+
+```dart
+final signature = await Purchasely.signPromotionalOfferWithToken(
+    'com.example.yearly', 'com.example.yearly.winback');
+final token = signature['purchaseContextToken']; // lowercase UUID string
+```
+
+Put `purchaseContextToken` in the account field of the purchase: `appAccountToken` for
+StoreKit 2, `applicationUsername` for StoreKit 1. Apple rejects the offer if it differs. To sign
+again for the same purchase, pass the token back with `purchaseContextToken:`. A value that is
+not a UUID string rejects with a `PlatformException`. On Android the method resolves with an
+empty map.
 
 ---
 
