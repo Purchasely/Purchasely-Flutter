@@ -1059,6 +1059,11 @@ again for the same purchase, pass the token back with `purchaseContextToken:`. A
 not a UUID string rejects with a `PlatformException`. On Android the method resolves with an
 empty map.
 
+In Observer mode, set StoreKit 1 `applicationUsername` to the returned `purchaseContextToken`
+exactly. With StoreKit 2, pass its UUID as the purchase `appAccountToken`. Do not use the
+anonymous user id or generate another token: Apple rejects the offer when the purchase carries a
+different value from the one used to sign it.
+
 ---
 
 ## Troubleshooting
