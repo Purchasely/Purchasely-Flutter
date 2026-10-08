@@ -1,3 +1,7 @@
+## 6.2.0
+- Updated Android Purchasely Google Play SDK to `io.purchasely:google-play:6.2.0`.
+- Aligns the extension package version with `purchasely_flutter` 6.2.0.
+
 ## 6.1.1
 - Updated Android Purchasely Google Play SDK to `io.purchasely:google-play:6.1.1`.
 - Aligns the extension package version with `purchasely_flutter` 6.1.1.

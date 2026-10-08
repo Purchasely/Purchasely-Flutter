@@ -455,7 +455,7 @@ class PurchaselyFlutterPluginTest {
         assertEquals(1, StoreType.GOOGLE_PLAY_STORE.ordinal)
         assertEquals(2, StoreType.AMAZON_APP_STORE.ordinal)
         assertEquals(3, StoreType.HUAWEI_APP_GALLERY.ordinal)
-        assertEquals(4, StoreType.WEB_CHECKOUT_STRIPE.ordinal)
+        assertEquals(4, StoreType.STRIPE.ordinal)
         assertEquals(5, StoreType.NONE.ordinal)
     }
 
