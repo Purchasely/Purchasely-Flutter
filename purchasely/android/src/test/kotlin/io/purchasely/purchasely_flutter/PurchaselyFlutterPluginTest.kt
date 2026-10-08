@@ -137,6 +137,18 @@ class PurchaselyFlutterPluginTest {
     }
 
     @Test
+    fun `signPromotionalOfferWithToken answers an empty map on Android`() {
+        plugin.onAttachedToEngine(mockFlutterPluginBinding)
+
+        plugin.onMethodCall(
+            MethodCall("signPromotionalOfferWithToken", mapOf("storeProductId" to "p", "storeOfferId" to "o")),
+            mockResult
+        )
+
+        verify { mockResult.success(emptyMap<String, Any?>()) }
+    }
+
+    @Test
     fun `unknown method is not implemented`() {
         plugin.onAttachedToEngine(mockFlutterPluginBinding)
 

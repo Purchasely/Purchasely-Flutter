@@ -291,6 +291,8 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             isAnonymous(result: result)
         case "signPromotionalOffer":
             signPromotionalOffer(arguments: arguments, result: result)
+        case "signPromotionalOfferWithToken":
+            signPromotionalOfferWithToken(arguments: arguments, result: result)
         case "isEligibleForIntroOffer":
             isEligibleForIntroOffer(arguments: arguments, result: result)
         case "setDynamicOffering":
@@ -1193,6 +1195,46 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             if #available(iOS 12.2, macOS 12.0, tvOS 15.0, watchOS 8.0, *) {
                 Purchasely.signPromotionalOffer(storeProductId: storeProductId, storeOfferId: storeOfferId) { signature in
                     result(signature.toMap)
+                } failure: { error in
+                    result(FlutterError.error(code:"-1", message:"signature failed", error: error))
+                }
+            } else {
+                result(FlutterError.error(code:"-1", message:"Promotional offers signature are only available for iOS 15.0, macOS 12.0, tvOS 15.0, watchOS 8.0", error: nil))
+            }
+        }
+    }
+
+    private struct InvalidPurchaseContextToken: Error {}
+
+    /// An absent token (`nil` or `NSNull`) lets the SDK make one. A malformed token throws:
+    /// signing over a token the app did not send would make Apple reject the purchase.
+    static func purchaseContextToken(from raw: Any?) throws -> UUID? {
+        guard let raw, !(raw is NSNull) else { return nil }
+        guard let string = raw as? String, let token = UUID(uuidString: string) else {
+            throw InvalidPurchaseContextToken()
+        }
+        return token
+    }
+
+    private func signPromotionalOfferWithToken(arguments: [String: Any]?, result: @escaping FlutterResult) {
+        guard let arguments = arguments,
+              let storeProductId = arguments["storeProductId"] as? String,
+              let storeOfferId = arguments["storeOfferId"] as? String else {
+            result(FlutterError.error(code: "-1", message: "storeProductId and storeOfferId must not be nil", error: nil))
+            return
+        }
+        let token: UUID?
+        do {
+            token = try Self.purchaseContextToken(from: arguments["purchaseContextToken"])
+        } catch {
+            result(FlutterError.error(code: "-1", message: "purchaseContextToken must be a UUID string", error: nil))
+            return
+        }
+
+        DispatchQueue.main.async {
+            if #available(iOS 12.2, macOS 12.0, tvOS 15.0, watchOS 8.0, *) {
+                Purchasely.signPromotionalOffer(storeProductId: storeProductId, storeOfferId: storeOfferId, purchaseContextToken: token) { signature, signedToken in
+                    result(signature.toMap(purchaseContextToken: signedToken))
                 } failure: { error in
                     result(FlutterError.error(code:"-1", message:"signature failed", error: error))
                 }

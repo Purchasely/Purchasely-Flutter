@@ -403,9 +403,10 @@ class _MyAppState extends State<MyApp> {
 
   Future<void> signPromotionalOffer() async {
     try {
-      Map<dynamic, dynamic> signature = await Purchasely.signPromotionalOffer(
-          'com.purchasely.plus.yearly',
-          'com.purchasely.plus.yearly.winback.test');
+      Map<dynamic, dynamic> signature =
+          await Purchasely.signPromotionalOfferWithToken(
+              'com.purchasely.plus.yearly',
+              'com.purchasely.plus.yearly.winback.test');
       print('Signature $signature');
     } catch (e) {
       print(e);

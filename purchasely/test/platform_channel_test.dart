@@ -628,6 +628,28 @@ void main() {
       });
     });
 
+    group('signPromotionalOfferWithToken', () {
+      test('sends the ids and the token', () async {
+        final result = await Purchasely.signPromotionalOfferWithToken(
+            'store-product-123', 'promo-offer-456',
+            purchaseContextToken: 'abc');
+
+        expect(methodCalls.first.method, 'signPromotionalOfferWithToken');
+        expect(
+            methodCalls.first.arguments['storeProductId'], 'store-product-123');
+        expect(methodCalls.first.arguments['storeOfferId'], 'promo-offer-456');
+        expect(methodCalls.first.arguments['purchaseContextToken'], 'abc');
+        expect(result['signature'], 'sig-123');
+        expect(result['purchaseContextToken'], 'token-123');
+      });
+
+      test('sends a null token when none is given', () async {
+        await Purchasely.signPromotionalOfferWithToken('p', 'o');
+
+        expect(methodCalls.first.arguments['purchaseContextToken'], isNull);
+      });
+    });
+
     group('iOS Specific Methods', () {
       test('signPromotionalOffer sends storeProductId and offerId', () async {
         final result = await Purchasely.signPromotionalOffer(
@@ -906,6 +928,14 @@ dynamic _handleMethodCall(MethodCall methodCall) {
     case 'removeDynamicOffering':
     case 'clearDynamicOfferings':
       return null;
+    case 'signPromotionalOfferWithToken':
+      return {
+        'signature': 'sig-123',
+        'timestamp': '1234567890',
+        'nonce': 'nonce-123',
+        'keyIdentifier': 'key-123',
+        'purchaseContextToken': 'token-123'
+      };
     case 'signPromotionalOffer':
       return {
         'signature': 'sig-123',

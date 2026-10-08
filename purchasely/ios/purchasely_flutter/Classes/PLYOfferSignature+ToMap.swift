@@ -21,4 +21,12 @@ extension PLYOfferSignature {
         result["timestamp"] = timestamp
         return result
     }
+
+    /// The signature plus the token it covers. The token is lowercase because StoreKit 1
+    /// rejects an uppercase `applicationUsername`.
+    func toMap(purchaseContextToken: UUID) -> [String: Any] {
+        var result = toMap
+        result["purchaseContextToken"] = purchaseContextToken.uuidString.lowercased()
+        return result
+    }
 }

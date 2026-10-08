@@ -323,12 +323,37 @@ class Purchasely {
   /// Android this is a no-op that resolves with an empty map rather than
   /// throwing (FLT-W-01 / REC-04); it never rejects, so calling it
   /// cross-platform is safe, but the result is only meaningful on iOS.
+  @Deprecated(
+      'Use signPromotionalOfferWithToken. This method signs over the anonymous user id.')
   static Future<Map<dynamic, dynamic>> signPromotionalOffer(
       String storeProductId, String storeOfferId) async {
     final Map<dynamic, dynamic> result = await _channel.invokeMethod(
         'signPromotionalOffer', <String, dynamic>{
       'storeProductId': storeProductId,
       'storeOfferId': storeOfferId
+    });
+    return result;
+  }
+
+  /// Signs a StoreKit promotional offer over a purchase context token.
+  ///
+  /// iOS-only. On Android this resolves with an empty map and never rejects.
+  /// The result holds the signature fields of [signPromotionalOffer] plus
+  /// `purchaseContextToken`, a lowercase UUID string. Put that token in the
+  /// account field of the purchase (StoreKit 2: `appAccountToken`; StoreKit 1:
+  /// `applicationUsername`). Apple rejects the offer if it differs.
+  ///
+  /// Without [purchaseContextToken], the SDK makes a new token. To sign again
+  /// for the same purchase, pass the token you received. A value that is not a
+  /// UUID string rejects with a `PlatformException`, and no native call is made.
+  static Future<Map<dynamic, dynamic>> signPromotionalOfferWithToken(
+      String storeProductId, String storeOfferId,
+      {String? purchaseContextToken}) async {
+    final Map<dynamic, dynamic> result = await _channel
+        .invokeMethod('signPromotionalOfferWithToken', <String, dynamic>{
+      'storeProductId': storeProductId,
+      'storeOfferId': storeOfferId,
+      'purchaseContextToken': purchaseContextToken
     });
     return result;
   }

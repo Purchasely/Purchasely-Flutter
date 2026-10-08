@@ -294,6 +294,8 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
                 // doc comment on `Purchasely.signPromotionalOffer`.
                 result.safeSuccess(emptyMap<String, Any?>())
             }
+            // iOS-only, like `signPromotionalOffer` above: resolve empty, never reject.
+            "signPromotionalOfferWithToken" -> result.safeSuccess(emptyMap<String, Any?>())
             "getAnonymousUserId" -> result.safeSuccess(getAnonymousUserId())
             "isAnonymous" -> result.safeSuccess(isAnonymous())
             "isEligibleForIntroOffer" -> {
