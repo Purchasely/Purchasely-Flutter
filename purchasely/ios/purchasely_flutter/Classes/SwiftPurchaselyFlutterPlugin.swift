@@ -1605,11 +1605,8 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
         Purchasely.clearDynamicOfferings()
     }
 
-    private func revokeDataProcessingConsent(arguments: [String: Any]?) {
-        guard let arguments, let purposesArg = arguments["purposes"] as? [String] else {
-            return
-        }
-        let purposes: Set<PLYDataProcessingPurpose> = Set(purposesArg.compactMap { (value: String) -> PLYDataProcessingPurpose? in
+    static func dataProcessingPurposes(from values: [String]) -> Set<PLYDataProcessingPurpose> {
+        Set(values.compactMap { (value: String) -> PLYDataProcessingPurpose? in
             switch value {
                 case "ALL_NON_ESSENTIALS": .allNonEssentials
                 case "ANALYTICS": .analytics
@@ -1621,6 +1618,13 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
                 default: nil
             }
         })
+    }
+
+    private func revokeDataProcessingConsent(arguments: [String: Any]?) {
+        guard let arguments, let purposesArg = arguments["purposes"] as? [String] else {
+            return
+        }
+        let purposes = Self.dataProcessingPurposes(from: purposesArg)
         Purchasely.revokeDataProcessingConsent(for: purposes)
     }
 

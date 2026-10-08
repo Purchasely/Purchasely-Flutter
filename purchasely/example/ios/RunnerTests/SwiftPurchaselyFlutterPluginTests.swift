@@ -61,6 +61,28 @@ class SwiftPurchaselyFlutterPluginTests: XCTestCase {
         XCTAssertNotNil(emit)
     }
 
+    // MARK: - Consent purpose mapping (6.2.0)
+
+    func testConsentMappingKeepsEveryPurposeWhateverTheOrder() {
+        let expected: Set<PLYDataProcessingPurpose> = [.allNonEssentials, .refundHandling, .identifiedAnalytics]
+        XCTAssertEqual(
+            SwiftPurchaselyFlutterPlugin.dataProcessingPurposes(from: ["ALL_NON_ESSENTIALS", "REFUND_HANDLING", "IDENTIFIED_ANALYTICS"]),
+            expected)
+        XCTAssertEqual(
+            SwiftPurchaselyFlutterPlugin.dataProcessingPurposes(from: ["REFUND_HANDLING", "IDENTIFIED_ANALYTICS", "ALL_NON_ESSENTIALS"]),
+            expected)
+    }
+
+    func testConsentMappingOfAnEmptyListIsEmpty() {
+        XCTAssertTrue(SwiftPurchaselyFlutterPlugin.dataProcessingPurposes(from: []).isEmpty)
+    }
+
+    func testConsentMappingIgnoresAnUnknownValue() {
+        XCTAssertEqual(
+            SwiftPurchaselyFlutterPlugin.dataProcessingPurposes(from: ["NOPE", "ANALYTICS"]),
+            [.analytics])
+    }
+
     // MARK: - signPromotionalOfferWithToken (6.2.0)
 
     func testSignWithTokenRejectsAMalformedToken() {
