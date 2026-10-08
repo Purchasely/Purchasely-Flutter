@@ -503,6 +503,18 @@ class Purchasely {
     return await _channel.invokeMethod('userDidConsumeSubscriptionContent');
   }
 
+  /// Sends a custom analytics event to Purchasely.
+  ///
+  /// The SDK does not validate the property types. The backend casts each
+  /// value to the `data_type` declared in the Console. Values must be types
+  /// the platform channel carries: `String`, `num`, `bool`, `List`, `Map` or
+  /// `null`. Pass dates as ISO 8601 strings: a `DateTime` makes the call fail.
+  static Future<void> emit(String name,
+      [Map<String, dynamic> properties = const {}]) async {
+    await _channel.invokeMethod(
+        'emit', <String, dynamic>{'name': name, 'properties': properties});
+  }
+
   static Future<void> setUserAttributeWithString(String key, String value,
       {PLYDataProcessingLegalBasis processingLegalBasis =
           PLYDataProcessingLegalBasis.optional}) async {

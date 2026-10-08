@@ -397,6 +397,11 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
                 setAttribute(call.argument<Int>("attribute"), call.argument<String>("value"))
                 result.safeSuccess(true)
             }
+            "emit" -> {
+                val name = call.argument<String>("name") ?: return
+                Purchasely.emit(name, call.argument<Map<String, Any?>>("properties") ?: emptyMap())
+                result.safeSuccess(true)
+            }
             "setUserAttributeWithString" -> {
                 val key = call.argument<String>("key") ?: return
                 val value = call.argument<String>("value") ?: return

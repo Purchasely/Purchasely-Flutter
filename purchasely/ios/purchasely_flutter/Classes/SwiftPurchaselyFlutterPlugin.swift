@@ -248,6 +248,9 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
         case "userDidConsumeSubscriptionContent":
             userDidConsumeSubscriptionContent()
             result(true)
+        case "emit":
+            emit(arguments: arguments)
+            result(true)
         case "setUserAttributeWithString":
             setUserAttributeWithString(arguments: arguments)
         case "setUserAttributeWithInt":
@@ -1333,6 +1336,13 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
 
         guard let attributeKey = attr else { return }
         Purchasely.setAttribute(attributeKey, value: value)
+    }
+
+    private func emit(arguments: [String: Any]?) {
+        guard let name = arguments?["name"] as? String else {
+            return
+        }
+        Purchasely.emit(name: name, properties: arguments?["properties"] as? [String: Any] ?? [:])
     }
 
     private func setUserAttributeWithString(arguments: [String: Any]?) {

@@ -52,6 +52,15 @@ class SwiftPurchaselyFlutterPluginTests: XCTestCase {
         XCTAssertNotNil(builder)
     }
 
+    // MARK: - emit (6.2.0)
+
+    func testNativeEmitSignatureExists() {
+        // Not called: the SDK is not started in this target. Compiling this proves the
+        // native signature `emit(name:properties:)` the bridge forwards to.
+        let emit: (String, [String: Any]) -> Void = { Purchasely.emit(name: $0, properties: $1) }
+        XCTAssertNotNil(emit)
+    }
+
     // MARK: - Web2App redemption + anonymous user id (6.1.0)
 
     func testInitBuilderAcceptsAnonymousUserIdAndOverride() {
