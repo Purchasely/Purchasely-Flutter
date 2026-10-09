@@ -191,7 +191,26 @@ else
   echo "=== Targeted manual run: skipping batches 1-6; running StoreKit only ==="
 fi
 
-# --- Batch 7/9: S7 StoreKit restore degradation ---------------------------
+echo "=== Batch 7/9: 6.1.0 identity + cleared proxy + redemption listener — HARD gate ==="
+# From #153. Deterministic, no idb driver: asserts the pinned anonymousUserId round-trips
+# uppercased and reaches analytics, that an explicit proxy(null) clear leaves the SDK on
+# production, that the chain listener subscribed before start(), that a bogus `ply/redeem`
+# token settles as a Failure with the backend's own code, and that a GRANTED redemption
+# crosses the bridge with its subscription mapped. Kept as its own suite rather than folded
+# into a batch: it starts the SDK with a distinct proxy/identity state.
+run_suite "redemption_identity" integration_test/redemption_identity_test.dart "" redemption_identity || fail=1
+
+echo "=== Batch 8/9: 6.1.0 unconvertible proxy is skipped, not fatal — HARD gate ==="
+# From #153. Must be its own app process: the SDK starts once, and this needs a different
+# proxy state than batch 7. Asserts a typo neither clears the proxy nor breaks start().
+run_suite "proxy_invalid" integration_test/proxy_invalid_test.dart "" proxy_invalid || fail=1
+
+# --- Batch 9/9: S7 StoreKit restore degradation ---------------------------
+# Runs LAST, after every `flutter test` suite. When this suite ran before redemption_identity,
+# the first plain launch after its SKTestSession resolved an empty App Store catalogue
+# (`allProducts` → "Unable to find the product.") on attempt 1 of every CI run checked since abb0008,
+# and passed only on attempt 2. Do not schedule another suite after it.
+#
 # SPECIAL CASE, not run via run_suite(): purchase_restore_ios_test.dart can
 # only exercise a real local StoreKit2 transaction if the app is launched
 # through the Xcode scheme (Configuration.storekit is wired into the
@@ -211,7 +230,7 @@ fi
 # purchase/restore assertion failure, etc.) the suite gates, even if other
 # attempts in the same run also matched the Apple signature — a mixed run
 # must not let a real regression hide behind an unrelated known-bug match.
-echo "=== Batch 7/9: S7 StoreKit restore degradation (xcodebuild, RunnerIntegrationTests) — HARD gate (Apple-bug exception) ==="
+echo "=== Batch 9/9: S7 StoreKit restore degradation (xcodebuild, RunnerIntegrationTests) — HARD gate (Apple-bug exception) ==="
 TIMEOUT="$STOREKIT_TIMEOUT"
 storekit_logbase="storekit-ios"
 storekit_ok=0
@@ -282,20 +301,6 @@ if [ "$storekit_ok" -ne 1 ]; then
     fail=1
   fi
 fi
-
-echo "=== Batch 8/9: 6.1.0 identity + cleared proxy + redemption listener — HARD gate ==="
-# From #153. Deterministic, no idb driver: asserts the pinned anonymousUserId round-trips
-# uppercased and reaches analytics, that an explicit proxy(null) clear leaves the SDK on
-# production, that the chain listener subscribed before start(), that a bogus `ply/redeem`
-# token settles as a Failure with the backend's own code, and that a GRANTED redemption
-# crosses the bridge with its subscription mapped. Kept as its own suite rather than folded
-# into a batch: it starts the SDK with a distinct proxy/identity state.
-run_suite "redemption_identity" integration_test/redemption_identity_test.dart "" redemption_identity || fail=1
-
-echo "=== Batch 9/9: 6.1.0 unconvertible proxy is skipped, not fatal — HARD gate ==="
-# From #153. Must be its own app process: the SDK starts once, and this needs a different
-# proxy state than batch 8. Asserts a typo neither clears the proxy nor breaks start().
-run_suite "proxy_invalid" integration_test/proxy_invalid_test.dart "" proxy_invalid || fail=1
 
 echo "=== E2E iOS finished (gating fail=$fail) ==="
 exit $fail

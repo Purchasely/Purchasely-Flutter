@@ -323,12 +323,37 @@ class Purchasely {
   /// Android this is a no-op that resolves with an empty map rather than
   /// throwing (FLT-W-01 / REC-04); it never rejects, so calling it
   /// cross-platform is safe, but the result is only meaningful on iOS.
+  @Deprecated(
+      'Use signPromotionalOfferWithToken. This method signs over the anonymous user id.')
   static Future<Map<dynamic, dynamic>> signPromotionalOffer(
       String storeProductId, String storeOfferId) async {
     final Map<dynamic, dynamic> result = await _channel.invokeMethod(
         'signPromotionalOffer', <String, dynamic>{
       'storeProductId': storeProductId,
       'storeOfferId': storeOfferId
+    });
+    return result;
+  }
+
+  /// Signs a StoreKit promotional offer over a purchase context token.
+  ///
+  /// iOS-only. On Android this resolves with an empty map and never rejects.
+  /// The result holds the signature fields of [signPromotionalOffer] plus
+  /// `purchaseContextToken`, a lowercase UUID string. Put that token in the
+  /// account field of the purchase (StoreKit 2: `appAccountToken`; StoreKit 1:
+  /// `applicationUsername`). Apple rejects the offer if it differs.
+  ///
+  /// Without [purchaseContextToken], the SDK makes a new token. To sign again
+  /// for the same purchase, pass the token you received. A value that is not a
+  /// UUID string rejects with a `PlatformException`, and no native call is made.
+  static Future<Map<dynamic, dynamic>> signPromotionalOfferWithToken(
+      String storeProductId, String storeOfferId,
+      {String? purchaseContextToken}) async {
+    final Map<dynamic, dynamic> result = await _channel
+        .invokeMethod('signPromotionalOfferWithToken', <String, dynamic>{
+      'storeProductId': storeProductId,
+      'storeOfferId': storeOfferId,
+      'purchaseContextToken': purchaseContextToken
     });
     return result;
   }
@@ -501,6 +526,18 @@ class Purchasely {
 
   static Future<void> userDidConsumeSubscriptionContent() async {
     return await _channel.invokeMethod('userDidConsumeSubscriptionContent');
+  }
+
+  /// Sends a custom analytics event to Purchasely.
+  ///
+  /// The SDK does not validate the property types. The backend casts each
+  /// value to the `data_type` declared in the Console. Values must be types
+  /// the platform channel carries: `String`, `num`, `bool`, `List`, `Map` or
+  /// `null`. Pass dates as ISO 8601 strings: a `DateTime` makes the call fail.
+  static Future<void> emit(String name,
+      [Map<String, dynamic> properties = const {}]) async {
+    await _channel.invokeMethod(
+        'emit', <String, dynamic>{'name': name, 'properties': properties});
   }
 
   static Future<void> setUserAttributeWithString(String key, String value,
@@ -740,6 +777,13 @@ class Purchasely {
     _channel.invokeMethod('clearDynamicOfferings');
   }
 
+  /// Replaces the persisted set of revoked purposes; it does not merge.
+  ///
+  /// Pass the complete list every time. Passing `[]` grants everything back.
+  /// On iOS, `allNonEssentials` is analytics, campaigns, personalization, and
+  /// thirdPartyIntegrations; it excludes identifiedAnalytics and refundHandling,
+  /// which must be added explicitly when needed. On Android, `allNonEssentials`
+  /// includes identifiedAnalytics, and refundHandling is ignored.
   static void revokeDataProcessingConsent(
       List<PLYDataProcessingPurpose> purposes) {
     List<String> mappedPurposes = purposes
@@ -949,6 +993,8 @@ class Purchasely {
         return "PERSONALIZATION";
       case PLYDataProcessingPurpose.thirdPartyIntegrations:
         return "THIRD_PARTY_INTEGRATIONS";
+      case PLYDataProcessingPurpose.refundHandling:
+        return "REFUND_HANDLING";
     }
   }
 }
@@ -1013,7 +1059,13 @@ enum PLYDataProcessingPurpose {
   identifiedAnalytics,
   campaigns,
   personalization,
-  thirdPartyIntegrations
+  thirdPartyIntegrations,
+
+  /// iOS only (Purchasely iOS >= 6.2.0); ignored on Android. Carries the
+  /// revoked-consent flag as `refund-handling` in the
+  /// `X-PRIVACY-CONSENT-REVOKED-FEATURES` header for refusal of consumption
+  /// data processing attached to a refund request. Gates no SDK behaviour.
+  refundHandling
 }
 
 enum PLYThemeMode { light, dark, system }

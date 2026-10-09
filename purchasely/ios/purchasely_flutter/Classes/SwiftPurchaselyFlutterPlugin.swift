@@ -248,6 +248,9 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
         case "userDidConsumeSubscriptionContent":
             userDidConsumeSubscriptionContent()
             result(true)
+        case "emit":
+            emit(arguments: arguments)
+            result(true)
         case "setUserAttributeWithString":
             setUserAttributeWithString(arguments: arguments)
         case "setUserAttributeWithInt":
@@ -288,6 +291,8 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             isAnonymous(result: result)
         case "signPromotionalOffer":
             signPromotionalOffer(arguments: arguments, result: result)
+        case "signPromotionalOfferWithToken":
+            signPromotionalOfferWithToken(arguments: arguments, result: result)
         case "isEligibleForIntroOffer":
             isEligibleForIntroOffer(arguments: arguments, result: result)
         case "setDynamicOffering":
@@ -411,7 +416,7 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
 
         var builder = Purchasely.apiKey(apiKey)
             .appTechnology(.flutter)
-            .sdkBridgeVersion("6.1.1")
+            .sdkBridgeVersion("6.2.0")
 
         if let userId = (arguments["appUserId"] as? String) ?? (arguments["userId"] as? String), !userId.isEmpty {
             builder = builder.appUserId(userId)
@@ -1199,6 +1204,46 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
         }
     }
 
+    private struct InvalidPurchaseContextToken: Error {}
+
+    /// An absent token (`nil` or `NSNull`) lets the SDK make one. A malformed token throws:
+    /// signing over a token the app did not send would make Apple reject the purchase.
+    static func purchaseContextToken(from raw: Any?) throws -> UUID? {
+        guard let raw, !(raw is NSNull) else { return nil }
+        guard let string = raw as? String, let token = UUID(uuidString: string) else {
+            throw InvalidPurchaseContextToken()
+        }
+        return token
+    }
+
+    private func signPromotionalOfferWithToken(arguments: [String: Any]?, result: @escaping FlutterResult) {
+        guard let arguments = arguments,
+              let storeProductId = arguments["storeProductId"] as? String,
+              let storeOfferId = arguments["storeOfferId"] as? String else {
+            result(FlutterError.error(code: "-1", message: "storeProductId and storeOfferId must not be nil", error: nil))
+            return
+        }
+        let token: UUID?
+        do {
+            token = try Self.purchaseContextToken(from: arguments["purchaseContextToken"])
+        } catch {
+            result(FlutterError.error(code: "-1", message: "purchaseContextToken must be a UUID string", error: nil))
+            return
+        }
+
+        DispatchQueue.main.async {
+            if #available(iOS 12.2, macOS 12.0, tvOS 15.0, watchOS 8.0, *) {
+                Purchasely.signPromotionalOffer(storeProductId: storeProductId, storeOfferId: storeOfferId, purchaseContextToken: token) { signature, signedToken in
+                    result(signature.toMap(purchaseContextToken: signedToken))
+                } failure: { error in
+                    result(FlutterError.error(code:"-1", message:"signature failed", error: error))
+                }
+            } else {
+                result(FlutterError.error(code:"-1", message:"Promotional offers signature are only available for iOS 15.0, macOS 12.0, tvOS 15.0, watchOS 8.0", error: nil))
+            }
+        }
+    }
+
     private func purchaseWithPlanVendorId(arguments: [String: Any]?, result: @escaping FlutterResult) {
         guard let arguments = arguments, let vendorId = arguments["vendorId"] as? String else {
             result(FlutterError.error(code: "-1", message: "plan vendor id must not be nil", error: nil))
@@ -1333,6 +1378,13 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
 
         guard let attributeKey = attr else { return }
         Purchasely.setAttribute(attributeKey, value: value)
+    }
+
+    private func emit(arguments: [String: Any]?) {
+        guard let name = arguments?["name"] as? String else {
+            return
+        }
+        Purchasely.emit(name: name, properties: arguments?["properties"] as? [String: Any] ?? [:])
     }
 
     private func setUserAttributeWithString(arguments: [String: Any]?) {
@@ -1553,24 +1605,26 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
         Purchasely.clearDynamicOfferings()
     }
 
+    static func dataProcessingPurposes(from values: [String]) -> Set<PLYDataProcessingPurpose> {
+        Set(values.compactMap { (value: String) -> PLYDataProcessingPurpose? in
+            switch value {
+                case "ALL_NON_ESSENTIALS": .allNonEssentials
+                case "ANALYTICS": .analytics
+                case "IDENTIFIED_ANALYTICS": .identifiedAnalytics
+                case "CAMPAIGNS": .campaigns
+                case "PERSONALIZATION": .personalization
+                case "THIRD_PARTY_INTEGRATIONS": .thirdPartyIntegrations
+                case "REFUND_HANDLING": .refundHandling
+                default: nil
+            }
+        })
+    }
+
     private func revokeDataProcessingConsent(arguments: [String: Any]?) {
         guard let arguments, let purposesArg = arguments["purposes"] as? [String] else {
             return
         }
-        let purposes: Set<PLYDataProcessingPurpose> = if purposesArg.contains("ALL_NON_ESSENTIALS") {
-            Set([PLYDataProcessingPurpose.allNonEssentials])
-        } else {
-            Set(purposesArg.compactMap { (value: String) -> PLYDataProcessingPurpose? in
-                switch value {
-                    case "ANALYTICS": .analytics
-                    case "IDENTIFIED_ANALYTICS": .identifiedAnalytics
-                    case "CAMPAIGNS": .campaigns
-                    case "PERSONALIZATION": .personalization
-                    case "THIRD_PARTY_INTEGRATIONS": .thirdPartyIntegrations
-                    default: nil
-                }
-            })
-        }
+        let purposes = Self.dataProcessingPurposes(from: purposesArg)
         Purchasely.revokeDataProcessingConsent(for: purposes)
     }
 

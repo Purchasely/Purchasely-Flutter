@@ -294,6 +294,8 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
                 // doc comment on `Purchasely.signPromotionalOffer`.
                 result.safeSuccess(emptyMap<String, Any?>())
             }
+            // iOS-only, like `signPromotionalOffer` above: resolve empty, never reject.
+            "signPromotionalOfferWithToken" -> result.safeSuccess(emptyMap<String, Any?>())
             "getAnonymousUserId" -> result.safeSuccess(getAnonymousUserId())
             "isAnonymous" -> result.safeSuccess(isAnonymous())
             "isEligibleForIntroOffer" -> {
@@ -395,6 +397,11 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
             }
             "setAttribute" -> {
                 setAttribute(call.argument<Int>("attribute"), call.argument<String>("value"))
+                result.safeSuccess(true)
+            }
+            "emit" -> {
+                val name = call.argument<String>("name") ?: return
+                Purchasely.emit(name, call.argument<Map<String, Any?>>("properties") ?: emptyMap())
                 result.safeSuccess(true)
             }
             "setUserAttributeWithString" -> {
@@ -688,7 +695,7 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
             }
             .build()
 
-        Purchasely.sdkBridgeVersion = "6.1.1"
+        Purchasely.sdkBridgeVersion = "6.2.0"
         Purchasely.appTechnology = PLYAppTechnology.FLUTTER
 
         Purchasely.start { error ->
@@ -1693,18 +1700,18 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
                 // Exhaustive on purpose, and `when` on the enum without an `else` is what
                 // keeps it that way: a new StoreType then fails to COMPILE here instead of
                 // silently falling into a null the Dart side reads as `none`. That is how
-                // WEB_CHECKOUT_STRIPE was dropped — the very source a Web2App redemption
+                // STRIPE (then WEB_CHECKOUT_STRIPE) was dropped — the very source a Web2App redemption
                 // grants. `null` stays only for NONE, which Dart maps to its own `none`.
                 //
                 // The ordinals are the wire contract and both natives agree on them:
-                // APPLE 0, GOOGLE 1, AMAZON 2, HUAWEI 3, WEB_CHECKOUT_STRIPE 4, NONE 5 —
+                // APPLE 0, GOOGLE 1, AMAZON 2, HUAWEI 3, STRIPE 4, NONE 5 —
                 // same order as Dart's PLYSubscriptionSource.
                 this["subscriptionSource"] = when(data.data.storeType) {
                     StoreType.APPLE_APP_STORE -> StoreType.APPLE_APP_STORE.ordinal
                     StoreType.GOOGLE_PLAY_STORE -> StoreType.GOOGLE_PLAY_STORE.ordinal
                     StoreType.AMAZON_APP_STORE -> StoreType.AMAZON_APP_STORE.ordinal
                     StoreType.HUAWEI_APP_GALLERY -> StoreType.HUAWEI_APP_GALLERY.ordinal
-                    StoreType.WEB_CHECKOUT_STRIPE -> StoreType.WEB_CHECKOUT_STRIPE.ordinal
+                    StoreType.STRIPE -> StoreType.STRIPE.ordinal
                     StoreType.NONE -> StoreType.NONE.ordinal
                     null -> null
                 }

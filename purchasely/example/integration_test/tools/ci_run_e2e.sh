@@ -183,6 +183,9 @@ echo "=== Suite 3/14: user-attribute listener (set/removed events) — HARD gate
 # event the listener must receive (no UI interaction, no driver).
 run_suite "user_attribute_listener" integration_test/user_attribute_listener_test.dart "" user_attribute_listener || fail=1
 
+echo "=== Suite 3b: emit reaches the native bridge — HARD gate ==="
+run_suite "emit" integration_test/emit_test.dart "" emit || fail=1
+
 echo "=== Suite 4/14: interceptor trigger (uiautomator tap) — HARD gate ==="
 run_suite "interceptor" integration_test/interceptor_trigger_test.dart \
   tap_purchase.sh interceptor || fail=1

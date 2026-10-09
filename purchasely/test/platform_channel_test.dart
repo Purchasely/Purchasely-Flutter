@@ -599,6 +599,57 @@ void main() {
       });
     });
 
+    group('emit', () {
+      test('emit sends the name and the properties', () async {
+        await Purchasely.emit('level_up', {'level': 3, 'tag': 'a'});
+
+        expect(methodCalls.first.method, 'emit');
+        expect(methodCalls.first.arguments['name'], 'level_up');
+        expect(methodCalls.first.arguments['properties'],
+            {'level': 3, 'tag': 'a'});
+      });
+
+      test('emit sends empty properties by default', () async {
+        await Purchasely.emit('level_up');
+
+        expect(methodCalls.first.arguments['properties'], isEmpty);
+      });
+
+      test('emit rethrows a channel error', () async {
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(channel, (MethodCall methodCall) async {
+          throw PlatformException(code: '-1', message: 'emit failed');
+        });
+
+        await expectLater(
+          Purchasely.emit('level_up'),
+          throwsA(isA<PlatformException>()),
+        );
+      });
+    });
+
+    group('signPromotionalOfferWithToken', () {
+      test('sends the ids and the token', () async {
+        final result = await Purchasely.signPromotionalOfferWithToken(
+            'store-product-123', 'promo-offer-456',
+            purchaseContextToken: 'abc');
+
+        expect(methodCalls.first.method, 'signPromotionalOfferWithToken');
+        expect(
+            methodCalls.first.arguments['storeProductId'], 'store-product-123');
+        expect(methodCalls.first.arguments['storeOfferId'], 'promo-offer-456');
+        expect(methodCalls.first.arguments['purchaseContextToken'], 'abc');
+        expect(result['signature'], 'sig-123');
+        expect(result['purchaseContextToken'], 'token-123');
+      });
+
+      test('sends a null token when none is given', () async {
+        await Purchasely.signPromotionalOfferWithToken('p', 'o');
+
+        expect(methodCalls.first.arguments['purchaseContextToken'], isNull);
+      });
+    });
+
     group('iOS Specific Methods', () {
       test('signPromotionalOffer sends storeProductId and offerId', () async {
         final result = await Purchasely.signPromotionalOffer(
@@ -698,6 +749,7 @@ void main() {
       expect(PLYDataProcessingPurpose.campaigns.index, 3);
       expect(PLYDataProcessingPurpose.personalization.index, 4);
       expect(PLYDataProcessingPurpose.thirdPartyIntegrations.index, 5);
+      expect(PLYDataProcessingPurpose.refundHandling.index, 6);
     });
   });
 
@@ -876,6 +928,14 @@ dynamic _handleMethodCall(MethodCall methodCall) {
     case 'removeDynamicOffering':
     case 'clearDynamicOfferings':
       return null;
+    case 'signPromotionalOfferWithToken':
+      return {
+        'signature': 'sig-123',
+        'timestamp': '1234567890',
+        'nonce': 'nonce-123',
+        'keyIdentifier': 'key-123',
+        'purchaseContextToken': 'token-123'
+      };
     case 'signPromotionalOffer':
       return {
         'signature': 'sig-123',

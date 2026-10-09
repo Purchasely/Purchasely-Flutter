@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'dart_ios_bridge_test.dart' as bridge;
 import 'deeplink_cold_start_test.dart' as deeplink;
+import 'emit_test.dart' as emit;
 import 'flow_dismiss_ios_test.dart' as flow_dismiss;
 import 'user_attribute_listener_test.dart' as user_attributes;
 
@@ -13,4 +14,5 @@ void main() {
   group('flow dismiss', flow_dismiss.main);
   group('Dart iOS bridge', bridge.main);
   group('user-attribute listener', user_attributes.main);
+  group('emit', emit.main);
 }

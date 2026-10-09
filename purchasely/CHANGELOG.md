@@ -1,3 +1,28 @@
+## 6.2.0
+
+Native SDKs: iOS `Purchasely 6.2.0`, Android `io.purchasely:core 6.2.0`.
+
+### Added
+
+- Added `PLYDataProcessingPurpose.refundHandling` for iOS (requires Purchasely
+  iOS 6.2.0). It carries the revoked refund-handling consent flag to the
+  backend.
+- Added `Purchasely.emit(name, properties)` to send a custom analytics event.
+  Pass dates as ISO 8601 strings.
+- Added `Purchasely.signPromotionalOfferWithToken` for iOS. It signs over a
+  purchase context token and returns `purchaseContextToken` with the signature.
+  On Android it resolves with an empty map.
+
+### Deprecated
+
+- `Purchasely.signPromotionalOffer` signs over the anonymous user id. Use
+  `signPromotionalOfferWithToken`.
+
+### Fixed
+
+- On iOS, combining `allNonEssentials` with other data processing purposes no
+  longer collapses the additional purposes.
+
 ## 6.1.1
 
 Native SDKs: iOS `Purchasely 6.1.2`, Android `io.purchasely:core 6.1.1`. No

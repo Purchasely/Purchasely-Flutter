@@ -27,7 +27,7 @@ class SwiftPurchaselyFlutterPluginTests: XCTestCase {
         // Mirrors the chain used by `SwiftPurchaselyFlutterPlugin.start(...)`.
         let builder = Purchasely.apiKey("test-api-key")
             .appTechnology(.flutter)
-            .sdkBridgeVersion("6.1.1")
+            .sdkBridgeVersion("6.2.0")
             .runningMode(.full)
             .logLevel(.debug)
             .storekitSettings(.storeKit2)
@@ -50,6 +50,73 @@ class SwiftPurchaselyFlutterPluginTests: XCTestCase {
             .appTechnology(.flutter)
             .handleDeeplink(url)
         XCTAssertNotNil(builder)
+    }
+
+    // MARK: - emit (6.2.0)
+
+    func testNativeEmitSignatureExists() {
+        // Not called: the SDK is not started in this target. Compiling this proves the
+        // native signature `emit(name:properties:)` the bridge forwards to.
+        let emit: (String, [String: Any]) -> Void = { Purchasely.emit(name: $0, properties: $1) }
+        XCTAssertNotNil(emit)
+    }
+
+    // MARK: - Consent purpose mapping (6.2.0)
+
+    func testConsentMappingKeepsEveryPurposeWhateverTheOrder() {
+        let expected: Set<PLYDataProcessingPurpose> = [.allNonEssentials, .refundHandling, .identifiedAnalytics]
+        XCTAssertEqual(
+            SwiftPurchaselyFlutterPlugin.dataProcessingPurposes(from: ["ALL_NON_ESSENTIALS", "REFUND_HANDLING", "IDENTIFIED_ANALYTICS"]),
+            expected)
+        XCTAssertEqual(
+            SwiftPurchaselyFlutterPlugin.dataProcessingPurposes(from: ["REFUND_HANDLING", "IDENTIFIED_ANALYTICS", "ALL_NON_ESSENTIALS"]),
+            expected)
+    }
+
+    func testConsentMappingOfAnEmptyListIsEmpty() {
+        XCTAssertTrue(SwiftPurchaselyFlutterPlugin.dataProcessingPurposes(from: []).isEmpty)
+    }
+
+    func testConsentMappingIgnoresAnUnknownValue() {
+        XCTAssertEqual(
+            SwiftPurchaselyFlutterPlugin.dataProcessingPurposes(from: ["NOPE", "ANALYTICS"]),
+            [.analytics])
+    }
+
+    // MARK: - signPromotionalOfferWithToken (6.2.0)
+
+    func testSignWithTokenRejectsAMalformedToken() {
+        XCTAssertThrowsError(try SwiftPurchaselyFlutterPlugin.purchaseContextToken(from: "not-a-uuid"))
+    }
+
+    func testSignWithTokenRejectsAnEmptyToken() {
+        XCTAssertThrowsError(try SwiftPurchaselyFlutterPlugin.purchaseContextToken(from: ""))
+    }
+
+    func testSignWithTokenLeavesAnAbsentTokenToTheSDK() throws {
+        XCTAssertNil(try SwiftPurchaselyFlutterPlugin.purchaseContextToken(from: nil))
+        XCTAssertNil(try SwiftPurchaselyFlutterPlugin.purchaseContextToken(from: NSNull()))
+    }
+
+    func testSignWithTokenAcceptsAUUIDString() throws {
+        let raw = "0E984725-C51C-4BF4-9960-E1C80E27ABA0"
+        XCTAssertEqual(try SwiftPurchaselyFlutterPlugin.purchaseContextToken(from: raw), UUID(uuidString: raw))
+    }
+
+    func testSignWithTokenResultCarriesTheSignatureAndALowercaseToken() throws {
+        let json = """
+        {"key_identifier":"key-1","plan_vendor_id":"plan-1","offer_identifier":"offer-1",
+         "offer_signature":"sig-1","offer_nonce":"6B29FC40-CA47-1067-B31D-00DD010662DA",
+         "offer_timestamp":1234567890}
+        """
+        let signature = try JSONDecoder().decode(PLYOfferSignature.self, from: Data(json.utf8))
+        let token = UUID(uuidString: "0E984725-C51C-4BF4-9960-E1C80E27ABA0")!
+
+        let map = signature.toMap(purchaseContextToken: token)
+
+        XCTAssertEqual(map["signature"] as? String, "sig-1")
+        XCTAssertEqual(map["keyIdentifier"] as? String, "key-1")
+        XCTAssertEqual(map["purchaseContextToken"] as? String, "0e984725-c51c-4bf4-9960-e1c80e27aba0")
     }
 
     // MARK: - Web2App redemption + anonymous user id (6.1.0)

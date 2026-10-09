@@ -12,7 +12,9 @@ import io.mockk.MockKAnnotations
 import io.mockk.every
 import io.mockk.impl.annotations.MockK
 import io.mockk.mockk
+import io.mockk.just
 import io.mockk.mockkStatic
+import io.mockk.runs
 import io.mockk.unmockkAll
 import io.mockk.verify
 import kotlinx.coroutines.Dispatchers
@@ -20,6 +22,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
+import io.purchasely.ext.Purchasely
 import io.purchasely.ext.StoreType
 import io.purchasely.models.PLYPlan
 import io.purchasely.models.PLYProduct
@@ -116,6 +119,33 @@ class PurchaselyFlutterPluginTest {
         plugin.onAttachedToActivity(mockActivityBinding)
 
         verify { mockActivityBinding.activity }
+    }
+
+    @Test
+    fun `emit forwards the name and the properties to the SDK`() {
+        plugin.onAttachedToEngine(mockFlutterPluginBinding)
+        mockkStatic(Purchasely::class)
+        every { Purchasely.emit(any(), any()) } just runs
+
+        plugin.onMethodCall(
+            MethodCall("emit", mapOf("name" to "x", "properties" to mapOf("a" to 1))),
+            mockResult
+        )
+
+        verify { Purchasely.emit("x", mapOf("a" to 1)) }
+        verify { mockResult.success(true) }
+    }
+
+    @Test
+    fun `signPromotionalOfferWithToken answers an empty map on Android`() {
+        plugin.onAttachedToEngine(mockFlutterPluginBinding)
+
+        plugin.onMethodCall(
+            MethodCall("signPromotionalOfferWithToken", mapOf("storeProductId" to "p", "storeOfferId" to "o")),
+            mockResult
+        )
+
+        verify { mockResult.success(emptyMap<String, Any?>()) }
     }
 
     @Test
@@ -455,7 +485,7 @@ class PurchaselyFlutterPluginTest {
         assertEquals(1, StoreType.GOOGLE_PLAY_STORE.ordinal)
         assertEquals(2, StoreType.AMAZON_APP_STORE.ordinal)
         assertEquals(3, StoreType.HUAWEI_APP_GALLERY.ordinal)
-        assertEquals(4, StoreType.WEB_CHECKOUT_STRIPE.ordinal)
+        assertEquals(4, StoreType.STRIPE.ordinal)
         assertEquals(5, StoreType.NONE.ordinal)
     }
 
