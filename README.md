@@ -1,4 +1,4 @@
-![Purchasely](images/icon.png)
+![Purchasely](purchasely/images/icon.png)
 
 # Purchasely
 
