@@ -524,6 +524,7 @@ jobs:
   # ============================================
   # Public API check (against the last release on pub.dev)
   # ============================================
+  # Not in `CI Success`: a pub.dev outage must not fail the aggregate.
   api-check:
     name: Public API
     runs-on: ubuntu-latest
@@ -573,7 +574,6 @@ jobs:
         build-android,
         flutter-3-44-agp-9,
         version-check,
-        api-check,
       ]
     if: always()
     steps:
@@ -613,10 +613,6 @@ jobs:
           fi
           if [[ "${{ needs.version-check.result }}" != "success" ]]; then
             echo "Version check job failed"
-            exit 1
-          fi
-          if [[ "${{ needs.api-check.result }}" != "success" ]]; then
-            echo "Public API check job failed"
             exit 1
           fi
           echo "All CI checks passed! ✅"

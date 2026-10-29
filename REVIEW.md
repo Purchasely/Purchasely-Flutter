@@ -169,8 +169,8 @@ pub.dev gets three packages: `purchasely_flutter` (folder `purchasely/`), `purch
 - **Public API:** the `Public API` job of `ci.yml` runs `.github/scripts/api-check.sh`. The
   script compares the three packages with their last release on pub.dev (`dart_apitool`). It
   fails on a breaking change that the `version:` of `pubspec.yaml` does not allow. It writes
-  all other changes in the job summary and does not fail on them. `CI Success` reads this job,
-  but it is not a required check. The platform reviewer also reads the diff of the exports of
+  all other changes in the job summary and does not fail on them. It is not a required check,
+  and `CI Success` does not read it: a pub.dev outage also fails it. The platform reviewer also reads the diff of the exports of
   `purchasely_flutter.dart` and of every public declaration under the `lib/` folders.
 - **Release checklist:** `RELEASE_GUIDE.md` (Quick Reference Checklist), a new row in
   `VERSIONS.md`, and the three `CHANGELOG.md` files. The repo has no release test plan file.
