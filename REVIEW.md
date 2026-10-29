@@ -172,6 +172,9 @@ pub.dev gets three packages: `purchasely_flutter` (folder `purchasely/`), `purch
   `VERSIONS.md`, and the three `CHANGELOG.md` files. The repo has no release test plan file.
   The E2E catalog `purchasely/example/integration_test/E2E_TEST_INDEX.md` is the nearest
   equivalent. A T2 PR writes its manual test steps in **How to verify**.
+- **Reviewers:** `.github/CODEOWNERS` requests the owners of the T2 and T3 paths. Branch
+  protection does not require a code owner review: the tier sets who must approve. For a T2 or
+  T3 file that `CODEOWNERS` does not list, the author requests the reviewers.
 - **The PR also has:** the `minSdk = 23` line in `purchasely/example/android/app/build.gradle`
   (CI fails without it); for a native SDK version change, the same version in all the pins of
   the table above and a new row in `VERSIONS.md`; screenshots for a UI change.
@@ -181,8 +184,6 @@ For the section 5 of the other repos, see the
 
 ### Not in place yet
 
-- A `CODEOWNERS` file that requests the right reviewers for the T2 and T3 paths. Until then,
-  the author requests them.
 - A public API check in CI (for example `dart_apitool`).
 - Labels `tier:T0` to `tier:T3`. Until then, the tier is in the PR body.
 - Required checks on `main`. Today, `main` requires 1 approval and no check.
