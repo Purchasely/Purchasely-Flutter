@@ -522,6 +522,27 @@ jobs:
           echo "Version check completed!"
 
   # ============================================
+  # Public API check (against the last release on pub.dev)
+  # ============================================
+  api-check:
+    name: Public API
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      # dart_apitool 0.23.2 needs Dart 3.9 or later (analyzer 10), so not Flutter 3.24.x.
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.44.0"
+          channel: "stable"
+          cache: true
+
+      - name: Check the public API
+        run: .github/scripts/api-check.sh
+
+  # ============================================
   # Podspec Validation (iOS)
   # ============================================
   validate-podspec:
@@ -552,6 +573,7 @@ jobs:
         build-android,
         flutter-3-44-agp-9,
         version-check,
+        api-check,
       ]
     if: always()
     steps:
@@ -591,6 +613,10 @@ jobs:
           fi
           if [[ "${{ needs.version-check.result }}" != "success" ]]; then
             echo "Version check job failed"
+            exit 1
+          fi
+          if [[ "${{ needs.api-check.result }}" != "success" ]]; then
+            echo "Public API check job failed"
             exit 1
           fi
           echo "All CI checks passed! ✅"
