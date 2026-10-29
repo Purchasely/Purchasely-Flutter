@@ -1,32 +1,31 @@
 # Reviewers of the T2 and T3 paths of REVIEW.md, section 5.
 # GitHub requests these owners on each PR that changes a matching path.
 # Branch protection does not require a code owner review: REVIEW.md sets who must approve.
-# Bridge sides: Android owners for android/, iOS owners for ios/, the SDK lead for the
-# JS or Dart side and the native pins.
-# The last pattern that matches a file wins: keep the pins and the T3 paths at the end.
+# The four SDK owners own every bridge path, so an author can get a second owner.
+# The last pattern that matches a file wins: keep the T3 paths at the end.
 
 # T2: hybrid bridge, Dart side and public API
-/purchasely/lib/                @kherembourg
-/purchasely_google/lib/         @kherembourg
-/purchasely_android_player/lib/ @kherembourg
+/purchasely/lib/                @kherembourg @chouaibMo @El-Fitz @EPIKorial
+/purchasely_google/lib/         @kherembourg @chouaibMo @El-Fitz @EPIKorial
+/purchasely_android_player/lib/ @kherembourg @chouaibMo @El-Fitz @EPIKorial
 
 # T2: hybrid bridge, Android side
-/purchasely/android/                @kherembourg @chouaibMo
-/purchasely_google/android/         @kherembourg @chouaibMo
-/purchasely_android_player/android/ @kherembourg @chouaibMo
+/purchasely/android/                @kherembourg @chouaibMo @El-Fitz @EPIKorial
+/purchasely_google/android/         @kherembourg @chouaibMo @El-Fitz @EPIKorial
+/purchasely_android_player/android/ @kherembourg @chouaibMo @El-Fitz @EPIKorial
 
 # T2: hybrid bridge, iOS side
-/purchasely/ios/ @kherembourg @EPIKorial @El-Fitz
+/purchasely/ios/ @kherembourg @chouaibMo @El-Fitz @EPIKorial
 
 # T2: native SDK pins and build compatibility
-/purchasely/android/build.gradle                 @kherembourg
-/purchasely_google/android/build.gradle          @kherembourg
-/purchasely_android_player/android/build.gradle  @kherembourg
-/purchasely/android/gradle.properties            @kherembourg
-/purchasely/ios/purchasely_flutter.podspec       @kherembourg
-/purchasely/ios/purchasely_flutter/Package.swift @kherembourg
-/purchasely/example/android/app/build.gradle     @kherembourg
-/purchasely/example/ios/Podfile.lock             @kherembourg
+/purchasely/android/build.gradle                 @kherembourg @chouaibMo @El-Fitz @EPIKorial
+/purchasely_google/android/build.gradle          @kherembourg @chouaibMo @El-Fitz @EPIKorial
+/purchasely_android_player/android/build.gradle  @kherembourg @chouaibMo @El-Fitz @EPIKorial
+/purchasely/android/gradle.properties            @kherembourg @chouaibMo @El-Fitz @EPIKorial
+/purchasely/ios/purchasely_flutter.podspec       @kherembourg @chouaibMo @El-Fitz @EPIKorial
+/purchasely/ios/purchasely_flutter/Package.swift @kherembourg @chouaibMo @El-Fitz @EPIKorial
+/purchasely/example/android/app/build.gradle     @kherembourg @chouaibMo @El-Fitz @EPIKorial
+/purchasely/example/ios/Podfile.lock             @kherembourg @chouaibMo @El-Fitz @EPIKorial
 
 # T3: publication, published package manifests, this file
 /.github/workflows/publish.yml          @kherembourg @chouaibMo @El-Fitz @EPIKorial
