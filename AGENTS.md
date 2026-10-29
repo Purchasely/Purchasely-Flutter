@@ -85,3 +85,9 @@ Do not test:
 
 - Lint config: `purchasely/analysis_options.yaml`. CI runs analyze without fatal infos or warnings, but format is strict.
 - Tests are Dart (`purchasely/test/`), Kotlin or Java with Mockito (Android), and XCTest (iOS).
+
+### Commits and Pull Requests
+
+[REVIEW.md](REVIEW.md) sets the review and merge rules: the tier of the PR (T0 to T3), the
+reviewers it needs, what runs before the release, and the sections of the PR body. Read it
+before you open a PR, and give the tier in the PR body.
