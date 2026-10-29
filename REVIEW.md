@@ -166,8 +166,12 @@ pub.dev gets three packages: `purchasely_flutter` (folder `purchasely/`), `purch
   again. Read the test log, not only the job status.
 - **Required checks:** `main` has none. Before the merge, the person who merges reads
   `CI Success` and the two E2E runs on the head commit.
-- **Public API:** no API check in CI yet. The platform reviewer reads the diff of the exports
-  of `purchasely_flutter.dart` and of every public declaration under the `lib/` folders.
+- **Public API:** the `Public API` job of `ci.yml` runs `.github/scripts/api-check.sh`. The
+  script compares the three packages with their last release on pub.dev (`dart_apitool`). It
+  fails on a breaking change that the `version:` of `pubspec.yaml` does not allow. It writes
+  all other changes in the job summary and does not fail on them. `CI Success` reads this job,
+  but it is not a required check. The platform reviewer also reads the diff of the exports of
+  `purchasely_flutter.dart` and of every public declaration under the `lib/` folders.
 - **Release checklist:** `RELEASE_GUIDE.md` (Quick Reference Checklist), a new row in
   `VERSIONS.md`, and the three `CHANGELOG.md` files. The repo has no release test plan file.
   The E2E catalog `purchasely/example/integration_test/E2E_TEST_INDEX.md` is the nearest
@@ -186,6 +190,5 @@ For the section 5 of the other repos, see the
 
 ### Not in place yet
 
-- A public API check in CI (for example `dart_apitool`).
 - Required checks on `main`. Today, `main` requires 1 approval and no check.
 - Protection against force pushes to `main`: they are allowed today.

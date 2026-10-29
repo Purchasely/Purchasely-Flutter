@@ -24,6 +24,8 @@ flutter analyze --no-fatal-infos --no-fatal-warnings
 dart format --set-exit-if-changed .
 ```
 
+Public API check against the last release on pub.dev, as CI runs it (needs Dart 3.9 or later): `.github/scripts/api-check.sh`.
+
 `purchasely_google` needs a local override of `purchasely_flutter` (`path: ../purchasely`) in a `pubspec_overrides.yaml`, as CI does.
 
 Native tests:
@@ -77,7 +79,7 @@ Do not test:
 
 ## CI
 
-- `ci.yml` (PRs and pushes to main, master, develop): format, analyze, Dart tests, Android and iOS native tests, iOS (CocoaPods and SwiftPM) and Android builds, a Flutter 3.44 / AGP 9 job, version consistency. Dart and iOS jobs use Flutter 3.24.x. Android jobs use Flutter 3.44.0 and Java 17.
+- `ci.yml` (PRs and pushes to main, master, develop): format, analyze, Dart tests, public API check, Android and iOS native tests, iOS (CocoaPods and SwiftPM) and Android builds, a Flutter 3.44 / AGP 9 job, version consistency. Dart and iOS jobs use Flutter 3.24.x. Android jobs use Flutter 3.44.0 and Java 17. The public API job uses Flutter 3.44.0.
 - Keep `minSdk = 23` in `purchasely/example/android/app/build.gradle`. A local `flutter build` rewrites it, and `version-check` fails when it is gone. Restore it before you commit.
 - `e2e-android.yml` and `e2e-ios.yml` run on a real backend. They start when a PR opens and on the `run-ci` label, not on every push. Read the test log, not only the job status. The test catalog is `purchasely/example/integration_test/E2E_TEST_INDEX.md`.
 
