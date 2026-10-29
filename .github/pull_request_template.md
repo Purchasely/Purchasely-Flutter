@@ -1,6 +1,36 @@
-## Description
+## What
 
 <!-- Provide a brief description of the changes in this PR -->
+
+## Why
+
+<!-- The problem that this PR solves, or the reason for the change -->
+
+## Tier
+
+<!-- T0, T1, T2 or T3: the row of the REVIEW.md matrix that sets it, and the evidence. -->
+
+## Integrator impact
+
+<!-- What an integrating app sees or must do. "None" when apps see no difference. -->
+
+## Mitigation after release
+
+<!-- Backend flag (REVIEW.md rule 5), hotfix release or workaround. "Not needed" for T0. -->
+
+## How to verify
+
+<!-- Describe the tests you ran -->
+
+- [ ] iOS example app builds successfully (`flutter build ios --simulator`)
+- [ ] Android example app builds successfully (`flutter build apk`)
+- [ ] Unit tests pass (`flutter test`)
+- [ ] Manually tested on iOS simulator/device
+- [ ] Manually tested on Android emulator/device
+
+## Notes
+
+<!-- Any additional information that reviewers should know -->
 
 ## Type of Change
 
@@ -27,16 +57,6 @@
 - [ ] Updated `purchasely_google/pubspec.yaml` version (if applicable)
 - [ ] Updated `purchasely_android_player/pubspec.yaml` version (if applicable)
 
-## Testing
-
-<!-- Describe the tests you ran -->
-
-- [ ] iOS example app builds successfully (`flutter build ios --simulator`)
-- [ ] Android example app builds successfully (`flutter build apk`)
-- [ ] Unit tests pass (`flutter test`)
-- [ ] Manually tested on iOS simulator/device
-- [ ] Manually tested on Android emulator/device
-
 ## Checklist
 
 - [ ] My code follows the project's style guidelines
@@ -55,7 +75,3 @@ Closes #
 ## Screenshots/Videos (if applicable)
 
 <!-- Add screenshots or videos to help explain your changes -->
-
-## Additional Notes
-
-<!-- Any additional information that reviewers should know -->
