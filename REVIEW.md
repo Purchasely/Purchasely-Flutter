@@ -67,7 +67,7 @@ two rows, the more specific row wins. Section 5 gives the paths of each area in 
 | Generated or rewritten files | files that a script builds or rewrites | T2 |
 | Hybrid bridge, contained change | bridge code that keeps the arguments, defaults, type mappings, errors, results, callbacks and listener lifetime | T1 |
 | Hybrid bridge, contract change | a change to one of the items above, or to purchase, restore, identity or entitlement behavior, also with no signature change | T2 |
-| Native SDK version in a bridge | the native pins: `build.gradle`, `.podspec`, `Package.swift`, `plugin.xml`, lockfiles | T2 minimum, or the highest tier of the native changes that the new version brings. Keep all native pins at the same version. |
+| Native SDK version in a bridge | the native pins: `build.gradle`, `.podspec`, `Package.swift`, `plugin.xml`, lockfiles | T2 minimum, or the highest tier of the native changes that the new version brings. Keep the pins of one platform at one version: the iOS pins together, the Android pins together. The two platforms can differ (`VERSIONS.md` gives each pair). |
 | CI: comments and formatting | workflow files, no behavior change | T0 |
 | CI: tests and reports | test workflows, CI scripts, Actions version bumps | T1 |
 | Publication, signing, credentials, required checks | publish workflows and scripts, signing, secrets, `permissions:`, the composition of the published artifact, a required check | T3, wherever the code is. |
@@ -182,8 +182,8 @@ pub.dev gets three packages: `purchasely_flutter` (folder `purchasely/`), `purch
   protection does not require a code owner review: the tier sets who must approve. For a T2 or
   T3 file that `CODEOWNERS` does not list, the author requests the reviewers.
 - **The PR also has:** the `minSdk = 23` line in `purchasely/example/android/app/build.gradle`
-  (CI fails without it); for a native SDK version change, the same version in all the pins of
-  the table above and a new row in `VERSIONS.md`; screenshots for a UI change.
+  (CI fails without it); for a native SDK version change, one version for the pins of each
+  platform in the table above (iOS and Android can differ) and a new row in `VERSIONS.md`; screenshots for a UI change.
 
 For the section 5 of the other repos, see the
 [Android copy](https://github.com/Purchasely/Purchasely-Android-Sources/blob/develop/REVIEW.md).
