@@ -13,19 +13,25 @@ import io.mockk.every
 import io.mockk.impl.annotations.MockK
 import io.mockk.mockk
 import io.mockk.just
+import io.mockk.coEvery
+import io.mockk.mockkObject
 import io.mockk.mockkStatic
 import io.mockk.runs
 import io.mockk.unmockkAll
 import io.mockk.verify
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
 import io.purchasely.ext.Purchasely
+import io.purchasely.ext.DistributionType
+import io.purchasely.ext.PLYSubscriptionStatus
 import io.purchasely.ext.StoreType
 import io.purchasely.models.PLYPlan
 import io.purchasely.models.PLYProduct
+import io.purchasely.models.PLYSubscription
 import io.purchasely.models.PLYSubscriptionData
 import io.purchasely.models.PLYWebRedemptionContext
 import io.purchasely.models.PLYWebRedemptionResult
@@ -40,6 +46,11 @@ import org.junit.Before
 import org.junit.Test
 import java.nio.file.Files
 import java.util.UUID
+import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class PurchaselyFlutterPluginTest {
@@ -429,35 +440,50 @@ class PurchaselyFlutterPluginTest {
 
     // region subscription mapping shared by userSubscriptions and the redemption context
 
-    /** A [PLYSubscriptionData] whose three parts are stubbed, so no org.json is needed. */
-    private fun stubbedSubscriptionData(storeType: StoreType): PLYSubscriptionData {
-        val subscription = mockk<io.purchasely.models.PLYSubscription>(relaxed = true)
-        every { subscription.toMap() } returns mapOf(
-            "purchaseToken" to "token-1",
-            "subscription_status" to "ACTIVE",
-        )
-        every { subscription.storeType } returns storeType
-        every { subscription.plan } returns null
-
-        val resolvedPlan = mockk<PLYPlan>(relaxed = true)
-        every { resolvedPlan.vendorId } returns "plan_monthly"
-        every { resolvedPlan.name } returns "Monthly"
-
-        val product = mockk<PLYProduct>(relaxed = true)
-        every { product.vendorId } returns "product_premium"
-        every { product.name } returns "Premium"
-        every { product.plans } returns listOf(resolvedPlan)
-        every { product.toMap() } returns mapOf(
-            "name" to "Premium",
-            "vendorId" to "product_premium",
-        )
-
-        val data = mockk<PLYSubscriptionData>(relaxed = true)
-        every { data.data } returns subscription
-        every { data.plan } returns resolvedPlan
-        every { data.product } returns product
-        return data
+    /**
+     * A plan whose `toMap()` is stubbed: the real one formats prices with an Android context.
+     * Each call is recorded with its thread, so a test can count the conversions and see
+     * where they ran.
+     */
+    private fun countedPlan(name: String, conversions: MutableList<String>? = null): PLYPlan {
+        val plan = mockk<PLYPlan>(relaxed = true)
+        every { plan.vendorId } returns "plan_$name"
+        every { plan.name } returns name
+        every { plan.type } returns DistributionType.RENEWING_SUBSCRIPTION
+        every { plan.toMap() } answers {
+            conversions?.add(threadName())
+            mapOf(
+                "vendorId" to "plan_$name",
+                "name" to name,
+                "localizedAmount" to "9,99 €",
+                "currencyCode" to "EUR",
+                "offerDuration" to "1 week",
+            )
+        }
+        return plan
     }
+
+    /**
+     * A real [PLYSubscriptionData] like the SDK builds it: the subscribed plan is the same
+     * instance as one of `product.plans`. Only the plans are mocked.
+     */
+    private fun subscriptionData(
+        storeType: StoreType = StoreType.GOOGLE_PLAY_STORE,
+        conversions: MutableList<String>? = null,
+        planCount: Int = 1,
+    ): PLYSubscriptionData {
+        val plans = (1..planCount).map { countedPlan(if (it == 1) "Monthly" else "Plan$it", conversions) }
+        val product = PLYProduct(id = "prod_id", vendorId = "product_premium", name = "Premium", plans = plans)
+        val subscription = PLYSubscription(
+            storeType = storeType,
+            purchaseToken = "token-1",
+            subscriptionStatus = PLYSubscriptionStatus.AUTO_RENEWING,
+            plan = plans.first(),
+        )
+        return PLYSubscriptionData(data = subscription, plan = plans.first(), product = product)
+    }
+
+    private fun stubbedSubscriptionData(storeType: StoreType) = subscriptionData(storeType)
 
     @Test
     fun `transformSubscriptionToMap maps EVERY store type to its ordinal`() {
@@ -534,6 +560,176 @@ class PurchaselyFlutterPluginTest {
             PurchaselyFlutterPlugin.transformSubscriptionToMap(data),
             subscription,
         )
+    }
+
+    @Test
+    fun `transformSubscriptionToMap keeps the Dart subscription shape`() {
+        val data = subscriptionData(planCount = 2)
+        fun planMap(name: String) = mapOf(
+            "vendorId" to "plan_$name",
+            "name" to name,
+            "localizedAmount" to "9,99 €",
+            "currencyCode" to "EUR",
+            "offerDuration" to "1 week",
+            "type" to DistributionType.RENEWING_SUBSCRIPTION.ordinal,
+        )
+        val expected = data.data.toMap() - "subscription_status" + mapOf(
+            "subscriptionSource" to StoreType.GOOGLE_PLAY_STORE.ordinal,
+            "plan" to planMap("Monthly"),
+            "product" to mapOf(
+                "id" to "prod_id",
+                "name" to "Premium",
+                "vendorId" to "product_premium",
+                "publicId" to null,
+                "conditions" to null,
+                "plans" to mapOf("Monthly" to planMap("Monthly"), "Plan2" to planMap("Plan2")),
+            ),
+        )
+
+        val map = PurchaselyFlutterPlugin.transformSubscriptionToMap(data)
+
+        assertEquals(expected, map)
+        // The codec writes entries in map order: keep the SDK order, with `product` last.
+        assertEquals(
+            data.data.toMap().keys.toList() - "subscription_status" + "product",
+            map.keys.toList(),
+        )
+        assertEquals(data.product.toMap().keys.toList(), (map["product"] as Map<*, *>).keys.toList())
+    }
+
+    // endregion
+
+    // region plan conversion thread (MOB-731: ANRs with price formatting on Main)
+
+    private var mainExecutor: ExecutorService? = null
+
+    /** A real one-thread Main, so a test can tell Main from the other threads. */
+    private fun useRealMain() {
+        val executor = Executors.newSingleThreadExecutor { Thread(it, MAIN_THREAD) }
+        mainExecutor = executor
+        Dispatchers.setMain(executor.asCoroutineDispatcher())
+    }
+
+    /** Waits until Main has run everything already queued on it. */
+    private fun drainMain() {
+        mainExecutor!!.submit {}.get(5, TimeUnit.SECONDS)
+    }
+
+    @After
+    fun stopRealMain() {
+        mainExecutor?.shutdownNow()
+    }
+
+    /** Records each answer with the thread that sent it. */
+    private class RecordingResult : MethodChannel.Result {
+        val answers = CopyOnWriteArrayList<String>()
+        val answered = CountDownLatch(1)
+        var value: Any? = null
+
+        override fun success(result: Any?) = record("success", result)
+        override fun error(errorCode: String, errorMessage: String?, errorDetails: Any?) = record("error", errorMessage)
+        override fun notImplemented() = record("notImplemented", null)
+
+        private fun record(kind: String, result: Any?) {
+            value = result
+            answers += "$kind@${threadName()}"
+            answered.countDown()
+        }
+    }
+
+    private fun callAndAwait(method: String, args: Map<String, Any?>? = null): RecordingResult {
+        val result = RecordingResult()
+        plugin.onMethodCall(MethodCall(method, args), result)
+        assertTrue("$method never answered", result.answered.await(5, TimeUnit.SECONDS))
+        drainMain()
+        return result
+    }
+
+    @Test
+    fun `userSubscriptions converts each plan once off Main and answers once on Main`() {
+        useRealMain()
+        val conversions = CopyOnWriteArrayList<String>()
+        // A large list: 50 subscriptions, 3 plans in each product.
+        val subscriptions = (1..50).map { subscriptionData(conversions = conversions, planCount = 3) }
+        mockkObject(Purchasely)
+        coEvery { Purchasely.userSubscriptions(any()) } returns subscriptions
+
+        val first = callAndAwait("userSubscriptions")
+        val second = callAndAwait("userSubscriptions")
+
+        for (result in listOf(first, second)) {
+            assertEquals(listOf("success@$MAIN_THREAD"), result.answers)
+            assertEquals(50, (result.value as List<*>).size)
+        }
+        assertFalse("a plan was converted on Main", conversions.contains(MAIN_THREAD))
+        // Per subscription with 3 product plans: the SDK maps of the subscription (1) and of
+        // the product (3), then the product plans (3). The subscribed plan reuses its map.
+        assertEquals(2 * 50 * 7, conversions.size)
+    }
+
+    @Test
+    fun `every plan-converting method converts off Main and answers once on Main`() {
+        useRealMain()
+        val conversions = CopyOnWriteArrayList<String>()
+        val data = subscriptionData(conversions = conversions, planCount = 3)
+        mockkObject(Purchasely)
+        coEvery { Purchasely.userSubscriptionsHistory(any()) } returns listOf(data)
+        coEvery { Purchasely.allProducts() } returns listOf(data.product)
+        coEvery { Purchasely.product(any()) } returns data.product
+        coEvery { Purchasely.plan(any<String>()) } returns data.plan
+
+        // method to the expected conversions, SDK maps included.
+        val cases = linkedMapOf(
+            "userSubscriptionsHistory" to 7,
+            "allProducts" to 6,
+            "productWithIdentifier" to 6,
+            "planWithIdentifier" to 1,
+        )
+        for ((method, expected) in cases) {
+            conversions.clear()
+            val result = callAndAwait(method, mapOf("vendorId" to "any"))
+
+            assertEquals(method, listOf("success@$MAIN_THREAD"), result.answers)
+            assertFalse("$method converted a plan on Main", conversions.contains(MAIN_THREAD))
+            assertEquals(method, expected, conversions.size)
+        }
+    }
+
+    @Test
+    fun `userSubscriptions sends no answer after the engine detaches`() {
+        useRealMain()
+        plugin.onAttachedToEngine(mockFlutterPluginBinding)
+        val entered = CountDownLatch(1)
+        val release = CountDownLatch(1)
+        val plan = countedPlan("Monthly")
+        every { plan.toMap() } answers {
+            entered.countDown()
+            release.await(5, TimeUnit.SECONDS)
+            mapOf("name" to "Monthly")
+        }
+        val product = PLYProduct(id = "prod_id", vendorId = "product_premium", plans = listOf(plan))
+        mockkObject(Purchasely)
+        coEvery { Purchasely.userSubscriptions(any()) } returns listOf(
+            PLYSubscriptionData(data = PLYSubscription(plan = plan), plan = plan, product = product)
+        )
+        val result = RecordingResult()
+
+        plugin.onMethodCall(MethodCall("userSubscriptions", null), result)
+        assertTrue(entered.await(5, TimeUnit.SECONDS))
+        plugin.onDetachedFromEngine(mockFlutterPluginBinding)
+        release.countDown()
+
+        // A negative check needs a wait: give the conversion time to finish and resume.
+        Thread.sleep(300)
+        drainMain()
+        assertEquals(emptyList<String>(), result.answers)
+    }
+
+    private companion object {
+        const val MAIN_THREAD = "test-main"
+
+        /** The thread name without the coroutine suffix that the debug agent appends. */
+        fun threadName(): String = Thread.currentThread().name.substringBefore(" @")
     }
 
     // endregion
