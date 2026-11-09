@@ -348,16 +348,12 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
                     try {
                         val product = productWithIdentifier(call.argument<String>("vendorId"))
                         if(product != null) {
-                            val plans = HashMap<String?, Any>()
-                            product.plans.map {
-                                plans.put(it.name, transformPlanToMap(it))
-                            }
-                            result.safeSuccess(product.toMap().toMutableMap().apply {
-                                this["plans"] = plans
-                            })
+                            result.safeSuccess(offMain { productToMap(product) })
                         } else {
                             result.safeError("-1", "product ${call.argument<String>("vendorId")} not found", null)
                         }
+                    } catch (e: CancellationException) {
+                        throw e
                     } catch (e: Exception) {
                         result.safeError("-1", e.message, e)
                     }
@@ -368,10 +364,12 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
                     try {
                         val plan = planWithIdentifier(call.argument<String>("vendorId"))
                         if(plan != null) {
-                            result.safeSuccess(transformPlanToMap(plan))
+                            result.safeSuccess(offMain { transformPlanToMap(plan) })
                         } else {
                             result.safeError("-1", "plan ${call.argument<String>("vendorId")} not found", null)
                         }
+                    } catch (e: CancellationException) {
+                        throw e
                     } catch (e: Exception) {
                         result.safeError("-1", e.message, e)
                     }
@@ -1218,17 +1216,9 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
     private suspend fun allProducts(result: Result) {
         try {
             val products = Purchasely.allProducts()
-            val list = arrayListOf<Map<String, Any?>>()
-            for (product in products) {
-                list.add(product.toMap().toMutableMap().apply {
-                    val plans: MutableMap<String?, Any> = HashMap()
-                    product.plans.forEach { plan ->
-                        plans[plan.name] = transformPlanToMap(plan)
-                    }
-                    this["plans"] = plans
-                })
-            }
-            result.safeSuccess(list)
+            result.safeSuccess(offMain { ArrayList(products.map { productToMap(it) }) })
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             result.safeError("-1", e.message, e)
         }
@@ -1246,7 +1236,9 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
     private suspend fun userSubscriptions(invalidateCache: Boolean, result: Result) {
         try {
             val subscriptions = Purchasely.userSubscriptions(invalidateCache)
-            result.safeSuccess(transformSubscriptionsToList(subscriptions))
+            result.safeSuccess(offMain { transformSubscriptionsToList(subscriptions) })
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             result.safeError("-1", e.message, e)
         }
@@ -1255,11 +1247,20 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
     private suspend fun userSubscriptionsHistory(invalidateCache: Boolean, result: Result) {
         try {
             val subscriptions = Purchasely.userSubscriptionsHistory(invalidateCache)
-            result.safeSuccess(transformSubscriptionsToList(subscriptions))
+            result.safeSuccess(offMain { transformSubscriptionsToList(subscriptions) })
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             result.safeError("-1", e.message, e)
         }
     }
+
+    /**
+     * Runs a model conversion off Main; the caller then answers on Main. `PLYPlan.toMap()`
+     * formats prices and durations (ICU, a Context per call), so a list of plans is too
+     * slow for Main.
+     */
+    private suspend fun <T> offMain(block: () -> T): T = withContext(Dispatchers.Default) { block() }
 
     private fun transformSubscriptionsToList(subscriptions: List<PLYSubscriptionData>): ArrayList<MutableMap<String, Any?>> {
         return ArrayList(subscriptions.map { transformSubscriptionToMap(it) })
@@ -1716,16 +1717,24 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
                     null -> null
                 }
 
-                this["plan"] = transformPlanToMap(data.plan)
-
-                val plans = HashMap<String?, Any>()
-                data.product.plans.map {
-                    plans.put(it.name, transformPlanToMap(it))
-                }
-                this["product"] = data.product.toMap().toMutableMap().apply {
-                    this["plans"] = plans
-                }
+                val plans = data.product.plans.map { it to transformPlanToMap(it) }
+                // The SDK gives the subscribed plan as one of product.plans: convert it once.
+                this["plan"] = plans.firstOrNull { it.first === data.plan }?.second
+                    ?: transformPlanToMap(data.plan)
+                this["product"] = productToMap(data.product, plans)
                 remove("subscription_status") //TODO add in a future version after checking with iOS
+            }
+        }
+
+        /** The product with its plans keyed by name, because the Dart parser reads a map. */
+        private fun productToMap(
+            product: PLYProduct,
+            plans: List<Pair<PLYPlan, Map<String, Any?>>> = product.plans.map { it to transformPlanToMap(it) },
+        ): MutableMap<String, Any?> {
+            return product.toMap().toMutableMap().apply {
+                val byName = HashMap<String?, Any>()
+                plans.forEach { (plan, map) -> byName[plan.name] = map }
+                this["plans"] = byName
             }
         }
 
