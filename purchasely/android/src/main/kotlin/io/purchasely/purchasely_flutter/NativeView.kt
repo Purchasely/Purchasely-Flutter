@@ -5,6 +5,8 @@ import android.util.Log
 import android.view.View
 import android.widget.FrameLayout
 import io.flutter.plugin.platform.PlatformView
+import io.purchasely.ext.presentation.PLYPresentationOutcome
+import io.purchasely.ext.presentation.PLYPresentationState
 
 internal class NativeView(
     context: Context,
@@ -13,11 +15,13 @@ internal class NativeView(
 ) : PlatformView {
 
     private val layout: FrameLayout
+    private var onDispose: (() -> Unit)? = null
 
     override fun getView(): View = layout
 
     override fun dispose() {
         layout.removeAllViews()
+        onDispose?.invoke()
     }
 
     init {
@@ -31,7 +35,9 @@ internal class NativeView(
         if (requestId != null && presentation != null) {
             Log.d("Purchasely", "Loaded Presentation found for requestId=$requestId")
 
-            val presentationView = presentation.buildView(context) { outcome ->
+            var dismissed = false
+            fun dismiss(outcome: PLYPresentationOutcome) {
+                if (dismissed) return
                 // Surface the embedded outcome through the SAME presentation-events
                 // sink and envelope shape as the full-screen path, keyed by the
                 // request's `requestId`, so the Dart `onDismissed` callback (and the
@@ -40,6 +46,7 @@ internal class NativeView(
                 // prepared request stays registered so a re-display of the same
                 // Dart handle keeps its original source (same policy as the
                 // full-screen path).
+                dismissed = true
                 PurchaselyFlutterPlugin.loadedPresentations.remove(requestId)
                 PurchaselyFlutterPlugin.displayCallbacks.remove(requestId)
                 PurchaselyFlutterPlugin.emitPresentationEvent(
@@ -47,6 +54,13 @@ internal class NativeView(
                         put("outcome", PurchaselyFlutterPlugin.outcomeToMap(outcome))
                     }
                 )
+            }
+            val presentationView = presentation.buildView(context) { dismiss(it) }
+            // The SDK skips the buildView callback when the host lifecycle is already destroyed,
+            // but it still ends the session: send the dismissal from that state.
+            onDispose = {
+                val state = presentation.state.value
+                if (state is PLYPresentationState.Dismissed) dismiss(state.outcome)
             }
             Log.d("Purchasely", "Presentation built successfully.")
             layout.addView(presentationView)
