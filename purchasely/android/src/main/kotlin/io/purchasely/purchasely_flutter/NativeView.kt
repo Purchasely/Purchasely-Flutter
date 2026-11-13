@@ -56,8 +56,9 @@ internal class NativeView(
                 )
             }
             val presentationView = presentation.buildView(context) { dismiss(it) }
-            // The SDK skips the buildView callback when the host lifecycle is already destroyed,
-            // but it still ends the session: send the dismissal from that state.
+            // The SDK skips the buildView callback when the view tree lifecycle owner is already
+            // destroyed (a FlutterFragment host; a FlutterActivity has no owner, so the callback
+            // still comes), but it still ends the session: send the dismissal from that state.
             onDispose = {
                 val state = presentation.state.value
                 if (state is PLYPresentationState.Dismissed) dismiss(state.outcome)
