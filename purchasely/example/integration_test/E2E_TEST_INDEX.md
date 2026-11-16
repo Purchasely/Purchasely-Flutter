@@ -208,6 +208,14 @@ Files:
   - RN: identical builder JS with `onDismissed` set + `await display()`; reuse the same drivers; assert the default handler did not fire.
   - Cordova: the imperative `presentPresentationForPlacement(...)` success callback is the per-presentation dismiss outcome — assert it fires and the default handler does not.
 
+### T13 — two inline views created in one frame each report their own dismissal
+- **File:** `inline_two_views_test.dart` (Android; no UI driver). Uses the inline suites' key and placement (`PLY_KEY` default, `promo_offers`).
+- **API:** `PLYPresentationView(request:)` twice, `onLoaded`, `onPresented`, `onDismissed`.
+- **Guards:** the native SDK view reads its outcome callback from a global request when it attaches, and each `buildView` replaces that request. Hybrid composition creates all platform views of a frame before it attaches them. When `NativeView` built the SDK view in `init`, view A took the callback of view B.
+- **Action:** set `framePolicy = onlyPumps`; mount two `PLYPresentationView` widgets; wait for both `onLoaded` **without pumping**; pump **one** frame (both platform-view `create` calls go out before any attach); wait for both `onPresented`; remove B's widget, then A's.
+- **Expected (from source, not yet observed on a device):** request A's `onDismissed` fires and request B's does not. The removal order is required: the SDK sends the outcome of an embedded view only when no other Purchasely view is attached (`PLYPresentationView.isRootView()`), so removing B while A is attached sends nothing. Before the fix, removing A sent B's outcome (`onDismissed` for request B, none for A).
+- **Port:** RN has the same fix (`buildWhenAttached` in `PurchaselyViewManager.kt`); port this test with two inline views mounted together. Cordova: no inline view.
+
 ### R1–R4 — 6.1.0: anonymousUserId, proxy(null), Web2App redemption listener
 - **File:** `redemption_identity_test.dart` (both platforms; no UI driver).
 - **Start chain:** `.anonymousUserId('3f2504e0-4f89-11d3-9a0c-0305e82c3301', override: true).proxy(null).webRedemptionListener(collect)`.
