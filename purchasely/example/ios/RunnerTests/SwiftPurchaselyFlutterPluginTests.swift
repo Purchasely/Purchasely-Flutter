@@ -570,3 +570,32 @@ class SwiftPurchaselyFlutterPluginTests: XCTestCase {
         XCTAssertNil(SwiftPurchaselyFlutterPlugin.requestContentIds[key])
     }
 }
+
+// iOS SDK 6.3+ sends an inline `onDismissed` only after the controller leaves its parent.
+class NativeViewCloseRequestTests: XCTestCase {
+
+    func testCloseRequestRemovesTheShownControllerFromItsParent() {
+        let view = NativeView(frame: .zero, viewIdentifier: 0, arguments: nil)
+        let root = UIViewController()
+        let embedded = UIViewController()
+        view.attachController(embedded, to: root)
+        XCTAssertTrue(embedded.parent === root, "Precondition: containment declared")
+
+        view.closeRequested(for: embedded)
+
+        XCTAssertNil(embedded.parent, "The SDK completes an inline close only after removeFromParent()")
+        XCTAssertNil(embedded.viewIfLoaded?.superview)
+    }
+
+    func testCloseRequestForAReplacedControllerIsIgnored() {
+        let view = NativeView(frame: .zero, viewIdentifier: 0, arguments: nil)
+        let root = UIViewController()
+        let current = UIViewController()
+        view.attachController(current, to: root)
+
+        view.closeRequested(for: UIViewController())
+
+        XCTAssertTrue(current.parent === root, "A late close request of an old paywall must not remove the new one")
+        XCTAssertTrue(current.view.superview === view.view())
+    }
+}
