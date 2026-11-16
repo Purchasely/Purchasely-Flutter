@@ -1,103 +1,124 @@
 package io.purchasely.purchasely_flutter
 
-import android.content.Context
-import io.mockk.every
-import io.mockk.mockk
-import io.mockk.mockkObject
-import io.mockk.slot
-import io.mockk.unmockkAll
-import io.mockk.verify
+import android.app.Activity
+import android.os.Looper
+import android.widget.FrameLayout
+import io.flutter.plugin.common.EventChannel
 import io.purchasely.ext.presentation.PLYPresentationBase
-import io.purchasely.ext.presentation.PLYPresentationOutcome
-import io.purchasely.ext.presentation.PLYPresentationState
-import io.purchasely.ext.presentation.PLYPurchaseResult
-import io.purchasely.views.presentation.PLYPresentationView
-import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.After
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
 import org.junit.Before
+import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
-import org.robolectric.RuntimeEnvironment
+import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 
 /**
- * The inline view's dismissal reaches Dart once, also when the native SDK ends the session
- * without calling the buildView callback (it skips the callback of a destroyed host).
+ * Real SDK path: `buildView` + `PLYPresentationView` attach/detach. Hybrid Composition creates
+ * every platform view of a frame (`NativeView.init`) before it adds any of them to the window.
  */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [34])
+@Config(sdk = [34]) // SDK 36 needs JDK internals that the test JVM does not open
 class NativeViewTest {
 
-    private val requestId = "req-inline"
-    private val state = MutableStateFlow<PLYPresentationState>(PLYPresentationState.Displayed)
-    private val callback = slot<(PLYPresentationOutcome) -> Unit>()
-    private val events = mutableListOf<Map<String, Any?>>()
+    private val events = mutableListOf<Map<*, *>>()
+    private lateinit var activity: Activity
+    private lateinit var root: FrameLayout
 
     @Before
-    fun setup() {
-        val presentation = mockk<PLYPresentationBase.Loaded>(relaxed = true)
-        every { presentation.state } returns state
-        val inline = mockk<PLYPresentationView>(relaxed = true) { every { parent } returns null }
-        every { presentation.buildView(any<Context>(), capture(callback)) } returns inline
-        mockkObject(PurchaselyFlutterPlugin.Companion)
-        every { PurchaselyFlutterPlugin.emitPresentationEvent(any()) } answers { events += firstArg<Map<String, Any?>>() }
-        every { PurchaselyFlutterPlugin.presentationToMap(any()) } returns emptyMap()
-        every { PurchaselyFlutterPlugin.outcomeToMap(any()) } answers {
-            mapOf("purchaseResult" to firstArg<PLYPresentationOutcome>().purchaseResult?.name?.lowercase())
-        }
-        PurchaselyFlutterPlugin.loadedPresentations[requestId] = presentation
-        PurchaselyFlutterPlugin.displayCallbacks[requestId] = {}
+    fun setUp() {
+        setPresentationSink(object : EventChannel.EventSink {
+            override fun success(event: Any?) { events.add(event as Map<*, *>) }
+            override fun error(code: String?, message: String?, details: Any?) = Unit
+            override fun endOfStream() = Unit
+        })
+        activity = Robolectric.buildActivity(Activity::class.java).setup().get()
+        root = FrameLayout(activity)
+        activity.setContentView(root)
+        PurchaselyFlutterPlugin.loadedPresentations["req-A"] = loaded("screen-A")
+        PurchaselyFlutterPlugin.loadedPresentations["req-B"] = loaded("screen-B")
     }
 
     @After
     fun tearDown() {
+        root.removeAllViews() // detach: the SDK keeps attached views in a global list
+        idle()
+        setPresentationSink(null)
         PurchaselyFlutterPlugin.loadedPresentations.clear()
         PurchaselyFlutterPlugin.displayCallbacks.clear()
-        unmockkAll()
     }
 
     @Test
-    fun `dispose after the SDK dismissed without calling back sends onDismissed and drops the entries`() {
-        val view = NativeView(RuntimeEnvironment.getApplication(), 1, mapOf("requestId" to requestId))
-        state.value = PLYPresentationState.Dismissed(PLYPresentationOutcome(purchaseResult = PLYPurchaseResult.CANCELLED))
+    fun `an inline view created before another one attaches reports its own dismissal`() {
+        // Two PurchaselyView widgets in one frame: both factories run before any attach.
+        val viewA = NativeView(activity, 1, mapOf("requestId" to "req-A"))
+        NativeView(activity, 2, mapOf("requestId" to "req-B"))
 
-        view.dispose()
+        root.addView(viewA.view)
+        idle()
+        root.removeView(viewA.view)
+        idle()
 
-        assertDismissedOnce()
+        assertEquals("onDismissed requestIds after view A is removed", listOf("req-A"), requestIds("onDismissed"))
     }
 
     @Test
-    fun `dispose after the callback does not send onDismissed again`() {
-        val view = NativeView(RuntimeEnvironment.getApplication(), 1, mapOf("requestId" to requestId))
-        val outcome = PLYPresentationOutcome(purchaseResult = PLYPurchaseResult.CANCELLED)
-        callback.captured(outcome)
-        state.value = PLYPresentationState.Dismissed(outcome)
-
+    fun `a view disposed before it attaches builds nothing`() {
+        val view = NativeView(activity, 1, mapOf("requestId" to "req-A"))
         view.dispose()
 
-        assertDismissedOnce()
+        root.addView(view.view)
+        idle()
+
+        assertEquals("children of the disposed layout", 0, (view.view as FrameLayout).childCount)
+        assertEquals("events after a dispose before attach", emptyList<Map<*, *>>(), events)
     }
 
     @Test
-    fun `dispose of a presentation still on screen sends no onDismissed`() {
-        val view = NativeView(RuntimeEnvironment.getApplication(), 1, mapOf("requestId" to requestId))
+    fun `onPresented is sent once, when the view first attaches`() {
+        val view = NativeView(activity, 1, mapOf("requestId" to "req-A"))
+        idle()
+        assertEquals("onPresented before attach", emptyList<Any?>(), requestIds("onPresented"))
 
-        view.dispose()
+        root.addView(view.view)
+        idle()
+        root.removeView(view.view)
+        root.addView(view.view)
+        idle()
 
-        verify(exactly = 0) { PurchaselyFlutterPlugin.outcomeToMap(any()) }
-        assertTrue(events.none { it["event"] == "onDismissed" })
+        assertEquals("onPresented after attach, detach and attach", listOf("req-A"), requestIds("onPresented"))
     }
 
-    private fun assertDismissedOnce() {
-        val dismissed = events.filter { it["event"] == "onDismissed" }
-        assertEquals("onDismissed events: $dismissed", 1, dismissed.size)
-        assertEquals(requestId, dismissed.single()["requestId"])
-        assertEquals("cancelled", (dismissed.single()["outcome"] as Map<*, *>)["purchaseResult"])
-        assertFalse(PurchaselyFlutterPlugin.loadedPresentations.containsKey(requestId))
-        assertFalse(PurchaselyFlutterPlugin.displayCallbacks.containsKey(requestId))
+    private fun idle() = shadowOf(Looper.getMainLooper()).idle()
+
+    private fun requestIds(event: String) = events.filter { it["event"] == event }.map { it["requestId"] }
+
+    private fun setPresentationSink(sink: EventChannel.EventSink?) {
+        PurchaselyFlutterPlugin::class.java.getDeclaredField("activePresentationSink").apply {
+            isAccessible = true
+            set(null, sink)
+        }
+    }
+
+    /** `Loaded` has an internal constructor: call its Kotlin defaults constructor with only `screenId`. */
+    private fun loaded(screenId: String): PLYPresentationBase.Loaded {
+        val ctor = PLYPresentationBase.Loaded::class.java.declaredConstructors.first {
+            it.parameterTypes.lastOrNull()?.name == "kotlin.jvm.internal.DefaultConstructorMarker"
+        }
+        val types = ctor.parameterTypes
+        val masks = (types.size - 1 + 32) / 33 // n params + ceil(n / 32) masks + marker
+        val n = types.size - 1 - masks
+        val args = arrayOfNulls<Any>(types.size)
+        for (i in 0 until n) args[i] = when (types[i]) {
+            Int::class.javaPrimitiveType -> 0
+            Boolean::class.javaPrimitiveType -> false
+            else -> null
+        }
+        for (m in 0 until masks) args[n + m] = -1
+        args[1] = screenId
+        args[n] = -1 and (1 shl 1).inv() // screenId is parameter 1: not defaulted
+        return ctor.newInstance(*args) as PLYPresentationBase.Loaded
     }
 }
