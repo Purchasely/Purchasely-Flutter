@@ -18,54 +18,33 @@ void main() {
 
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(channel, (MethodCall methodCall) async {
-            methodCalls.add(methodCall);
+        methodCalls.add(methodCall);
 
-            switch (methodCall.method) {
-              case 'start':
-                return true;
-              case 'getAnonymousUserId':
-                return 'anonymous-user-123';
-              case 'userLogin':
-                return true;
-              case 'setLogLevel':
-                return true;
-              case 'restoreAllProducts':
-                return true;
-              case 'silentRestoreAllProducts':
-                return true;
-              case 'isAnonymous':
-                return true;
-              case 'isEligibleForIntroOffer':
-                return true;
-              case 'handleDeeplink':
-                return true;
-              case 'productWithIdentifier':
-                return {
-                  'name': 'Test Product',
-                  'vendorId': 'product-vendor-123',
-                  'plans': {
-                    'plan1': {
-                      'vendorId': 'plan-vendor-123',
-                      'productId': 'product-123',
-                      'name': 'Premium Plan',
-                      'type': 2,
-                      'amount': 9.99,
-                      'localizedAmount': '\$9.99',
-                      'currencyCode': 'USD',
-                      'currencySymbol': '\$',
-                      'price': '9.99',
-                      'period': 'P1M',
-                      'hasIntroductoryPrice': false,
-                      'introPrice': null,
-                      'introAmount': null,
-                      'introDuration': null,
-                      'introPeriod': null,
-                      'hasFreeTrial': false,
-                    },
-                  },
-                };
-              case 'planWithIdentifier':
-                return {
+        switch (methodCall.method) {
+          case 'start':
+            return true;
+          case 'getAnonymousUserId':
+            return 'anonymous-user-123';
+          case 'userLogin':
+            return true;
+          case 'setLogLevel':
+            return true;
+          case 'restoreAllProducts':
+            return true;
+          case 'silentRestoreAllProducts':
+            return true;
+          case 'isAnonymous':
+            return true;
+          case 'isEligibleForIntroOffer':
+            return true;
+          case 'handleDeeplink':
+            return true;
+          case 'productWithIdentifier':
+            return {
+              'name': 'Test Product',
+              'vendorId': 'product-vendor-123',
+              'plans': {
+                'plan1': {
                   'vendorId': 'plan-vendor-123',
                   'productId': 'product-123',
                   'name': 'Premium Plan',
@@ -81,104 +60,125 @@ void main() {
                   'introAmount': null,
                   'introDuration': null,
                   'introPeriod': null,
-                  'hasFreeTrial': false,
-                };
-              case 'allProducts':
-                return [
-                  {
-                    'name': 'Product 1',
-                    'vendorId': 'vendor-1',
-                    'plans': {
-                      'plan1': {
-                        'vendorId': 'plan-1',
-                        'productId': 'product-1',
-                        'name': 'Plan 1',
-                        'type': 0,
-                        'amount': 1.99,
-                        'localizedAmount': '\$1.99',
-                        'currencyCode': 'USD',
-                        'currencySymbol': '\$',
-                        'price': '1.99',
-                        'period': null,
-                        'hasIntroductoryPrice': false,
-                        'introPrice': null,
-                        'introAmount': null,
-                        'introDuration': null,
-                        'introPeriod': null,
-                        'hasFreeTrial': false,
-                      },
-                    },
-                  },
-                ];
-              case 'userSubscriptions':
-              case 'userSubscriptionsHistory':
-                return [
-                  {
-                    'purchaseToken': 'token-123',
-                    'subscriptionSource': 1,
-                    'nextRenewalDate': '2025-02-01T00:00:00Z',
-                    'cancelledDate': null,
-                    'plan': {
-                      'vendorId': 'plan-vendor-123',
-                      'productId': 'product-123',
-                      'name': 'Premium Plan',
-                      'type': 2,
-                      'amount': 9.99,
-                      'localizedAmount': '\$9.99',
-                      'currencyCode': 'USD',
-                      'currencySymbol': '\$',
-                      'price': '9.99',
-                      'period': 'P1M',
-                      'hasIntroductoryPrice': false,
-                      'introPrice': null,
-                      'introAmount': null,
-                      'introDuration': null,
-                      'introPeriod': null,
-                      'hasFreeTrial': false,
-                    },
-                    'product': {
-                      'name': 'Premium Product',
-                      'vendorId': 'product-vendor-123',
-                      'plans': {},
-                    },
-                    'cumulatedRevenuesInUSD': 29.97,
-                    'subscriptionDurationInDays': 90,
-                    'subscriptionDurationInWeeks': 12,
-                    'subscriptionDurationInMonths': 3,
-                  },
-                ];
-              case 'signPromotionalOffer':
-                return {
-                  'signature': 'sig-123',
-                  'timestamp': '1234567890',
-                  'nonce': 'nonce-123',
-                  'keyIdentifier': 'key-123',
-                };
-              case 'purchaseWithPlanVendorId':
-                return {'status': 'success', 'transactionId': 'txn-123'};
-              case 'userAttribute':
-                return 'test-value';
-              case 'userAttributes':
-                return {'attr1': 'value1', 'attr2': 'value2'};
-              case 'setDynamicOffering':
-                return true;
-              case 'getDynamicOfferings':
-                return [
-                  {
-                    'reference': 'offer-ref-1',
-                    'planVendorId': 'plan-vendor-1',
-                    'offerVendorId': 'offer-vendor-1',
-                  },
-                  {
-                    'reference': 'offer-ref-2',
-                    'planVendorId': 'plan-vendor-2',
-                    'offerVendorId': null,
-                  },
-                ];
-              default:
-                return null;
-            }
-          });
+                  'hasFreeTrial': false
+                }
+              }
+            };
+          case 'planWithIdentifier':
+            return {
+              'vendorId': 'plan-vendor-123',
+              'productId': 'product-123',
+              'name': 'Premium Plan',
+              'type': 2,
+              'amount': 9.99,
+              'localizedAmount': '\$9.99',
+              'currencyCode': 'USD',
+              'currencySymbol': '\$',
+              'price': '9.99',
+              'period': 'P1M',
+              'hasIntroductoryPrice': false,
+              'introPrice': null,
+              'introAmount': null,
+              'introDuration': null,
+              'introPeriod': null,
+              'hasFreeTrial': false
+            };
+          case 'allProducts':
+            return [
+              {
+                'name': 'Product 1',
+                'vendorId': 'vendor-1',
+                'plans': {
+                  'plan1': {
+                    'vendorId': 'plan-1',
+                    'productId': 'product-1',
+                    'name': 'Plan 1',
+                    'type': 0,
+                    'amount': 1.99,
+                    'localizedAmount': '\$1.99',
+                    'currencyCode': 'USD',
+                    'currencySymbol': '\$',
+                    'price': '1.99',
+                    'period': null,
+                    'hasIntroductoryPrice': false,
+                    'introPrice': null,
+                    'introAmount': null,
+                    'introDuration': null,
+                    'introPeriod': null,
+                    'hasFreeTrial': false
+                  }
+                }
+              }
+            ];
+          case 'userSubscriptions':
+          case 'userSubscriptionsHistory':
+            return [
+              {
+                'purchaseToken': 'token-123',
+                'subscriptionSource': 1,
+                'nextRenewalDate': '2025-02-01T00:00:00Z',
+                'cancelledDate': null,
+                'plan': {
+                  'vendorId': 'plan-vendor-123',
+                  'productId': 'product-123',
+                  'name': 'Premium Plan',
+                  'type': 2,
+                  'amount': 9.99,
+                  'localizedAmount': '\$9.99',
+                  'currencyCode': 'USD',
+                  'currencySymbol': '\$',
+                  'price': '9.99',
+                  'period': 'P1M',
+                  'hasIntroductoryPrice': false,
+                  'introPrice': null,
+                  'introAmount': null,
+                  'introDuration': null,
+                  'introPeriod': null,
+                  'hasFreeTrial': false
+                },
+                'product': {
+                  'name': 'Premium Product',
+                  'vendorId': 'product-vendor-123',
+                  'plans': {}
+                },
+                'cumulatedRevenuesInUSD': 29.97,
+                'subscriptionDurationInDays': 90,
+                'subscriptionDurationInWeeks': 12,
+                'subscriptionDurationInMonths': 3
+              }
+            ];
+          case 'signPromotionalOffer':
+            return {
+              'signature': 'sig-123',
+              'timestamp': '1234567890',
+              'nonce': 'nonce-123',
+              'keyIdentifier': 'key-123'
+            };
+          case 'purchaseWithPlanVendorId':
+            return {'status': 'success', 'transactionId': 'txn-123'};
+          case 'userAttribute':
+            return 'test-value';
+          case 'userAttributes':
+            return {'attr1': 'value1', 'attr2': 'value2'};
+          case 'setDynamicOffering':
+            return true;
+          case 'getDynamicOfferings':
+            return [
+              {
+                'reference': 'offer-ref-1',
+                'planVendorId': 'plan-vendor-1',
+                'offerVendorId': 'offer-vendor-1'
+              },
+              {
+                'reference': 'offer-ref-2',
+                'planVendorId': 'plan-vendor-2',
+                'offerVendorId': null
+              }
+            ];
+          default:
+            return null;
+        }
+      });
     });
 
     tearDown(() {
@@ -227,15 +227,12 @@ void main() {
     });
 
     test('handleDeeplink calls native method correctly', () async {
-      final result = await Purchasely.handleDeeplink(
-        'https://example.com/deep',
-      );
+      final result =
+          await Purchasely.handleDeeplink('https://example.com/deep');
       expect(result, true);
       expect(methodCalls.first.method, 'handleDeeplink');
       expect(
-        methodCalls.first.arguments['deeplink'],
-        'https://example.com/deep',
-      );
+          methodCalls.first.arguments['deeplink'], 'https://example.com/deep');
     });
 
     test('productWithIdentifier returns correct product', () async {
@@ -268,10 +265,8 @@ void main() {
 
       expect(subscriptions.length, 1);
       expect(subscriptions.first.purchaseToken, 'token-123');
-      expect(
-        subscriptions.first.subscriptionSource,
-        PLYSubscriptionSource.googlePlayStore,
-      );
+      expect(subscriptions.first.subscriptionSource,
+          PLYSubscriptionSource.googlePlayStore);
     });
 
     test('userSubscriptionsHistory returns list with extra fields', () async {
@@ -285,10 +280,8 @@ void main() {
     });
 
     test('signPromotionalOffer returns correct map', () async {
-      final result = await Purchasely.signPromotionalOffer(
-        'product-123',
-        'offer-123',
-      );
+      final result =
+          await Purchasely.signPromotionalOffer('product-123', 'offer-123');
 
       expect(result['signature'], 'sig-123');
       expect(result['timestamp'], '1234567890');
@@ -297,10 +290,7 @@ void main() {
 
     test('purchaseWithPlanVendorId returns correct result', () async {
       final result = await Purchasely.purchaseWithPlanVendorId(
-        vendorId: 'plan-123',
-        offerId: 'offer-123',
-        contentId: 'content-123',
-      );
+          vendorId: 'plan-123', offerId: 'offer-123', contentId: 'content-123');
 
       expect(result['status'], 'success');
       expect(result['transactionId'], 'txn-123');
@@ -318,11 +308,8 @@ void main() {
     });
 
     test('setDynamicOffering calls native method correctly', () async {
-      final offering = PLYDynamicOffering(
-        'ref-123',
-        'plan-vendor-123',
-        'offer-vendor-123',
-      );
+      final offering =
+          PLYDynamicOffering('ref-123', 'plan-vendor-123', 'offer-vendor-123');
       final result = await Purchasely.setDynamicOffering(offering);
 
       expect(result, true);
@@ -343,9 +330,7 @@ void main() {
 
     test('setAttribute calls native method correctly', () async {
       await Purchasely.setAttribute(
-        PLYAttribute.firebase_app_instance_id,
-        'firebase-123',
-      );
+          PLYAttribute.firebase_app_instance_id, 'firebase-123');
 
       expect(methodCalls.first.method, 'setAttribute');
       expect(methodCalls.first.arguments['attribute'], 0);
@@ -353,11 +338,8 @@ void main() {
     });
 
     test('setUserAttributeWithString calls native method correctly', () async {
-      await Purchasely.setUserAttributeWithString(
-        'key',
-        'value',
-        processingLegalBasis: PLYDataProcessingLegalBasis.essential,
-      );
+      await Purchasely.setUserAttributeWithString('key', 'value',
+          processingLegalBasis: PLYDataProcessingLegalBasis.essential);
 
       expect(methodCalls.first.method, 'setUserAttributeWithString');
       expect(methodCalls.first.arguments['key'], 'key');
@@ -399,58 +381,41 @@ void main() {
       expect(methodCalls.first.arguments['value'], contains('2025-01-15'));
     });
 
-    test(
-      'setUserAttributeWithStringArray calls native method correctly',
-      () async {
-        await Purchasely.setUserAttributeWithStringArray('arrayKey', [
-          'a',
-          'b',
-          'c',
-        ]);
+    test('setUserAttributeWithStringArray calls native method correctly',
+        () async {
+      await Purchasely.setUserAttributeWithStringArray(
+          'arrayKey', ['a', 'b', 'c']);
 
-        expect(methodCalls.first.method, 'setUserAttributeWithStringArray');
-        expect(methodCalls.first.arguments['key'], 'arrayKey');
-        expect(methodCalls.first.arguments['value'], ['a', 'b', 'c']);
-      },
-    );
+      expect(methodCalls.first.method, 'setUserAttributeWithStringArray');
+      expect(methodCalls.first.arguments['key'], 'arrayKey');
+      expect(methodCalls.first.arguments['value'], ['a', 'b', 'c']);
+    });
 
-    test(
-      'setUserAttributeWithIntArray calls native method correctly',
-      () async {
-        await Purchasely.setUserAttributeWithIntArray('intArrayKey', [1, 2, 3]);
+    test('setUserAttributeWithIntArray calls native method correctly',
+        () async {
+      await Purchasely.setUserAttributeWithIntArray('intArrayKey', [1, 2, 3]);
 
-        expect(methodCalls.first.method, 'setUserAttributeWithIntArray');
-        expect(methodCalls.first.arguments['value'], [1, 2, 3]);
-      },
-    );
+      expect(methodCalls.first.method, 'setUserAttributeWithIntArray');
+      expect(methodCalls.first.arguments['value'], [1, 2, 3]);
+    });
 
-    test(
-      'setUserAttributeWithDoubleArray calls native method correctly',
-      () async {
-        await Purchasely.setUserAttributeWithDoubleArray('doubleArrayKey', [
-          1.1,
-          2.2,
-          3.3,
-        ]);
+    test('setUserAttributeWithDoubleArray calls native method correctly',
+        () async {
+      await Purchasely.setUserAttributeWithDoubleArray(
+          'doubleArrayKey', [1.1, 2.2, 3.3]);
 
-        expect(methodCalls.first.method, 'setUserAttributeWithDoubleArray');
-        expect(methodCalls.first.arguments['value'], [1.1, 2.2, 3.3]);
-      },
-    );
+      expect(methodCalls.first.method, 'setUserAttributeWithDoubleArray');
+      expect(methodCalls.first.arguments['value'], [1.1, 2.2, 3.3]);
+    });
 
-    test(
-      'setUserAttributeWithBooleanArray calls native method correctly',
-      () async {
-        await Purchasely.setUserAttributeWithBooleanArray('boolArrayKey', [
-          true,
-          false,
-          true,
-        ]);
+    test('setUserAttributeWithBooleanArray calls native method correctly',
+        () async {
+      await Purchasely.setUserAttributeWithBooleanArray(
+          'boolArrayKey', [true, false, true]);
 
-        expect(methodCalls.first.method, 'setUserAttributeWithBooleanArray');
-        expect(methodCalls.first.arguments['value'], [true, false, true]);
-      },
-    );
+      expect(methodCalls.first.method, 'setUserAttributeWithBooleanArray');
+      expect(methodCalls.first.arguments['value'], [true, false, true]);
+    });
 
     test('incrementUserAttribute calls native method correctly', () async {
       await Purchasely.incrementUserAttribute('counter', value: 5);
@@ -557,20 +522,17 @@ void main() {
     test('revokeDataProcessingConsent calls native method correctly', () {
       Purchasely.revokeDataProcessingConsent([
         PLYDataProcessingPurpose.analytics,
-        PLYDataProcessingPurpose.campaigns,
+        PLYDataProcessingPurpose.campaigns
       ]);
 
       expect(methodCalls.first.method, 'revokeDataProcessingConsent');
-      expect(methodCalls.first.arguments['purposes'], [
-        'ANALYTICS',
-        'CAMPAIGNS',
-      ]);
+      expect(
+          methodCalls.first.arguments['purposes'], ['ANALYTICS', 'CAMPAIGNS']);
     });
 
     test('revokeDataProcessingConsent maps refundHandling', () {
-      Purchasely.revokeDataProcessingConsent([
-        PLYDataProcessingPurpose.refundHandling,
-      ]);
+      Purchasely.revokeDataProcessingConsent(
+          [PLYDataProcessingPurpose.refundHandling]);
 
       expect(methodCalls.first.arguments['purposes'], ['REFUND_HANDLING']);
     });
@@ -578,13 +540,11 @@ void main() {
     test('revokeDataProcessingConsent preserves combined purposes', () {
       Purchasely.revokeDataProcessingConsent([
         PLYDataProcessingPurpose.allNonEssentials,
-        PLYDataProcessingPurpose.refundHandling,
+        PLYDataProcessingPurpose.refundHandling
       ]);
 
-      expect(methodCalls.first.arguments['purposes'], [
-        'ALL_NON_ESSENTIALS',
-        'REFUND_HANDLING',
-      ]);
+      expect(methodCalls.first.arguments['purposes'],
+          ['ALL_NON_ESSENTIALS', 'REFUND_HANDLING']);
     });
 
     test('revokeDataProcessingConsent clears all purposes', () {
@@ -618,7 +578,7 @@ void main() {
         'introAmount': 4.99,
         'introDuration': 'P1W',
         'introPeriod': 'week',
-        'hasFreeTrial': true,
+        'hasFreeTrial': true
       };
 
       final plan = Purchasely.transformToPLYPlan(planMap);
@@ -660,7 +620,7 @@ void main() {
         'offerAmount': 4.99,
         'offerDuration': '7 days',
         'offerPeriod': 'week',
-        'hasFreeTrial': true,
+        'hasFreeTrial': true
       };
 
       final plan = Purchasely.transformToPLYPlan(planMap);
@@ -697,7 +657,7 @@ void main() {
         'introAmount': null,
         'introDuration': null,
         'introPeriod': null,
-        'hasFreeTrial': false,
+        'hasFreeTrial': false
       };
 
       final plan = Purchasely.transformToPLYPlan(planMap);
@@ -735,12 +695,11 @@ void main() {
         'subscriptionId': 'sub-123',
         'basePlanId': 'base-plan-123',
         'offerToken': 'token-123',
-        'offerId': 'offer-123',
+        'offerId': 'offer-123'
       };
 
-      final subscription = Purchasely.transformToPLYSubscription(
-        subscriptionMap,
-      );
+      final subscription =
+          Purchasely.transformToPLYSubscription(subscriptionMap);
 
       expect(subscription, isNotNull);
       expect(subscription!.subscriptionId, 'sub-123');
@@ -764,9 +723,9 @@ void main() {
         {
           'reference': 'ref-1',
           'planVendorId': 'plan-1',
-          'offerVendorId': 'offer-1',
+          'offerVendorId': 'offer-1'
         },
-        {'reference': 'ref-2', 'planVendorId': 'plan-2', 'offerVendorId': null},
+        {'reference': 'ref-2', 'planVendorId': 'plan-2', 'offerVendorId': null}
       ];
 
       final result = Purchasely.transformToDynamicOfferings(offerings);
@@ -783,12 +742,12 @@ void main() {
         {'reference': 'ref-1', 'planVendorId': 'plan-1'},
         {
           'reference': null,
-          'planVendorId': 'plan-2',
+          'planVendorId': 'plan-2'
         }, // Invalid - null reference
         {
           'reference': 'ref-3',
-          'planVendorId': null,
-        }, // Invalid - null planVendorId
+          'planVendorId': null
+        } // Invalid - null planVendorId
       ];
 
       final result = Purchasely.transformToDynamicOfferings(offerings);
@@ -825,8 +784,8 @@ void main() {
             'discount_referent': 'ref-123',
             'discount_percentage_comparison_to_referent': '50%',
             'discount_price_comparison_to_referent': '\$5.00',
-            'is_default': true,
-          },
+            'is_default': true
+          }
         ],
         'deeplink_identifier': 'deeplink-123',
         'source_identifier': 'source-123',
@@ -841,8 +800,8 @@ void main() {
             'number_of_slides': 3,
             'is_carousel_auto_playing': true,
             'default_slide': 0,
-            'previous_slide': 0,
-          },
+            'previous_slide': 0
+          }
         ],
         'language': 'en',
         'device': 'iPhone',
@@ -855,17 +814,16 @@ void main() {
         'selected_product': 'product-123',
         'plan_change_type': 'upgrade',
         'running_subscriptions': [
-          {'plan': 'plan-123', 'product': 'product-123'},
+          {'plan': 'plan-123', 'product': 'product-123'}
         ],
         'selected_option_id': 'option-123',
         'selected_options': ['opt1', 'opt2'],
         'displayed_options': ['opt1', 'opt2', 'opt3'],
-        'web_checkout_provider': 'stripe',
+        'web_checkout_provider': 'stripe'
       };
 
-      final properties = Purchasely.transformToPLYEventProperties(
-        propertiesMap,
-      );
+      final properties =
+          Purchasely.transformToPLYEventProperties(propertiesMap);
 
       expect(properties.sdk_version, '5.6.1');
       expect(properties.event_name, PLYEventName.PRESENTATION_VIEWED);
@@ -889,88 +847,63 @@ void main() {
       expect(Purchasely.mapType('BOOLEAN'), PLYUserAttributeType.bool);
       expect(Purchasely.mapType('DATE'), PLYUserAttributeType.date);
       expect(
-        Purchasely.mapType('STRING_ARRAY'),
-        PLYUserAttributeType.stringArray,
-      );
+          Purchasely.mapType('STRING_ARRAY'), PLYUserAttributeType.stringArray);
       expect(Purchasely.mapType('INT_ARRAY'), PLYUserAttributeType.intArray);
       expect(
-        Purchasely.mapType('FLOAT_ARRAY'),
-        PLYUserAttributeType.floatArray,
-      );
+          Purchasely.mapType('FLOAT_ARRAY'), PLYUserAttributeType.floatArray);
       expect(
-        Purchasely.mapType('BOOLEAN_ARRAY'),
-        PLYUserAttributeType.boolArray,
-      );
+          Purchasely.mapType('BOOLEAN_ARRAY'), PLYUserAttributeType.boolArray);
       expect(Purchasely.mapType('DICTIONARY'), PLYUserAttributeType.dictionary);
     });
 
-    test('mapType never throws for an unknown type — maps to unknown '
+    test(
+        'mapType never throws for an unknown type — maps to unknown '
         '(REC-09 / FLT-W-04 / ENM-08)', () {
       expect(Purchasely.mapType('UNKNOWN'), PLYUserAttributeType.unknown);
-      expect(
-        Purchasely.mapType('SOME_FUTURE_NATIVE_TYPE'),
-        PLYUserAttributeType.unknown,
-      );
+      expect(Purchasely.mapType('SOME_FUTURE_NATIVE_TYPE'),
+          PLYUserAttributeType.unknown);
     });
 
     test('mapDataProcessingLegalBasisToString returns correct strings', () {
       expect(
-        Purchasely.mapDataProcessingLegalBasisToString(
-          PLYDataProcessingLegalBasis.essential,
-        ),
-        'ESSENTIAL',
-      );
+          Purchasely.mapDataProcessingLegalBasisToString(
+              PLYDataProcessingLegalBasis.essential),
+          'ESSENTIAL');
       expect(
-        Purchasely.mapDataProcessingLegalBasisToString(
-          PLYDataProcessingLegalBasis.optional,
-        ),
-        'OPTIONAL',
-      );
+          Purchasely.mapDataProcessingLegalBasisToString(
+              PLYDataProcessingLegalBasis.optional),
+          'OPTIONAL');
     });
 
     test('mapDataProcessingPurposeToString returns correct strings', () {
       expect(
-        Purchasely.mapDataProcessingPurposeToString(
-          PLYDataProcessingPurpose.allNonEssentials,
-        ),
-        'ALL_NON_ESSENTIALS',
-      );
+          Purchasely.mapDataProcessingPurposeToString(
+              PLYDataProcessingPurpose.allNonEssentials),
+          'ALL_NON_ESSENTIALS');
       expect(
-        Purchasely.mapDataProcessingPurposeToString(
-          PLYDataProcessingPurpose.analytics,
-        ),
-        'ANALYTICS',
-      );
+          Purchasely.mapDataProcessingPurposeToString(
+              PLYDataProcessingPurpose.analytics),
+          'ANALYTICS');
       expect(
-        Purchasely.mapDataProcessingPurposeToString(
-          PLYDataProcessingPurpose.identifiedAnalytics,
-        ),
-        'IDENTIFIED_ANALYTICS',
-      );
+          Purchasely.mapDataProcessingPurposeToString(
+              PLYDataProcessingPurpose.identifiedAnalytics),
+          'IDENTIFIED_ANALYTICS');
       expect(
-        Purchasely.mapDataProcessingPurposeToString(
-          PLYDataProcessingPurpose.campaigns,
-        ),
-        'CAMPAIGNS',
-      );
+          Purchasely.mapDataProcessingPurposeToString(
+              PLYDataProcessingPurpose.campaigns),
+          'CAMPAIGNS');
       expect(
-        Purchasely.mapDataProcessingPurposeToString(
-          PLYDataProcessingPurpose.personalization,
-        ),
-        'PERSONALIZATION',
-      );
+          Purchasely.mapDataProcessingPurposeToString(
+              PLYDataProcessingPurpose.personalization),
+          'PERSONALIZATION');
       expect(
-        Purchasely.mapDataProcessingPurposeToString(
-          PLYDataProcessingPurpose.thirdPartyIntegrations,
-        ),
-        'THIRD_PARTY_INTEGRATIONS',
-      );
+          Purchasely.mapDataProcessingPurposeToString(
+              PLYDataProcessingPurpose.thirdPartyIntegrations),
+          'THIRD_PARTY_INTEGRATIONS');
       expect(
-        Purchasely.mapDataProcessingPurposeToString(
-          PLYDataProcessingPurpose.refundHandling,
-        ),
-        'REFUND_HANDLING',
-      );
+          Purchasely.mapDataProcessingPurposeToString(
+              PLYDataProcessingPurpose.refundHandling),
+          'REFUND_HANDLING');
     });
   });
 
@@ -985,23 +918,22 @@ void main() {
     group('PLYPlan', () {
       test('creates instance with all properties', () {
         final plan = PLYPlan(
-          'vendor-123',
-          'product-123',
-          'Premium Plan',
-          PLYPlanType.autoRenewingSubscription,
-          9.99,
-          '\$9.99',
-          'USD',
-          '\$',
-          '9.99',
-          'P1M',
-          true,
-          '\$4.99',
-          4.99,
-          'P1W',
-          'week',
-          true,
-        );
+            'vendor-123',
+            'product-123',
+            'Premium Plan',
+            PLYPlanType.autoRenewingSubscription,
+            9.99,
+            '\$9.99',
+            'USD',
+            '\$',
+            '9.99',
+            'P1M',
+            true,
+            '\$4.99',
+            4.99,
+            'P1W',
+            'week',
+            true);
 
         expect(plan.vendorId, 'vendor-123');
         expect(plan.productId, 'product-123');
@@ -1014,11 +946,8 @@ void main() {
 
     group('PLYPromoOffer', () {
       test('creates instance with properties', () {
-        final offer = PLYPromoOffer(
-          'vendor-123',
-          'store-offer-123',
-          'public-offer-123',
-        );
+        final offer =
+            PLYPromoOffer('vendor-123', 'store-offer-123', 'public-offer-123');
 
         expect(offer.vendorId, 'vendor-123');
         expect(offer.storeOfferId, 'store-offer-123');
@@ -1029,11 +958,7 @@ void main() {
     group('PLYSubscriptionOffer', () {
       test('creates instance with all properties', () {
         final offer = PLYSubscriptionOffer(
-          'sub-123',
-          'base-plan-123',
-          'token-123',
-          'offer-123',
-        );
+            'sub-123', 'base-plan-123', 'token-123', 'offer-123');
 
         expect(offer.subscriptionId, 'sub-123');
         expect(offer.basePlanId, 'base-plan-123');
@@ -1046,23 +971,22 @@ void main() {
       test('creates instance with plans', () {
         final plans = [
           PLYPlan(
-            'plan-1',
-            'product-1',
-            'Plan 1',
-            PLYPlanType.consumable,
-            1.99,
-            '\$1.99',
-            'USD',
-            '\$',
-            '1.99',
-            null,
-            false,
-            null,
-            null,
-            null,
-            null,
-            false,
-          ),
+              'plan-1',
+              'product-1',
+              'Plan 1',
+              PLYPlanType.consumable,
+              1.99,
+              '\$1.99',
+              'USD',
+              '\$',
+              '1.99',
+              null,
+              false,
+              null,
+              null,
+              null,
+              null,
+              false)
         ];
 
         final product = PLYProduct('Test Product', 'vendor-123', plans);
@@ -1076,11 +1000,10 @@ void main() {
     group('PLYPresentationPlan', () {
       test('creates instance and converts to map', () {
         final plan = PLYPresentationPlan(
-          planVendorId: 'plan-123',
-          storeProductId: 'product-123',
-          basePlanId: 'base-123',
-          offerId: 'offer-123',
-        );
+            planVendorId: 'plan-123',
+            storeProductId: 'product-123',
+            basePlanId: 'base-123',
+            offerId: 'offer-123');
 
         final map = plan.toMap();
 
@@ -1094,44 +1017,40 @@ void main() {
     group('PLYSubscription', () {
       test('creates instance with all properties', () {
         final plan = PLYPlan(
-          'plan-123',
-          'product-123',
-          'Premium',
-          PLYPlanType.autoRenewingSubscription,
-          9.99,
-          '\$9.99',
-          'USD',
-          '\$',
-          '9.99',
-          'P1M',
-          false,
-          null,
-          null,
-          null,
-          null,
-          false,
-        );
+            'plan-123',
+            'product-123',
+            'Premium',
+            PLYPlanType.autoRenewingSubscription,
+            9.99,
+            '\$9.99',
+            'USD',
+            '\$',
+            '9.99',
+            'P1M',
+            false,
+            null,
+            null,
+            null,
+            null,
+            false);
 
         final product = PLYProduct('Premium Product', 'vendor-123', [plan]);
 
         final subscription = PLYSubscription(
-          'token-123',
-          PLYSubscriptionSource.appleAppStore,
-          '2025-02-01T00:00:00Z',
-          null,
-          plan,
-          product,
-          99.99,
-          365,
-          52,
-          12,
-        );
+            'token-123',
+            PLYSubscriptionSource.appleAppStore,
+            '2025-02-01T00:00:00Z',
+            null,
+            plan,
+            product,
+            99.99,
+            365,
+            52,
+            12);
 
         expect(subscription.purchaseToken, 'token-123');
-        expect(
-          subscription.subscriptionSource,
-          PLYSubscriptionSource.appleAppStore,
-        );
+        expect(subscription.subscriptionSource,
+            PLYSubscriptionSource.appleAppStore);
         expect(subscription.nextRenewalDate, '2025-02-01T00:00:00Z');
         expect(subscription.cancelledDate, isNull);
         expect(subscription.plan!.vendorId, 'plan-123');
@@ -1146,26 +1065,25 @@ void main() {
     group('PLYEventPropertyPlan', () {
       test('creates instance with all properties', () {
         final plan = PLYEventPropertyPlan(
-          'subscription',
-          'plan-123',
-          'app_store',
-          'US',
-          'product-123',
-          9.99,
-          'USD',
-          'P1M',
-          30,
-          4.99,
-          'P1W',
-          7,
-          true,
-          'P1W',
-          7,
-          'ref-123',
-          '50%',
-          '\$5.00',
-          true,
-        );
+            'subscription',
+            'plan-123',
+            'app_store',
+            'US',
+            'product-123',
+            9.99,
+            'USD',
+            'P1M',
+            30,
+            4.99,
+            'P1W',
+            7,
+            true,
+            'P1W',
+            7,
+            'ref-123',
+            '50%',
+            '\$5.00',
+            true);
 
         expect(plan.type, 'subscription');
         expect(plan.purchasely_plan_id, 'plan-123');
@@ -1179,37 +1097,36 @@ void main() {
     group('PLYEvent', () {
       test('creates instance with name and properties', () {
         final properties = PLYEventProperties(
-          '5.6.1',
-          PLYEventName.PRESENTATION_VIEWED,
-          '2025-01-15T10:00:00Z',
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          [],
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          [],
-          null,
-          null,
-          null,
-          null,
-        );
+            '5.6.1',
+            PLYEventName.PRESENTATION_VIEWED,
+            '2025-01-15T10:00:00Z',
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            [],
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            [],
+            null,
+            null,
+            null,
+            null);
 
         final event = PLYEvent(PLYEventName.PRESENTATION_VIEWED, properties);
 
@@ -1232,10 +1149,8 @@ void main() {
 
     group('PLYEventPropertySubscription', () {
       test('creates instance with properties', () {
-        final subscription = PLYEventPropertySubscription(
-          'plan-123',
-          'product-123',
-        );
+        final subscription =
+            PLYEventPropertySubscription('plan-123', 'product-123');
 
         expect(subscription.plan, 'plan-123');
         expect(subscription.product, 'product-123');
@@ -1245,10 +1160,7 @@ void main() {
     group('PLYDynamicOffering', () {
       test('creates instance with all properties', () {
         final offering = PLYDynamicOffering(
-          'ref-123',
-          'plan-vendor-123',
-          'offer-vendor-123',
-        );
+            'ref-123', 'plan-vendor-123', 'offer-vendor-123');
 
         expect(offering.reference, 'ref-123');
         expect(offering.planVendorId, 'plan-vendor-123');
@@ -1257,10 +1169,7 @@ void main() {
 
       test('toJson returns correct map', () {
         final offering = PLYDynamicOffering(
-          'ref-123',
-          'plan-vendor-123',
-          'offer-vendor-123',
-        );
+            'ref-123', 'plan-vendor-123', 'offer-vendor-123');
         final json = offering.toJson();
 
         expect(json['reference'], 'ref-123');
@@ -1433,12 +1342,11 @@ void main() {
         'selected_option_id': null,
         'selected_options': null,
         'displayed_options': null,
-        'web_checkout_provider': null,
+        'web_checkout_provider': null
       };
 
-      final properties = Purchasely.transformToPLYEventProperties(
-        propertiesMap,
-      );
+      final properties =
+          Purchasely.transformToPLYEventProperties(propertiesMap);
 
       // When purchasable_plans is null in input, it stays null in output
       // But carousels and running_subscriptions are always initialized as lists
@@ -1478,114 +1386,107 @@ void main() {
         'selected_option_id': null,
         'selected_options': null,
         'displayed_options': null,
-        'web_checkout_provider': null,
+        'web_checkout_provider': null
       };
 
-      final properties = Purchasely.transformToPLYEventProperties(
-        propertiesMap,
-      );
+      final properties =
+          Purchasely.transformToPLYEventProperties(propertiesMap);
 
       expect(properties.purchasable_plans, isEmpty);
       expect(properties.carousels, isEmpty);
       expect(properties.running_subscriptions, isEmpty);
     });
 
-    test(
-      'transformToPLYEventProperties handles carousel without auto_playing',
-      () {
-        final propertiesMap = {
-          'sdk_version': '5.6.1',
-          'event_name': 'CAROUSEL_SLIDE_SWIPED',
-          'event_created_at': '2025-01-15T10:00:00Z',
-          'displayed_presentation': null,
-          'user_id': null,
-          'anonymous_user_id': null,
-          'purchasable_plans': null,
-          'deeplink_identifier': null,
-          'source_identifier': null,
-          'selected_plan': null,
-          'previous_selected_plan': null,
-          'selected_presentation': null,
-          'previous_selected_presentation': null,
-          'link_identifier': null,
-          'carousels': [
-            {
-              'selected_slide': 1,
-              'number_of_slides': 3,
-              // 'is_carousel_auto_playing' is missing, should default to false
-              'default_slide': 0,
-              'previous_slide': 0,
-            },
-          ],
-          'language': null,
-          'device': null,
-          'os_version': null,
-          'device_type': null,
-          'error_message': null,
-          'cancellation_reason_id': null,
-          'cancellation_reason': null,
-          'plan': null,
-          'selected_product': null,
-          'plan_change_type': null,
-          'running_subscriptions': null,
-          'selected_option_id': null,
-          'selected_options': null,
-          'displayed_options': null,
-          'web_checkout_provider': null,
-        };
+    test('transformToPLYEventProperties handles carousel without auto_playing',
+        () {
+      final propertiesMap = {
+        'sdk_version': '5.6.1',
+        'event_name': 'CAROUSEL_SLIDE_SWIPED',
+        'event_created_at': '2025-01-15T10:00:00Z',
+        'displayed_presentation': null,
+        'user_id': null,
+        'anonymous_user_id': null,
+        'purchasable_plans': null,
+        'deeplink_identifier': null,
+        'source_identifier': null,
+        'selected_plan': null,
+        'previous_selected_plan': null,
+        'selected_presentation': null,
+        'previous_selected_presentation': null,
+        'link_identifier': null,
+        'carousels': [
+          {
+            'selected_slide': 1,
+            'number_of_slides': 3,
+            // 'is_carousel_auto_playing' is missing, should default to false
+            'default_slide': 0,
+            'previous_slide': 0
+          }
+        ],
+        'language': null,
+        'device': null,
+        'os_version': null,
+        'device_type': null,
+        'error_message': null,
+        'cancellation_reason_id': null,
+        'cancellation_reason': null,
+        'plan': null,
+        'selected_product': null,
+        'plan_change_type': null,
+        'running_subscriptions': null,
+        'selected_option_id': null,
+        'selected_options': null,
+        'displayed_options': null,
+        'web_checkout_provider': null
+      };
 
-        final properties = Purchasely.transformToPLYEventProperties(
-          propertiesMap,
-        );
+      final properties =
+          Purchasely.transformToPLYEventProperties(propertiesMap);
 
-        expect(properties.carousels.length, 1);
-        expect(properties.carousels[0].is_carousel_auto_playing, false);
-      },
-    );
+      expect(properties.carousels.length, 1);
+      expect(properties.carousels[0].is_carousel_auto_playing, false);
+    });
 
-    test(
-      'transformToPLYEventProperties handles valid APP_STARTED event name',
-      () {
-        final propertiesMap = {
-          'sdk_version': '5.6.1',
-          'event_name': 'APP_STARTED',
-          'event_created_at': '2025-01-15T10:00:00Z',
-          'displayed_presentation': null,
-          'user_id': null,
-          'anonymous_user_id': null,
-          'purchasable_plans': null,
-          'deeplink_identifier': null,
-          'source_identifier': null,
-          'selected_plan': null,
-          'previous_selected_plan': null,
-          'selected_presentation': null,
-          'previous_selected_presentation': null,
-          'link_identifier': null,
-          'carousels': null,
-          'language': null,
-          'device': null,
-          'os_version': null,
-          'device_type': null,
-          'error_message': null,
-          'cancellation_reason_id': null,
-          'cancellation_reason': null,
-          'plan': null,
-          'selected_product': null,
-          'plan_change_type': null,
-          'running_subscriptions': null,
-          'selected_option_id': null,
-          'selected_options': null,
-          'displayed_options': null,
-          'web_checkout_provider': null,
-        };
+    test('transformToPLYEventProperties handles valid APP_STARTED event name',
+        () {
+      final propertiesMap = {
+        'sdk_version': '5.6.1',
+        'event_name': 'APP_STARTED',
+        'event_created_at': '2025-01-15T10:00:00Z',
+        'displayed_presentation': null,
+        'user_id': null,
+        'anonymous_user_id': null,
+        'purchasable_plans': null,
+        'deeplink_identifier': null,
+        'source_identifier': null,
+        'selected_plan': null,
+        'previous_selected_plan': null,
+        'selected_presentation': null,
+        'previous_selected_presentation': null,
+        'link_identifier': null,
+        'carousels': null,
+        'language': null,
+        'device': null,
+        'os_version': null,
+        'device_type': null,
+        'error_message': null,
+        'cancellation_reason_id': null,
+        'cancellation_reason': null,
+        'plan': null,
+        'selected_product': null,
+        'plan_change_type': null,
+        'running_subscriptions': null,
+        'selected_option_id': null,
+        'selected_options': null,
+        'displayed_options': null,
+        'web_checkout_provider': null
+      };
 
-        final properties = Purchasely.transformToPLYEventProperties(
-          propertiesMap,
-        );
+      final properties =
+          Purchasely.transformToPLYEventProperties(propertiesMap);
 
-        expect(properties.event_name, PLYEventName.APP_STARTED);
-      },
-    );
+      expect(properties.event_name, PLYEventName.APP_STARTED);
+    });
   });
 
   group('User Attribute Date Parsing', () {
@@ -1594,11 +1495,11 @@ void main() {
 
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(channel, (MethodCall methodCall) async {
-            if (methodCall.method == 'userAttribute') {
-              return '2025-01-15T10:30:00.000Z';
-            }
-            return null;
-          });
+        if (methodCall.method == 'userAttribute') {
+          return '2025-01-15T10:30:00.000Z';
+        }
+        return null;
+      });
 
       final value = await Purchasely.userAttribute('dateKey');
 
@@ -1616,11 +1517,11 @@ void main() {
 
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(channel, (MethodCall methodCall) async {
-            if (methodCall.method == 'userAttribute') {
-              return 'not-a-date';
-            }
-            return null;
-          });
+        if (methodCall.method == 'userAttribute') {
+          return 'not-a-date';
+        }
+        return null;
+      });
 
       final value = await Purchasely.userAttribute('stringKey');
 
@@ -1630,47 +1531,45 @@ void main() {
           .setMockMethodCallHandler(channel, null);
     });
 
-    test(
-      'userAttribute returns a non-string value as-is without throwing',
-      () async {
-        // Guards the broad `catch (_)` around DateTime.parse: a non-string
-        // attribute (int/bool/…) makes DateTime.parse throw a TypeError, not a
-        // FormatException. Narrowing to `on FormatException` would let that
-        // TypeError escape and reject the whole future — this pins that it
-        // doesn't.
-        final channel = const MethodChannel('purchasely');
+    test('userAttribute returns a non-string value as-is without throwing',
+        () async {
+      // Guards the broad `catch (_)` around DateTime.parse: a non-string
+      // attribute (int/bool/…) makes DateTime.parse throw a TypeError, not a
+      // FormatException. Narrowing to `on FormatException` would let that
+      // TypeError escape and reject the whole future — this pins that it
+      // doesn't.
+      final channel = const MethodChannel('purchasely');
 
-        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-            .setMockMethodCallHandler(channel, (MethodCall methodCall) async {
-              if (methodCall.method == 'userAttribute') {
-                return 42;
-              }
-              return null;
-            });
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (MethodCall methodCall) async {
+        if (methodCall.method == 'userAttribute') {
+          return 42;
+        }
+        return null;
+      });
 
-        final value = await Purchasely.userAttribute('intKey');
+      final value = await Purchasely.userAttribute('intKey');
 
-        expect(value, 42);
+      expect(value, 42);
 
-        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-            .setMockMethodCallHandler(channel, null);
-      },
-    );
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, null);
+    });
 
     test('userAttributes parses date values in map', () async {
       final channel = const MethodChannel('purchasely');
 
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(channel, (MethodCall methodCall) async {
-            if (methodCall.method == 'userAttributes') {
-              return {
-                'dateAttr': '2025-06-20T14:00:00.000Z',
-                'stringAttr': 'hello',
-                'intAttr': 42,
-              };
-            }
-            return null;
-          });
+        if (methodCall.method == 'userAttributes') {
+          return {
+            'dateAttr': '2025-06-20T14:00:00.000Z',
+            'stringAttr': 'hello',
+            'intAttr': 42
+          };
+        }
+        return null;
+      });
 
       final attrs = await Purchasely.userAttributes();
 
@@ -1685,73 +1584,71 @@ void main() {
   });
 
   group('Subscription Handling Edge Cases', () {
-    test('userSubscriptions falls back to .none for a null subscriptionSource '
+    test(
+        'userSubscriptions falls back to .none for a null subscriptionSource '
         'instead of crashing (REC-09 / FLT-W-07)', () async {
       final channel = const MethodChannel('purchasely');
 
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(channel, (MethodCall methodCall) async {
-            if (methodCall.method == 'userSubscriptions') {
-              return [
-                {
-                  'purchaseToken': 'token-123',
-                  // Android emits null for a StoreType outside the 4 known ones.
-                  'subscriptionSource': null,
-                  'nextRenewalDate': null,
-                  'cancelledDate': null,
-                  // transformToPLYPlan() takes a non-nullable Map — {} (empty)
-                  // is its documented "absent" convention, unrelated to the
-                  // subscriptionSource fix under test here.
-                  'plan': <String, dynamic>{},
-                  'product': null,
-                },
-              ];
+        if (methodCall.method == 'userSubscriptions') {
+          return [
+            {
+              'purchaseToken': 'token-123',
+              // Android emits null for a StoreType outside the 4 known ones.
+              'subscriptionSource': null,
+              'nextRenewalDate': null,
+              'cancelledDate': null,
+              // transformToPLYPlan() takes a non-nullable Map — {} (empty)
+              // is its documented "absent" convention, unrelated to the
+              // subscriptionSource fix under test here.
+              'plan': <String, dynamic>{},
+              'product': null,
             }
-            return null;
-          });
+          ];
+        }
+        return null;
+      });
 
       final subscriptions = await Purchasely.userSubscriptions();
 
       expect(subscriptions.length, 1);
       expect(
-        subscriptions.first.subscriptionSource,
-        PLYSubscriptionSource.none,
-      );
+          subscriptions.first.subscriptionSource, PLYSubscriptionSource.none);
 
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(channel, null);
     });
 
-    test('userSubscriptions falls back to .none for an out-of-range '
+    test(
+        'userSubscriptions falls back to .none for an out-of-range '
         'subscriptionSource index (REC-09 / FLT-W-07)', () async {
       final channel = const MethodChannel('purchasely');
 
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(channel, (MethodCall methodCall) async {
-            if (methodCall.method == 'userSubscriptions') {
-              return [
-                {
-                  'purchaseToken': 'token-123',
-                  'subscriptionSource': 99,
-                  'nextRenewalDate': null,
-                  'cancelledDate': null,
-                  // transformToPLYPlan() takes a non-nullable Map — {} (empty)
-                  // is its documented "absent" convention, unrelated to the
-                  // subscriptionSource fix under test here.
-                  'plan': <String, dynamic>{},
-                  'product': null,
-                },
-              ];
+        if (methodCall.method == 'userSubscriptions') {
+          return [
+            {
+              'purchaseToken': 'token-123',
+              'subscriptionSource': 99,
+              'nextRenewalDate': null,
+              'cancelledDate': null,
+              // transformToPLYPlan() takes a non-nullable Map — {} (empty)
+              // is its documented "absent" convention, unrelated to the
+              // subscriptionSource fix under test here.
+              'plan': <String, dynamic>{},
+              'product': null,
             }
-            return null;
-          });
+          ];
+        }
+        return null;
+      });
 
       final subscriptions = await Purchasely.userSubscriptions();
 
       expect(
-        subscriptions.first.subscriptionSource,
-        PLYSubscriptionSource.none,
-      );
+          subscriptions.first.subscriptionSource, PLYSubscriptionSource.none);
 
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(channel, null);
@@ -1762,37 +1659,37 @@ void main() {
 
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(channel, (MethodCall methodCall) async {
-            if (methodCall.method == 'userSubscriptions') {
-              return [
-                {
-                  'purchaseToken': 'token-123',
-                  'subscriptionSource': 0,
-                  'nextRenewalDate': '2025-02-01T00:00:00Z',
-                  'cancelledDate': null,
-                  'plan': {
-                    'vendorId': 'plan-123',
-                    'productId': 'product-123',
-                    'name': 'Plan',
-                    'type': 2,
-                    'amount': 9.99,
-                    'localizedAmount': '\$9.99',
-                    'currencyCode': 'USD',
-                    'currencySymbol': '\$',
-                    'price': '9.99',
-                    'period': 'P1M',
-                    'hasIntroductoryPrice': false,
-                    'introPrice': null,
-                    'introAmount': null,
-                    'introDuration': null,
-                    'introPeriod': null,
-                    'hasFreeTrial': false,
-                  },
-                  'product': null,
-                },
-              ];
+        if (methodCall.method == 'userSubscriptions') {
+          return [
+            {
+              'purchaseToken': 'token-123',
+              'subscriptionSource': 0,
+              'nextRenewalDate': '2025-02-01T00:00:00Z',
+              'cancelledDate': null,
+              'plan': {
+                'vendorId': 'plan-123',
+                'productId': 'product-123',
+                'name': 'Plan',
+                'type': 2,
+                'amount': 9.99,
+                'localizedAmount': '\$9.99',
+                'currencyCode': 'USD',
+                'currencySymbol': '\$',
+                'price': '9.99',
+                'period': 'P1M',
+                'hasIntroductoryPrice': false,
+                'introPrice': null,
+                'introAmount': null,
+                'introDuration': null,
+                'introPeriod': null,
+                'hasFreeTrial': false
+              },
+              'product': null
             }
-            return null;
-          });
+          ];
+        }
+        return null;
+      });
 
       final subscriptions = await Purchasely.userSubscriptions();
 
@@ -1809,32 +1706,30 @@ void main() {
 
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(channel, (MethodCall methodCall) async {
-            if (methodCall.method == 'userSubscriptions') {
-              return [
-                {
-                  'purchaseToken': 'token-123',
-                  'subscriptionSource': 2,
-                  'nextRenewalDate': null,
-                  'cancelledDate': '2025-01-15T00:00:00Z',
-                  'plan': {},
-                  'product': {
-                    'name': 'Product Name',
-                    'vendorId': 'product-vendor',
-                    'plans': null,
-                  },
-                },
-              ];
+        if (methodCall.method == 'userSubscriptions') {
+          return [
+            {
+              'purchaseToken': 'token-123',
+              'subscriptionSource': 2,
+              'nextRenewalDate': null,
+              'cancelledDate': '2025-01-15T00:00:00Z',
+              'plan': {},
+              'product': {
+                'name': 'Product Name',
+                'vendorId': 'product-vendor',
+                'plans': null
+              }
             }
-            return null;
-          });
+          ];
+        }
+        return null;
+      });
 
       final subscriptions = await Purchasely.userSubscriptions();
 
       expect(subscriptions.length, 1);
-      expect(
-        subscriptions.first.subscriptionSource,
-        PLYSubscriptionSource.amazonAppstore,
-      );
+      expect(subscriptions.first.subscriptionSource,
+          PLYSubscriptionSource.amazonAppstore);
       expect(subscriptions.first.product!.name, 'Product Name');
       expect(subscriptions.first.plan, isNull);
 
@@ -1861,7 +1756,7 @@ void main() {
         'introAmount': null,
         'introDuration': null,
         'introPeriod': null,
-        'hasFreeTrial': false,
+        'hasFreeTrial': false
       };
 
       final plan = Purchasely.transformToPLYPlan(planMap);
@@ -1885,7 +1780,7 @@ void main() {
         'introAmount': null,
         'introDuration': null,
         'introPeriod': null,
-        'hasFreeTrial': false,
+        'hasFreeTrial': false
       };
 
       final plan = Purchasely.transformToPLYPlan(planMap);
@@ -1909,7 +1804,7 @@ void main() {
         'introAmount': null,
         'introDuration': null,
         'introPeriod': null,
-        'hasFreeTrial': false,
+        'hasFreeTrial': false
       };
 
       final plan = Purchasely.transformToPLYPlan(planMap);
@@ -1933,14 +1828,15 @@ void main() {
         'introAmount': null,
         'introDuration': null,
         'introPeriod': null,
-        'hasFreeTrial': false,
+        'hasFreeTrial': false
       };
 
       final plan = Purchasely.transformToPLYPlan(planMap);
       expect(plan!.type, PLYPlanType.unknown);
     });
 
-    test('transformToPLYPlan tolerates the String wire format too '
+    test(
+        'transformToPLYPlan tolerates the String wire format too '
         '(rc.4 hardening — Android will switch plan type to a String)', () {
       final planMap = {
         'vendorId': 'vendor-123',
@@ -1958,17 +1854,15 @@ void main() {
         'introAmount': null,
         'introDuration': null,
         'introPeriod': null,
-        'hasFreeTrial': false,
+        'hasFreeTrial': false
       };
 
       final plan = Purchasely.transformToPLYPlan(planMap);
       expect(plan!.type, PLYPlanType.autoRenewingSubscription);
 
       // And an unrecognized String still degrades to unknown, not a throw.
-      final unknownPlan = Purchasely.transformToPLYPlan({
-        ...planMap,
-        'type': 'SOME_FUTURE_TYPE',
-      });
+      final unknownPlan = Purchasely.transformToPLYPlan(
+          {...planMap, 'type': 'SOME_FUTURE_TYPE'});
       expect(unknownPlan!.type, PLYPlanType.unknown);
     });
   });
@@ -1991,9 +1885,9 @@ void main() {
 
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(channel, (MethodCall methodCall) async {
-            methodCalls.add(methodCall);
-            return null;
-          });
+        methodCalls.add(methodCall);
+        return null;
+      });
     });
 
     tearDown(() {
@@ -2054,9 +1948,9 @@ void main() {
 
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(channel, (MethodCall methodCall) async {
-            methodCalls.add(methodCall);
-            return null;
-          });
+        methodCalls.add(methodCall);
+        return null;
+      });
     });
 
     tearDown(() {
@@ -2078,86 +1972,69 @@ void main() {
       expect(methodCalls.first.arguments['processingLegalBasis'], 'OPTIONAL');
     });
 
-    test(
-      'setUserAttributeWithString uses optional legal basis by default',
-      () async {
-        await Purchasely.setUserAttributeWithString('key', 'value');
+    test('setUserAttributeWithString uses optional legal basis by default',
+        () async {
+      await Purchasely.setUserAttributeWithString('key', 'value');
 
-        expect(methodCalls.first.arguments['processingLegalBasis'], 'OPTIONAL');
-      },
-    );
+      expect(methodCalls.first.arguments['processingLegalBasis'], 'OPTIONAL');
+    });
 
-    test(
-      'setUserAttributeWithInt uses optional legal basis by default',
-      () async {
-        await Purchasely.setUserAttributeWithInt('key', 42);
+    test('setUserAttributeWithInt uses optional legal basis by default',
+        () async {
+      await Purchasely.setUserAttributeWithInt('key', 42);
 
-        expect(methodCalls.first.arguments['processingLegalBasis'], 'OPTIONAL');
-      },
-    );
+      expect(methodCalls.first.arguments['processingLegalBasis'], 'OPTIONAL');
+    });
 
-    test(
-      'setUserAttributeWithDouble uses optional legal basis by default',
-      () async {
-        await Purchasely.setUserAttributeWithDouble('key', 3.14);
+    test('setUserAttributeWithDouble uses optional legal basis by default',
+        () async {
+      await Purchasely.setUserAttributeWithDouble('key', 3.14);
 
-        expect(methodCalls.first.arguments['processingLegalBasis'], 'OPTIONAL');
-      },
-    );
+      expect(methodCalls.first.arguments['processingLegalBasis'], 'OPTIONAL');
+    });
 
-    test(
-      'setUserAttributeWithBoolean uses optional legal basis by default',
-      () async {
-        await Purchasely.setUserAttributeWithBoolean('key', true);
+    test('setUserAttributeWithBoolean uses optional legal basis by default',
+        () async {
+      await Purchasely.setUserAttributeWithBoolean('key', true);
 
-        expect(methodCalls.first.arguments['processingLegalBasis'], 'OPTIONAL');
-      },
-    );
+      expect(methodCalls.first.arguments['processingLegalBasis'], 'OPTIONAL');
+    });
 
-    test(
-      'setUserAttributeWithDate uses optional legal basis by default',
-      () async {
-        await Purchasely.setUserAttributeWithDate('key', DateTime.now());
+    test('setUserAttributeWithDate uses optional legal basis by default',
+        () async {
+      await Purchasely.setUserAttributeWithDate('key', DateTime.now());
 
-        expect(methodCalls.first.arguments['processingLegalBasis'], 'OPTIONAL');
-      },
-    );
+      expect(methodCalls.first.arguments['processingLegalBasis'], 'OPTIONAL');
+    });
 
-    test(
-      'setUserAttributeWithStringArray uses optional legal basis by default',
-      () async {
-        await Purchasely.setUserAttributeWithStringArray('key', ['a', 'b']);
+    test('setUserAttributeWithStringArray uses optional legal basis by default',
+        () async {
+      await Purchasely.setUserAttributeWithStringArray('key', ['a', 'b']);
 
-        expect(methodCalls.first.arguments['processingLegalBasis'], 'OPTIONAL');
-      },
-    );
+      expect(methodCalls.first.arguments['processingLegalBasis'], 'OPTIONAL');
+    });
 
-    test(
-      'setUserAttributeWithIntArray uses optional legal basis by default',
-      () async {
-        await Purchasely.setUserAttributeWithIntArray('key', [1, 2]);
+    test('setUserAttributeWithIntArray uses optional legal basis by default',
+        () async {
+      await Purchasely.setUserAttributeWithIntArray('key', [1, 2]);
 
-        expect(methodCalls.first.arguments['processingLegalBasis'], 'OPTIONAL');
-      },
-    );
+      expect(methodCalls.first.arguments['processingLegalBasis'], 'OPTIONAL');
+    });
+
+    test('setUserAttributeWithDoubleArray uses optional legal basis by default',
+        () async {
+      await Purchasely.setUserAttributeWithDoubleArray('key', [1.1, 2.2]);
+
+      expect(methodCalls.first.arguments['processingLegalBasis'], 'OPTIONAL');
+    });
 
     test(
-      'setUserAttributeWithDoubleArray uses optional legal basis by default',
-      () async {
-        await Purchasely.setUserAttributeWithDoubleArray('key', [1.1, 2.2]);
+        'setUserAttributeWithBooleanArray uses optional legal basis by default',
+        () async {
+      await Purchasely.setUserAttributeWithBooleanArray('key', [true, false]);
 
-        expect(methodCalls.first.arguments['processingLegalBasis'], 'OPTIONAL');
-      },
-    );
-
-    test(
-      'setUserAttributeWithBooleanArray uses optional legal basis by default',
-      () async {
-        await Purchasely.setUserAttributeWithBooleanArray('key', [true, false]);
-
-        expect(methodCalls.first.arguments['processingLegalBasis'], 'OPTIONAL');
-      },
-    );
+      expect(methodCalls.first.arguments['processingLegalBasis'], 'OPTIONAL');
+    });
   });
 
   group('PurchaselyBuilder.start', () {
@@ -2170,9 +2047,9 @@ void main() {
 
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(channel, (MethodCall methodCall) async {
-            methodCalls.add(methodCall);
-            return true;
-          });
+        methodCalls.add(methodCall);
+        return true;
+      });
       PurchaselyBridge.debugReset();
     });
 
@@ -2216,10 +2093,8 @@ void main() {
       expect(startCall.arguments['logLevel'], 'debug');
       expect(startCall.arguments['allowDeeplink'], true);
       expect(startCall.arguments['allowCampaigns'], false);
-      expect(
-        startCall.arguments['deeplink'],
-        'app://ply/presentations/onboarding',
-      );
+      expect(startCall.arguments['deeplink'],
+          'app://ply/presentations/onboarding');
       expect(startCall.arguments['automaticDeeplinkHandling'], false);
       expect(startCall.arguments['stores'], ['google', 'huawei', 'amazon']);
       expect(startCall.arguments['storekitVersion'], 'storeKit1');
@@ -2230,62 +2105,52 @@ void main() {
 
       final startCall = methodCalls.firstWhere((c) => c.method == 'start');
       expect(
-        startCall.arguments.containsKey('automaticDeeplinkHandling'),
-        false,
-      );
+          startCall.arguments.containsKey('automaticDeeplinkHandling'), false);
     });
 
-    test(
-      'handleDeeplink(null) does not forward a cold-start deeplink',
-      () async {
-        await Purchasely.apiKey('test-key').handleDeeplink(null).start();
+    test('handleDeeplink(null) does not forward a cold-start deeplink',
+        () async {
+      await Purchasely.apiKey('test-key').handleDeeplink(null).start();
 
-        final startCall = methodCalls.firstWhere((c) => c.method == 'start');
-        expect(startCall.arguments.containsKey('deeplink'), false);
-      },
-    );
+      final startCall = methodCalls.firstWhere((c) => c.method == 'start');
+      expect(startCall.arguments.containsKey('deeplink'), false);
+    });
 
-    test(
-      'anonymousUserId forwards the id and its override flag (6.1.0)',
-      () async {
-        await Purchasely.apiKey('test-key')
-            .anonymousUserId(
-              '3f2504e0-4f89-11d3-9a0c-0305e82c3301',
-              override: true,
-            )
-            .start();
+    test('anonymousUserId forwards the id and its override flag (6.1.0)',
+        () async {
+      await Purchasely.apiKey('test-key')
+          .anonymousUserId('3f2504e0-4f89-11d3-9a0c-0305e82c3301',
+              override: true)
+          .start();
 
-        final startCall = methodCalls.firstWhere((c) => c.method == 'start');
-        expect(
-          startCall.arguments['anonymousUserId'],
-          '3f2504e0-4f89-11d3-9a0c-0305e82c3301',
-        );
-        expect(startCall.arguments['anonymousUserIdOverride'], true);
-      },
-    );
+      final startCall = methodCalls.firstWhere((c) => c.method == 'start');
+      expect(startCall.arguments['anonymousUserId'],
+          '3f2504e0-4f89-11d3-9a0c-0305e82c3301');
+      expect(startCall.arguments['anonymousUserIdOverride'], true);
+    });
 
     test('anonymousUserId defaults override to false (6.1.0)', () async {
-      await Purchasely.apiKey(
-        'test-key',
-      ).anonymousUserId('3f2504e0-4f89-11d3-9a0c-0305e82c3301').start();
+      await Purchasely.apiKey('test-key')
+          .anonymousUserId('3f2504e0-4f89-11d3-9a0c-0305e82c3301')
+          .start();
 
       final startCall = methodCalls.firstWhere((c) => c.method == 'start');
       expect(startCall.arguments['anonymousUserIdOverride'], false);
     });
 
     test('proxy forwards the API base URL (6.1.0)', () async {
-      await Purchasely.apiKey(
-        'test-key',
-      ).proxy('https://svc.purchasely.io').start();
+      await Purchasely.apiKey('test-key')
+          .proxy('https://svc.purchasely.io')
+          .start();
 
       final startCall = methodCalls.firstWhere((c) => c.method == 'start');
       expect(startCall.arguments['proxy'], 'https://svc.purchasely.io');
     });
 
     test('appHandlesRedemptionAlert forwards the flag (6.1.0)', () async {
-      await Purchasely.apiKey(
-        'test-key',
-      ).appHandlesRedemptionAlert(true).start();
+      await Purchasely.apiKey('test-key')
+          .appHandlesRedemptionAlert(true)
+          .start();
 
       final startCall = methodCalls.firstWhere((c) => c.method == 'start');
       expect(startCall.arguments['appHandlesRedemptionAlert'], true);
@@ -2301,9 +2166,7 @@ void main() {
       expect(startCall.arguments.containsKey('anonymousUserIdOverride'), false);
       expect(startCall.arguments.containsKey('proxy'), false);
       expect(
-        startCall.arguments.containsKey('appHandlesRedemptionAlert'),
-        false,
-      );
+          startCall.arguments.containsKey('appHandlesRedemptionAlert'), false);
     });
 
     test('runtime allowCampaigns forwards the campaign gate', () async {

@@ -90,9 +90,8 @@ void main() {
     });
 
     test('contentId(null) is treated the same as never calling it', () {
-      final request = PLYPresentationBuilder.placement(
-        'home',
-      ).contentId(null).build();
+      final request =
+          PLYPresentationBuilder.placement('home').contentId(null).build();
       expect(request.toMap().containsKey('contentId'), isFalse);
     });
 

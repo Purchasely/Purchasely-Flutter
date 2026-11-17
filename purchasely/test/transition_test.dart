@@ -14,17 +14,15 @@ void main() {
     });
 
     test('pixel serializes type + value', () {
-      expect(const PLYTransitionDimension.pixel(320).toMap(), <String, Object?>{
-        'type': 'pixel',
-        'value': 320.0,
-      });
+      expect(
+        const PLYTransitionDimension.pixel(320).toMap(),
+        <String, Object?>{'type': 'pixel', 'value': 320.0},
+      );
     });
 
     test('generic constructor keeps the explicit type', () {
-      const dim = PLYTransitionDimension(
-        type: PLYDimensionType.pixel,
-        value: 12,
-      );
+      const dim =
+          PLYTransitionDimension(type: PLYDimensionType.pixel, value: 12);
       expect(dim.type, PLYDimensionType.pixel);
       expect(dim.toMap()['type'], 'pixel');
     });
@@ -56,10 +54,10 @@ void main() {
 
       expect(map['type'], 'popin');
       expect(map['width'], <String, Object?>{'type': 'pixel', 'value': 320.0});
-      expect(map['height'], <String, Object?>{
-        'type': 'percentage',
-        'value': 0.5,
-      });
+      expect(
+        map['height'],
+        <String, Object?>{'type': 'percentage', 'value': 0.5},
+      );
       expect(map['dismissible'], true);
     });
 
@@ -70,10 +68,10 @@ void main() {
       ).toMap();
 
       expect(map['type'], 'drawer');
-      expect(map['height'], <String, Object?>{
-        'type': 'percentage',
-        'value': 0.6,
-      });
+      expect(
+        map['height'],
+        <String, Object?>{'type': 'percentage', 'value': 0.6},
+      );
       expect(map.containsKey('width'), isFalse);
       // dismissible omitted when not set.
       expect(map.containsKey('dismissible'), isFalse);
@@ -89,16 +87,12 @@ void main() {
 
     test('drawer with backgroundColors forwards the colors map', () {
       final map = const PLYTransition.drawer(
-        backgroundColors: PLYTransitionColors(
-          light: '#FFFFFF',
-          dark: '#000000',
-        ),
+        backgroundColors:
+            PLYTransitionColors(light: '#FFFFFF', dark: '#000000'),
       ).toMap();
 
-      expect(map['backgroundColors'], <String, Object?>{
-        'light': '#FFFFFF',
-        'dark': '#000000',
-      });
+      expect(map['backgroundColors'],
+          <String, Object?>{'light': '#FFFFFF', 'dark': '#000000'});
     });
 
     test('popin with backgroundColors forwards the colors map', () {

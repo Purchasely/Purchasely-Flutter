@@ -40,10 +40,8 @@ void main() {
       expect(presentation.flowId, 'flow_1');
       expect(presentation.language, 'fr');
       expect(presentation.height, 640);
-      expect(presentation.metadata, <String, Object?>{
-        'foo': 'bar',
-        'count': 3,
-      });
+      expect(
+          presentation.metadata, <String, Object?>{'foo': 'bar', 'count': 3});
     });
 
     test('screenId falls back to the legacy "id" key when absent', () {
@@ -54,17 +52,15 @@ void main() {
       expect(presentation.screenId, 'legacy_screen');
     });
 
-    test(
-      'screenId prefers the v6 key over the legacy one when both present',
-      () {
-        final presentation = PLYPresentation.fromMap(<String, Object?>{
-          'requestId': 'req_1',
-          'screenId': 'v6_screen',
-          'id': 'legacy_screen',
-        });
-        expect(presentation.screenId, 'v6_screen');
-      },
-    );
+    test('screenId prefers the v6 key over the legacy one when both present',
+        () {
+      final presentation = PLYPresentation.fromMap(<String, Object?>{
+        'requestId': 'req_1',
+        'screenId': 'v6_screen',
+        'id': 'legacy_screen',
+      });
+      expect(presentation.screenId, 'v6_screen');
+    });
 
     test('type parses from an int index', () {
       final presentation = PLYPresentation.fromMap(<String, Object?>{
@@ -95,18 +91,14 @@ void main() {
           'requestId': 'req_1',
           'type': rawType,
         });
-        expect(
-          presentation.type,
-          PLYPresentationType.normal,
-          reason: 'type: $rawType',
-        );
+        expect(presentation.type, PLYPresentationType.normal,
+            reason: 'type: $rawType');
       }
     });
 
     test('height defaults to 0 when absent', () {
-      final presentation = PLYPresentation.fromMap(<String, Object?>{
-        'requestId': 'req_1',
-      });
+      final presentation =
+          PLYPresentation.fromMap(<String, Object?>{'requestId': 'req_1'});
       expect(presentation.height, 0);
     });
 
@@ -137,9 +129,8 @@ void main() {
       });
       expect(withNonStringKey.metadata, <String, Object?>{'kept': 'value'});
 
-      final withoutMetadata = PLYPresentation.fromMap(<String, Object?>{
-        'requestId': 'req_1',
-      });
+      final withoutMetadata =
+          PLYPresentation.fromMap(<String, Object?>{'requestId': 'req_1'});
       expect(withoutMetadata.metadata, isEmpty);
     });
   });

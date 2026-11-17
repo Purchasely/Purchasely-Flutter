@@ -6,7 +6,7 @@ enum PLYPlanType {
   nonConsumable,
   autoRenewingSubscription,
   nonRenewingSubscription,
-  unknown,
+  unknown
 }
 
 class PLYPlan {
@@ -38,29 +38,28 @@ class PLYPlan {
   List<PLYCommitmentInfo> commitmentInfo = [];
 
   PLYPlan(
-    this.vendorId,
-    this.productId,
-    this.name,
-    this.type,
-    this.amount,
-    this.localizedAmount,
-    this.currencyCode,
-    this.currencySymbol,
-    this.price,
-    this.period,
-    this.hasIntroductoryPrice,
-    this.introPrice,
-    this.introAmount,
-    this.introDuration,
-    this.introPeriod,
-    this.hasFreeTrial, [
-    this.hasOfferPrice,
-    this.offerPrice,
-    this.offerAmount,
-    this.offerDuration,
-    this.offerPeriod,
-    this.basePlanId,
-  ]) {
+      this.vendorId,
+      this.productId,
+      this.name,
+      this.type,
+      this.amount,
+      this.localizedAmount,
+      this.currencyCode,
+      this.currencySymbol,
+      this.price,
+      this.period,
+      this.hasIntroductoryPrice,
+      this.introPrice,
+      this.introAmount,
+      this.introDuration,
+      this.introPeriod,
+      this.hasFreeTrial,
+      [this.hasOfferPrice,
+      this.offerPrice,
+      this.offerAmount,
+      this.offerDuration,
+      this.offerPeriod,
+      this.basePlanId]) {
     hasOfferPrice ??= hasIntroductoryPrice;
     offerPrice ??= introPrice;
     offerAmount ??= introAmount;
@@ -111,11 +110,7 @@ class PLYSubscriptionOffer {
   String? offerId;
 
   PLYSubscriptionOffer(
-    this.subscriptionId,
-    this.basePlanId,
-    this.offerToken,
-    this.offerId,
-  );
+      this.subscriptionId, this.basePlanId, this.offerToken, this.offerId);
 }
 
 /// Apple billing plan type for a commitment (iOS 26.4+). Apple-only; other
@@ -167,8 +162,7 @@ class PLYCommitmentInfo {
   });
 
   @override
-  String toString() =>
-      'PLYCommitmentInfo('
+  String toString() => 'PLYCommitmentInfo('
       'billingPlanType: $billingPlanType, '
       'billingPrice: $billingPrice, '
       'billingPeriod: $billingPeriod, '
@@ -200,8 +194,7 @@ class PLYCommitmentProgress {
   });
 
   @override
-  String toString() =>
-      'PLYCommitmentProgress('
+  String toString() => 'PLYCommitmentProgress('
       'billingPeriodNumber: $billingPeriodNumber, '
       'totalBillingPeriods: $totalBillingPeriods, '
       'commitmentExpiresDate: $commitmentExpiresDate, '
@@ -235,7 +228,7 @@ enum PLYSubscriptionSource {
   /// `PLYWebRedemptionContext.subscription` is the payload most likely to carry
   /// it.
   webCheckoutStripe,
-  none,
+  none
 }
 
 class PLYProduct {
@@ -274,15 +267,14 @@ class PLYSubscription {
   PLYCommitmentProgress? commitmentProgress;
 
   PLYSubscription(
-    this.purchaseToken,
-    this.subscriptionSource,
-    this.nextRenewalDate,
-    this.cancelledDate,
-    this.plan,
-    this.product,
-    this.cumulatedRevenuesInUSD,
-    this.subscriptionDurationInDays,
-    this.subscriptionDurationInWeeks,
-    this.subscriptionDurationInMonths,
-  );
+      this.purchaseToken,
+      this.subscriptionSource,
+      this.nextRenewalDate,
+      this.cancelledDate,
+      this.plan,
+      this.product,
+      this.cumulatedRevenuesInUSD,
+      this.subscriptionDurationInDays,
+      this.subscriptionDurationInWeeks,
+      this.subscriptionDurationInMonths);
 }

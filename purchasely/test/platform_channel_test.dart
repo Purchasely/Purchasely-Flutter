@@ -19,9 +19,9 @@ void main() {
 
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(channel, (MethodCall methodCall) async {
-            methodCalls.add(methodCall);
-            return _handleMethodCall(methodCall);
-          });
+        methodCalls.add(methodCall);
+        return _handleMethodCall(methodCall);
+      });
     });
 
     tearDown(() {
@@ -36,42 +36,35 @@ void main() {
         expect(methodCalls.first.method, 'synchronize');
       });
 
-      test(
-        'synchronize awaits the native callback (resolves on success)',
-        () async {
-          // The 6.0 native SDKs resolve synchronize() through a success/error
-          // callback. The Dart Future must complete (not hang) once native
-          // acknowledges. A timeout failure here would catch a regression to the
-          // old fire-and-forget bridge that never wired the callback.
-          final ok = await Purchasely.synchronize().timeout(
-            const Duration(seconds: 1),
-          );
-          expect(methodCalls.last.method, 'synchronize');
-          expect(ok, isTrue);
-        },
-      );
+      test('synchronize awaits the native callback (resolves on success)',
+          () async {
+        // The 6.0 native SDKs resolve synchronize() through a success/error
+        // callback. The Dart Future must complete (not hang) once native
+        // acknowledges. A timeout failure here would catch a regression to the
+        // old fire-and-forget bridge that never wired the callback.
+        final ok =
+            await Purchasely.synchronize().timeout(const Duration(seconds: 1));
+        expect(methodCalls.last.method, 'synchronize');
+        expect(ok, isTrue);
+      });
 
-      test(
-        'synchronize rethrows a native failure as PlatformException',
-        () async {
-          TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-              .setMockMethodCallHandler(channel, (MethodCall methodCall) async {
-                methodCalls.add(methodCall);
-                if (methodCall.method == 'synchronize') {
-                  throw PlatformException(
-                    code: '-1',
-                    message: 'Synchronization failed',
-                  );
-                }
-                return _handleMethodCall(methodCall);
-              });
+      test('synchronize rethrows a native failure as PlatformException',
+          () async {
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(channel, (MethodCall methodCall) async {
+          methodCalls.add(methodCall);
+          if (methodCall.method == 'synchronize') {
+            throw PlatformException(
+                code: '-1', message: 'Synchronization failed');
+          }
+          return _handleMethodCall(methodCall);
+        });
 
-          expect(
-            () => Purchasely.synchronize(),
-            throwsA(isA<PlatformException>()),
-          );
-        },
-      );
+        expect(
+          () => Purchasely.synchronize(),
+          throwsA(isA<PlatformException>()),
+        );
+      });
 
       test('allowCampaigns sends runtime campaign gate to native', () async {
         await Purchasely.allowCampaigns(false);
@@ -97,14 +90,12 @@ void main() {
         expect(methodCalls.first.arguments['clearUserAttributes'], true);
       });
 
-      test(
-        'userLogout(clearUserAttributes: false) forwards the override',
-        () async {
-          await Purchasely.userLogout(clearUserAttributes: false);
+      test('userLogout(clearUserAttributes: false) forwards the override',
+          () async {
+        await Purchasely.userLogout(clearUserAttributes: false);
 
-          expect(methodCalls.first.arguments['clearUserAttributes'], false);
-        },
-      );
+        expect(methodCalls.first.arguments['clearUserAttributes'], false);
+      });
 
       test('isAnonymous returns boolean from native', () async {
         final isAnon = await Purchasely.isAnonymous();
@@ -116,9 +107,8 @@ void main() {
 
     group('Product & Plan Methods', () {
       test('productWithIdentifier returns correct product', () async {
-        final product = await Purchasely.productWithIdentifier(
-          'product-vendor-123',
-        );
+        final product =
+            await Purchasely.productWithIdentifier('product-vendor-123');
 
         expect(methodCalls.first.method, 'productWithIdentifier');
         expect(methodCalls.first.arguments['vendorId'], 'product-vendor-123');
@@ -174,14 +164,13 @@ void main() {
         // can hang forever — the optional timeout must surface it.
         TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
             .setMockMethodCallHandler(channel, (call) {
-              // Never resolve.
-              return Completer<Object?>().future;
-            });
+          // Never resolve.
+          return Completer<Object?>().future;
+        });
 
         await expectLater(
           Purchasely.restoreAllProducts(
-            timeout: const Duration(milliseconds: 50),
-          ),
+              timeout: const Duration(milliseconds: 50)),
           throwsA(isA<TimeoutException>()),
         );
       });
@@ -198,14 +187,12 @@ void main() {
         expect(subs.first.purchaseToken, 'token-123');
       });
 
-      test(
-        'userSubscriptions(invalidateCache: true) forwards the override',
-        () async {
-          await Purchasely.userSubscriptions(invalidateCache: true);
+      test('userSubscriptions(invalidateCache: true) forwards the override',
+          () async {
+        await Purchasely.userSubscriptions(invalidateCache: true);
 
-          expect(methodCalls.first.arguments['invalidateCache'], true);
-        },
-      );
+        expect(methodCalls.first.arguments['invalidateCache'], true);
+      });
 
       test('userSubscriptionsHistory returns history', () async {
         final history = await Purchasely.userSubscriptionsHistory();
@@ -216,7 +203,8 @@ void main() {
         expect(history.first.cumulatedRevenuesInUSD, 29.97);
       });
 
-      test('userSubscriptionsHistory(invalidateCache: true) forwards the '
+      test(
+          'userSubscriptionsHistory(invalidateCache: true) forwards the '
           'override', () async {
         await Purchasely.userSubscriptionsHistory(invalidateCache: true);
 
@@ -242,9 +230,7 @@ void main() {
         expect(methodCalls.first.arguments['key'], 'name');
         expect(methodCalls.first.arguments['value'], 'John');
         expect(
-          methodCalls.first.arguments['processingLegalBasis'],
-          'ESSENTIAL',
-        );
+            methodCalls.first.arguments['processingLegalBasis'], 'ESSENTIAL');
       });
 
       test('setUserAttributeWithInt sends correct values', () async {
@@ -281,48 +267,33 @@ void main() {
       });
 
       test('setUserAttributeWithStringArray sends array', () async {
-        await Purchasely.setUserAttributeWithStringArray('interests', [
-          'sports',
-          'music',
-          'travel',
-        ]);
+        await Purchasely.setUserAttributeWithStringArray(
+            'interests', ['sports', 'music', 'travel']);
 
         expect(methodCalls.first.method, 'setUserAttributeWithStringArray');
-        expect(methodCalls.first.arguments['value'], [
-          'sports',
-          'music',
-          'travel',
-        ]);
+        expect(methodCalls.first.arguments['value'],
+            ['sports', 'music', 'travel']);
       });
 
       test('setUserAttributeWithIntArray sends array', () async {
-        await Purchasely.setUserAttributeWithIntArray('scores', [
-          100,
-          200,
-          300,
-        ]);
+        await Purchasely.setUserAttributeWithIntArray(
+            'scores', [100, 200, 300]);
 
         expect(methodCalls.first.method, 'setUserAttributeWithIntArray');
         expect(methodCalls.first.arguments['value'], [100, 200, 300]);
       });
 
       test('setUserAttributeWithDoubleArray sends array', () async {
-        await Purchasely.setUserAttributeWithDoubleArray('ratings', [
-          4.5,
-          3.8,
-          4.9,
-        ]);
+        await Purchasely.setUserAttributeWithDoubleArray(
+            'ratings', [4.5, 3.8, 4.9]);
 
         expect(methodCalls.first.method, 'setUserAttributeWithDoubleArray');
         expect(methodCalls.first.arguments['value'], [4.5, 3.8, 4.9]);
       });
 
       test('setUserAttributeWithBooleanArray sends array', () async {
-        await Purchasely.setUserAttributeWithBooleanArray('flags', [
-          true,
-          false,
-          true,
-        ]);
+        await Purchasely.setUserAttributeWithBooleanArray(
+            'flags', [true, false, true]);
 
         expect(methodCalls.first.method, 'setUserAttributeWithBooleanArray');
         expect(methodCalls.first.arguments['value'], [true, false, true]);
@@ -474,9 +445,7 @@ void main() {
     group('Attributes', () {
       test('setAttribute with firebase_app_instance_id', () async {
         await Purchasely.setAttribute(
-          PLYAttribute.firebase_app_instance_id,
-          'firebase-123',
-        );
+            PLYAttribute.firebase_app_instance_id, 'firebase-123');
 
         expect(methodCalls.first.method, 'setAttribute');
         expect(methodCalls.first.arguments['attribute'], 0);
@@ -485,9 +454,7 @@ void main() {
 
       test('setAttribute with airship_channel_id', () async {
         await Purchasely.setAttribute(
-          PLYAttribute.airship_channel_id,
-          'airship-456',
-        );
+            PLYAttribute.airship_channel_id, 'airship-456');
 
         expect(methodCalls.first.arguments['attribute'], 1);
       });
@@ -500,9 +467,7 @@ void main() {
 
       test('setAttribute with batch_installation_id', () async {
         await Purchasely.setAttribute(
-          PLYAttribute.batch_installation_id,
-          'batch-install',
-        );
+            PLYAttribute.batch_installation_id, 'batch-install');
 
         expect(methodCalls.first.arguments['attribute'], 3);
       });
@@ -515,153 +480,119 @@ void main() {
 
       test('setAttribute with appsflyer_id', () async {
         await Purchasely.setAttribute(
-          PLYAttribute.appsflyer_id,
-          'appsflyer-456',
-        );
+            PLYAttribute.appsflyer_id, 'appsflyer-456');
 
         expect(methodCalls.first.arguments['attribute'], 5);
       });
 
       test('setAttribute with mixpanel_distinct_id', () async {
         await Purchasely.setAttribute(
-          PLYAttribute.mixpanel_distinct_id,
-          'mixpanel-123',
-        );
+            PLYAttribute.mixpanel_distinct_id, 'mixpanel-123');
 
         expect(methodCalls.first.arguments['attribute'], 6);
       });
 
       test('setAttribute with clever_tap_id', () async {
         await Purchasely.setAttribute(
-          PLYAttribute.clever_tap_id,
-          'clevertap-456',
-        );
+            PLYAttribute.clever_tap_id, 'clevertap-456');
 
         expect(methodCalls.first.arguments['attribute'], 7);
       });
 
       test('setAttribute with sendinblueUserEmail', () async {
         await Purchasely.setAttribute(
-          PLYAttribute.sendinblueUserEmail,
-          'test@example.com',
-        );
+            PLYAttribute.sendinblueUserEmail, 'test@example.com');
 
         expect(methodCalls.first.arguments['attribute'], 8);
       });
 
       test('setAttribute with iterableUserEmail', () async {
         await Purchasely.setAttribute(
-          PLYAttribute.iterableUserEmail,
-          'iterable@example.com',
-        );
+            PLYAttribute.iterableUserEmail, 'iterable@example.com');
 
         expect(methodCalls.first.arguments['attribute'], 9);
       });
 
       test('setAttribute with iterableUserId', () async {
         await Purchasely.setAttribute(
-          PLYAttribute.iterableUserId,
-          'iterable-user',
-        );
+            PLYAttribute.iterableUserId, 'iterable-user');
 
         expect(methodCalls.first.arguments['attribute'], 10);
       });
 
       test('setAttribute with atInternetIdClient', () async {
         await Purchasely.setAttribute(
-          PLYAttribute.atInternetIdClient,
-          'atinternet-123',
-        );
+            PLYAttribute.atInternetIdClient, 'atinternet-123');
 
         expect(methodCalls.first.arguments['attribute'], 11);
       });
 
       test('setAttribute with mParticleUserId', () async {
         await Purchasely.setAttribute(
-          PLYAttribute.mParticleUserId,
-          'mparticle-456',
-        );
+            PLYAttribute.mParticleUserId, 'mparticle-456');
 
         expect(methodCalls.first.arguments['attribute'], 12);
       });
 
       test('setAttribute with customerioUserId', () async {
         await Purchasely.setAttribute(
-          PLYAttribute.customerioUserId,
-          'customerio-789',
-        );
+            PLYAttribute.customerioUserId, 'customerio-789');
 
         expect(methodCalls.first.arguments['attribute'], 13);
       });
 
       test('setAttribute with customerioUserEmail', () async {
         await Purchasely.setAttribute(
-          PLYAttribute.customerioUserEmail,
-          'customerio@example.com',
-        );
+            PLYAttribute.customerioUserEmail, 'customerio@example.com');
 
         expect(methodCalls.first.arguments['attribute'], 14);
       });
 
       test('setAttribute with branchUserDeveloperIdentity', () async {
         await Purchasely.setAttribute(
-          PLYAttribute.branchUserDeveloperIdentity,
-          'branch-123',
-        );
+            PLYAttribute.branchUserDeveloperIdentity, 'branch-123');
 
         expect(methodCalls.first.arguments['attribute'], 15);
       });
 
       test('setAttribute with amplitudeUserId', () async {
         await Purchasely.setAttribute(
-          PLYAttribute.amplitudeUserId,
-          'amplitude-789',
-        );
+            PLYAttribute.amplitudeUserId, 'amplitude-789');
 
         expect(methodCalls.first.arguments['attribute'], 16);
       });
 
       test('setAttribute with amplitudeDeviceId', () async {
         await Purchasely.setAttribute(
-          PLYAttribute.amplitudeDeviceId,
-          'amplitude-device',
-        );
+            PLYAttribute.amplitudeDeviceId, 'amplitude-device');
 
         expect(methodCalls.first.arguments['attribute'], 17);
       });
 
       test('setAttribute with moengageUniqueId', () async {
         await Purchasely.setAttribute(
-          PLYAttribute.moengageUniqueId,
-          'moengage-456',
-        );
+            PLYAttribute.moengageUniqueId, 'moengage-456');
 
         expect(methodCalls.first.arguments['attribute'], 18);
       });
 
       test('setAttribute with oneSignalExternalId', () async {
         await Purchasely.setAttribute(
-          PLYAttribute.oneSignalExternalId,
-          'onesignal-external',
-        );
+            PLYAttribute.oneSignalExternalId, 'onesignal-external');
 
         expect(methodCalls.first.arguments['attribute'], 19);
       });
 
       test('setAttribute with batchCustomUserId', () async {
         await Purchasely.setAttribute(
-          PLYAttribute.batchCustomUserId,
-          'batch-custom-user',
-        );
+            PLYAttribute.batchCustomUserId, 'batch-custom-user');
 
         expect(methodCalls.first.arguments['attribute'], 20);
       });
 
       test('setAttribute with oneSignalUserId (REC-11 / ENM-03)', () async {
         await Purchasely.setAttribute(
-          PLYAttribute.oneSignalUserId,
-          'onesignal-user',
-        );
+            PLYAttribute.oneSignalUserId, 'onesignal-user');
 
         expect(methodCalls.first.arguments['attribute'], 21);
         expect(methodCalls.first.arguments['value'], 'onesignal-user');
@@ -674,10 +605,8 @@ void main() {
 
         expect(methodCalls.first.method, 'emit');
         expect(methodCalls.first.arguments['name'], 'level_up');
-        expect(methodCalls.first.arguments['properties'], {
-          'level': 3,
-          'tag': 'a',
-        });
+        expect(methodCalls.first.arguments['properties'],
+            {'level': 3, 'tag': 'a'});
       });
 
       test('emit sends empty properties by default', () async {
@@ -689,8 +618,8 @@ void main() {
       test('emit rethrows a channel error', () async {
         TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
             .setMockMethodCallHandler(channel, (MethodCall methodCall) async {
-              throw PlatformException(code: '-1', message: 'emit failed');
-            });
+          throw PlatformException(code: '-1', message: 'emit failed');
+        });
 
         await expectLater(
           Purchasely.emit('level_up'),
@@ -702,16 +631,12 @@ void main() {
     group('signPromotionalOfferWithToken', () {
       test('sends the ids and the token', () async {
         final result = await Purchasely.signPromotionalOfferWithToken(
-          'store-product-123',
-          'promo-offer-456',
-          purchaseContextToken: 'abc',
-        );
+            'store-product-123', 'promo-offer-456',
+            purchaseContextToken: 'abc');
 
         expect(methodCalls.first.method, 'signPromotionalOfferWithToken');
         expect(
-          methodCalls.first.arguments['storeProductId'],
-          'store-product-123',
-        );
+            methodCalls.first.arguments['storeProductId'], 'store-product-123');
         expect(methodCalls.first.arguments['storeOfferId'], 'promo-offer-456');
         expect(methodCalls.first.arguments['purchaseContextToken'], 'abc');
         expect(result['signature'], 'sig-123');
@@ -728,15 +653,11 @@ void main() {
     group('iOS Specific Methods', () {
       test('signPromotionalOffer sends storeProductId and offerId', () async {
         final result = await Purchasely.signPromotionalOffer(
-          'store-product-123',
-          'promo-offer-456',
-        );
+            'store-product-123', 'promo-offer-456');
 
         expect(methodCalls.first.method, 'signPromotionalOffer');
         expect(
-          methodCalls.first.arguments['storeProductId'],
-          'store-product-123',
-        );
+            methodCalls.first.arguments['storeProductId'], 'store-product-123');
         expect(methodCalls.first.arguments['storeOfferId'], 'promo-offer-456');
         expect(result, isA<Map>());
         expect(result['signature'], 'sig-123');
@@ -860,9 +781,9 @@ void main() {
 
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(channel, (MethodCall methodCall) async {
-            methodCalls.add(methodCall);
-            return _handleMethodCall(methodCall);
-          });
+        methodCalls.add(methodCall);
+        return _handleMethodCall(methodCall);
+      });
     });
 
     tearDown(() {
@@ -871,10 +792,8 @@ void main() {
     });
 
     test('signPromotionalOffer is iOS specific method', () async {
-      final result = await Purchasely.signPromotionalOffer(
-        'product-123',
-        'offer-456',
-      );
+      final result =
+          await Purchasely.signPromotionalOffer('product-123', 'offer-456');
 
       expect(methodCalls.first.method, 'signPromotionalOffer');
       expect(result['signature'], isNotNull);
@@ -926,7 +845,7 @@ dynamic _handleMethodCall(MethodCall methodCall) {
       return {
         'name': 'Test Product',
         'vendorId': 'product-vendor-123',
-        'plans': {},
+        'plans': {}
       };
     case 'planWithIdentifier':
       return {
@@ -938,7 +857,7 @@ dynamic _handleMethodCall(MethodCall methodCall) {
       };
     case 'allProducts':
       return [
-        {'name': 'Product 1', 'vendorId': 'vendor-1', 'plans': {}},
+        {'name': 'Product 1', 'vendorId': 'vendor-1', 'plans': {}}
       ];
     case 'purchaseWithPlanVendorId':
       return {'status': 'success', 'transactionId': 'txn-123'};
@@ -949,13 +868,17 @@ dynamic _handleMethodCall(MethodCall methodCall) {
           'purchaseToken': 'token-123',
           'subscriptionSource': 1,
           'nextRenewalDate': '2025-02-01T00:00:00Z',
-          'plan': {'vendorId': 'plan-vendor-123', 'name': 'Premium', 'type': 2},
+          'plan': {
+            'vendorId': 'plan-vendor-123',
+            'name': 'Premium',
+            'type': 2,
+          },
           'product': {'name': 'Premium Product', 'vendorId': 'product-123'},
           'cumulatedRevenuesInUSD': 29.97,
           'subscriptionDurationInDays': 90,
           'subscriptionDurationInWeeks': 12,
           'subscriptionDurationInMonths': 3,
-        },
+        }
       ];
     case 'userDidConsumeSubscriptionContent':
       return null;
@@ -994,13 +917,13 @@ dynamic _handleMethodCall(MethodCall methodCall) {
         {
           'reference': 'offer-ref-1',
           'planVendorId': 'plan-vendor-1',
-          'offerVendorId': 'offer-vendor-1',
+          'offerVendorId': 'offer-vendor-1'
         },
         {
           'reference': 'offer-ref-2',
           'planVendorId': 'plan-vendor-2',
-          'offerVendorId': null,
-        },
+          'offerVendorId': null
+        }
       ];
     case 'removeDynamicOffering':
     case 'clearDynamicOfferings':
@@ -1011,14 +934,14 @@ dynamic _handleMethodCall(MethodCall methodCall) {
         'timestamp': '1234567890',
         'nonce': 'nonce-123',
         'keyIdentifier': 'key-123',
-        'purchaseContextToken': 'token-123',
+        'purchaseContextToken': 'token-123'
       };
     case 'signPromotionalOffer':
       return {
         'signature': 'sig-123',
         'timestamp': '1234567890',
         'nonce': 'nonce-123',
-        'keyIdentifier': 'key-123',
+        'keyIdentifier': 'key-123'
       };
     case 'isEligibleForIntroOffer':
       return true;

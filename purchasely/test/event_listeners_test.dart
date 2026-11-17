@@ -24,33 +24,23 @@ void main() {
   void emitOnListen(EventChannel channel, List<Object?> events) {
     messenger.setMockStreamHandler(
       channel,
-      MockStreamHandler.inline(
-        onListen: (arguments, sink) {
-          for (final e in events) {
-            sink.success(e);
-          }
-        },
-      ),
+      MockStreamHandler.inline(onListen: (arguments, sink) {
+        for (final e in events) {
+          sink.success(e);
+        }
+      }),
     );
   }
 
   tearDown(() {
     messenger.setMockStreamHandler(
-      const EventChannel('purchasely-events'),
-      null,
-    );
+        const EventChannel('purchasely-events'), null);
     messenger.setMockStreamHandler(
-      const EventChannel('purchasely-purchases'),
-      null,
-    );
+        const EventChannel('purchasely-purchases'), null);
     messenger.setMockStreamHandler(
-      const EventChannel('purchasely-user-attributes'),
-      null,
-    );
+        const EventChannel('purchasely-user-attributes'), null);
     messenger.setMockStreamHandler(
-      const EventChannel('purchasely-web-redemption'),
-      null,
-    );
+        const EventChannel('purchasely-web-redemption'), null);
   });
 
   group('listenToEvents', () {
@@ -84,7 +74,8 @@ void main() {
       Purchasely.stopListeningToEvents();
     });
 
-    test('falls back to UNKNOWN (not APP_CONFIGURED) for an unrecognized '
+    test(
+        'falls back to UNKNOWN (not APP_CONFIGURED) for an unrecognized '
         'event name (REC-13 / EVT-01)', () async {
       emitOnListen(const EventChannel('purchasely-events'), [
         {
@@ -107,7 +98,8 @@ void main() {
       Purchasely.stopListeningToEvents();
     });
 
-    test('decodes the PLACEMENT_OPENED and PURCHASE_FROM_STORE_TAPPED '
+    test(
+        'decodes the PLACEMENT_OPENED and PURCHASE_FROM_STORE_TAPPED '
         'parity additions (REC-13 / EVT-01)', () async {
       emitOnListen(const EventChannel('purchasely-events'), [
         {
@@ -139,7 +131,8 @@ void main() {
   });
 
   group('addEventListener / removeEventListener aliases', () {
-    test('addEventListener/removeEventListener delegate to '
+    test(
+        'addEventListener/removeEventListener delegate to '
         'listenToEvents/stopListeningToEvents (REC-18 / PAR-18)', () async {
       emitOnListen(const EventChannel('purchasely-events'), [
         {
@@ -216,15 +209,11 @@ void main() {
       expect(result.errorCode, isNull);
       expect(result.errorMessage, isNull);
       expect(result.context?.subscription?.purchaseToken, 'token-1');
-      expect(
-        result.context?.subscription?.subscriptionSource,
-        PLYSubscriptionSource.googlePlayStore,
-      );
+      expect(result.context?.subscription?.subscriptionSource,
+          PLYSubscriptionSource.googlePlayStore);
       expect(result.context?.subscription?.plan?.vendorId, 'plan_monthly');
       expect(
-        result.context?.subscription?.product?.vendorId,
-        'product_premium',
-      );
+          result.context?.subscription?.product?.vendorId, 'product_premium');
 
       Purchasely.removeWebRedemptionListener();
     });
@@ -251,46 +240,42 @@ void main() {
       Purchasely.removeWebRedemptionListener();
     });
 
-    test(
-      'decodes a failure: no context, replay false, code + message',
-      () async {
-        emitOnListen(const EventChannel('purchasely-web-redemption'), [
-          {
-            'isSuccess': false,
-            'replay': false,
-            'context': null,
-            'errorCode': 'EXPIRED_REDEMPTION_TOKEN',
-            'errorMessage': 'A new link was sent to j***@example.com.',
-          },
-        ]);
+    test('decodes a failure: no context, replay false, code + message',
+        () async {
+      emitOnListen(const EventChannel('purchasely-web-redemption'), [
+        {
+          'isSuccess': false,
+          'replay': false,
+          'context': null,
+          'errorCode': 'EXPIRED_REDEMPTION_TOKEN',
+          'errorMessage': 'A new link was sent to j***@example.com.',
+        },
+      ]);
 
-        final received = <PLYWebRedemptionResult>[];
-        Purchasely.addWebRedemptionListener(received.add);
-        await pumpEventQueue();
+      final received = <PLYWebRedemptionResult>[];
+      Purchasely.addWebRedemptionListener(received.add);
+      await pumpEventQueue();
 
-        final result = received.single;
-        expect(result.isSuccess, false);
-        expect(result.context, isNull);
-        expect(result.replay, false);
-        expect(result.errorCode, 'EXPIRED_REDEMPTION_TOKEN');
-        expect(result.errorMessage, 'A new link was sent to j***@example.com.');
+      final result = received.single;
+      expect(result.isSuccess, false);
+      expect(result.context, isNull);
+      expect(result.replay, false);
+      expect(result.errorCode, 'EXPIRED_REDEMPTION_TOKEN');
+      expect(result.errorMessage, 'A new link was sent to j***@example.com.');
 
-        Purchasely.removeWebRedemptionListener();
-      },
-    );
+      Purchasely.removeWebRedemptionListener();
+    });
 
-    test(
-      'removeWebRedemptionListener clears the subscription handle',
-      () async {
-        emitOnListen(const EventChannel('purchasely-web-redemption'), []);
+    test('removeWebRedemptionListener clears the subscription handle',
+        () async {
+      emitOnListen(const EventChannel('purchasely-web-redemption'), []);
 
-        Purchasely.addWebRedemptionListener((_) {});
-        expect(Purchasely.webRedemptions, isNotNull);
+      Purchasely.addWebRedemptionListener((_) {});
+      expect(Purchasely.webRedemptions, isNotNull);
 
-        Purchasely.removeWebRedemptionListener();
-        expect(Purchasely.webRedemptions, isNull);
-      },
-    );
+      Purchasely.removeWebRedemptionListener();
+      expect(Purchasely.webRedemptions, isNull);
+    });
   });
 
   group('redemption analytics events (6.1.0)', () {
@@ -303,7 +288,10 @@ void main() {
             'event_created_at': '2026-09-07T10:00:00Z',
             'redemption': {
               'token': 'tok_abc',
-              'receipt': {'id': 'rcpt_1', 'validation_status': 'COMPLETED'},
+              'receipt': {
+                'id': 'rcpt_1',
+                'validation_status': 'COMPLETED',
+              },
               'subscriptions': [
                 {
                   'public_id': 'subs_1',
@@ -341,16 +329,15 @@ void main() {
       expect(redemption?.purchase_context?.version, 1);
       expect(redemption?.purchase_context?.replay, true);
       expect(redemption?.purchase_context?.built_in_attributes, isNull);
-      expect(
-        redemption?.purchase_context?.custom_attributes?.single.value,
-        'gold',
-      );
+      expect(redemption?.purchase_context?.custom_attributes?.single.value,
+          'gold');
       expect(redemption?.error_code, isNull);
 
       Purchasely.stopListeningToEvents();
     });
 
-    test('decodes REDEMPTION_FAILED: error_code in the payload, the reason in '
+    test(
+        'decodes REDEMPTION_FAILED: error_code in the payload, the reason in '
         'the top-level error_message', () async {
       emitOnListen(const EventChannel('purchasely-events'), [
         {
@@ -372,42 +359,36 @@ void main() {
       await pumpEventQueue();
 
       expect(received.single.name, PLYEventName.REDEMPTION_FAILED);
-      expect(
-        received.single.properties.error_message,
-        'This redemption link has expired.',
-      );
-      expect(
-        received.single.properties.redemption?.error_code,
-        'EXPIRED_REDEMPTION_TOKEN',
-      );
+      expect(received.single.properties.error_message,
+          'This redemption link has expired.');
+      expect(received.single.properties.redemption?.error_code,
+          'EXPIRED_REDEMPTION_TOKEN');
       expect(received.single.properties.redemption?.receipt, isNull);
       expect(received.single.properties.redemption?.subscriptions, isNull);
 
       Purchasely.stopListeningToEvents();
     });
 
-    test(
-      'an event without a redemption block reports a null redemption',
-      () async {
-        emitOnListen(const EventChannel('purchasely-events'), [
-          {
-            'name': 'APP_STARTED',
-            'properties': {
-              'event_name': 'APP_STARTED',
-              'event_created_at': '2026-09-07T10:00:00Z',
-            },
+    test('an event without a redemption block reports a null redemption',
+        () async {
+      emitOnListen(const EventChannel('purchasely-events'), [
+        {
+          'name': 'APP_STARTED',
+          'properties': {
+            'event_name': 'APP_STARTED',
+            'event_created_at': '2026-09-07T10:00:00Z',
           },
-        ]);
+        },
+      ]);
 
-        final received = <PLYEvent>[];
-        Purchasely.listenToEvents(received.add);
-        await pumpEventQueue();
+      final received = <PLYEvent>[];
+      Purchasely.listenToEvents(received.add);
+      await pumpEventQueue();
 
-        expect(received.single.properties.redemption, isNull);
+      expect(received.single.properties.redemption, isNull);
 
-        Purchasely.stopListeningToEvents();
-      },
-    );
+      Purchasely.stopListeningToEvents();
+    });
   });
 
   group('setUserAttributeListener', () {
@@ -456,12 +437,8 @@ class _RecordingAttributeListener extends UserAttributeListener {
   final List<List<Object?>> removedCalls;
 
   @override
-  void onUserAttributeSet(
-    String key,
-    PLYUserAttributeType type,
-    dynamic value,
-    PLYUserAttributeSource source,
-  ) {
+  void onUserAttributeSet(String key, PLYUserAttributeType type, dynamic value,
+      PLYUserAttributeSource source) {
     setCalls.add([key, type, value, source]);
   }
 

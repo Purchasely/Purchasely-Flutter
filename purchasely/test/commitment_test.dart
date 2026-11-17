@@ -15,14 +15,10 @@ void main() {
   group('PLYBillingPlanType wire mapping', () {
     test('string wire values map to cases', () {
       expect(
-        plyBillingPlanTypeFromWire('up_front'),
-        PLYBillingPlanType.upFront,
-      );
+          plyBillingPlanTypeFromWire('up_front'), PLYBillingPlanType.upFront);
       expect(plyBillingPlanTypeFromWire('monthly'), PLYBillingPlanType.monthly);
-      expect(
-        plyBillingPlanTypeFromWire('unspecified'),
-        PLYBillingPlanType.unspecified,
-      );
+      expect(plyBillingPlanTypeFromWire('unspecified'),
+          PLYBillingPlanType.unspecified);
     });
 
     test('legacy int rawValue maps to cases', () {
@@ -34,9 +30,7 @@ void main() {
     test('unknown / null / out-of-range falls back to unspecified', () {
       expect(plyBillingPlanTypeFromWire(null), PLYBillingPlanType.unspecified);
       expect(
-        plyBillingPlanTypeFromWire('nope'),
-        PLYBillingPlanType.unspecified,
-      );
+          plyBillingPlanTypeFromWire('nope'), PLYBillingPlanType.unspecified);
       expect(plyBillingPlanTypeFromWire(99), PLYBillingPlanType.unspecified);
     });
 
@@ -82,30 +76,29 @@ void main() {
     });
 
     test('exposed through the purchase interceptor payload', () {
-      final payload =
-          actionPayloadFromMap(PLYPresentationActionKind.purchase, {
-                'plan': {
-                  'vendorId': 'plan_x',
-                  'type': 2,
-                  'commitmentInfo': [
-                    {
-                      'billingPlanType': 'up_front',
-                      'billingPrice': 119.88,
-                      'billingPeriod': 'P1Y',
-                      'totalPrice': 119.88,
-                      'totalPeriod': 'P1Y',
-                      'totalDuration': 1,
-                    },
-                  ],
-                },
-              })
-              as PLYPurchasePayload;
+      final payload = actionPayloadFromMap(
+        PLYPresentationActionKind.purchase,
+        {
+          'plan': {
+            'vendorId': 'plan_x',
+            'type': 2,
+            'commitmentInfo': [
+              {
+                'billingPlanType': 'up_front',
+                'billingPrice': 119.88,
+                'billingPeriod': 'P1Y',
+                'totalPrice': 119.88,
+                'totalPeriod': 'P1Y',
+                'totalDuration': 1,
+              },
+            ],
+          },
+        },
+      ) as PLYPurchasePayload;
 
       expect(payload.plan.commitmentInfo, hasLength(1));
-      expect(
-        payload.plan.commitmentInfo.first.billingPlanType,
-        PLYBillingPlanType.upFront,
-      );
+      expect(payload.plan.commitmentInfo.first.billingPlanType,
+          PLYBillingPlanType.upFront);
       expect(payload.plan.commitmentInfo.first.totalDuration, 1);
     });
   });
@@ -138,12 +131,8 @@ void main() {
       expect(offering.billingPlanType, PLYBillingPlanType.unspecified);
       expect(offering.toJson()['billingPlanType'], 'unspecified');
 
-      final monthly = PLYDynamicOffering(
-        'ref',
-        'plan_x',
-        null,
-        PLYBillingPlanType.monthly,
-      );
+      final monthly =
+          PLYDynamicOffering('ref', 'plan_x', null, PLYBillingPlanType.monthly);
       expect(monthly.toJson()['billingPlanType'], 'monthly');
     });
   });

@@ -43,11 +43,11 @@ class PLYPresentationPlan {
   }
 
   Map<String, Object?> toMap() => {
-    'planVendorId': planVendorId,
-    'storeProductId': storeProductId,
-    'basePlanId': basePlanId,
-    'offerId': offerId,
-  };
+        'planVendorId': planVendorId,
+        'storeProductId': storeProductId,
+        'basePlanId': basePlanId,
+        'offerId': offerId,
+      };
 }
 
 /// Indirection used by [PLYPresentation.display] / [close] / [back] so the
@@ -57,17 +57,14 @@ abstract class PLYPresentationActions {
   static PLYPresentationActions instance = _UninitialisedActions();
 
   Future<PLYPresentationOutcome> display(
-    PLYPresentation presentation,
-    PLYTransition? transition,
-  );
+      PLYPresentation presentation, PLYTransition? transition);
   Future<void> close(PLYPresentation presentation);
   Future<void> back(PLYPresentation presentation);
 }
 
 class _UninitialisedActions extends PLYPresentationActions {
   StateError _err() => StateError(
-    'Purchasely bridge not initialised — call any presentation entry point first.',
-  );
+      'Purchasely bridge not initialised — call any presentation entry point first.');
 
   @override
   Future<PLYPresentationOutcome> display(_, __) => throw _err();
@@ -107,7 +104,7 @@ class PLYPresentation {
   /// Optional pre-loaded handler — fires once when the presentation has been
   /// shown for the first time (or with an error if display failed).
   void Function(PLYPresentation? presentation, PLYPresentationError? error)?
-  onPresented;
+      onPresented;
 
   /// Optional close-requested handler — fires when the user taps the native
   /// close button (or system back on Android). Does not fire when the
@@ -144,8 +141,7 @@ class PLYPresentation {
   /// `id` -> `screenId` once at the SDK boundary; this fallback keeps the
   /// Dart-side parsing resilient.
   factory PLYPresentation.fromMap(Map<dynamic, dynamic> map) {
-    final plansList =
-        (map['plans'] as List?)
+    final plansList = (map['plans'] as List?)
             ?.whereType<Map>()
             .map((e) => PLYPresentationPlan.fromMap(e))
             .toList() ??
@@ -160,8 +156,8 @@ class PLYPresentation {
     final typeIndex = rawType is int
         ? rawType
         : rawType is String
-        ? _typeIndexFromString(rawType)
-        : null;
+            ? _typeIndexFromString(rawType)
+            : null;
 
     return PLYPresentation(
       requestId: map['requestId'] as String? ?? '',
@@ -197,21 +193,21 @@ class PLYPresentation {
   }
 
   Map<String, Object?> toMap() => {
-    'requestId': requestId,
-    'screenId': screenId,
-    'placementId': placementId,
-    'contentId': contentId,
-    'audienceId': audienceId,
-    'abTestId': abTestId,
-    'abTestVariantId': abTestVariantId,
-    'campaignId': campaignId,
-    'flowId': flowId,
-    'language': language,
-    'height': height,
-    'type': type.index,
-    'plans': plans.map((p) => p.toMap()).toList(),
-    'metadata': metadata,
-  };
+        'requestId': requestId,
+        'screenId': screenId,
+        'placementId': placementId,
+        'contentId': contentId,
+        'audienceId': audienceId,
+        'abTestId': abTestId,
+        'abTestVariantId': abTestVariantId,
+        'campaignId': campaignId,
+        'flowId': flowId,
+        'language': language,
+        'height': height,
+        'type': type.index,
+        'plans': plans.map((p) => p.toMap()).toList(),
+        'metadata': metadata,
+      };
 
   /// Re-display the presentation (matches `display()` on the native SDKs).
   ///
