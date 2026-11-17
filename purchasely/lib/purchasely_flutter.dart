@@ -11,7 +11,8 @@ import 'src/ply_transformers.dart';
 import 'src/presentation.dart' show PLYPresentation, PLYPresentationType;
 import 'src/presentation_outcome.dart' show PLYPresentationOutcome;
 import 'src/purchasely_builder.dart' show PLYLogLevel, PurchaselyBuilder;
-import 'src/web_redemption.dart' as web_redemption
+import 'src/web_redemption.dart'
+    as web_redemption
     show
         PLYWebRedemptionListener,
         addWebRedemptionListener,
@@ -45,8 +46,9 @@ class Purchasely {
   static const MethodChannel _channel = const MethodChannel('purchasely');
   static const EventChannel _stream = EventChannel('purchasely-events');
   static const EventChannel _purchases = EventChannel('purchasely-purchases');
-  static const EventChannel _userAttributesChannel =
-      EventChannel('purchasely-user-attributes');
+  static const EventChannel _userAttributesChannel = EventChannel(
+    'purchasely-user-attributes',
+  );
 
   static UserAttributeListener? _userAttributeListener;
 
@@ -80,8 +82,7 @@ class Purchasely {
   static Future<void> interceptAction(
     PLYPresentationActionKind kind,
     PLYActionInterceptorHandler handler,
-  ) =>
-      PurchaselyBridge.ensureInstalled().registerInterceptor(kind, handler);
+  ) => PurchaselyBridge.ensureInstalled().registerInterceptor(kind, handler);
 
   /// Removes the action interceptor previously registered for [kind].
   static Future<void> removeActionInterceptor(PLYPresentationActionKind kind) =>
@@ -99,9 +100,9 @@ class Purchasely {
   /// campaign/deeplink presentation was closed.
   static Future<void> setDefaultPresentationDismissHandler(
     void Function(PLYPresentationOutcome outcome) handler,
-  ) =>
-      PurchaselyBridge.ensureInstalled()
-          .setDefaultPresentationDismissHandler(handler);
+  ) => PurchaselyBridge.ensureInstalled().setDefaultPresentationDismissHandler(
+    handler,
+  );
 
   /// Removes the global dismiss handler previously registered with
   /// [setDefaultPresentationDismissHandler].
@@ -124,9 +125,12 @@ class Purchasely {
   /// Pass the [PLYPresentation] returned by
   /// `PLYPresentationBuilder…build().preload()`.
   static Future<void> clientPresentationDisplayed(
-      PLYPresentation presentation) async {
-    return await _channel.invokeMethod('clientPresentationDisplayed',
-        <String, dynamic>{'presentation': presentation.toMap()});
+    PLYPresentation presentation,
+  ) async {
+    return await _channel.invokeMethod(
+      'clientPresentationDisplayed',
+      <String, dynamic>{'presentation': presentation.toMap()},
+    );
   }
 
   /// Notifies Purchasely that a paywall rendered by your own code (a
@@ -134,9 +138,12 @@ class Purchasely {
   ///
   /// Pass the same [PLYPresentation] given to [clientPresentationDisplayed].
   static Future<void> clientPresentationClosed(
-      PLYPresentation presentation) async {
-    return await _channel.invokeMethod('clientPresentationClosed',
-        <String, dynamic>{'presentation': presentation.toMap()});
+    PLYPresentation presentation,
+  ) async {
+    return await _channel.invokeMethod(
+      'clientPresentationClosed',
+      <String, dynamic>{'presentation': presentation.toMap()},
+    );
   }
 
   /// Removes the user attribute listener
@@ -208,8 +215,10 @@ class Purchasely {
     } else if (type == "DICTIONARY") {
       return PLYUserAttributeType.dictionary;
     } else {
-      log('Purchasely: unknown user attribute type "$type", mapping to '
-          'PLYUserAttributeType.unknown');
+      log(
+        'Purchasely: unknown user attribute type "$type", mapping to '
+        'PLYUserAttributeType.unknown',
+      );
       return PLYUserAttributeType.unknown;
     }
   }
@@ -222,8 +231,9 @@ class Purchasely {
   /// [TimeoutException] instead of awaiting forever.
   static Future<bool> restoreAllProducts({Duration? timeout}) async {
     final call = _channel.invokeMethod('restoreAllProducts');
-    final dynamic restored =
-        await (timeout == null ? call : call.timeout(timeout));
+    final dynamic restored = await (timeout == null
+        ? call
+        : call.timeout(timeout));
     return restored == true;
   }
 
@@ -231,8 +241,9 @@ class Purchasely {
   /// Same [timeout] semantics.
   static Future<bool> silentRestoreAllProducts({Duration? timeout}) async {
     final call = _channel.invokeMethod('silentRestoreAllProducts');
-    final dynamic restored =
-        await (timeout == null ? call : call.timeout(timeout));
+    final dynamic restored = await (timeout == null
+        ? call
+        : call.timeout(timeout));
     return restored == true;
   }
 
@@ -259,8 +270,10 @@ class Purchasely {
   }
 
   static Future<bool> userLogin(String userId) async {
-    final bool restored = await _channel
-        .invokeMethod('userLogin', <String, dynamic>{'userId': userId});
+    final bool restored = await _channel.invokeMethod(
+      'userLogin',
+      <String, dynamic>{'userId': userId},
+    );
     return restored;
   }
 
@@ -269,8 +282,9 @@ class Purchasely {
   /// [clearUserAttributes] also clears locally-stored user attributes.
   /// Defaults to `true`, matching the native default (PAR-30).
   static Future<void> userLogout({bool clearUserAttributes = true}) async {
-    return await _channel.invokeMethod("userLogout",
-        <String, dynamic>{'clearUserAttributes': clearUserAttributes});
+    return await _channel.invokeMethod("userLogout", <String, dynamic>{
+      'clearUserAttributes': clearUserAttributes,
+    });
   }
 
   /// Sets the SDK log level. Wire-encoded as `.name` (e.g. `"debug"`), the
@@ -278,13 +292,16 @@ class Purchasely {
   /// standardizing PLYLogLevel's wire format so both entry points agree.
   static Future<bool> setLogLevel(PLYLogLevel logLevel) async {
     final bool restored = await _channel.invokeMethod(
-        'setLogLevel', <String, dynamic>{'logLevel': logLevel.name});
+      'setLogLevel',
+      <String, dynamic>{'logLevel': logLevel.name},
+    );
     return restored;
   }
 
   static Future<void> allowDeeplink(bool allowDeeplink) async {
-    await _channel.invokeMethod(
-        'allowDeeplink', <String, dynamic>{'allowDeeplink': allowDeeplink});
+    await _channel.invokeMethod('allowDeeplink', <String, dynamic>{
+      'allowDeeplink': allowDeeplink,
+    });
   }
 
   /// Allows or defers automatic campaign presentation display at runtime.
@@ -293,27 +310,36 @@ class Purchasely {
   /// the native SDKs; pass `false` during startup/onboarding to queue
   /// campaigns, then `true` when your app is ready to display them.
   static Future<void> allowCampaigns(bool allowCampaigns) async {
-    await _channel.invokeMethod(
-        'allowCampaigns', <String, dynamic>{'allowCampaigns': allowCampaigns});
+    await _channel.invokeMethod('allowCampaigns', <String, dynamic>{
+      'allowCampaigns': allowCampaigns,
+    });
   }
 
   static Future<void> setLanguage(String language) async {
-    _channel
-        .invokeMethod('setLanguage', <String, dynamic>{'language': language});
+    _channel.invokeMethod('setLanguage', <String, dynamic>{
+      'language': language,
+    });
   }
 
   static Future<PLYProduct> productWithIdentifier(String vendorId) async {
     final Map<dynamic, dynamic> result = await _channel.invokeMethod(
-        'productWithIdentifier', <String, dynamic>{'vendorId': vendorId});
+      'productWithIdentifier',
+      <String, dynamic>{'vendorId': vendorId},
+    );
     final List<PLYPlan?> plans = new List.empty(growable: true);
     result['plans'].forEach((k, plan) => {plans.add(transformToPLYPlan(plan))});
     return PLYProduct(
-        result['name'], result['vendorId'], plans.nonNulls.toList());
+      result['name'],
+      result['vendorId'],
+      plans.nonNulls.toList(),
+    );
   }
 
   static Future<PLYPlan?> planWithIdentifier(String vendorId) async {
     final Map<dynamic, dynamic> result = await _channel.invokeMethod(
-        'planWithIdentifier', <String, dynamic>{'vendorId': vendorId});
+      'planWithIdentifier',
+      <String, dynamic>{'vendorId': vendorId},
+    );
     return transformToPLYPlan(result);
   }
 
@@ -324,14 +350,19 @@ class Purchasely {
   /// throwing (FLT-W-01 / REC-04); it never rejects, so calling it
   /// cross-platform is safe, but the result is only meaningful on iOS.
   @Deprecated(
-      'Use signPromotionalOfferWithToken. This method signs over the anonymous user id.')
+    'Use signPromotionalOfferWithToken. This method signs over the anonymous user id.',
+  )
   static Future<Map<dynamic, dynamic>> signPromotionalOffer(
-      String storeProductId, String storeOfferId) async {
+    String storeProductId,
+    String storeOfferId,
+  ) async {
     final Map<dynamic, dynamic> result = await _channel.invokeMethod(
-        'signPromotionalOffer', <String, dynamic>{
-      'storeProductId': storeProductId,
-      'storeOfferId': storeOfferId
-    });
+      'signPromotionalOffer',
+      <String, dynamic>{
+        'storeProductId': storeProductId,
+        'storeOfferId': storeOfferId,
+      },
+    );
     return result;
   }
 
@@ -347,25 +378,32 @@ class Purchasely {
   /// for the same purchase, pass the token you received. A value that is not a
   /// UUID string rejects with a `PlatformException`, and no native call is made.
   static Future<Map<dynamic, dynamic>> signPromotionalOfferWithToken(
-      String storeProductId, String storeOfferId,
-      {String? purchaseContextToken}) async {
+    String storeProductId,
+    String storeOfferId, {
+    String? purchaseContextToken,
+  }) async {
     final Map<dynamic, dynamic> result = await _channel
         .invokeMethod('signPromotionalOfferWithToken', <String, dynamic>{
-      'storeProductId': storeProductId,
-      'storeOfferId': storeOfferId,
-      'purchaseContextToken': purchaseContextToken
-    });
+          'storeProductId': storeProductId,
+          'storeOfferId': storeOfferId,
+          'purchaseContextToken': purchaseContextToken,
+        });
     return result;
   }
 
-  static Future<Map<dynamic, dynamic>> purchaseWithPlanVendorId(
-      {required String vendorId, String? offerId, String? contentId}) async {
+  static Future<Map<dynamic, dynamic>> purchaseWithPlanVendorId({
+    required String vendorId,
+    String? offerId,
+    String? contentId,
+  }) async {
     final Map<dynamic, dynamic> product = await _channel.invokeMethod(
-        'purchaseWithPlanVendorId', <String, dynamic>{
-      'vendorId': vendorId,
-      'offerId': offerId,
-      'contentId': contentId
-    });
+      'purchaseWithPlanVendorId',
+      <String, dynamic>{
+        'vendorId': vendorId,
+        'offerId': offerId,
+        'contentId': contentId,
+      },
+    );
     return product;
   }
 
@@ -374,10 +412,16 @@ class Purchasely {
     List<PLYProduct> products = new List.empty(growable: true);
     result.forEach((element) {
       final List<PLYPlan?> plans = new List.empty(growable: true);
-      element['plans']
-          .forEach((k, plan) => {plans.add(transformToPLYPlan(plan))});
-      products.add(PLYProduct(
-          element['name'], element['vendorId'], plans.nonNulls.toList()));
+      element['plans'].forEach(
+        (k, plan) => {plans.add(transformToPLYPlan(plan))},
+      );
+      products.add(
+        PLYProduct(
+          element['name'],
+          element['vendorId'],
+          plans.nonNulls.toList(),
+        ),
+      );
     });
     return products;
   }
@@ -386,15 +430,18 @@ class Purchasely {
   ///
   /// [invalidateCache] forces a refresh instead of returning a cached result
   /// (PAR-29). Defaults to `false`, matching the native default.
-  static Future<List<PLYSubscription>> userSubscriptions(
-      {bool invalidateCache = false}) async {
+  static Future<List<PLYSubscription>> userSubscriptions({
+    bool invalidateCache = false,
+  }) async {
     final List<dynamic> result = await _channel.invokeMethod(
-        'userSubscriptions',
-        <String, dynamic>{'invalidateCache': invalidateCache});
+      'userSubscriptions',
+      <String, dynamic>{'invalidateCache': invalidateCache},
+    );
 
     return result
-        .map((element) =>
-            plySubscriptionFromMap(element as Map<dynamic, dynamic>))
+        .map(
+          (element) => plySubscriptionFromMap(element as Map<dynamic, dynamic>),
+        )
         .toList();
   }
 
@@ -403,15 +450,18 @@ class Purchasely {
   ///
   /// [invalidateCache] forces a refresh instead of returning a cached result
   /// (PAR-29). Defaults to `false`, matching the native default.
-  static Future<List<PLYSubscription>> userSubscriptionsHistory(
-      {bool invalidateCache = false}) async {
+  static Future<List<PLYSubscription>> userSubscriptionsHistory({
+    bool invalidateCache = false,
+  }) async {
     final List<dynamic> result = await _channel.invokeMethod(
-        'userSubscriptionsHistory',
-        <String, dynamic>{'invalidateCache': invalidateCache});
+      'userSubscriptionsHistory',
+      <String, dynamic>{'invalidateCache': invalidateCache},
+    );
 
     return result
-        .map((element) =>
-            plySubscriptionFromMap(element as Map<dynamic, dynamic>))
+        .map(
+          (element) => plySubscriptionFromMap(element as Map<dynamic, dynamic>),
+        )
         .toList();
   }
 
@@ -424,15 +474,17 @@ class Purchasely {
   /// native SDKs (iOS emits `DEEPLINK_OPENED` first, Android may emit
   /// `PRESENTATION_LOADED` first) — don't rely on their ordering.
   static Future<bool> handleDeeplink(String deepLink) async {
-    return await _channel.invokeMethod(
-        'handleDeeplink', <String, dynamic>{'deeplink': deepLink});
+    return await _channel.invokeMethod('handleDeeplink', <String, dynamic>{
+      'deeplink': deepLink,
+    });
   }
 
   static void listenToEvents(Function(PLYEvent) block) {
     events = _stream.receiveBroadcastStream().listen((event) {
       final eventName = _eventNameFromWire(event['name'] as String?);
-      block(PLYEvent(
-          eventName, transformToPLYEventProperties(event['properties'])));
+      block(
+        PLYEvent(eventName, transformToPLYEventProperties(event['properties'])),
+      );
     });
   }
 
@@ -489,8 +541,8 @@ class Purchasely {
   ///   that rule on a platform check — it is personal data on every platform.
   ///   The analytics event drops the hint, so only this channel carries it.
   static void addWebRedemptionListener(
-          web_redemption.PLYWebRedemptionListener block) =>
-      web_redemption.addWebRedemptionListener(block);
+    web_redemption.PLYWebRedemptionListener block,
+  ) => web_redemption.addWebRedemptionListener(block);
 
   /// Removes the listener registered with [addWebRedemptionListener] or with
   /// [PurchaselyBuilder.webRedemptionListener].
@@ -508,8 +560,10 @@ class Purchasely {
   }
 
   static Future<void> setAttribute(PLYAttribute attribute, String value) async {
-    return await _channel.invokeMethod('setAttribute',
-        <String, dynamic>{'attribute': attribute.index, 'value': value});
+    return await _channel.invokeMethod('setAttribute', <String, dynamic>{
+      'attribute': attribute.index,
+      'value': value,
+    });
   }
 
   static Future<bool> isAnonymous() async {
@@ -519,8 +573,9 @@ class Purchasely {
 
   static Future<bool> isEligibleForIntroOffer(String planVendorId) async {
     final bool isEligible = await _channel.invokeMethod(
-        'isEligibleForIntroOffer',
-        <String, dynamic>{'planVendorId': planVendorId});
+      'isEligibleForIntroOffer',
+      <String, dynamic>{'planVendorId': planVendorId},
+    );
     return isEligible;
   }
 
@@ -534,144 +589,195 @@ class Purchasely {
   /// value to the `data_type` declared in the Console. Values must be types
   /// the platform channel carries: `String`, `num`, `bool`, `List`, `Map` or
   /// `null`. Pass dates as ISO 8601 strings: a `DateTime` makes the call fail.
-  static Future<void> emit(String name,
-      [Map<String, dynamic> properties = const {}]) async {
-    await _channel.invokeMethod(
-        'emit', <String, dynamic>{'name': name, 'properties': properties});
+  static Future<void> emit(
+    String name, [
+    Map<String, dynamic> properties = const {},
+  ]) async {
+    await _channel.invokeMethod('emit', <String, dynamic>{
+      'name': name,
+      'properties': properties,
+    });
   }
 
-  static Future<void> setUserAttributeWithString(String key, String value,
-      {PLYDataProcessingLegalBasis processingLegalBasis =
-          PLYDataProcessingLegalBasis.optional}) async {
+  static Future<void> setUserAttributeWithString(
+    String key,
+    String value, {
+    PLYDataProcessingLegalBasis processingLegalBasis =
+        PLYDataProcessingLegalBasis.optional,
+  }) async {
     _channel.invokeMethod('setUserAttributeWithString', <String, dynamic>{
       'key': key,
       'value': value,
-      'processingLegalBasis':
-          mapDataProcessingLegalBasisToString(processingLegalBasis)
+      'processingLegalBasis': mapDataProcessingLegalBasisToString(
+        processingLegalBasis,
+      ),
     });
   }
 
-  static Future<void> setUserAttributeWithInt(String key, int value,
-      {PLYDataProcessingLegalBasis processingLegalBasis =
-          PLYDataProcessingLegalBasis.optional}) async {
+  static Future<void> setUserAttributeWithInt(
+    String key,
+    int value, {
+    PLYDataProcessingLegalBasis processingLegalBasis =
+        PLYDataProcessingLegalBasis.optional,
+  }) async {
     _channel.invokeMethod('setUserAttributeWithInt', <String, dynamic>{
       'key': key,
       'value': value,
-      'processingLegalBasis':
-          mapDataProcessingLegalBasisToString(processingLegalBasis)
+      'processingLegalBasis': mapDataProcessingLegalBasisToString(
+        processingLegalBasis,
+      ),
     });
   }
 
-  static Future<void> setUserAttributeWithDouble(String key, double value,
-      {PLYDataProcessingLegalBasis processingLegalBasis =
-          PLYDataProcessingLegalBasis.optional}) async {
+  static Future<void> setUserAttributeWithDouble(
+    String key,
+    double value, {
+    PLYDataProcessingLegalBasis processingLegalBasis =
+        PLYDataProcessingLegalBasis.optional,
+  }) async {
     _channel.invokeMethod('setUserAttributeWithDouble', <String, dynamic>{
       'key': key,
       'value': value,
-      'processingLegalBasis':
-          mapDataProcessingLegalBasisToString(processingLegalBasis)
+      'processingLegalBasis': mapDataProcessingLegalBasisToString(
+        processingLegalBasis,
+      ),
     });
   }
 
-  static Future<void> setUserAttributeWithBoolean(String key, bool value,
-      {PLYDataProcessingLegalBasis processingLegalBasis =
-          PLYDataProcessingLegalBasis.optional}) async {
+  static Future<void> setUserAttributeWithBoolean(
+    String key,
+    bool value, {
+    PLYDataProcessingLegalBasis processingLegalBasis =
+        PLYDataProcessingLegalBasis.optional,
+  }) async {
     _channel.invokeMethod('setUserAttributeWithBoolean', <String, dynamic>{
       'key': key,
       'value': value,
-      'processingLegalBasis':
-          mapDataProcessingLegalBasisToString(processingLegalBasis)
+      'processingLegalBasis': mapDataProcessingLegalBasisToString(
+        processingLegalBasis,
+      ),
     });
   }
 
   static Future<void> setUserAttributeWithStringArray(
-      String key, List<String> value,
-      {PLYDataProcessingLegalBasis processingLegalBasis =
-          PLYDataProcessingLegalBasis.optional}) async {
+    String key,
+    List<String> value, {
+    PLYDataProcessingLegalBasis processingLegalBasis =
+        PLYDataProcessingLegalBasis.optional,
+  }) async {
     _channel.invokeMethod('setUserAttributeWithStringArray', <String, dynamic>{
       'key': key,
       'value': value,
-      'processingLegalBasis':
-          mapDataProcessingLegalBasisToString(processingLegalBasis)
+      'processingLegalBasis': mapDataProcessingLegalBasisToString(
+        processingLegalBasis,
+      ),
     });
   }
 
-  static Future<void> setUserAttributeWithIntArray(String key, List<int> value,
-      {PLYDataProcessingLegalBasis processingLegalBasis =
-          PLYDataProcessingLegalBasis.optional}) async {
+  static Future<void> setUserAttributeWithIntArray(
+    String key,
+    List<int> value, {
+    PLYDataProcessingLegalBasis processingLegalBasis =
+        PLYDataProcessingLegalBasis.optional,
+  }) async {
     _channel.invokeMethod('setUserAttributeWithIntArray', <String, dynamic>{
       'key': key,
       'value': value,
-      'processingLegalBasis':
-          mapDataProcessingLegalBasisToString(processingLegalBasis)
+      'processingLegalBasis': mapDataProcessingLegalBasisToString(
+        processingLegalBasis,
+      ),
     });
   }
 
   static Future<void> setUserAttributeWithDoubleArray(
-      String key, List<double> value,
-      {PLYDataProcessingLegalBasis processingLegalBasis =
-          PLYDataProcessingLegalBasis.optional}) async {
+    String key,
+    List<double> value, {
+    PLYDataProcessingLegalBasis processingLegalBasis =
+        PLYDataProcessingLegalBasis.optional,
+  }) async {
     _channel.invokeMethod('setUserAttributeWithDoubleArray', <String, dynamic>{
       'key': key,
       'value': value,
-      'processingLegalBasis':
-          mapDataProcessingLegalBasisToString(processingLegalBasis)
+      'processingLegalBasis': mapDataProcessingLegalBasisToString(
+        processingLegalBasis,
+      ),
     });
   }
 
   static Future<void> setUserAttributeWithBooleanArray(
-      String key, List<bool> value,
-      {PLYDataProcessingLegalBasis processingLegalBasis =
-          PLYDataProcessingLegalBasis.optional}) async {
+    String key,
+    List<bool> value, {
+    PLYDataProcessingLegalBasis processingLegalBasis =
+        PLYDataProcessingLegalBasis.optional,
+  }) async {
     _channel.invokeMethod('setUserAttributeWithBooleanArray', <String, dynamic>{
       'key': key,
       'value': value,
-      'processingLegalBasis':
-          mapDataProcessingLegalBasisToString(processingLegalBasis)
+      'processingLegalBasis': mapDataProcessingLegalBasisToString(
+        processingLegalBasis,
+      ),
     });
   }
 
-  static Future<void> setUserAttributeWithDate(String key, DateTime value,
-      {PLYDataProcessingLegalBasis processingLegalBasis =
-          PLYDataProcessingLegalBasis.optional}) async {
-    DateTime date = DateTime(value.year, value.month, value.day, value.hour,
-            value.minute, value.second, value.millisecond)
-        .toUtc();
+  static Future<void> setUserAttributeWithDate(
+    String key,
+    DateTime value, {
+    PLYDataProcessingLegalBasis processingLegalBasis =
+        PLYDataProcessingLegalBasis.optional,
+  }) async {
+    DateTime date = DateTime(
+      value.year,
+      value.month,
+      value.day,
+      value.hour,
+      value.minute,
+      value.second,
+      value.millisecond,
+    ).toUtc();
     _channel.invokeMethod('setUserAttributeWithDate', <String, dynamic>{
       'key': key,
       'value': date.toIso8601String(),
-      'processingLegalBasis':
-          mapDataProcessingLegalBasisToString(processingLegalBasis)
+      'processingLegalBasis': mapDataProcessingLegalBasisToString(
+        processingLegalBasis,
+      ),
     });
   }
 
-  static Future<void> incrementUserAttribute(String key,
-      {int value = 1,
-      PLYDataProcessingLegalBasis processingLegalBasis =
-          PLYDataProcessingLegalBasis.optional}) async {
+  static Future<void> incrementUserAttribute(
+    String key, {
+    int value = 1,
+    PLYDataProcessingLegalBasis processingLegalBasis =
+        PLYDataProcessingLegalBasis.optional,
+  }) async {
     _channel.invokeMethod('incrementUserAttribute', <String, dynamic>{
       'key': key,
       'value': value,
-      'processingLegalBasis':
-          mapDataProcessingLegalBasisToString(processingLegalBasis)
+      'processingLegalBasis': mapDataProcessingLegalBasisToString(
+        processingLegalBasis,
+      ),
     });
   }
 
-  static Future<void> decrementUserAttribute(String key,
-      {int value = 1,
-      PLYDataProcessingLegalBasis processingLegalBasis =
-          PLYDataProcessingLegalBasis.optional}) async {
+  static Future<void> decrementUserAttribute(
+    String key, {
+    int value = 1,
+    PLYDataProcessingLegalBasis processingLegalBasis =
+        PLYDataProcessingLegalBasis.optional,
+  }) async {
     _channel.invokeMethod('decrementUserAttribute', <String, dynamic>{
       'key': key,
       'value': value,
-      'processingLegalBasis':
-          mapDataProcessingLegalBasisToString(processingLegalBasis)
+      'processingLegalBasis': mapDataProcessingLegalBasisToString(
+        processingLegalBasis,
+      ),
     });
   }
 
   static Future<dynamic> userAttribute(String key) async {
-    dynamic value = await _channel
-        .invokeMethod('userAttribute', <String, dynamic>{'key': key});
+    dynamic value = await _channel.invokeMethod(
+      'userAttribute',
+      <String, dynamic>{'key': key},
+    );
 
     try {
       value = DateTime.parse(value);
@@ -685,8 +791,9 @@ class Purchasely {
   }
 
   static Future<Map<dynamic, dynamic>> userAttributes() async {
-    Map<dynamic, dynamic> attributes =
-        await _channel.invokeMethod('userAttributes');
+    Map<dynamic, dynamic> attributes = await _channel.invokeMethod(
+      'userAttributes',
+    );
 
     return attributes.map((key, value) {
       dynamic attributeValue = value;
@@ -717,8 +824,10 @@ class Purchasely {
   /// read counterpart of the built-in attributes the SDK tracks internally
   /// (PAR-07).
   static Future<dynamic> getBuiltInAttribute(String key) async {
-    dynamic value = await _channel
-        .invokeMethod('getBuiltInAttribute', <String, dynamic>{'key': key});
+    dynamic value = await _channel.invokeMethod(
+      'getBuiltInAttribute',
+      <String, dynamic>{'key': key},
+    );
 
     try {
       value = DateTime.parse(value);
@@ -733,8 +842,9 @@ class Purchasely {
 
   /// Reads all built-in (SDK-computed) user attributes (PAR-07).
   static Future<Map<dynamic, dynamic>> getBuiltInAttributes() async {
-    Map<dynamic, dynamic> attributes =
-        await _channel.invokeMethod('getBuiltInAttributes');
+    Map<dynamic, dynamic> attributes = await _channel.invokeMethod(
+      'getBuiltInAttributes',
+    );
 
     return attributes.map((key, value) {
       dynamic attributeValue = value;
@@ -750,8 +860,9 @@ class Purchasely {
   }
 
   static Future<void> setThemeMode(PLYThemeMode mode) async {
-    return await _channel
-        .invokeMethod('setThemeMode', <String, dynamic>{'mode': mode.index});
+    return await _channel.invokeMethod('setThemeMode', <String, dynamic>{
+      'mode': mode.index,
+    });
   }
 
   static Future<bool> setDynamicOffering(PLYDynamicOffering offering) async {
@@ -759,18 +870,22 @@ class Purchasely {
       'reference': offering.reference,
       'planVendorId': offering.planVendorId,
       'offerVendorId': offering.offerVendorId,
-      'billingPlanType': offering.billingPlanType.wire
+      'billingPlanType': offering.billingPlanType.wire,
     });
   }
 
   static Future<List<PLYDynamicOffering>> getDynamicOfferings() async {
-    return transformToDynamicOfferings(await _channel
-        .invokeListMethod<Map<dynamic, dynamic>>('getDynamicOfferings'));
+    return transformToDynamicOfferings(
+      await _channel.invokeListMethod<Map<dynamic, dynamic>>(
+        'getDynamicOfferings',
+      ),
+    );
   }
 
   static void removeDynamicOffering(String reference) async {
-    _channel.invokeMethod(
-        'removeDynamicOffering', <String, dynamic>{'reference': reference});
+    _channel.invokeMethod('removeDynamicOffering', <String, dynamic>{
+      'reference': reference,
+    });
   }
 
   static void clearDynamicOfferings() async {
@@ -785,17 +900,20 @@ class Purchasely {
   /// which must be added explicitly when needed. On Android, `allNonEssentials`
   /// includes identifiedAnalytics, and refundHandling is ignored.
   static void revokeDataProcessingConsent(
-      List<PLYDataProcessingPurpose> purposes) {
+    List<PLYDataProcessingPurpose> purposes,
+  ) {
     List<String> mappedPurposes = purposes
         .map((purpose) => mapDataProcessingPurposeToString(purpose))
         .toList();
-    _channel.invokeMethod('revokeDataProcessingConsent',
-        <String, dynamic>{'purposes': mappedPurposes});
+    _channel.invokeMethod('revokeDataProcessingConsent', <String, dynamic>{
+      'purposes': mappedPurposes,
+    });
   }
 
   static Future<void> setDebugMode(bool debugMode) async {
-    return await _channel.invokeMethod(
-        'setDebugMode', <String, dynamic>{'debugMode': debugMode});
+    return await _channel.invokeMethod('setDebugMode', <String, dynamic>{
+      'debugMode': debugMode,
+    });
   }
 
   // -- Private Methods --
@@ -807,11 +925,12 @@ class Purchasely {
       plyPromoOfferFromMap(offer);
 
   static PLYSubscriptionOffer? transformToPLYSubscription(
-          Map<dynamic, dynamic> subscriptionOffer) =>
-      plySubscriptionOfferFromMap(subscriptionOffer);
+    Map<dynamic, dynamic> subscriptionOffer,
+  ) => plySubscriptionOfferFromMap(subscriptionOffer);
 
   static List<PLYDynamicOffering> transformToDynamicOfferings(
-      List<Map<dynamic, dynamic>>? offerings) {
+    List<Map<dynamic, dynamic>>? offerings,
+  ) {
     if (offerings == null || offerings.isEmpty) return List.empty();
 
     inspect(offerings);
@@ -828,57 +947,72 @@ class Purchasely {
         return;
       }
 
-      dynamicOfferings.add(PLYDynamicOffering(
+      dynamicOfferings.add(
+        PLYDynamicOffering(
           reference,
           planVendorId,
           offering['offerVendorId'],
-          plyBillingPlanTypeFromWire(offering['billingPlanType'])));
+          plyBillingPlanTypeFromWire(offering['billingPlanType']),
+        ),
+      );
     });
     return dynamicOfferings;
   }
 
   static PLYEventProperties transformToPLYEventProperties(
-      Map<dynamic, dynamic> properties) {
+    Map<dynamic, dynamic> properties,
+  ) {
     final eventName = _eventNameFromWire(properties['event_name'] as String?);
 
     List<PLYEventPropertyPlan> plans = new List.empty(growable: true);
-    properties['purchasable_plans']?.forEach((element) => plans.add(
+    properties['purchasable_plans']?.forEach(
+      (element) => plans.add(
         PLYEventPropertyPlan(
-            element['type'],
-            element['purchasely_plan_id'],
-            element['store'],
-            element['store_country'],
-            element['store_product_id'],
-            element['price_in_customer_currency'],
-            element['customer_currency'],
-            element['period'],
-            element['duration'],
-            element['intro_price_in_customer_currency'],
-            element['intro_period'],
-            element['intro_duration'],
-            element['has_free_trial'],
-            element['free_trial_period'],
-            element['free_trial_duration'],
-            element['discount_referent'],
-            element['discount_percentage_comparison_to_referent'],
-            element['discount_price_comparison_to_referent'],
-            element['is_default'])));
+          element['type'],
+          element['purchasely_plan_id'],
+          element['store'],
+          element['store_country'],
+          element['store_product_id'],
+          element['price_in_customer_currency'],
+          element['customer_currency'],
+          element['period'],
+          element['duration'],
+          element['intro_price_in_customer_currency'],
+          element['intro_period'],
+          element['intro_duration'],
+          element['has_free_trial'],
+          element['free_trial_period'],
+          element['free_trial_duration'],
+          element['discount_referent'],
+          element['discount_percentage_comparison_to_referent'],
+          element['discount_price_comparison_to_referent'],
+          element['is_default'],
+        ),
+      ),
+    );
 
     List<PLYEventPropertyCarousel> carousels = new List.empty(growable: true);
     properties['carousels']?.forEach((element) {
       bool isAutoPlaying = element['is_carousel_auto_playing'] ?? false;
-      carousels.add(PLYEventPropertyCarousel(
+      carousels.add(
+        PLYEventPropertyCarousel(
           element['selected_slide'],
           element['number_of_slides'],
           isAutoPlaying,
           element['default_slide'],
-          element['previous_slide']));
+          element['previous_slide'],
+        ),
+      );
     });
 
-    List<PLYEventPropertySubscription> subscriptions =
-        new List.empty(growable: true);
-    properties['running_subscriptions']?.forEach((element) => subscriptions.add(
-        PLYEventPropertySubscription(element['plan'], element['product'])));
+    List<PLYEventPropertySubscription> subscriptions = new List.empty(
+      growable: true,
+    );
+    properties['running_subscriptions']?.forEach(
+      (element) => subscriptions.add(
+        PLYEventPropertySubscription(element['plan'], element['product']),
+      ),
+    );
 
     final displayedOptions = (properties['displayed_options'] as List?)
         ?.map((e) => e.toString())
@@ -935,16 +1069,21 @@ class Purchasely {
       raw['token'] as String?,
       receipt is Map
           ? PLYEventPropertyRedemptionReceipt(
-              receipt['id'] as String?, receipt['validation_status'] as String?)
+              receipt['id'] as String?,
+              receipt['validation_status'] as String?,
+            )
           : null,
       (raw['subscriptions'] as List?)
           ?.whereType<Map>()
-          .map((s) => PLYEventPropertyRedemptionSubscription(
+          .map(
+            (s) => PLYEventPropertyRedemptionSubscription(
               s['public_id'] as String?,
               s['plan_id'] as String?,
               s['store_type'] as String?,
               s['subscription_status'] as String?,
-              s['environment'] as String?))
+              s['environment'] as String?,
+            ),
+          )
           .toList(),
       context is Map
           ? PLYEventPropertyRedemptionPurchaseContext(
@@ -953,23 +1092,31 @@ class Purchasely {
               context['sandbox'] as bool?,
               context['replay'] as bool?,
               _redemptionAttributes(context['built_in_attributes']),
-              _redemptionAttributes(context['custom_attributes']))
+              _redemptionAttributes(context['custom_attributes']),
+            )
           : null,
       raw['error_code'] as String?,
     );
   }
 
   static List<PLYEventPropertyRedemptionAttribute>? _redemptionAttributes(
-      dynamic raw) {
+    dynamic raw,
+  ) {
     return (raw as List?)
         ?.whereType<Map>()
-        .map((a) => PLYEventPropertyRedemptionAttribute(
-            a['key'] as String?, a['type'] as String?, a['value']))
+        .map(
+          (a) => PLYEventPropertyRedemptionAttribute(
+            a['key'] as String?,
+            a['type'] as String?,
+            a['value'],
+          ),
+        )
         .toList();
   }
 
   static String mapDataProcessingLegalBasisToString(
-      PLYDataProcessingLegalBasis processingLegalBasis) {
+    PLYDataProcessingLegalBasis processingLegalBasis,
+  ) {
     switch (processingLegalBasis) {
       case PLYDataProcessingLegalBasis.essential:
         return "ESSENTIAL";
@@ -979,7 +1126,8 @@ class Purchasely {
   }
 
   static String mapDataProcessingPurposeToString(
-      PLYDataProcessingPurpose purpose) {
+    PLYDataProcessingPurpose purpose,
+  ) {
     switch (purpose) {
       case PLYDataProcessingPurpose.allNonEssentials:
         return "ALL_NON_ESSENTIALS";
@@ -1009,7 +1157,9 @@ PLYEventName _eventNameFromWire(String? wire) {
   for (final name in PLYEventName.values) {
     if (name.name == wire) return name;
   }
-  log('Purchasely: unknown event name "$wire", mapping to PLYEventName.UNKNOWN');
+  log(
+    'Purchasely: unknown event name "$wire", mapping to PLYEventName.UNKNOWN',
+  );
   return PLYEventName.UNKNOWN;
 }
 
@@ -1065,7 +1215,7 @@ enum PLYDataProcessingPurpose {
   /// revoked-consent flag as `refund-handling` in the
   /// `X-PRIVACY-CONSENT-REVOKED-FEATURES` header for refusal of consumption
   /// data processing attached to a refund request. Gates no SDK behaviour.
-  refundHandling
+  refundHandling,
 }
 
 enum PLYThemeMode { light, dark, system }
@@ -1146,10 +1296,7 @@ enum PLYEventName {
   UNKNOWN,
 }
 
-enum PLYUserAttributeSource {
-  purchasely,
-  client,
-}
+enum PLYUserAttributeSource { purchasely, client }
 
 enum PLYUserAttributeType {
   string,
@@ -1195,25 +1342,26 @@ class PLYEventPropertyPlan {
   String? discount_price_comparison_to_referent;
   bool? is_default;
   PLYEventPropertyPlan(
-      this.type,
-      this.purchasely_plan_id,
-      this.store,
-      this.store_country,
-      this.store_product_id,
-      this.price_in_customer_currency,
-      this.customer_currency,
-      this.period,
-      this.duration,
-      this.intro_price_in_customer_currency,
-      this.intro_period,
-      this.intro_duration,
-      this.has_free_trial,
-      this.free_trial_period,
-      this.free_trial_duration,
-      this.discount_referent,
-      this.discount_percentage_comparison_to_referent,
-      this.discount_price_comparison_to_referent,
-      this.is_default);
+    this.type,
+    this.purchasely_plan_id,
+    this.store,
+    this.store_country,
+    this.store_product_id,
+    this.price_in_customer_currency,
+    this.customer_currency,
+    this.period,
+    this.duration,
+    this.intro_price_in_customer_currency,
+    this.intro_period,
+    this.intro_duration,
+    this.has_free_trial,
+    this.free_trial_period,
+    this.free_trial_duration,
+    this.discount_referent,
+    this.discount_percentage_comparison_to_referent,
+    this.discount_price_comparison_to_referent,
+    this.is_default,
+  );
 }
 
 class PLYEvent {
@@ -1261,36 +1409,37 @@ class PLYEventProperties {
   PLYEventPropertyRedemption? redemption;
 
   PLYEventProperties(
-      this.sdk_version,
-      this.event_name,
-      this.event_created_at,
-      this.displayed_presentation,
-      this.user_id,
-      this.anonymous_user_id,
-      this.purchasable_plans,
-      this.deeplink_identifier,
-      this.source_identifier,
-      this.selected_plan,
-      this.previous_selected_plan,
-      this.selected_presentation,
-      this.previous_selected_presentation,
-      this.link_identifier,
-      this.carousels,
-      this.language,
-      this.device,
-      this.os_version,
-      this.device_type,
-      this.error_message,
-      this.cancellation_reason_id,
-      this.cancellation_reason,
-      this.plan,
-      this.selected_product,
-      this.plan_change_type,
-      this.running_subscriptions,
-      this.selected_option_id,
-      this.selected_options,
-      this.displayed_options,
-      this.webCheckoutProvider);
+    this.sdk_version,
+    this.event_name,
+    this.event_created_at,
+    this.displayed_presentation,
+    this.user_id,
+    this.anonymous_user_id,
+    this.purchasable_plans,
+    this.deeplink_identifier,
+    this.source_identifier,
+    this.selected_plan,
+    this.previous_selected_plan,
+    this.selected_presentation,
+    this.previous_selected_presentation,
+    this.link_identifier,
+    this.carousels,
+    this.language,
+    this.device,
+    this.os_version,
+    this.device_type,
+    this.error_message,
+    this.cancellation_reason_id,
+    this.cancellation_reason,
+    this.plan,
+    this.selected_product,
+    this.plan_change_type,
+    this.running_subscriptions,
+    this.selected_option_id,
+    this.selected_options,
+    this.displayed_options,
+    this.webCheckoutProvider,
+  );
 }
 
 class PLYEventPropertyCarousel {
@@ -1300,8 +1449,13 @@ class PLYEventPropertyCarousel {
   int? default_slide;
   int? previous_slide;
 
-  PLYEventPropertyCarousel(this.selected_slide, this.number_of_slides,
-      this.is_carousel_auto_playing, this.default_slide, this.previous_slide);
+  PLYEventPropertyCarousel(
+    this.selected_slide,
+    this.number_of_slides,
+    this.is_carousel_auto_playing,
+    this.default_slide,
+    this.previous_slide,
+  );
 }
 
 class PLYEventPropertySubscription {
@@ -1332,8 +1486,13 @@ class PLYEventPropertyRedemptionSubscription {
   String? subscription_status;
   String? environment;
 
-  PLYEventPropertyRedemptionSubscription(this.public_id, this.plan_id,
-      this.store_type, this.subscription_status, this.environment);
+  PLYEventPropertyRedemptionSubscription(
+    this.public_id,
+    this.plan_id,
+    this.store_type,
+    this.subscription_status,
+    this.environment,
+  );
 }
 
 /// One attribute a redemption restored. [value] stays the JSON the backend
@@ -1359,12 +1518,13 @@ class PLYEventPropertyRedemptionPurchaseContext {
   List<PLYEventPropertyRedemptionAttribute>? custom_attributes;
 
   PLYEventPropertyRedemptionPurchaseContext(
-      this.version,
-      this.source,
-      this.sandbox,
-      this.replay,
-      this.built_in_attributes,
-      this.custom_attributes);
+    this.version,
+    this.source,
+    this.sandbox,
+    this.replay,
+    this.built_in_attributes,
+    this.custom_attributes,
+  );
 }
 
 /// What a Web2App redemption reports. `REDEMPTION_CONSUMED` carries [token],
@@ -1396,13 +1556,22 @@ class PLYEventPropertyRedemption {
   /// failure or a parsing failure carries no code.
   String? error_code;
 
-  PLYEventPropertyRedemption(this.token, this.receipt, this.subscriptions,
-      this.purchase_context, this.error_code);
+  PLYEventPropertyRedemption(
+    this.token,
+    this.receipt,
+    this.subscriptions,
+    this.purchase_context,
+    this.error_code,
+  );
 }
 
 abstract class UserAttributeListener {
-  void onUserAttributeSet(String key, PLYUserAttributeType type, dynamic value,
-      PLYUserAttributeSource source);
+  void onUserAttributeSet(
+    String key,
+    PLYUserAttributeType type,
+    dynamic value,
+    PLYUserAttributeSource source,
+  );
 
   void onUserAttributeRemoved(String key, PLYUserAttributeSource source);
 }
@@ -1416,15 +1585,19 @@ class PLYDynamicOffering {
   /// Android and other platforms. Defaults to [PLYBillingPlanType.unspecified].
   PLYBillingPlanType billingPlanType;
 
-  PLYDynamicOffering(this.reference, this.planVendorId, this.offerVendorId,
-      [this.billingPlanType = PLYBillingPlanType.unspecified]);
+  PLYDynamicOffering(
+    this.reference,
+    this.planVendorId,
+    this.offerVendorId, [
+    this.billingPlanType = PLYBillingPlanType.unspecified,
+  ]);
 
   Map<String, dynamic> toJson() => {
-        'reference': reference,
-        'planVendorId': planVendorId,
-        'offerVendorId': offerVendorId,
-        'billingPlanType': billingPlanType.wire,
-      };
+    'reference': reference,
+    'planVendorId': planVendorId,
+    'offerVendorId': offerVendorId,
+    'billingPlanType': billingPlanType.wire,
+  };
 
   @override
   String toString() {

@@ -41,12 +41,10 @@ import 'transition.dart';
 /// track of in-flight presentations, request-keyed callbacks and registered
 /// interceptors. Installed lazily via [ensureInstalled].
 class PurchaselyBridge {
-  PurchaselyBridge._({
-    MethodChannel? methodChannel,
-    EventChannel? eventChannel,
-  })  : _method = methodChannel ?? const MethodChannel('purchasely'),
-        _events = eventChannel ??
-            const EventChannel('purchasely-presentation-events');
+  PurchaselyBridge._({MethodChannel? methodChannel, EventChannel? eventChannel})
+    : _method = methodChannel ?? const MethodChannel('purchasely'),
+      _events =
+          eventChannel ?? const EventChannel('purchasely-presentation-events');
 
   static PurchaselyBridge? _instance;
   static bool _wired = false;
@@ -110,7 +108,7 @@ class PurchaselyBridge {
   /// Global dismiss handler for SDK-owned presentations (campaigns,
   /// deeplinks, promoted in-app purchases).
   void Function(PLYPresentationOutcome outcome)?
-      _defaultPresentationDismissHandler;
+  _defaultPresentationDismissHandler;
 
   void _listenEvents() {
     _eventSub?.cancel();
@@ -149,7 +147,10 @@ class PurchaselyBridge {
       return loaded;
     } on PlatformException catch (e) {
       throw PLYPresentationError(
-          code: e.code, message: e.message, details: e.details);
+        code: e.code,
+        message: e.message,
+        details: e.details,
+      );
     }
   }
 
@@ -165,26 +166,25 @@ class PurchaselyBridge {
     final completer = Completer<PLYPresentationOutcome>();
     entry.dismissCompleter = completer;
     try {
-      await _method.invokeMethod<dynamic>(
-        'display',
-        <String, Object?>{
-          ..._argsForRequest(request),
-          if (transition != null) 'transition': transition.toMap(),
-        },
-      );
+      await _method.invokeMethod<dynamic>('display', <String, Object?>{
+        ..._argsForRequest(request),
+        if (transition != null) 'transition': transition.toMap(),
+      });
     } on PlatformException catch (e) {
       final err = PLYPresentationError(
-          code: e.code, message: e.message, details: e.details);
+        code: e.code,
+        message: e.message,
+        details: e.details,
+      );
       // If the native side rejected the display synchronously, surface the
       // error on the Future *and* clear the pending dismiss completer so a
       // stray onDismissed event doesn't double-complete.
       entry.dismissCompleter = null;
       _entries.remove(request.requestId);
       if (!completer.isCompleted) {
-        completer.complete(PLYPresentationOutcome(
-          presentation: entry.presentation,
-          error: err,
-        ));
+        completer.complete(
+          PLYPresentationOutcome(presentation: entry.presentation, error: err),
+        );
       }
     }
     return completer.future;
@@ -207,51 +207,48 @@ class PurchaselyBridge {
     final completer = Completer<PLYPresentationOutcome>();
     entry.dismissCompleter = completer;
     try {
-      await _method.invokeMethod<dynamic>(
-        'display',
-        <String, Object?>{
-          'requestId': presentation.requestId,
-          // The native side may have to rebuild the request from these args
-          // (e.g. a retry after a failed display dropped the native request):
-          // resend the ORIGINAL source — falling back to inference from the
-          // handle only when the bridge was re-created (e.g. hot restart).
-          'source': _originSources[presentation.requestId] ??
-              _sourceMapForPresentation(presentation),
-          if (presentation.contentId != null)
-            'contentId': presentation.contentId,
-          if (transition != null) 'transition': transition.toMap(),
-        },
-      );
+      await _method.invokeMethod<dynamic>('display', <String, Object?>{
+        'requestId': presentation.requestId,
+        // The native side may have to rebuild the request from these args
+        // (e.g. a retry after a failed display dropped the native request):
+        // resend the ORIGINAL source — falling back to inference from the
+        // handle only when the bridge was re-created (e.g. hot restart).
+        'source':
+            _originSources[presentation.requestId] ??
+            _sourceMapForPresentation(presentation),
+        if (presentation.contentId != null) 'contentId': presentation.contentId,
+        if (transition != null) 'transition': transition.toMap(),
+      });
     } on PlatformException catch (e) {
       final err = PLYPresentationError(
-          code: e.code, message: e.message, details: e.details);
+        code: e.code,
+        message: e.message,
+        details: e.details,
+      );
       // The native side rejected the display synchronously: clear the pending
       // dismiss completer and drop the entry so a stray onDismissed can't
       // double-complete, then surface the error on the Future.
       entry.dismissCompleter = null;
       _entries.remove(presentation.requestId);
       if (!completer.isCompleted) {
-        completer.complete(PLYPresentationOutcome(
-          presentation: presentation,
-          error: err,
-        ));
+        completer.complete(
+          PLYPresentationOutcome(presentation: presentation, error: err),
+        );
       }
     }
     return completer.future;
   }
 
   Future<void> _close(PLYPresentation presentation) async {
-    await _method.invokeMethod<dynamic>(
-      'close',
-      <String, Object?>{'requestId': presentation.requestId},
-    );
+    await _method.invokeMethod<dynamic>('close', <String, Object?>{
+      'requestId': presentation.requestId,
+    });
   }
 
   Future<void> _back(PLYPresentation presentation) async {
-    await _method.invokeMethod<dynamic>(
-      'back',
-      <String, Object?>{'requestId': presentation.requestId},
-    );
+    await _method.invokeMethod<dynamic>('back', <String, Object?>{
+      'requestId': presentation.requestId,
+    });
   }
 
   // --- Interceptor API ----------------------------------------------------
@@ -269,10 +266,9 @@ class PurchaselyBridge {
 
   Future<void> removeActionInterceptor(PLYPresentationActionKind kind) async {
     _interceptors.remove(kind.wire);
-    await _method.invokeMethod<dynamic>(
-      'removeInterceptor',
-      <String, Object?>{'kind': kind.wire},
-    );
+    await _method.invokeMethod<dynamic>('removeInterceptor', <String, Object?>{
+      'kind': kind.wire,
+    });
   }
 
   Future<void> removeAllActionInterceptors() async {
@@ -289,19 +285,19 @@ class PurchaselyBridge {
 
   Future<void> removeDefaultPresentationDismissHandler() async {
     _defaultPresentationDismissHandler = null;
-    await _method
-        .invokeMethod<dynamic>('removeDefaultPresentationDismissHandler');
+    await _method.invokeMethod<dynamic>(
+      'removeDefaultPresentationDismissHandler',
+    );
   }
 
   Future<void> _resolveInterceptor(
-      String invocationId, PLYInterceptResult result) async {
-    await _method.invokeMethod<dynamic>(
-      'interceptorResolve',
-      <String, Object?>{
-        'invocationId': invocationId,
-        'result': result.wire,
-      },
-    );
+    String invocationId,
+    PLYInterceptResult result,
+  ) async {
+    await _method.invokeMethod<dynamic>('interceptorResolve', <String, Object?>{
+      'invocationId': invocationId,
+      'result': result.wire,
+    });
   }
 
   // --- Event dispatch ------------------------------------------------------
@@ -390,8 +386,10 @@ class PurchaselyBridge {
     if (requestId == null) return;
     final entry = _entries[requestId];
     if (entry == null) return;
-    final outcome =
-        _outcomeFromMap(envelope['outcome'], fallback: entry.presentation);
+    final outcome = _outcomeFromMap(
+      envelope['outcome'],
+      fallback: entry.presentation,
+    );
     // Routing: prefer the per-presentation/request onDismissed callback. When
     // none is set, the dismissal isn't handled locally, so fall back to the
     // global default dismiss handler — this lets a host fire-and-forget a
@@ -473,14 +471,13 @@ class PurchaselyBridge {
 
   void _registerRequest(PLYPresentationRequest request) {
     _originSources[request.requestId] = request.source.toMap();
-    _entries.putIfAbsent(
-      request.requestId,
-      () => _RequestEntry(request),
-    );
+    _entries.putIfAbsent(request.requestId, () => _RequestEntry(request));
   }
 
   PLYPresentation _presentationFromRaw(
-      dynamic raw, PLYPresentationRequest request) {
+    dynamic raw,
+    PLYPresentationRequest request,
+  ) {
     final map = <dynamic, dynamic>{};
     if (raw is Map) map.addAll(raw);
     map['requestId'] = request.requestId;
@@ -494,8 +491,10 @@ class PurchaselyBridge {
     return p;
   }
 
-  PLYPresentationOutcome _outcomeFromMap(dynamic raw,
-      {PLYPresentation? fallback}) {
+  PLYPresentationOutcome _outcomeFromMap(
+    dynamic raw, {
+    PLYPresentation? fallback,
+  }) {
     if (raw is! Map) {
       return PLYPresentationOutcome(presentation: fallback);
     }
@@ -515,8 +514,9 @@ class PurchaselyBridge {
     final plan = plyPlanFromMap(planRaw is Map ? planRaw : null);
     return PLYPresentationOutcome(
       presentation: presentation,
-      purchaseResult:
-          purchaseResultFromString(raw['purchaseResult'] as String?),
+      purchaseResult: purchaseResultFromString(
+        raw['purchaseResult'] as String?,
+      ),
       plan: plan,
       closeReason: closeReasonFromString(raw['closeReason'] as String?),
       error: _errorFromMap(raw['error']),
@@ -554,8 +554,9 @@ class _BridgePresentationActions extends PLYPresentationActions {
 
   @override
   Future<PLYPresentationOutcome> display(
-          PLYPresentation presentation, PLYTransition? transition) =>
-      _bridge._displayPresentation(presentation, transition);
+    PLYPresentation presentation,
+    PLYTransition? transition,
+  ) => _bridge._displayPresentation(presentation, transition);
 
   @override
   Future<void> close(PLYPresentation presentation) =>
@@ -576,8 +577,9 @@ class _BridgePresentationRequestActions extends PLYPresentationRequestActions {
 
   @override
   Future<PLYPresentationOutcome> display(
-          PLYPresentationRequest request, PLYTransition? transition) =>
-      _bridge._displayRequest(request, transition);
+    PLYPresentationRequest request,
+    PLYTransition? transition,
+  ) => _bridge._displayRequest(request, transition);
 }
 
 // --- Sentinels reused by `debugReset` -------------------------------------
@@ -589,7 +591,8 @@ final PLYPresentationRequestActions _uninitialisedRequest =
 
 class _UninitialisedPresentationActions extends PLYPresentationActions {
   StateError _err() => StateError(
-      'Purchasely bridge not initialised — call any presentation entry point first.');
+    'Purchasely bridge not initialised — call any presentation entry point first.',
+  );
   @override
   Future<PLYPresentationOutcome> display(_, __) => throw _err();
   @override
@@ -600,7 +603,8 @@ class _UninitialisedPresentationActions extends PLYPresentationActions {
 
 class _UninitialisedRequestActions extends PLYPresentationRequestActions {
   StateError _err() => StateError(
-      'Purchasely bridge not initialised — call any presentation entry point first.');
+    'Purchasely bridge not initialised — call any presentation entry point first.',
+  );
   @override
   Future<PLYPresentation> preload(_) => throw _err();
   @override

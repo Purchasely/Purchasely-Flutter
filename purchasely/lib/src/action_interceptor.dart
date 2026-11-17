@@ -198,7 +198,9 @@ class _EmptyPayload extends PLYActionPayload {
 
 /// Parse an action payload sent by the bridge.
 PLYActionPayload? actionPayloadFromMap(
-    PLYPresentationActionKind kind, Map<dynamic, dynamic>? rawParameters) {
+  PLYPresentationActionKind kind,
+  Map<dynamic, dynamic>? rawParameters,
+) {
   final parameters = rawParameters ?? const {};
 
   Map<dynamic, dynamic>? _map(Object? value) {
@@ -219,21 +221,23 @@ PLYActionPayload? actionPayloadFromMap(
       if (plan == null) return null;
       return PLYPurchasePayload(
         plan: plan,
-        subscriptionOffer:
-            plySubscriptionOfferFromMap(_map(parameters['subscriptionOffer'])),
+        subscriptionOffer: plySubscriptionOfferFromMap(
+          _map(parameters['subscriptionOffer']),
+        ),
         offer: plyPromoOfferFromMap(_map(parameters['offer'])),
       );
     case PLYPresentationActionKind.close:
       return PLYClosePayload(
-          closeReason:
-              (parameters['closeReason'] as String?) ?? 'programmatic');
+        closeReason: (parameters['closeReason'] as String?) ?? 'programmatic',
+      );
     case PLYPresentationActionKind.closeAll:
       return PLYCloseAllPayload(
-          closeReason:
-              (parameters['closeReason'] as String?) ?? 'programmatic');
+        closeReason: (parameters['closeReason'] as String?) ?? 'programmatic',
+      );
     case PLYPresentationActionKind.openPresentation:
-      final id = (parameters['presentationId'] ?? parameters['presentation'])
-          as String?;
+      final id =
+          (parameters['presentationId'] ?? parameters['presentation'])
+              as String?;
       if (id == null) return null;
       return PLYOpenPresentationPayload(presentationId: id);
     case PLYPresentationActionKind.openPlacement:
@@ -245,8 +249,9 @@ PLYActionPayload? actionPayloadFromMap(
       final url = parameters['url'] as String?;
       final clientReferenceId = parameters['clientReferenceId'] as String?;
       final queryParameterKey = parameters['queryParameterKey'] as String?;
-      final provider =
-          _webCheckoutProviderFromWire(parameters['webCheckoutProvider']);
+      final provider = _webCheckoutProviderFromWire(
+        parameters['webCheckoutProvider'],
+      );
       if (url == null ||
           clientReferenceId == null ||
           queryParameterKey == null ||
@@ -289,7 +294,8 @@ String? _webCheckoutProviderFromWire(Object? value) {
 
 /// Signature of an action interceptor handler. May return synchronously or
 /// asynchronously.
-typedef PLYActionInterceptorHandler = FutureOr<PLYInterceptResult> Function(
-  PLYInterceptorInfo info,
-  PLYActionPayload? payload,
-);
+typedef PLYActionInterceptorHandler =
+    FutureOr<PLYInterceptResult> Function(
+      PLYInterceptorInfo info,
+      PLYActionPayload? payload,
+    );

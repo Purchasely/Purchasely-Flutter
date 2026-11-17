@@ -46,23 +46,24 @@ class PurchaselyBuilder {
   // iOS only
   PLYStorekitVersion _storekitVersion;
 
-  PurchaselyBuilder._(this._apiKey,
-      {String? appUserId,
-      PLYRunningMode runningMode = PLYRunningMode.observer,
-      PLYLogLevel logLevel = PLYLogLevel.error,
-      bool? allowDeeplink,
-      bool allowCampaigns = true,
-      String? deeplink,
-      List<PLYStore> stores = const [PLYStore.google],
-      PLYStorekitVersion storekitVersion = PLYStorekitVersion.storeKit2})
-      : _appUserId = appUserId,
-        _runningMode = runningMode,
-        _logLevel = logLevel,
-        _allowDeeplink = allowDeeplink,
-        _allowCampaigns = allowCampaigns,
-        _deeplink = deeplink,
-        _stores = List.of(stores),
-        _storekitVersion = storekitVersion;
+  PurchaselyBuilder._(
+    this._apiKey, {
+    String? appUserId,
+    PLYRunningMode runningMode = PLYRunningMode.observer,
+    PLYLogLevel logLevel = PLYLogLevel.error,
+    bool? allowDeeplink,
+    bool allowCampaigns = true,
+    String? deeplink,
+    List<PLYStore> stores = const [PLYStore.google],
+    PLYStorekitVersion storekitVersion = PLYStorekitVersion.storeKit2,
+  }) : _appUserId = appUserId,
+       _runningMode = runningMode,
+       _logLevel = logLevel,
+       _allowDeeplink = allowDeeplink,
+       _allowCampaigns = allowCampaigns,
+       _deeplink = deeplink,
+       _stores = List.of(stores),
+       _storekitVersion = storekitVersion;
 
   static PurchaselyBuilder apiKey(String key) => PurchaselyBuilder._(key);
 
@@ -205,8 +206,10 @@ class PurchaselyBuilder {
   ///
   /// [appHandlesRedemptionAlert] is a shorthand for the modifier of the same name. Omit
   /// it to leave the native default (the SDK shows its own popin) in place.
-  PurchaselyBuilder webRedemptionListener(PLYWebRedemptionListener listener,
-      [bool? appHandlesRedemptionAlert]) {
+  PurchaselyBuilder webRedemptionListener(
+    PLYWebRedemptionListener listener, [
+    bool? appHandlesRedemptionAlert,
+  ]) {
     addWebRedemptionListener(listener);
     if (appHandlesRedemptionAlert != null) {
       _appHandlesRedemptionAlert = appHandlesRedemptionAlert;
@@ -234,32 +237,29 @@ class PurchaselyBuilder {
     // PLYPresentationRequest calls have a live channel to talk to.
     PurchaselyBridge.ensureInstalled();
     const channel = MethodChannel('purchasely');
-    final result = await channel.invokeMethod<bool>(
-      'start',
-      <String, Object?>{
-        'apiKey': _apiKey,
-        'appUserId': _appUserId,
-        'runningMode': _runningMode.name,
-        'logLevel': _logLevel.name,
-        'allowDeeplink': _allowDeeplink,
-        'allowCampaigns': _allowCampaigns,
-        if (_deeplink != null) 'deeplink': _deeplink,
-        if (_automaticDeeplinkHandling != null)
-          'automaticDeeplinkHandling': _automaticDeeplinkHandling,
-        // The native bridges parse `anonymousUserId` into a UUID. An invalid
-        // string is rejected there, with a log, and start() still succeeds.
-        if (_anonymousUserId != null) 'anonymousUserId': _anonymousUserId,
-        if (_anonymousUserId != null)
-          'anonymousUserIdOverride': _anonymousUserIdOverride,
-        // Present-with-null is a clear, absent leaves native alone. The standard codec
-        // preserves a null map value, so both bridges read it with containsKey.
-        if (_proxyWasSet) 'proxy': _proxyApi,
-        if (_appHandlesRedemptionAlert != null)
-          'appHandlesRedemptionAlert': _appHandlesRedemptionAlert,
-        'stores': _stores.map((s) => s.name).toList(),
-        'storekitVersion': _storekitVersion.name,
-      },
-    );
+    final result = await channel.invokeMethod<bool>('start', <String, Object?>{
+      'apiKey': _apiKey,
+      'appUserId': _appUserId,
+      'runningMode': _runningMode.name,
+      'logLevel': _logLevel.name,
+      'allowDeeplink': _allowDeeplink,
+      'allowCampaigns': _allowCampaigns,
+      if (_deeplink != null) 'deeplink': _deeplink,
+      if (_automaticDeeplinkHandling != null)
+        'automaticDeeplinkHandling': _automaticDeeplinkHandling,
+      // The native bridges parse `anonymousUserId` into a UUID. An invalid
+      // string is rejected there, with a log, and start() still succeeds.
+      if (_anonymousUserId != null) 'anonymousUserId': _anonymousUserId,
+      if (_anonymousUserId != null)
+        'anonymousUserIdOverride': _anonymousUserIdOverride,
+      // Present-with-null is a clear, absent leaves native alone. The standard codec
+      // preserves a null map value, so both bridges read it with containsKey.
+      if (_proxyWasSet) 'proxy': _proxyApi,
+      if (_appHandlesRedemptionAlert != null)
+        'appHandlesRedemptionAlert': _appHandlesRedemptionAlert,
+      'stores': _stores.map((s) => s.name).toList(),
+      'storekitVersion': _storekitVersion.name,
+    });
     return result ?? false;
   }
 }

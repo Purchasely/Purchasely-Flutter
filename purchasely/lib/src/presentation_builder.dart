@@ -46,9 +46,9 @@ class PLYPresentationBuilder {
   bool? _displayBackButton;
 
   void Function(PLYPresentation presentation, PLYPresentationError? error)?
-      _onLoaded;
+  _onLoaded;
   void Function(PLYPresentation? presentation, PLYPresentationError? error)?
-      _onPresented;
+  _onPresented;
   void Function()? _onCloseRequested;
   void Function(PLYPresentationOutcome outcome)? _onDismissed;
 
@@ -99,15 +99,17 @@ class PLYPresentationBuilder {
   }
 
   PLYPresentationBuilder onLoaded(
-      void Function(PLYPresentation presentation, PLYPresentationError? error)
-          handler) {
+    void Function(PLYPresentation presentation, PLYPresentationError? error)
+    handler,
+  ) {
     _onLoaded = handler;
     return this;
   }
 
   PLYPresentationBuilder onPresented(
-      void Function(PLYPresentation? presentation, PLYPresentationError? error)
-          handler) {
+    void Function(PLYPresentation? presentation, PLYPresentationError? error)
+    handler,
+  ) {
     _onPresented = handler;
     return this;
   }
@@ -118,7 +120,8 @@ class PLYPresentationBuilder {
   }
 
   PLYPresentationBuilder onDismissed(
-      void Function(PLYPresentationOutcome outcome) handler) {
+    void Function(PLYPresentationOutcome outcome) handler,
+  ) {
     _onDismissed = handler;
     return this;
   }

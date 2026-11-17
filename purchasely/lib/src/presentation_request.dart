@@ -13,12 +13,15 @@ abstract class PLYPresentationRequestActions {
 
   Future<PLYPresentation> preload(PLYPresentationRequest request);
   Future<PLYPresentationOutcome> display(
-      PLYPresentationRequest request, PLYTransition? transition);
+    PLYPresentationRequest request,
+    PLYTransition? transition,
+  );
 }
 
 class _UninitialisedRequest extends PLYPresentationRequestActions {
   StateError _err() => StateError(
-      'Purchasely bridge not initialised — call any presentation entry point first.');
+    'Purchasely bridge not initialised — call any presentation entry point first.',
+  );
 
   @override
   Future<PLYPresentation> preload(_) => throw _err();
@@ -36,16 +39,13 @@ class PLYPresentationSource {
   const PLYPresentationSource._(this.kind, this.id);
 
   const PLYPresentationSource.defaultSource()
-      : this._(PLYPresentationSourceKind.defaultSource, null);
+    : this._(PLYPresentationSourceKind.defaultSource, null);
   const PLYPresentationSource.placement(String id)
-      : this._(PLYPresentationSourceKind.placementId, id);
+    : this._(PLYPresentationSourceKind.placementId, id);
   const PLYPresentationSource.screen(String id)
-      : this._(PLYPresentationSourceKind.screenId, id);
+    : this._(PLYPresentationSourceKind.screenId, id);
 
-  Map<String, Object?> toMap() => {
-        'kind': kind.name,
-        if (id != null) 'id': id,
-      };
+  Map<String, Object?> toMap() => {'kind': kind.name, if (id != null) 'id': id};
 }
 
 /// A configured presentation, ready to be preloaded or displayed.
@@ -72,9 +72,15 @@ class PLYPresentationRequest {
   /// events. They are copied onto the loaded [PLYPresentation] once preload
   /// completes so the host app can also reassign them post-preload.
   final void Function(
-      PLYPresentation presentation, PLYPresentationError? error)? onLoaded;
+    PLYPresentation presentation,
+    PLYPresentationError? error,
+  )?
+  onLoaded;
   final void Function(
-      PLYPresentation? presentation, PLYPresentationError? error)? onPresented;
+    PLYPresentation? presentation,
+    PLYPresentationError? error,
+  )?
+  onPresented;
   final void Function()? onCloseRequested;
   final void Function(PLYPresentationOutcome outcome)? onDismissed;
 
@@ -93,15 +99,14 @@ class PLYPresentationRequest {
   });
 
   Map<String, Object?> toMap() => {
-        'requestId': requestId,
-        'source': source.toMap(),
-        if (contentId != null) 'contentId': contentId,
-        if (backgroundColorHex != null) 'backgroundColor': backgroundColorHex,
-        if (progressColorHex != null) 'progressColor': progressColorHex,
-        if (displayCloseButton != null)
-          'displayCloseButton': displayCloseButton,
-        if (displayBackButton != null) 'displayBackButton': displayBackButton,
-      };
+    'requestId': requestId,
+    'source': source.toMap(),
+    if (contentId != null) 'contentId': contentId,
+    if (backgroundColorHex != null) 'backgroundColor': backgroundColorHex,
+    if (progressColorHex != null) 'progressColor': progressColorHex,
+    if (displayCloseButton != null) 'displayCloseButton': displayCloseButton,
+    if (displayBackButton != null) 'displayBackButton': displayBackButton,
+  };
 
   /// Fetch and cache the presentation without displaying it. Resolves with
   /// the loaded [PLYPresentation] once the network round-trip completes.

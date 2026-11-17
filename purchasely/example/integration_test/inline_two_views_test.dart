@@ -91,7 +91,8 @@ void main() {
 
       // Both widgets mount and start their preload in this frame.
       await tester.pumpWidget(MaterialApp(
-        home: Scaffold(body: Column(children: [slot(showA, a), slot(showB, b)])),
+        home:
+            Scaffold(body: Column(children: [slot(showA, a), slot(showB, b)])),
       ));
 
       // Wait for both preloads without pumping: no frame builds a platform

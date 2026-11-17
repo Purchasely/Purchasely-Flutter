@@ -1,14 +1,7 @@
 // Purchasely SDK — PLYPresentation transitions.
 
 /// Display transition type for a presentation.
-enum PLYTransitionType {
-  fullScreen,
-  push,
-  modal,
-  drawer,
-  popin,
-  inlinePaywall,
-}
+enum PLYTransitionType { fullScreen, push, modal, drawer, popin, inlinePaywall }
 
 /// Unit a [PLYTransitionDimension] value is expressed in. Mirrors the native
 /// Android `PLYDimensionType` ( `pixel` / `percentage` ).
@@ -30,16 +23,16 @@ class PLYTransitionDimension {
 
   /// Fixed size in density-independent pixels.
   const PLYTransitionDimension.pixel(this.value)
-      : type = PLYDimensionType.pixel;
+    : type = PLYDimensionType.pixel;
 
   /// Ratio of the available screen dimension, in `0.0`–`1.0`.
   const PLYTransitionDimension.percentage(this.value)
-      : type = PLYDimensionType.percentage;
+    : type = PLYDimensionType.percentage;
 
   Map<String, Object?> toMap() => {
-        'type': type == PLYDimensionType.pixel ? 'pixel' : 'percentage',
-        'value': value,
-      };
+    'type': type == PLYDimensionType.pixel ? 'pixel' : 'percentage',
+    'value': value,
+  };
 }
 
 /// Background color configuration for a transition.
@@ -53,9 +46,9 @@ class PLYTransitionColors {
   const PLYTransitionColors({this.light, this.dark});
 
   Map<String, Object?> toMap() => {
-        if (light != null) 'light': light,
-        if (dark != null) 'dark': dark,
-      };
+    if (light != null) 'light': light,
+    if (dark != null) 'dark': dark,
+  };
 }
 
 /// Display transition for a presentation (`PLYPresentationRequest.display(...)`).
@@ -80,39 +73,38 @@ class PLYTransition {
 
   const PLYTransition.fullScreen() : this(type: PLYTransitionType.fullScreen);
   const PLYTransition.modal({bool? dismissible})
-      : this(type: PLYTransitionType.modal, dismissible: dismissible);
+    : this(type: PLYTransitionType.modal, dismissible: dismissible);
   const PLYTransition.push() : this(type: PLYTransitionType.push);
   const PLYTransition.drawer({
     PLYTransitionDimension? height,
     bool? dismissible,
     PLYTransitionColors? backgroundColors,
   }) : this(
-          type: PLYTransitionType.drawer,
-          height: height,
-          dismissible: dismissible,
-          backgroundColors: backgroundColors,
-        );
+         type: PLYTransitionType.drawer,
+         height: height,
+         dismissible: dismissible,
+         backgroundColors: backgroundColors,
+       );
   const PLYTransition.popin({
     PLYTransitionDimension? width,
     PLYTransitionDimension? height,
     bool? dismissible,
     PLYTransitionColors? backgroundColors,
   }) : this(
-          type: PLYTransitionType.popin,
-          width: width,
-          height: height,
-          dismissible: dismissible,
-          backgroundColors: backgroundColors,
-        );
+         type: PLYTransitionType.popin,
+         width: width,
+         height: height,
+         dismissible: dismissible,
+         backgroundColors: backgroundColors,
+       );
 
   Map<String, Object?> toMap() => {
-        'type': _typeToWire(type),
-        if (width != null) 'width': width!.toMap(),
-        if (height != null) 'height': height!.toMap(),
-        if (dismissible != null) 'dismissible': dismissible,
-        if (backgroundColors != null)
-          'backgroundColors': backgroundColors!.toMap(),
-      };
+    'type': _typeToWire(type),
+    if (width != null) 'width': width!.toMap(),
+    if (height != null) 'height': height!.toMap(),
+    if (dismissible != null) 'dismissible': dismissible,
+    if (backgroundColors != null) 'backgroundColors': backgroundColors!.toMap(),
+  };
 
   static String _typeToWire(PLYTransitionType t) {
     switch (t) {

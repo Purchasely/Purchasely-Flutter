@@ -38,7 +38,9 @@ void main() {
         },
       );
       messenger.setMockMessageHandler(
-          eventChannelName, (message) async => null);
+        eventChannelName,
+        (message) async => null,
+      );
 
       PurchaselyBridge.debugReset();
       PurchaselyBridge.ensureInstalled();
@@ -47,17 +49,22 @@ void main() {
     tearDown(() {
       PurchaselyBridge.debugReset();
       messenger.setMockMethodCallHandler(
-          const MethodChannel(methodChannelName), null);
+        const MethodChannel(methodChannelName),
+        null,
+      );
       messenger.setMockMessageHandler(eventChannelName, null);
     });
 
     test('has correct view type', () {
-      expect(PLYPresentationView.viewType,
-          'io.purchasely.purchasely_flutter/native_view');
+      expect(
+        PLYPresentationView.viewType,
+        'io.purchasely.purchasely_flutter/native_view',
+      );
     });
 
-    testWidgets('shows a loading indicator before preload resolves',
-        (WidgetTester tester) async {
+    testWidgets('shows a loading indicator before preload resolves', (
+      WidgetTester tester,
+    ) async {
       final request = PLYPresentationBuilder.placement('home').build();
       final view = PLYPresentationView(request: request);
 
@@ -68,40 +75,43 @@ void main() {
     });
 
     testWidgets(
-        'renders a hybrid-composition PlatformViewLink after preload (Android)',
-        (WidgetTester tester) async {
-      final previousPlatform = debugDefaultTargetPlatformOverride;
-      debugDefaultTargetPlatformOverride = TargetPlatform.android;
-      try {
-        final request = PLYPresentationBuilder.placement('home').build();
-        final view = PLYPresentationView(request: request);
+      'renders a hybrid-composition PlatformViewLink after preload (Android)',
+      (WidgetTester tester) async {
+        final previousPlatform = debugDefaultTargetPlatformOverride;
+        debugDefaultTargetPlatformOverride = TargetPlatform.android;
+        try {
+          final request = PLYPresentationBuilder.placement('home').build();
+          final view = PLYPresentationView(request: request);
 
-        await tester.pumpWidget(
-          MaterialApp(
-            home: Directionality(
-              textDirection: TextDirection.ltr,
-              child: Scaffold(body: view),
+          await tester.pumpWidget(
+            MaterialApp(
+              home: Directionality(
+                textDirection: TextDirection.ltr,
+                child: Scaffold(body: view),
+              ),
             ),
-          ),
-        );
-        // Let the preload future resolve, then rebuild. Avoid pumpAndSettle:
-        // the hybrid-composition platform view never "settles" under test.
-        await tester.pump();
-        await tester.pump(const Duration(milliseconds: 50));
+          );
+          // Let the preload future resolve, then rebuild. Avoid pumpAndSettle:
+          // the hybrid-composition platform view never "settles" under test.
+          await tester.pump();
+          await tester.pump(const Duration(milliseconds: 50));
 
-        // The Android branch uses hybrid composition (PlatformViewLink +
-        // initExpensiveAndroidView) so the embedded native paywall receives
-        // touch events — a plain virtual-display AndroidView does not.
-        final link =
-            tester.widget<PlatformViewLink>(find.byType(PlatformViewLink));
-        expect(link.viewType, PLYPresentationView.viewType);
-      } finally {
-        debugDefaultTargetPlatformOverride = previousPlatform;
-      }
-    });
+          // The Android branch uses hybrid composition (PlatformViewLink +
+          // initExpensiveAndroidView) so the embedded native paywall receives
+          // touch events — a plain virtual-display AndroidView does not.
+          final link = tester.widget<PlatformViewLink>(
+            find.byType(PlatformViewLink),
+          );
+          expect(link.viewType, PLYPresentationView.viewType);
+        } finally {
+          debugDefaultTargetPlatformOverride = previousPlatform;
+        }
+      },
+    );
 
-    testWidgets('renders a UiKitView with the requestId on iOS',
-        (WidgetTester tester) async {
+    testWidgets('renders a UiKitView with the requestId on iOS', (
+      WidgetTester tester,
+    ) async {
       final previousPlatform = debugDefaultTargetPlatformOverride;
       debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
       try {
@@ -120,8 +130,9 @@ void main() {
       }
     });
 
-    testWidgets('build returns Text for unsupported platform',
-        (WidgetTester tester) async {
+    testWidgets('build returns Text for unsupported platform', (
+      WidgetTester tester,
+    ) async {
       debugDefaultTargetPlatformOverride = TargetPlatform.windows;
 
       final request = PLYPresentationBuilder.placement('home').build();

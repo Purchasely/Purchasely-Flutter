@@ -79,7 +79,8 @@ class PLYWebRedemptionResult {
   });
 
   @override
-  String toString() => 'PLYWebRedemptionResult('
+  String toString() =>
+      'PLYWebRedemptionResult('
       'isSuccess: $isSuccess, '
       'replay: $replay, '
       'errorCode: $errorCode, '
@@ -135,8 +136,10 @@ PLYWebRedemptionResult webRedemptionResultFromMap(Map<dynamic, dynamic> body) {
         ? PLYWebRedemptionContext(
             subscription: rawContext['subscription'] is Map
                 ? plySubscriptionFromMap(
-                    rawContext['subscription'] as Map<dynamic, dynamic>)
-                : null)
+                    rawContext['subscription'] as Map<dynamic, dynamic>,
+                  )
+                : null,
+          )
         : null,
     replay: body['replay'] == true,
     errorCode: body['errorCode'] as String?,

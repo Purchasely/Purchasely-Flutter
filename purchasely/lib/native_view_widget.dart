@@ -34,7 +34,7 @@ class PLYPresentationView extends StatefulWidget {
 
   /// Optional builder shown when preloading fails.
   final Widget Function(BuildContext context, PLYPresentationError error)?
-      errorBuilder;
+  errorBuilder;
 
   // View type must match the one defined in the native side.
   static const String viewType = 'io.purchasely.purchasely_flutter/native_view';
@@ -108,7 +108,8 @@ class _PLYPresentationViewState extends State<PLYPresentationView> {
               hitTestBehavior: PlatformViewHitTestBehavior.opaque,
               gestureRecognizers: <Factory<OneSequenceGestureRecognizer>>{
                 Factory<OneSequenceGestureRecognizer>(
-                    () => EagerGestureRecognizer()),
+                  () => EagerGestureRecognizer(),
+                ),
               },
             );
           },

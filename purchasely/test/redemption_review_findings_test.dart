@@ -34,43 +34,48 @@ void main() {
   // EVERY event the module emitted.
   // ---------------------------------------------------------------------------
 
-  group('review 2 — the cached subscription handle is cleared on every path',
-      () {
-    test('register → remove → register never cancels one handle twice',
-        () async {
-      var listens = 0;
-      var cancels = 0;
-      messenger.setMockStreamHandler(
-        redemptionChannel,
-        MockStreamHandler.inline(
-          onListen: (arguments, sink) => listens++,
-          onCancel: (arguments) => cancels++,
-        ),
-      );
+  group('review 2 — the cached subscription handle is cleared on every path', () {
+    test(
+      'register → remove → register never cancels one handle twice',
+      () async {
+        var listens = 0;
+        var cancels = 0;
+        messenger.setMockStreamHandler(
+          redemptionChannel,
+          MockStreamHandler.inline(
+            onListen: (arguments, sink) => listens++,
+            onCancel: (arguments) => cancels++,
+          ),
+        );
 
-      Purchasely.addWebRedemptionListener((_) {});
-      final firstHandle = Purchasely.webRedemptions;
-      expect(firstHandle, isNotNull);
+        Purchasely.addWebRedemptionListener((_) {});
+        final firstHandle = Purchasely.webRedemptions;
+        expect(firstHandle, isNotNull);
 
-      Purchasely.removeWebRedemptionListener();
-      // The handle must be gone, not merely cancelled. A non-null handle here
-      // is what let the next registration release the same subscription again.
-      expect(Purchasely.webRedemptions, isNull);
+        Purchasely.removeWebRedemptionListener();
+        // The handle must be gone, not merely cancelled. A non-null handle here
+        // is what let the next registration release the same subscription again.
+        expect(Purchasely.webRedemptions, isNull);
 
-      Purchasely.addWebRedemptionListener((_) {});
-      final secondHandle = Purchasely.webRedemptions;
-      expect(secondHandle, isNotNull);
-      expect(secondHandle, isNot(same(firstHandle)));
+        Purchasely.addWebRedemptionListener((_) {});
+        final secondHandle = Purchasely.webRedemptions;
+        expect(secondHandle, isNotNull);
+        expect(secondHandle, isNot(same(firstHandle)));
 
-      await pumpEventQueue();
+        await pumpEventQueue();
 
-      // Two registrations, two listens. One removal, one cancel — plus the
-      // teardown of the second subscription, which has not happened yet.
-      expect(listens, 2);
-      expect(cancels, 1,
-          reason: 'a second cancel for the first handle would drive the '
-              'platform listener count below zero');
-    });
+        // Two registrations, two listens. One removal, one cancel — plus the
+        // teardown of the second subscription, which has not happened yet.
+        expect(listens, 2);
+        expect(
+          cancels,
+          1,
+          reason:
+              'a second cancel for the first handle would drive the '
+              'platform listener count below zero',
+        );
+      },
+    );
 
     test('removing twice in a row sends only one cancel', () async {
       var cancels = 0;
@@ -91,27 +96,33 @@ void main() {
       expect(Purchasely.webRedemptions, isNull);
     });
 
-    test('re-registering replaces the subscription with exactly one cancel',
-        () async {
-      var listens = 0;
-      var cancels = 0;
-      messenger.setMockStreamHandler(
-        redemptionChannel,
-        MockStreamHandler.inline(
-          onListen: (arguments, sink) => listens++,
-          onCancel: (arguments) => cancels++,
-        ),
-      );
+    test(
+      're-registering replaces the subscription with exactly one cancel',
+      () async {
+        var listens = 0;
+        var cancels = 0;
+        messenger.setMockStreamHandler(
+          redemptionChannel,
+          MockStreamHandler.inline(
+            onListen: (arguments, sink) => listens++,
+            onCancel: (arguments) => cancels++,
+          ),
+        );
 
-      Purchasely.addWebRedemptionListener((_) {});
-      Purchasely.addWebRedemptionListener((_) {});
-      Purchasely.addWebRedemptionListener((_) {});
-      await pumpEventQueue();
+        Purchasely.addWebRedemptionListener((_) {});
+        Purchasely.addWebRedemptionListener((_) {});
+        Purchasely.addWebRedemptionListener((_) {});
+        await pumpEventQueue();
 
-      expect(listens, 3);
-      expect(cancels, 2, reason: 'each replacement cancels exactly one handle');
-      expect(Purchasely.webRedemptions, isNotNull);
-    });
+        expect(listens, 3);
+        expect(
+          cancels,
+          2,
+          reason: 'each replacement cancels exactly one handle',
+        );
+        expect(Purchasely.webRedemptions, isNotNull);
+      },
+    );
 
     test('redemption churn does not silence the shared event stream', () async {
       // The consequence the React Native bug actually had. Flutter gives each
@@ -121,20 +132,24 @@ void main() {
       messenger.setMockStreamHandler(
         redemptionChannel,
         MockStreamHandler.inline(
-            onListen: (arguments, sink) {}, onCancel: (arguments) {}),
+          onListen: (arguments, sink) {},
+          onCancel: (arguments) {},
+        ),
       );
       final received = <PLYEvent>[];
       messenger.setMockStreamHandler(
         eventsChannel,
-        MockStreamHandler.inline(onListen: (arguments, sink) {
-          sink.success(const <String, Object?>{
-            'name': 'APP_STARTED',
-            'properties': <String, Object?>{
-              'event_name': 'APP_STARTED',
-              'event_created_at': '2026-09-07T10:00:00Z',
-            },
-          });
-        }),
+        MockStreamHandler.inline(
+          onListen: (arguments, sink) {
+            sink.success(const <String, Object?>{
+              'name': 'APP_STARTED',
+              'properties': <String, Object?>{
+                'event_name': 'APP_STARTED',
+                'event_created_at': '2026-09-07T10:00:00Z',
+              },
+            });
+          },
+        ),
       );
 
       Purchasely.listenToEvents(received.add);
@@ -144,8 +159,11 @@ void main() {
       Purchasely.removeWebRedemptionListener();
       await pumpEventQueue();
 
-      expect(received, isNotEmpty,
-          reason: 'analytics must keep flowing through redemption churn');
+      expect(
+        received,
+        isNotEmpty,
+        reason: 'analytics must keep flowing through redemption churn',
+      );
       expect(received.first.name, PLYEventName.APP_STARTED);
     });
   });
@@ -162,8 +180,14 @@ void main() {
     test('the enum order is the wire contract both natives agree on', () {
       // Pinned as literals. Android StoreType and iOS PLYSubscriptionSource
       // both use this order at their released 6.1.0 tags.
-      expect(PLYSubscriptionSource.values.map((s) => s.index).toList(),
-          [0, 1, 2, 3, 4, 5]);
+      expect(PLYSubscriptionSource.values.map((s) => s.index).toList(), [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+      ]);
       expect(PLYSubscriptionSource.appleAppStore.index, 0);
       expect(PLYSubscriptionSource.googlePlayStore.index, 1);
       expect(PLYSubscriptionSource.amazonAppstore.index, 2);
@@ -173,10 +197,14 @@ void main() {
     });
 
     test('wire index 4 decodes to webCheckoutStripe, not none', () {
-      expect(plySubscriptionSourceFromWire(4),
-          PLYSubscriptionSource.webCheckoutStripe);
       expect(
-          plySubscriptionSourceFromWire(4), isNot(PLYSubscriptionSource.none));
+        plySubscriptionSourceFromWire(4),
+        PLYSubscriptionSource.webCheckoutStripe,
+      );
+      expect(
+        plySubscriptionSourceFromWire(4),
+        isNot(PLYSubscriptionSource.none),
+      );
     });
 
     test('every wire index round-trips to its own case', () {
@@ -189,8 +217,10 @@ void main() {
       expect(plySubscriptionSourceFromWire(null), PLYSubscriptionSource.none);
       expect(plySubscriptionSourceFromWire(-1), PLYSubscriptionSource.none);
       expect(plySubscriptionSourceFromWire(6), PLYSubscriptionSource.none);
-      expect(plySubscriptionSourceFromWire('GOOGLE_PLAY_STORE'),
-          PLYSubscriptionSource.none);
+      expect(
+        plySubscriptionSourceFromWire('GOOGLE_PLAY_STORE'),
+        PLYSubscriptionSource.none,
+      );
     });
 
     test('a redemption context reports a web checkout subscription', () async {
@@ -199,27 +229,31 @@ void main() {
       final received = <PLYWebRedemptionResult>[];
       messenger.setMockStreamHandler(
         redemptionChannel,
-        MockStreamHandler.inline(onListen: (arguments, sink) {
-          sink.success(const <String, Object?>{
-            'isSuccess': true,
-            'replay': false,
-            'errorCode': null,
-            'errorMessage': null,
-            'context': <String, Object?>{
-              'subscription': <String, Object?>{
-                'subscriptionSource': 4, // WEB_CHECKOUT_STRIPE / stripe
-                'plan': <String, Object?>{'vendorId': 'plan_monthly'},
+        MockStreamHandler.inline(
+          onListen: (arguments, sink) {
+            sink.success(const <String, Object?>{
+              'isSuccess': true,
+              'replay': false,
+              'errorCode': null,
+              'errorMessage': null,
+              'context': <String, Object?>{
+                'subscription': <String, Object?>{
+                  'subscriptionSource': 4, // WEB_CHECKOUT_STRIPE / stripe
+                  'plan': <String, Object?>{'vendorId': 'plan_monthly'},
+                },
               },
-            },
-          });
-        }),
+            });
+          },
+        ),
       );
 
       Purchasely.addWebRedemptionListener(received.add);
       await pumpEventQueue();
 
-      expect(received.single.context?.subscription?.subscriptionSource,
-          PLYSubscriptionSource.webCheckoutStripe);
+      expect(
+        received.single.context?.subscription?.subscriptionSource,
+        PLYSubscriptionSource.webCheckoutStripe,
+      );
     });
   });
 
@@ -233,8 +267,7 @@ void main() {
   // and must not coerce either to an empty string.
   // ---------------------------------------------------------------------------
 
-  group('review 4 — an explicit null and an omitted key decode identically',
-      () {
+  group('review 4 — an explicit null and an omitted key decode identically', () {
     test('the Android shape: keys present with an explicit null', () {
       final subscription = plySubscriptionFromMap(const <String, Object?>{
         'purchaseToken': null,
@@ -270,13 +303,15 @@ void main() {
         'cancelledDate': null,
         'subscriptionSource': 0,
       });
-      final ios = plySubscriptionFromMap(
-          const <String, Object?>{'subscriptionSource': 0});
+      final ios = plySubscriptionFromMap(const <String, Object?>{
+        'subscriptionSource': 0,
+      });
 
-      expect(
-        [android.purchaseToken, android.nextRenewalDate, android.cancelledDate],
-        equals([ios.purchaseToken, ios.nextRenewalDate, ios.cancelledDate]),
-      );
+      expect([
+        android.purchaseToken,
+        android.nextRenewalDate,
+        android.cancelledDate,
+      ], equals([ios.purchaseToken, ios.nextRenewalDate, ios.cancelledDate]));
     });
 
     test('a null product name or vendorId does not throw', () {
@@ -311,41 +346,45 @@ void main() {
       expect(subscription.subscriptionDurationInDays, isNull);
     });
 
-    test('a redemption context tolerates a fully-null Android subscription',
-        () async {
-      final received = <PLYWebRedemptionResult>[];
-      messenger.setMockStreamHandler(
-        redemptionChannel,
-        MockStreamHandler.inline(onListen: (arguments, sink) {
-          sink.success(const <String, Object?>{
-            'isSuccess': true,
-            'replay': false,
-            'errorCode': null,
-            'errorMessage': null,
-            'context': <String, Object?>{
-              'subscription': <String, Object?>{
-                'purchaseToken': null,
-                'nextRenewalDate': null,
-                'cancelledDate': null,
-                'subscriptionSource': null,
-                'product': null,
-                'plan': null,
-              },
+    test(
+      'a redemption context tolerates a fully-null Android subscription',
+      () async {
+        final received = <PLYWebRedemptionResult>[];
+        messenger.setMockStreamHandler(
+          redemptionChannel,
+          MockStreamHandler.inline(
+            onListen: (arguments, sink) {
+              sink.success(const <String, Object?>{
+                'isSuccess': true,
+                'replay': false,
+                'errorCode': null,
+                'errorMessage': null,
+                'context': <String, Object?>{
+                  'subscription': <String, Object?>{
+                    'purchaseToken': null,
+                    'nextRenewalDate': null,
+                    'cancelledDate': null,
+                    'subscriptionSource': null,
+                    'product': null,
+                    'plan': null,
+                  },
+                },
+              });
             },
-          });
-        }),
-      );
+          ),
+        );
 
-      Purchasely.addWebRedemptionListener(received.add);
-      await pumpEventQueue();
+        Purchasely.addWebRedemptionListener(received.add);
+        await pumpEventQueue();
 
-      final subscription = received.single.context?.subscription;
-      expect(subscription, isNotNull);
-      expect(subscription!.purchaseToken, isNull);
-      expect(subscription.nextRenewalDate, isNull);
-      expect(subscription.cancelledDate, isNull);
-      expect(subscription.subscriptionSource, PLYSubscriptionSource.none);
-    });
+        final subscription = received.single.context?.subscription;
+        expect(subscription, isNotNull);
+        expect(subscription!.purchaseToken, isNull);
+        expect(subscription.nextRenewalDate, isNull);
+        expect(subscription.cancelledDate, isNull);
+        expect(subscription.subscriptionSource, PLYSubscriptionSource.none);
+      },
+    );
   });
 
   // ---------------------------------------------------------------------------
@@ -354,34 +393,38 @@ void main() {
   // is; the runtime behaviour is the native SDKs'.
   // ---------------------------------------------------------------------------
 
-  group('review 1 — the failure message is carried verbatim on any platform',
-      () {
-    test('errorMessage is passed through unmodified and never logged by us',
-        () async {
-      const hint = 'Redemption link has expired. '
-          'A new link was sent to j***@example.com.';
-      final received = <PLYWebRedemptionResult>[];
-      messenger.setMockStreamHandler(
-        redemptionChannel,
-        MockStreamHandler.inline(onListen: (arguments, sink) {
-          sink.success(const <String, Object?>{
-            'isSuccess': false,
-            'context': null,
-            'replay': false,
-            'errorCode': 'EXPIRED_REDEMPTION_TOKEN',
-            'errorMessage': hint,
-          });
-        }),
-      );
+  group('review 1 — the failure message is carried verbatim on any platform', () {
+    test(
+      'errorMessage is passed through unmodified and never logged by us',
+      () async {
+        const hint =
+            'Redemption link has expired. '
+            'A new link was sent to j***@example.com.';
+        final received = <PLYWebRedemptionResult>[];
+        messenger.setMockStreamHandler(
+          redemptionChannel,
+          MockStreamHandler.inline(
+            onListen: (arguments, sink) {
+              sink.success(const <String, Object?>{
+                'isSuccess': false,
+                'context': null,
+                'replay': false,
+                'errorCode': 'EXPIRED_REDEMPTION_TOKEN',
+                'errorMessage': hint,
+              });
+            },
+          ),
+        );
 
-      Purchasely.addWebRedemptionListener(received.add);
-      await pumpEventQueue();
+        Purchasely.addWebRedemptionListener(received.add);
+        await pumpEventQueue();
 
-      // Verbatim: the bridge must not truncate or scrub the hint, because it is
-      // the only copy the app will ever see. Keeping it out of analytics is the
-      // integrator's job, and the docs state that unconditionally.
-      expect(received.single.errorMessage, hint);
-      expect(received.single.errorCode, 'EXPIRED_REDEMPTION_TOKEN');
-    });
+        // Verbatim: the bridge must not truncate or scrub the hint, because it is
+        // the only copy the app will ever see. Keeping it out of analytics is the
+        // integrator's job, and the docs state that unconditionally.
+        expect(received.single.errorMessage, hint);
+        expect(received.single.errorCode, 'EXPIRED_REDEMPTION_TOKEN');
+      },
+    );
   });
 }
