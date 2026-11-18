@@ -474,6 +474,15 @@ class SwiftPurchaselyFlutterPluginTests: XCTestCase {
         XCTAssertEqual(PLYEvent.redemptionFailed.name, "REDEMPTION_FAILED")
     }
 
+    func testExperimentEventsAndExposedExistOnTheNativeSdk() {
+        // The two 6.3.0 analytics events the Dart `PLYEventName` enum declares, and the
+        // `exposed()` call behind `PLYPresentation.exposed()`.
+        XCTAssertEqual(PLYEvent.experimentAssigned.name, "EXPERIMENT_ASSIGNED")
+        XCTAssertEqual(PLYEvent.experimentExposed.name, "EXPERIMENT_EXPOSED")
+        let exposed: (any PLYPresentation) -> () -> Void = { $0.exposed }
+        XCTAssertNotNil(exposed)
+    }
+
     // MARK: - Presentation builder factories (v6)
 
     func testPresentationBuilderFactories() {

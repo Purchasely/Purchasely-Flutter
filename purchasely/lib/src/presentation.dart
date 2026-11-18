@@ -60,6 +60,7 @@ abstract class PLYPresentationActions {
       PLYPresentation presentation, PLYTransition? transition);
   Future<void> close(PLYPresentation presentation);
   Future<void> back(PLYPresentation presentation);
+  Future<void> exposed(PLYPresentation presentation);
 }
 
 class _UninitialisedActions extends PLYPresentationActions {
@@ -72,6 +73,8 @@ class _UninitialisedActions extends PLYPresentationActions {
   Future<void> close(_) => throw _err();
   @override
   Future<void> back(_) => throw _err();
+  @override
+  Future<void> exposed(_) => throw _err();
 }
 
 /// A loaded presentation. Returned from `PLYPresentationRequest.preload()` and
@@ -221,6 +224,14 @@ class PLYPresentation {
   /// Navigate to the previous flow step or dismiss the current one
   /// (matches `back()` on Android).
   Future<void> back() => PLYPresentationActions.instance.back(this);
+
+  /// Tells Purchasely the app reached the moment it would have shown this
+  /// presentation: sends `EXPERIMENT_EXPOSED` for the experiment it serves, at
+  /// each call, and nothing when it serves none. Call it for a
+  /// [PLYPresentationType.deactivated] presentation (a campaign NONE arm) that
+  /// the app renders itself without calling [display]. Native SDKs ignore it
+  /// for any other type. Requires a presentation returned by `preload()`.
+  Future<void> exposed() => PLYPresentationActions.instance.exposed(this);
 }
 
 /// Convenience extension so a preload future can be chained directly to display:

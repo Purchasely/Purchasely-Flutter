@@ -919,7 +919,10 @@ class Purchasely {
       selectedOptions,
       displayedOptions,
       properties['web_checkout_provider'],
-    )..redemption = _redemptionFromMap(properties['redemption']);
+    )
+      ..redemption = _redemptionFromMap(properties['redemption'])
+      ..experiment_id = properties['experiment_id'] as String?
+      ..experiment_variant_id = properties['experiment_variant_id'] as String?;
   }
 
   /// Maps the `redemption` block of a `REDEMPTION_CONSUMED` /
@@ -1140,6 +1143,15 @@ enum PLYEventName {
   /// `properties.redemption?.error_code` and `properties.error_message`.
   REDEMPTION_FAILED,
 
+  /// The user was assigned to an arm of a campaign experiment. New in 6.3.0.
+  /// Read `properties.experiment_id` and `properties.experiment_variant_id`.
+  EXPERIMENT_ASSIGNED,
+
+  /// The user was exposed to the arm of a campaign experiment (a screen shown,
+  /// or a NONE arm at `display()` / `exposed()`). New in 6.3.0. Read
+  /// `properties.experiment_id` and `properties.experiment_variant_id`.
+  EXPERIMENT_EXPOSED,
+
   /// Sentinel for a native event name this enum doesn't (yet) declare a case
   /// for. Never silently misclassified as [APP_CONFIGURED] — see
   /// [_eventNameFromWire].
@@ -1259,6 +1271,13 @@ class PLYEventProperties {
   /// in 6.1.0. Assigned after construction, like [PLYPlan.commitmentInfo], so
   /// the positional constructor stays source-compatible.
   PLYEventPropertyRedemption? redemption;
+
+  /// Set on `EXPERIMENT_ASSIGNED` and `EXPERIMENT_EXPOSED`, null otherwise. New
+  /// in 6.3.0. Assigned after construction, like [redemption].
+  String? experiment_id;
+
+  /// The arm of [experiment_id] the user got. See [experiment_id].
+  String? experiment_variant_id;
 
   PLYEventProperties(
       this.sdk_version,

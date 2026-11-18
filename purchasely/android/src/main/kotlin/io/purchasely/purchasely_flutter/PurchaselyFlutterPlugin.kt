@@ -266,6 +266,7 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
                 result.safeSuccess(true)
             }
             "back" -> back(args, result)
+            "exposed" -> exposed(args, result)
             "clientPresentationDisplayed" -> {
                 clientPresentationDisplayed(args?.get("presentation") as? Map<*, *>)
                 result.safeSuccess(true)
@@ -844,6 +845,18 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
         val requestId = args?.get("requestId") as? String
         val loaded = requestId?.let { loadedPresentations[it] }
         loaded?.back()
+        result.safeSuccess(true)
+    }
+
+    /** Native `Loaded.exposed()` on the handle kept from the preload; a missing handle is an argument error. */
+    private fun exposed(args: Map<String, Any?>?, result: Result) {
+        val requestId = args?.get("requestId") as? String
+        val loaded = requestId?.let { loadedPresentations[it] }
+        if (loaded == null) {
+            result.safeError("ARG_INVALID", "exposed: no loaded presentation for this requestId, pass a presentation returned by preload()", null)
+            return
+        }
+        loaded.exposed()
         result.safeSuccess(true)
     }
 

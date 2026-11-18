@@ -857,6 +857,23 @@ try {
 | `deactivated` | No paywall for this placement |
 | `client` | Your own paywall (BYOS) |
 
+`display()` on a `deactivated` or `client` presentation shows nothing. The
+future resolves once with an outcome that carries the presentation, with no
+error and no purchase result. The native SDK still sends `EXPERIMENT_EXPOSED`
+for a `deactivated` presentation.
+
+If your app renders a `deactivated` presentation itself and does not call
+`display()`, call `exposed()` on the presentation returned by `preload()` when
+the user would have seen the screen (6.3.0). It sends `EXPERIMENT_EXPOSED` at
+each call.
+
+```dart
+final presentation = await request.preload();
+if (presentation.type == PLYPresentationType.deactivated) {
+  await presentation.exposed();
+}
+```
+
 ---
 
 ## Inline Presentations

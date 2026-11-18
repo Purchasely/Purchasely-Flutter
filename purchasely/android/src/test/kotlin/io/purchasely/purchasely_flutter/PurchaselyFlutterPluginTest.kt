@@ -8,6 +8,7 @@ import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding
 import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
+import io.purchasely.ext.presentation.PLYPresentationBase
 import io.mockk.MockKAnnotations
 import io.mockk.every
 import io.mockk.impl.annotations.MockK
@@ -730,6 +731,31 @@ class PurchaselyFlutterPluginTest {
 
         /** The thread name without the coroutine suffix that the debug agent appends. */
         fun threadName(): String = Thread.currentThread().name.substringBefore(" @")
+    }
+
+    // endregion
+
+    // region exposed (6.3.0)
+
+    @Test
+    fun `exposed without a loaded presentation returns an argument error`() {
+        plugin.onAttachedToEngine(mockFlutterPluginBinding)
+
+        plugin.onMethodCall(MethodCall("exposed", mapOf("requestId" to "missing")), mockResult)
+
+        verify { mockResult.error("ARG_INVALID", any(), null) }
+    }
+
+    @Test
+    fun `exposed calls the native handle kept from the preload`() {
+        val loaded = mockk<PLYPresentationBase.Loaded>(relaxed = true)
+        PurchaselyFlutterPlugin.loadedPresentations["req-1"] = loaded
+        plugin.onAttachedToEngine(mockFlutterPluginBinding)
+
+        plugin.onMethodCall(MethodCall("exposed", mapOf("requestId" to "req-1")), mockResult)
+
+        verify(exactly = 1) { loaded.exposed() }
+        verify { mockResult.success(true) }
     }
 
     // endregion

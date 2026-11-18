@@ -9,7 +9,7 @@
 //   - EventChannel  : `purchasely-presentation-events`  — events native → Dart
 //
 // MethodChannel verbs:
-//   start, preload, display, close, back,
+//   start, preload, display, close, back, exposed,
 //   registerInterceptor, removeInterceptor, removeAllInterceptors,
 //   interceptorResolve
 //
@@ -250,6 +250,13 @@ class PurchaselyBridge {
   Future<void> _back(PLYPresentation presentation) async {
     await _method.invokeMethod<dynamic>(
       'back',
+      <String, Object?>{'requestId': presentation.requestId},
+    );
+  }
+
+  Future<void> _exposed(PLYPresentation presentation) async {
+    await _method.invokeMethod<dynamic>(
+      'exposed',
       <String, Object?>{'requestId': presentation.requestId},
     );
   }
@@ -564,6 +571,10 @@ class _BridgePresentationActions extends PLYPresentationActions {
   @override
   Future<void> back(PLYPresentation presentation) =>
       _bridge._back(presentation);
+
+  @override
+  Future<void> exposed(PLYPresentation presentation) =>
+      _bridge._exposed(presentation);
 }
 
 class _BridgePresentationRequestActions extends PLYPresentationRequestActions {
@@ -596,6 +607,8 @@ class _UninitialisedPresentationActions extends PLYPresentationActions {
   Future<void> close(_) => throw _err();
   @override
   Future<void> back(_) => throw _err();
+  @override
+  Future<void> exposed(_) => throw _err();
 }
 
 class _UninitialisedRequestActions extends PLYPresentationRequestActions {

@@ -164,6 +164,8 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
             result(true)
         case "back":
             back(arguments, result: result)
+        case "exposed":
+            exposed(arguments, result: result)
         case "clientPresentationDisplayed":
             clientPresentationDisplayed(arguments)
             result(true)
@@ -662,6 +664,19 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
         if let id = requestId, let presentation = SwiftPurchaselyFlutterPlugin.loadedPresentations[id] {
             presentation.back()
         }
+        result(true)
+    }
+
+    /// Native `PLYPresentation.exposed()` on the handle kept from the preload; a missing handle is an argument error.
+    private func exposed(_ args: [String: Any]?, result: @escaping FlutterResult) {
+        guard let id = args?["requestId"] as? String,
+              let presentation = SwiftPurchaselyFlutterPlugin.loadedPresentations[id] else {
+            result(FlutterError(code: "ARG_INVALID",
+                                message: "exposed: no loaded presentation for this requestId, pass a presentation returned by preload()",
+                                details: nil))
+            return
+        }
+        presentation.exposed()
         result(true)
     }
 

@@ -1,6 +1,23 @@
 ## 6.3.0
 
 Native SDKs: iOS `Purchasely 6.3.0`, Android `io.purchasely:core 6.3.0`.
+
+### Added
+
+- Added `PLYPresentation.exposed()` (MOB-676). It tells Purchasely the app
+  reached the moment it would have shown a `PLYPresentationType.deactivated`
+  presentation (a campaign NONE arm) that it renders itself. It needs the
+  presentation returned by `preload()`; a missing handle raises a
+  `PlatformException` with code `ARG_INVALID`.
+- Added `PLYEventName.EXPERIMENT_ASSIGNED` and `PLYEventName.EXPERIMENT_EXPOSED`,
+  and `PLYEventProperties.experiment_id` / `experiment_variant_id` (MOB-676).
+
+### Changed
+
+- `display()` on a `deactivated` or `client` presentation shows nothing and
+  resolves once with an outcome that carries the presentation, no error and no
+  purchase result. The native SDK sends `EXPERIMENT_EXPOSED` from it (MOB-676).
+
 ## 6.2.0
 
 Native SDKs: iOS `Purchasely 6.2.0`, Android `io.purchasely:core 6.2.0`.

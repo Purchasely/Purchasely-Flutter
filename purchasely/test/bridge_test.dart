@@ -770,6 +770,83 @@ void main() {
       expect((backCall.arguments as Map)['requestId'], request.requestId);
     });
 
+    test('exposed() invokes the native verb with the requestId', () async {
+      final request = PLYPresentationBuilder.placement('home').build();
+      final presentation = await request.preload();
+      calls.clear();
+
+      await presentation.exposed();
+
+      final call = calls.single;
+      expect(call.method, 'exposed');
+      expect((call.arguments as Map)['requestId'], request.requestId);
+    });
+
+    test('exposed() surfaces the native argument error for a missing handle',
+        () async {
+      messenger.setMockMethodCallHandler(
+        const MethodChannel(methodChannelName),
+        (call) async {
+          if (call.method == 'exposed') {
+            throw PlatformException(code: 'ARG_INVALID', message: 'no handle');
+          }
+          return null;
+        },
+      );
+      final presentation = PLYPresentation(requestId: 'unknown');
+
+      await expectLater(
+        presentation.exposed(),
+        throwsA(isA<PlatformException>()
+            .having((e) => e.code, 'code', 'ARG_INVALID')),
+      );
+    });
+
+    for (final type in [
+      PLYPresentationType.deactivated,
+      PLYPresentationType.client,
+    ]) {
+      test(
+          'display() of a ${type.name} presentation still calls native '
+          'display and resolves once with the no-op outcome', () async {
+        final request = PLYPresentationBuilder.placement('home').build();
+        final presentation = PLYPresentation(
+            requestId: request.requestId, placementId: 'home', type: type);
+        calls.clear();
+
+        var resolved = 0;
+        final future = presentation.display().then((o) {
+          resolved++;
+          return o;
+        });
+        await Future<void>.delayed(Duration.zero);
+        expect(calls.map((c) => c.method).toList(), <String>['display']);
+
+        // Native acknowledges the dispatch and delivers a single empty
+        // dismissal: presentation set, no error, no purchase.
+        await emitEvent(<String, Object?>{
+          'event': 'onDismissed',
+          'requestId': request.requestId,
+          'outcome': <String, Object?>{
+            'presentation': <String, Object?>{
+              'screenId': 'screen_1',
+              'type': type.index,
+            },
+            'purchaseResult': null,
+            'closeReason': null,
+            'error': null,
+          },
+        });
+
+        final outcome = await future;
+        expect(resolved, 1);
+        expect(outcome.error, isNull);
+        expect(outcome.purchaseResult, isNull);
+        expect(outcome.closeReason, isNull);
+        expect(outcome.presentation?.type, type);
+      });
+    }
+
     test(
         'FuturePresentationDisplay sugar: preload().display() chains and '
         'resolves the outcome', () async {

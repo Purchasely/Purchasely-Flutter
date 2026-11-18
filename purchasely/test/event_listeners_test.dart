@@ -278,6 +278,57 @@ void main() {
     });
   });
 
+  group('experiment analytics events (6.3.0)', () {
+    for (final name in ['EXPERIMENT_ASSIGNED', 'EXPERIMENT_EXPOSED']) {
+      test('decodes $name with its experiment ids', () async {
+        emitOnListen(const EventChannel('purchasely-events'), [
+          {
+            'name': name,
+            'properties': {
+              'event_name': name,
+              'event_created_at': '2026-11-18T10:00:00Z',
+              'experiment_id': 'camp_1',
+              'experiment_variant_id': 'var_a',
+            },
+          },
+        ]);
+
+        final received = <PLYEvent>[];
+        Purchasely.listenToEvents(received.add);
+        await pumpEventQueue();
+
+        expect(received.single.name, PLYEventName.values.byName(name));
+        expect(received.single.properties.event_name,
+            PLYEventName.values.byName(name));
+        expect(received.single.properties.experiment_id, 'camp_1');
+        expect(received.single.properties.experiment_variant_id, 'var_a');
+
+        Purchasely.stopListeningToEvents();
+      });
+    }
+
+    test('an event without experiment ids reports null ids', () async {
+      emitOnListen(const EventChannel('purchasely-events'), [
+        {
+          'name': 'APP_STARTED',
+          'properties': {
+            'event_name': 'APP_STARTED',
+            'event_created_at': '2026-11-18T10:00:00Z',
+          },
+        },
+      ]);
+
+      final received = <PLYEvent>[];
+      Purchasely.listenToEvents(received.add);
+      await pumpEventQueue();
+
+      expect(received.single.properties.experiment_id, isNull);
+      expect(received.single.properties.experiment_variant_id, isNull);
+
+      Purchasely.stopListeningToEvents();
+    });
+  });
+
   group('redemption analytics events (6.1.0)', () {
     test('decodes REDEMPTION_CONSUMED with its redemption payload', () async {
       emitOnListen(const EventChannel('purchasely-events'), [
