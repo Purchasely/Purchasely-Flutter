@@ -50,7 +50,11 @@ class NativeViewDisposeTest {
         activity.setContentView(root)
         val presentation = mockk<PLYPresentationBase.Loaded>(relaxed = true)
         every { presentation.state } returns state
-        val inline = mockk<PLYPresentationView>(relaxed = true) { every { parent } returns null }
+        val inline = mockk<PLYPresentationView>(relaxed = true) {
+            every { parent } returns null
+            // The attached host measures its child: it needs FrameLayout params, not the relaxed default.
+            every { layoutParams } returns FrameLayout.LayoutParams(0, 0)
+        }
         every { presentation.buildView(any<Context>(), capture(callback)) } returns inline
         mockkObject(PurchaselyFlutterPlugin.Companion)
         every { PurchaselyFlutterPlugin.emitPresentationEvent(any()) } answers { events += firstArg<Map<String, Any?>>() }
