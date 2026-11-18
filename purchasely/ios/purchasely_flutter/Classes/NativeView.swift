@@ -153,8 +153,12 @@ class NativeView: NSObject, FlutterPlatformView {
     /// iOS SDK 6.3+ waits for an inline paywall to leave its parent before it sends
     /// `onDismissed`. Chain the close request so this view removes it; the Dart emit runs first.
     private func removeOnCloseRequest(_ presentation: PLYPresentation, controller: UIViewController) {
-        let previous = presentation.onCloseRequested
-        presentation.onCloseRequested = { [weak self, weak controller] in
+        presentation.onCloseRequested = closeRequestHandler(chaining: presentation.onCloseRequested, controller: controller)
+    }
+
+    /// Runs `previous` (the Dart emit) first, then removes `controller` one main-queue hop later.
+    func closeRequestHandler(chaining previous: (() -> Void)?, controller: UIViewController) -> () -> Void {
+        return { [weak self, weak controller] in
             previous?()
             // Async: SDK 6.2 calls this from inside its own dismissal.
             DispatchQueue.main.async { self?.closeRequested(for: controller) }
