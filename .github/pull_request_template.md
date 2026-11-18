@@ -1,61 +1,82 @@
-## Description
+<!--
+Write for a reviewer who does not know the code path. Leave out a section that has nothing to say,
+except Tier, Integrator impact and Mitigation after release (REVIEW.md, section 4).
+Add a mermaid diagram when a flow or a race is easier to see than to read.
+Example: Purchasely/Purchasely-Android-Sources#1906.
+-->
 
-<!-- Provide a brief description of the changes in this PR -->
+## What
 
-## Type of Change
+<!--
+One table of the changes the reviewer must know: the call, class or file; when it runs; before; after.
+Then "Also in this PR:" with one line for each smaller change (a test fixture, a doc, a rule).
+-->
 
-<!-- Mark the relevant option with an 'x' -->
+## Why
 
-- [ ] 🐛 Bug fix (non-breaking change which fixes an issue)
-- [ ] ✨ New feature (non-breaking change which adds functionality)
-- [ ] 💥 Breaking change (fix or feature that would cause existing functionality to not work as expected)
-- [ ] 📦 SDK Version Update (updating native SDK dependencies)
-- [ ] 📚 Documentation update
-- [ ] 🔧 Configuration/CI change
+<!--
+"The problem in two sentences": what goes wrong, and for whom.
+Then the evidence: a client case, ANR or crash counts, or the exact code path at a SHA.
+Say what the PR does not claim (for example: no measured ANR reduction).
+-->
 
-## SDK Version Update Checklist
+## Tier
 
-<!-- Complete this section if updating SDK versions -->
+<!-- T0, T1, T2 or T3: the row of the REVIEW.md matrix that sets it, and the evidence. -->
 
-- [ ] Updated `VERSIONS.md` with new version entry
-- [ ] Updated `purchasely/pubspec.yaml` version
-- [ ] Updated `purchasely/CHANGELOG.md` with changes
-- [ ] Updated iOS SDK version in `purchasely/ios/purchasely_flutter.podspec`
-- [ ] Updated Android SDK version in `purchasely/android/build.gradle`
-- [ ] Ran `flutter pub get` in `purchasely/`
-- [ ] Ran `pod update` in `purchasely/example/ios/`
-- [ ] Updated `purchasely_google/pubspec.yaml` version (if applicable)
-- [ ] Updated `purchasely_android_player/pubspec.yaml` version (if applicable)
+## Integrator impact
 
-## Testing
+<!-- What an integrating app sees or must do. Copy the "Impact for the application" line of the version note. "None" when apps see no difference. -->
 
-<!-- Describe the tests you ran -->
+## Mitigation after release
 
-- [ ] iOS example app builds successfully (`flutter build ios --simulator`)
-- [ ] Android example app builds successfully (`flutter build apk`)
-- [ ] Unit tests pass (`flutter test`)
-- [ ] Manually tested on iOS simulator/device
-- [ ] Manually tested on Android emulator/device
+<!-- Backend flag (REVIEW.md rule 5), hotfix release or workaround. "Not needed" for T0. -->
+
+## How it works
+
+<!--
+The design in short, for a change that is more than a few lines: the key code, a sequence or flow diagram,
+and why this approach and not the rejected one.
+-->
+
+## How to verify
+
+<!--
+1. The exact commands, in a bash block.
+2. One table: Test | What it proves | Red proof (the failure it gives on the old code).
+3. What ran locally, with counts. What did not run, and why.
+4. "Checklist for the reviewer": the 2 or 3 points that a reviewer must check.
+-->
+
+```bash
+
+```
+
+| Test | What it proves | Red proof |
+|---|---|---|
+|  |  |  |
+
+### Checklist for the reviewer
+
+- [ ]
+
+## Notes
+
+<!--
+"Review findings": one table for the findings of Greptile, Codex, Copilot and people.
+Outcome: "Fixed in <sha>", "Pushed back: <reason>", or "Follow-up: <ticket>".
+Then "Other decisions": scope limits, residual risks, the feature doc, the ticket.
+-->
+
+| # | Source | Finding | Outcome |
+|---|---|---|---|
+|  |  |  |  |
 
 ## Checklist
 
-- [ ] My code follows the project's style guidelines
-- [ ] I have performed a self-review of my own code
-- [ ] I have commented my code where necessary
-- [ ] I have updated the documentation accordingly
-- [ ] My changes generate no new warnings
-- [ ] All CI checks pass
-
-## Related Issues
-
-<!-- Link any related issues here -->
-
-Closes #
-
-## Screenshots/Videos (if applicable)
-
-<!-- Add screenshots or videos to help explain your changes -->
-
-## Additional Notes
-
-<!-- Any additional information that reviewers should know -->
+- [ ] The `minSdk = 23` line in `purchasely/example/android/app/build.gradle` (REVIEW.md, section 5).
+- [ ] For a native SDK version change: one version for the pins of each platform, and a new row in `VERSIONS.md`.
+- [ ] Screenshots for a UI change.
+- [ ] Issue links.
+- [ ] The `tier:T<n>` label of the **Tier** section.
+- [ ] The `run-ci` label after each push (REVIEW.md, section 5).
