@@ -483,6 +483,22 @@ class SwiftPurchaselyFlutterPluginTests: XCTestCase {
         XCTAssertNotNil(exposed)
     }
 
+    func testUserSubscriptionStatusBody() {
+        let sub: [String: Any] = ["purchaseToken": "t"]
+        let purchased = UserSubscriptionStatusHandler.body(isActive: true, reason: .purchased, subscription: sub)
+        XCTAssertEqual(purchased["reason"] as? String, "PURCHASED")
+        XCTAssertEqual(purchased["isActive"] as? Bool, true)
+        XCTAssertEqual((purchased["subscription"] as? [String: Any])?["purchaseToken"] as? String, "t")
+
+        let status = UserSubscriptionStatusHandler.body(isActive: false, reason: .none, subscription: nil)
+        XCTAssertTrue(status["reason"] is NSNull)
+        XCTAssertTrue(status["subscription"] is NSNull)
+
+        XCTAssertEqual(UserSubscriptionStatusHandler.body(isActive: true, reason: .webRedeemed, subscription: nil)["reason"] as? String, "WEB_REDEEMED")
+        XCTAssertEqual(UserSubscriptionStatusHandler.body(isActive: false, reason: .expired, subscription: nil)["reason"] as? String, "EXPIRED")
+        XCTAssertEqual(UserSubscriptionStatusHandler.body(isActive: true, reason: .restored, subscription: nil)["reason"] as? String, "RESTORED")
+    }
+
     // MARK: - Presentation builder factories (v6)
 
     func testPresentationBuilderFactories() {

@@ -72,6 +72,10 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
     private lateinit var userAttributeChannel: EventChannel
     private lateinit var presentationChannel: EventChannel
     private lateinit var webRedemptionChannel: EventChannel
+    private lateinit var userSubscriptionStatusChannel: EventChannel
+
+    /** The one native status listener while a Dart listener is attached, else null. */
+    private var userSubscriptionStatusListener: UserSubscriptionStatusListener? = null
 
     /**
      * The Dart-side `purchasely-web-redemption` sink, or null while no Dart listener is
@@ -106,6 +110,8 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
         // `activePresentationSink` is deliberately NOT cleared here: it is a companion-level
         // static shared with the inline NativeView, which outlives a single attachment.
         if (::webRedemptionChannel.isInitialized) webRedemptionChannel.setStreamHandler(null)
+        if (::userSubscriptionStatusChannel.isInitialized) userSubscriptionStatusChannel.setStreamHandler(null)
+        removeUserSubscriptionStatusListener()
         if (::eventChannel.isInitialized) eventChannel.setStreamHandler(null)
         if (::purchaseChannel.isInitialized) purchaseChannel.setStreamHandler(null)
         if (::userAttributeChannel.isInitialized) userAttributeChannel.setStreamHandler(null)
@@ -235,6 +241,30 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
                 webRedemptionSink = null
             }
         })
+
+        // 6.3.0 user subscription status. Its own native listener, not the single-slot
+        // `purchaseListener`: the SDK sends the current status on add, then every change.
+        userSubscriptionStatusChannel = EventChannel(flutterPluginBinding.binaryMessenger, USER_SUBSCRIPTION_STATUS_CHANNEL)
+        userSubscriptionStatusChannel.setStreamHandler(object : EventChannel.StreamHandler {
+            override fun onListen(arguments: Any?, events: EventChannel.EventSink?) {
+                removeUserSubscriptionStatusListener()
+                val listener = UserSubscriptionStatusListener { status ->
+                    val body = userSubscriptionStatusToMap(status)
+                    Handler(Looper.getMainLooper()).post { events?.success(body) }
+                }
+                userSubscriptionStatusListener = listener
+                Purchasely.addUserSubscriptionStatusListener(listener)
+            }
+
+            override fun onCancel(arguments: Any?) {
+                removeUserSubscriptionStatusListener()
+            }
+        })
+    }
+
+    private fun removeUserSubscriptionStatusListener() {
+        userSubscriptionStatusListener?.let { Purchasely.removeUserSubscriptionStatusListener(it) }
+        userSubscriptionStatusListener = null
     }
 
     /**
@@ -1598,6 +1628,7 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
     companion object {
         private const val PRESENTATION_EVENTS_CHANNEL = "purchasely-presentation-events"
         private const val WEB_REDEMPTION_CHANNEL = "purchasely-web-redemption"
+        private const val USER_SUBSCRIPTION_STATUS_CHANNEL = "purchasely-user-subscription-status"
 
         private lateinit var channel : MethodChannel
 
@@ -1700,6 +1731,13 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
         // invocation id (`ply_ic_<nanos>`) sent to Dart so `interceptorResolve`
         // can route to the right SDK completion.
         val pendingInterceptors = ConcurrentHashMap<String, (PLYInterceptResult) -> Unit>()
+
+        /** `{isActive, reason (enum name or null), subscription (same map as userSubscriptions, or null)}`. */
+        internal fun userSubscriptionStatusToMap(status: PLYUserSubscriptionStatus): Map<String, Any?> = mapOf(
+            "isActive" to status.isActive,
+            "reason" to status.reason?.name,
+            "subscription" to status.subscription?.let { transformSubscriptionToMap(it) },
+        )
 
         /**
          * Maps one [PLYSubscriptionData] to the Dart `PLYSubscription` shape.

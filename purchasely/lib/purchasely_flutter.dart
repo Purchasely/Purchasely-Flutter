@@ -11,6 +11,11 @@ import 'src/ply_transformers.dart';
 import 'src/presentation.dart' show PLYPresentation, PLYPresentationType;
 import 'src/presentation_outcome.dart' show PLYPresentationOutcome;
 import 'src/purchasely_builder.dart' show PLYLogLevel, PurchaselyBuilder;
+import 'src/user_subscription_status.dart' as user_subscription_status
+    show
+        PLYUserSubscriptionStatusListener,
+        addUserSubscriptionStatusListener,
+        removeUserSubscriptionStatusListener;
 import 'src/web_redemption.dart' as web_redemption
     show
         PLYWebRedemptionListener,
@@ -35,6 +40,8 @@ export 'src/presentation_outcome.dart';
 export 'src/presentation_request.dart';
 export 'src/purchasely_builder.dart';
 export 'src/transition.dart';
+export 'src/user_subscription_status.dart'
+    show PLYUserSubscriptionStatus, PLYUserSubscriptionStatusReason;
 export 'src/web_redemption.dart'
     show
         PLYWebRedemptionContext,
@@ -497,12 +504,29 @@ class Purchasely {
   static void removeWebRedemptionListener() =>
       web_redemption.removeWebRedemptionListener();
 
+  /// Registers [block] for the user's subscription status, replacing any
+  /// listener already registered (6.3.0).
+  ///
+  /// The native SDK sends the current status first when it knows it (a status
+  /// call: [PLYUserSubscriptionStatus.reason] is `null`), then every change:
+  /// a subscription purchased, restored, redeemed from the web or expired.
+  /// Replaces [listenToPurchases].
+  static void addUserSubscriptionStatusListener(
+          user_subscription_status.PLYUserSubscriptionStatusListener block) =>
+      user_subscription_status.addUserSubscriptionStatusListener(block);
+
+  /// Removes the listener registered with [addUserSubscriptionStatusListener].
+  static void removeUserSubscriptionStatusListener() =>
+      user_subscription_status.removeUserSubscriptionStatusListener();
+
+  @Deprecated('Use addUserSubscriptionStatusListener')
   static void listenToPurchases(Function block) {
     purchases = _purchases.receiveBroadcastStream().listen((event) {
       block(event);
     });
   }
 
+  @Deprecated('Use addUserSubscriptionStatusListener')
   static void stopListeningToPurchases() {
     purchases?.cancel();
   }

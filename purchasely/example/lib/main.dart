@@ -44,6 +44,13 @@ class _MyAppState extends State<MyApp> {
     }
   }
 
+  /// 6.3.0. Subscription status: the current one first, then every change.
+  void _onUserSubscriptionStatus(PLYUserSubscriptionStatus status) {
+    print('User subscription status: isActive=${status.isActive} '
+        'reason=${status.reason} '
+        'plan=${status.subscription?.plan?.vendorId}');
+  }
+
   // Platform messages are asynchronous, so we initialize in an async method.
   Future<void> initPurchaselySdk() async {
     try {
@@ -52,6 +59,8 @@ class _MyAppState extends State<MyApp> {
         print('Event properties : ${event.properties.event_name}');
         inspect(event);
       });*/
+
+      Purchasely.addUserSubscriptionStatusListener(_onUserSubscriptionStatus);
 
       bool configured =
           await Purchasely.apiKey('fcb39be4-2ba4-4db7-bde3-2a5a1e20745d')

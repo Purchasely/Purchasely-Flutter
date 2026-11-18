@@ -26,6 +26,8 @@ import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
+import io.purchasely.ext.PLYUserSubscriptionStatus
+import io.purchasely.ext.PLYUserSubscriptionStatusReason
 import io.purchasely.ext.Purchasely
 import io.purchasely.ext.DistributionType
 import io.purchasely.ext.PLYSubscriptionStatus
@@ -756,6 +758,31 @@ class PurchaselyFlutterPluginTest {
 
         verify(exactly = 1) { loaded.exposed() }
         verify { mockResult.success(true) }
+    }
+
+    // region user subscription status (6.3.0)
+
+    @Test
+    fun `userSubscriptionStatusToMap maps reason by name and reuses the subscription map`() {
+        val data = stubbedSubscriptionData(StoreType.GOOGLE_PLAY_STORE)
+        val map = PurchaselyFlutterPlugin.userSubscriptionStatusToMap(
+            PLYUserSubscriptionStatus(true, PLYUserSubscriptionStatusReason.WEB_REDEEMED, data)
+        )
+
+        assertEquals(true, map["isActive"])
+        assertEquals("WEB_REDEEMED", map["reason"])
+        assertEquals(PurchaselyFlutterPlugin.transformSubscriptionToMap(data), map["subscription"])
+    }
+
+    @Test
+    fun `userSubscriptionStatusToMap keeps a status call with null reason and subscription`() {
+        val map = PurchaselyFlutterPlugin.userSubscriptionStatusToMap(
+            PLYUserSubscriptionStatus(false, null, null)
+        )
+
+        assertEquals(false, map["isActive"])
+        assertTrue(map.containsKey("reason") && map["reason"] == null)
+        assertTrue(map.containsKey("subscription") && map["subscription"] == null)
     }
 
     // endregion

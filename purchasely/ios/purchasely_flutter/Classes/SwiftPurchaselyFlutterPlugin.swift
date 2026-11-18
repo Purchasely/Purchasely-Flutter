@@ -52,6 +52,10 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
     let userAttributesChannel: FlutterEventChannel
     let userAttributesHandler: UserAttributesHandler
 
+    // 6.3.0 user subscription status. A stored property: the SDK holds its delegate weakly.
+    let userSubscriptionStatusChannel: FlutterEventChannel
+    let userSubscriptionStatusHandler: UserSubscriptionStatusHandler
+
     // Web2App redemption outcomes (6.1.0). Held as a stored property, not a local
     // in `start`: `PurchaselyBuilder` retains the delegate only until it is applied,
     // and the SDK then keeps a weak reference — a local would be released and the
@@ -91,6 +95,11 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
                                                       binaryMessenger: registrar.messenger())
         self.userAttributesHandler = UserAttributesHandler()
         self.userAttributesChannel.setStreamHandler(self.userAttributesHandler)
+
+        self.userSubscriptionStatusChannel = FlutterEventChannel(name: "purchasely-user-subscription-status",
+                                                                 binaryMessenger: registrar.messenger())
+        self.userSubscriptionStatusHandler = UserSubscriptionStatusHandler()
+        self.userSubscriptionStatusChannel.setStreamHandler(self.userSubscriptionStatusHandler)
 
         self.webRedemptionChannel = FlutterEventChannel(name: "purchasely-web-redemption",
                                                         binaryMessenger: registrar.messenger())
@@ -1751,6 +1760,55 @@ class SwiftPurchaseHandler: NSObject, FlutterStreamHandler {
         self.eventSink?(nil)
     }
 
+}
+
+/// Bridges `PLYUserSubscriptionStatusDelegate` to the `purchasely-user-subscription-status`
+/// channel. One native delegate while Dart listens: added on listen, removed on cancel. The
+/// plugin holds this object strongly because the SDK holds its delegate weakly.
+class UserSubscriptionStatusHandler: NSObject, FlutterStreamHandler, PLYUserSubscriptionStatusDelegate {
+
+    var eventSink: FlutterEventSink?
+
+    func onListen(withArguments arguments: Any?, eventSink events: @escaping FlutterEventSink) -> FlutterError? {
+        self.eventSink = events
+        Purchasely.addUserSubscriptionStatusDelegate(self)
+        return nil
+    }
+
+    func onCancel(withArguments arguments: Any?) -> FlutterError? {
+        Purchasely.removeUserSubscriptionStatusDelegate(self)
+        self.eventSink = nil
+        return nil
+    }
+
+    /// The SDK calls this on the main thread.
+    func userSubscriptionStatusUpdated(_ status: PLYUserSubscriptionStatus) {
+        let body = Self.body(isActive: status.isActive,
+                             reason: status.reason,
+                             subscription: status.subscription?.toMap)
+        if Thread.isMainThread {
+            eventSink?(body)
+        } else {
+            DispatchQueue.main.async { [weak self] in self?.eventSink?(body) }
+        }
+    }
+
+    /// Destructured fields so a test can drive it without the native type (its init is internal).
+    /// `.none` (a status call) and a missing subscription become NSNull; the same three keys on every branch.
+    static func body(isActive: Bool,
+                     reason: PLYUserSubscriptionStatusReason,
+                     subscription: [String: Any]?) -> [String: Any] {
+        let wire: Any
+        switch reason {
+        case .none: wire = NSNull()
+        case .purchased: wire = "PURCHASED"
+        case .restored: wire = "RESTORED"
+        case .expired: wire = "EXPIRED"
+        case .webRedeemed: wire = "WEB_REDEEMED"
+        @unknown default: wire = NSNull()
+        }
+        return ["isActive": isActive, "reason": wire, "subscription": subscription ?? NSNull()]
+    }
 }
 
 /// Bridges `PLYWebRedemptionDelegate` to the `purchasely-web-redemption` channel.
