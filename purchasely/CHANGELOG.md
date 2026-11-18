@@ -12,6 +12,18 @@ Native SDKs: iOS `Purchasely 6.3.0`, Android `io.purchasely:core 6.3.0`.
 - Added `PLYEventName.EXPERIMENT_ASSIGNED` and `PLYEventName.EXPERIMENT_EXPOSED`,
   and `PLYEventProperties.experiment_id` / `experiment_variant_id` (MOB-676).
 
+- Added `Purchasely.addUserSubscriptionStatusListener` and
+  `removeUserSubscriptionStatusListener` (MOB-647). The callback receives a
+  `PLYUserSubscriptionStatus` with `isActive`, `reason`
+  (`purchased`, `restored`, `expired`, `webRedeemed`, or `null` for a status
+  call) and `subscription` (the `userSubscriptions()` type, or `null`). The
+  native SDK sends the current status first, then every change.
+
+### Deprecated
+
+- `Purchasely.listenToPurchases` and `stopListeningToPurchases`. Use
+  `addUserSubscriptionStatusListener`.
+
 ### Changed
 
 - `display()` on a `deactivated` or `client` presentation shows nothing and
