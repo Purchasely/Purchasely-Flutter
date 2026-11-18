@@ -1,3 +1,6 @@
+## 6.3.0
+
+Native SDKs: iOS `Purchasely 6.3.0`, Android `io.purchasely:core 6.3.0`.
 ## 6.2.0
 
 Native SDKs: iOS `Purchasely 6.2.0`, Android `io.purchasely:core 6.2.0`.

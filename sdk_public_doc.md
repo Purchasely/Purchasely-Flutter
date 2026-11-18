@@ -51,7 +51,7 @@ Add the Purchasely Flutter SDK to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  purchasely_flutter: 6.2.0
+  purchasely_flutter: 6.3.0
 ```
 
 Then run:
@@ -73,8 +73,8 @@ Google Play Billing extension:
 
 ```yaml
 dependencies:
-  purchasely_flutter: 6.2.0
-  purchasely_google: 6.2.0
+  purchasely_flutter: 6.3.0
+  purchasely_google: 6.3.0
 ```
 
 #### Video Player (Required for Video Paywalls)
@@ -83,14 +83,14 @@ If your presentations contain videos, add the Android video player extension:
 
 ```yaml
 dependencies:
-  purchasely_android_player: 6.2.0
+  purchasely_android_player: 6.3.0
 ```
 
 > ⚠️ **All Purchasely packages must be at the exact same version.** Mismatched
 > versions will cause runtime errors or unexpected behavior.
 
 > **Native dependency.** This release targets the Purchasely 6.2 native SDKs
-> (iOS `Purchasely 6.2.0`, Android `io.purchasely:core 6.2.0`), published on the
+> (iOS `Purchasely 6.3.0`, Android `io.purchasely:core 6.3.0`), published on the
 > CocoaPods trunk and Maven Central — so the project builds from the public
 > repositories.
 

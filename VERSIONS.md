@@ -56,3 +56,4 @@ This file provides the underlying native SDK versions that the Flutter SDK relie
 | 6.1.0   | 6.1.0       | 6.1.0           |
 | 6.1.1   | 6.1.2       | 6.1.1           |
 | 6.2.0   | 6.2.0       | 6.2.0           |
+| 6.3.0   | 6.3.0       | 6.3.0           |
