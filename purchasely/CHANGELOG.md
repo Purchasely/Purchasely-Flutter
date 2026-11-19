@@ -30,6 +30,7 @@ Full changelog available at https://docs.purchasely.com/changelog/63-subscriptio
 
 ### Changed
 
+- Android: `restoreAllProducts` and `silentRestoreAllProducts` now throw a `PlatformException` (`BillingUnavailable`) when Google Play billing is unavailable (no Google account, old Play services). 6.2.0 returned `false`. This comes from the native Android 6.3.0 (#1938). Catch the exception before you upgrade.
 - `display()` on a `deactivated` or `client` presentation shows nothing and
   resolves once with an outcome that carries the presentation, no error and no
   purchase result. The native SDK sends `EXPERIMENT_EXPOSED` from it (MOB-676).
