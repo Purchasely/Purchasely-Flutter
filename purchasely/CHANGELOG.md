@@ -2,6 +2,8 @@
 
 Native SDKs: iOS `Purchasely 6.3.0`, Android `io.purchasely:core 6.3.0`.
 
+Full changelog available at https://docs.purchasely.com/changelog/63-subscription-status-listener.
+
 ### Added
 
 - Added `PLYPresentation.exposed()` (MOB-676). It tells Purchasely the app
