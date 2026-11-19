@@ -804,11 +804,10 @@ class Purchasely {
   /// Replaces the persisted set of revoked purposes; it does not merge.
   ///
   /// Pass the complete list every time. Passing `[]` grants everything back.
-  /// On iOS, `allNonEssentials` is analytics, campaigns, personalization, and
-  /// thirdPartyIntegrations, and supportInvestigation; it excludes
-  /// identifiedAnalytics and refundHandling, which must be added explicitly
-  /// when needed. On Android, `allNonEssentials` includes identifiedAnalytics
-  /// and supportInvestigation, and refundHandling is ignored.
+  /// On both platforms, `allNonEssentials` is analytics, identifiedAnalytics,
+  /// campaigns, personalization, thirdPartyIntegrations and
+  /// supportInvestigation. It excludes refundHandling (iOS only, ignored on
+  /// Android), which must be added explicitly when needed.
   static void revokeDataProcessingConsent(
       List<PLYDataProcessingPurpose> purposes) {
     List<String> mappedPurposes = purposes
