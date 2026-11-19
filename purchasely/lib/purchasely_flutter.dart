@@ -519,14 +519,16 @@ class Purchasely {
   static void removeUserSubscriptionStatusListener() =>
       user_subscription_status.removeUserSubscriptionStatusListener();
 
-  @Deprecated('Use addUserSubscriptionStatusListener')
+  @Deprecated('Use addUserSubscriptionStatusListener for subscriptions. '
+      'For a non-consumable purchase, read the purchase result of the display() outcome.')
   static void listenToPurchases(Function block) {
     purchases = _purchases.receiveBroadcastStream().listen((event) {
       block(event);
     });
   }
 
-  @Deprecated('Use addUserSubscriptionStatusListener')
+  @Deprecated('Use addUserSubscriptionStatusListener for subscriptions. '
+      'For a non-consumable purchase, read the purchase result of the display() outcome.')
   static void stopListeningToPurchases() {
     purchases?.cancel();
   }
