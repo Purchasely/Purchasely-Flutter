@@ -50,15 +50,11 @@ class NativeView: NSObject, FlutterPlatformView {
         }
 
         if let controller = _controller {
-            let childView = controller.view!
-            childView.frame = _containerView.bounds
-            childView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-            _containerView.addSubview(childView)
+            attachController(controller, to: NativeView.findRootViewController())
 
-            // Attach the controller to the nearest parent VC for proper lifecycle
-            if let rootVC = NativeView.findRootViewController() {
-                rootVC.addChild(controller)
-                controller.didMove(toParent: rootVC)
+            if let requestId = _requestId,
+               let presentation = SwiftPurchaselyFlutterPlugin.loadedPresentations[requestId] {
+                removeOnCloseRequest(presentation, controller: controller)
             }
 
             // The native SDK fires no `onPresented` for an embedded controller —
@@ -139,6 +135,41 @@ class NativeView: NSObject, FlutterPlatformView {
             ) as Any?,
         ])
         SwiftPurchaselyFlutterPlugin.loadedPresentations.removeValue(forKey: requestId)
+    }
+
+    /// Shows the controller in the container and declares it a child of `parent` (for its lifecycle).
+    func attachController(_ controller: UIViewController, to parent: UIViewController?) {
+        _controller = controller
+        let childView = controller.view!
+        childView.frame = _containerView.bounds
+        childView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        _containerView.addSubview(childView)
+        if let parent = parent {
+            parent.addChild(controller)
+            controller.didMove(toParent: parent)
+        }
+    }
+
+    /// iOS SDK 6.3+ waits for an inline paywall to leave its parent before it sends
+    /// `onDismissed`. Chain the close request so this view removes it; the Dart emit runs first.
+    private func removeOnCloseRequest(_ presentation: PLYPresentation, controller: UIViewController) {
+        presentation.onCloseRequested = closeRequestHandler(chaining: presentation.onCloseRequested, controller: controller)
+    }
+
+    /// Runs `previous` (the Dart emit) first, then removes `controller` one main-queue hop later.
+    func closeRequestHandler(chaining previous: (() -> Void)?, controller: UIViewController) -> () -> Void {
+        return { [weak self, weak controller] in
+            previous?()
+            // Async: SDK 6.2 calls this from inside its own dismissal.
+            DispatchQueue.main.async { self?.closeRequested(for: controller) }
+        }
+    }
+
+    /// Removes the paywall only if it is still the one this view shows.
+    /// shortcut: without a root view controller there is no containment, so the SDK keeps the outcome; such hosts are not supported for inline close.
+    func closeRequested(for controller: UIViewController?) {
+        guard let controller = controller, _controller === controller else { return }
+        cleanupController()
     }
 
     private func cleanupController() {

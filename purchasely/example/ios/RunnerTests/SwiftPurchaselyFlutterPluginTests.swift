@@ -570,3 +570,51 @@ class SwiftPurchaselyFlutterPluginTests: XCTestCase {
         XCTAssertNil(SwiftPurchaselyFlutterPlugin.requestContentIds[key])
     }
 }
+
+// iOS SDK 6.3+ sends an inline `onDismissed` only after the controller leaves its parent.
+class NativeViewCloseRequestTests: XCTestCase {
+
+    func testCloseRequestRemovesTheShownControllerFromItsParent() {
+        let view = NativeView(frame: .zero, viewIdentifier: 0, arguments: nil)
+        let root = UIViewController()
+        let embedded = UIViewController()
+        view.attachController(embedded, to: root)
+        XCTAssertTrue(embedded.parent === root, "Precondition: containment declared")
+
+        view.closeRequested(for: embedded)
+
+        XCTAssertNil(embedded.parent, "The SDK completes an inline close only after removeFromParent()")
+        XCTAssertNil(embedded.viewIfLoaded?.superview)
+    }
+
+    func testCloseRequestHandlerRunsThePreviousHandlerFirstThenRemovesTheController() {
+        let view = NativeView(frame: .zero, viewIdentifier: 0, arguments: nil)
+        let root = UIViewController()
+        let embedded = UIViewController()
+        view.attachController(embedded, to: root)
+        var attachedDuringPrevious: Bool?
+
+        let handler = view.closeRequestHandler(
+            chaining: { attachedDuringPrevious = embedded.parent === root }, controller: embedded)
+        handler()
+
+        XCTAssertEqual(attachedDuringPrevious, true, "The Dart onCloseRequested emit runs first, with the paywall still attached")
+        XCTAssertTrue(embedded.parent === root, "The removal waits one main-queue hop (SDK 6.2 calls from inside its dismissal)")
+        let hop = expectation(description: "main-queue hop")
+        DispatchQueue.main.async { hop.fulfill() }
+        wait(for: [hop], timeout: 1)
+        XCTAssertNil(embedded.parent, "The SDK completes an inline close only after removeFromParent()")
+    }
+
+    func testCloseRequestForAReplacedControllerIsIgnored() {
+        let view = NativeView(frame: .zero, viewIdentifier: 0, arguments: nil)
+        let root = UIViewController()
+        let current = UIViewController()
+        view.attachController(current, to: root)
+
+        view.closeRequested(for: UIViewController())
+
+        XCTAssertTrue(current.parent === root, "A late close request of an old paywall must not remove the new one")
+        XCTAssertTrue(current.view.superview === view.view())
+    }
+}
