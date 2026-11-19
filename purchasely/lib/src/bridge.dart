@@ -69,6 +69,7 @@ class PurchaselyBridge {
     final bridge = _instance!;
     if (!_wired) {
       PLYPresentationActions.instance = _BridgePresentationActions(bridge);
+      PLYPresentationActions.exposedCall = bridge._exposed;
       PLYPresentationRequestActions.instance =
           _BridgePresentationRequestActions(bridge);
       bridge._listenEvents();
@@ -83,6 +84,7 @@ class PurchaselyBridge {
     _instance = null;
     _wired = false;
     PLYPresentationActions.instance = _uninitialisedPresentation;
+    PLYPresentationActions.exposedCall = _uninitialisedExposed;
     PLYPresentationRequestActions.instance = _uninitialisedRequest;
   }
 
@@ -571,10 +573,6 @@ class _BridgePresentationActions extends PLYPresentationActions {
   @override
   Future<void> back(PLYPresentation presentation) =>
       _bridge._back(presentation);
-
-  @override
-  Future<void> exposed(PLYPresentation presentation) =>
-      _bridge._exposed(presentation);
 }
 
 class _BridgePresentationRequestActions extends PLYPresentationRequestActions {
@@ -593,6 +591,9 @@ class _BridgePresentationRequestActions extends PLYPresentationRequestActions {
 
 // --- Sentinels reused by `debugReset` -------------------------------------
 
+Future<void> _uninitialisedExposed(PLYPresentation _) => throw StateError(
+    'Purchasely bridge not initialised — call any presentation entry point first.');
+
 final PLYPresentationActions _uninitialisedPresentation =
     _UninitialisedPresentationActions();
 final PLYPresentationRequestActions _uninitialisedRequest =
@@ -607,8 +608,6 @@ class _UninitialisedPresentationActions extends PLYPresentationActions {
   Future<void> close(_) => throw _err();
   @override
   Future<void> back(_) => throw _err();
-  @override
-  Future<void> exposed(_) => throw _err();
 }
 
 class _UninitialisedRequestActions extends PLYPresentationRequestActions {
