@@ -155,9 +155,14 @@ void main() {
         debugPrint('S7 Android → restoreAllProducts TimeoutException after '
             '${restoreSw.elapsedMilliseconds}ms (clean bounded failure, as '
             'documented on restoreAllProducts)');
+      } on PlatformException catch (e) {
+        // Native Android 6.3.0 (#1938) reports BillingUnavailable to onError instead of false.
+        restoreHandledCleanly = true;
+        debugPrint('S7 Android → restoreAllProducts PlatformException(${e.code}): '
+            '${e.message} after ${restoreSw.elapsedMilliseconds}ms');
       }
       expect(restoreHandledCleanly, isTrue,
-          reason: 'restoreAllProducts must return false or throw '
+          reason: 'restoreAllProducts must return false, throw PlatformException or '
               'TimeoutException — never hang past the 15s bound');
       expect(restoreSw.elapsed, lessThan(const Duration(seconds: 20)),
           reason: 'restoreAllProducts must fast-fail, not stall near/above '
