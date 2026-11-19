@@ -37,7 +37,8 @@ FLUTTER_LOG="$LOGS/storekit_ios_flutter.log"
 flutter pub get
 flutter build ios --config-only --simulator \
   integration_test/purchase_restore_ios_test.dart
-(cd ios && pod install)
+# No Podfile means the SwiftPM path (the CI default); pod install only for CocoaPods.
+if [ -f ios/Podfile ]; then (cd ios && pod install); fi
 
 xcrun simctl terminate "$UDID" com.purchasely.demo >/dev/null 2>&1
 
