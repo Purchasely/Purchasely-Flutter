@@ -157,6 +157,8 @@ void main() {
             'documented on restoreAllProducts)');
       } on PlatformException catch (e) {
         // Native Android 6.3.0 (#1938) reports BillingUnavailable to onError instead of false.
+        // Any other restore error must still fail the test.
+        if (!e.toString().contains('BillingUnavailable')) rethrow;
         restoreHandledCleanly = true;
         debugPrint(
             'S7 Android → restoreAllProducts PlatformException(${e.code}): '
