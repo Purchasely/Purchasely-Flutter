@@ -18,6 +18,8 @@ Native SDKs: iOS `Purchasely 6.3.0`, Android `io.purchasely:core 6.3.0`.
   (`purchased`, `restored`, `expired`, `webRedeemed`, or `null` for a status
   call) and `subscription` (the `userSubscriptions()` type, or `null`). The
   native SDK sends the current status first, then every change.
+- Added `PLYDataProcessingPurpose.supportInvestigation` (iOS and Android 6.3.0).
+  `allNonEssentials` now includes it natively.
 
 ### Deprecated
 

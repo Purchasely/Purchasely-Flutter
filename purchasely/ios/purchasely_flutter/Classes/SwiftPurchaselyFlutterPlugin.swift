@@ -1639,6 +1639,7 @@ public class SwiftPurchaselyFlutterPlugin: NSObject, FlutterPlugin {
                 case "PERSONALIZATION": .personalization
                 case "THIRD_PARTY_INTEGRATIONS": .thirdPartyIntegrations
                 case "REFUND_HANDLING": .refundHandling
+                case "SUPPORT_INVESTIGATION": .supportInvestigation
                 default: nil
             }
         })

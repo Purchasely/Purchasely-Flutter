@@ -537,6 +537,14 @@ void main() {
       expect(methodCalls.first.arguments['purposes'], ['REFUND_HANDLING']);
     });
 
+    test('revokeDataProcessingConsent maps supportInvestigation', () {
+      Purchasely.revokeDataProcessingConsent(
+          [PLYDataProcessingPurpose.supportInvestigation]);
+
+      expect(
+          methodCalls.first.arguments['purposes'], ['SUPPORT_INVESTIGATION']);
+    });
+
     test('revokeDataProcessingConsent preserves combined purposes', () {
       Purchasely.revokeDataProcessingConsent([
         PLYDataProcessingPurpose.allNonEssentials,
@@ -904,6 +912,10 @@ void main() {
           Purchasely.mapDataProcessingPurposeToString(
               PLYDataProcessingPurpose.refundHandling),
           'REFUND_HANDLING');
+      expect(
+          Purchasely.mapDataProcessingPurposeToString(
+              PLYDataProcessingPurpose.supportInvestigation),
+          'SUPPORT_INVESTIGATION');
     });
   });
 
@@ -1267,6 +1279,7 @@ void main() {
       expect(PLYDataProcessingPurpose.personalization.index, 4);
       expect(PLYDataProcessingPurpose.thirdPartyIntegrations.index, 5);
       expect(PLYDataProcessingPurpose.refundHandling.index, 6);
+      expect(PLYDataProcessingPurpose.supportInvestigation.index, 7);
     });
 
     test('PLYUserAttributeSource has correct values', () {

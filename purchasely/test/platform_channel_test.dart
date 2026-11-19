@@ -750,6 +750,7 @@ void main() {
       expect(PLYDataProcessingPurpose.personalization.index, 4);
       expect(PLYDataProcessingPurpose.thirdPartyIntegrations.index, 5);
       expect(PLYDataProcessingPurpose.refundHandling.index, 6);
+      expect(PLYDataProcessingPurpose.supportInvestigation.index, 7);
     });
   });
 

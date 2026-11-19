@@ -805,9 +805,10 @@ class Purchasely {
   ///
   /// Pass the complete list every time. Passing `[]` grants everything back.
   /// On iOS, `allNonEssentials` is analytics, campaigns, personalization, and
-  /// thirdPartyIntegrations; it excludes identifiedAnalytics and refundHandling,
-  /// which must be added explicitly when needed. On Android, `allNonEssentials`
-  /// includes identifiedAnalytics, and refundHandling is ignored.
+  /// thirdPartyIntegrations, and supportInvestigation; it excludes
+  /// identifiedAnalytics and refundHandling, which must be added explicitly
+  /// when needed. On Android, `allNonEssentials` includes identifiedAnalytics
+  /// and supportInvestigation, and refundHandling is ignored.
   static void revokeDataProcessingConsent(
       List<PLYDataProcessingPurpose> purposes) {
     List<String> mappedPurposes = purposes
@@ -1022,6 +1023,8 @@ class Purchasely {
         return "THIRD_PARTY_INTEGRATIONS";
       case PLYDataProcessingPurpose.refundHandling:
         return "REFUND_HANDLING";
+      case PLYDataProcessingPurpose.supportInvestigation:
+        return "SUPPORT_INVESTIGATION";
     }
   }
 }
@@ -1092,7 +1095,12 @@ enum PLYDataProcessingPurpose {
   /// revoked-consent flag as `refund-handling` in the
   /// `X-PRIVACY-CONSENT-REVOKED-FEATURES` header for refusal of consumption
   /// data processing attached to a refund request. Gates no SDK behaviour.
-  refundHandling
+  refundHandling,
+
+  /// Purchasely iOS and Android >= 6.3.0. Processing of the data that Purchasely
+  /// support uses to investigate an issue reported by the user. Part of
+  /// `allNonEssentials`.
+  supportInvestigation
 }
 
 enum PLYThemeMode { light, dark, system }

@@ -1546,6 +1546,7 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
                 "PERSONALIZATION" -> PLYDataProcessingPurpose.Personalization
                 "THIRD_PARTY_INTEGRATIONS" -> PLYDataProcessingPurpose.ThirdPartyIntegrations
                 "ALL_NON_ESSENTIALS" -> PLYDataProcessingPurpose.AllNonEssentials
+                "SUPPORT_INVESTIGATION" -> PLYDataProcessingPurpose.SupportInvestigation
                 else -> null // Ignore any unrecognized strings
             }
         }.toSet()

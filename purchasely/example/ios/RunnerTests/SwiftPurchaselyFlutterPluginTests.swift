@@ -73,6 +73,12 @@ class SwiftPurchaselyFlutterPluginTests: XCTestCase {
             expected)
     }
 
+    func testConsentMappingKeepsSupportInvestigation() {
+        XCTAssertEqual(
+            SwiftPurchaselyFlutterPlugin.dataProcessingPurposes(from: ["SUPPORT_INVESTIGATION"]),
+            [.supportInvestigation])
+    }
+
     func testConsentMappingOfAnEmptyListIsEmpty() {
         XCTAssertTrue(SwiftPurchaselyFlutterPlugin.dataProcessingPurposes(from: []).isEmpty)
     }
