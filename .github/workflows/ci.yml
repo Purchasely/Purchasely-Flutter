@@ -209,9 +209,10 @@ jobs:
           rm -rf Pods Podfile Podfile.lock
           sed -i '' '/Pods\/Target Support Files\/Pods-Runner\/Pods-Runner\..*\.xcconfig/d' Flutter/Debug.xcconfig Flutter/Release.xcconfig
 
+      # A full build, not --config-only: Flutter 3.24 adds the SwiftPM integration only on a build.
       - name: Add the plugin package to the Runner project
         working-directory: purchasely/example
-        run: flutter build ios --config-only --simulator --no-codesign
+        run: flutter build ios --debug --simulator --no-codesign
 
       # RunnerTests is hostless, so it needs the plugin package in its own link phase.
       - name: Link the plugin package into RunnerTests

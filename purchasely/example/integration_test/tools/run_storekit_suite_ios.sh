@@ -38,7 +38,12 @@ flutter pub get
 flutter build ios --config-only --simulator \
   integration_test/purchase_restore_ios_test.dart
 # No Podfile means the SwiftPM path (the CI default); pod install only for CocoaPods.
-if [ -f ios/Podfile ]; then (cd ios && pod install); fi
+if [ -f ios/Podfile ]; then
+  (cd ios && pod install)
+else
+  # SwiftPM: the hostless RunnerTests bundle needs the plugin package in its own link phase.
+  python3 ../../.github/scripts/link-runnertests-spm.py ios/Runner.xcodeproj/project.pbxproj
+fi
 
 xcrun simctl terminate "$UDID" com.purchasely.demo >/dev/null 2>&1
 
