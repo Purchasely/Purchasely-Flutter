@@ -9,6 +9,8 @@ import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import io.purchasely.ext.presentation.PLYPresentationBase
+import io.purchasely.ext.presentation.PLYPresentationType
+import io.mockk.Called
 import io.mockk.MockKAnnotations
 import io.mockk.every
 import io.mockk.impl.annotations.MockK
@@ -736,6 +738,31 @@ class PurchaselyFlutterPluginTest {
     }
 
     // endregion
+
+    @Test
+    fun `display refuses an unavailable deactivated preload before starting a request`() {
+        plugin.onAttachedToEngine(mockFlutterPluginBinding)
+        val expired = "expired-none"
+        val replaced = "replaced-none"
+        val prepared = mockk<PLYPresentationBase.Prepared>(relaxed = true)
+        val replacement = mockk<PLYPresentationBase.Loaded>(relaxed = true)
+        every { replacement.type } returns PLYPresentationType.NORMAL
+        PurchaselyFlutterPlugin.loadedPresentations[replaced] = replacement
+        PurchaselyFlutterPlugin.preparedRequests[expired] = prepared
+
+        for (requestId in listOf(expired, replaced)) {
+            val result = mockk<MethodChannel.Result>(relaxed = true)
+            val displayArgs = mapOf("requestId" to requestId, "requiresDeactivatedPreload" to true)
+
+            plugin.onMethodCall(MethodCall("display", displayArgs), result)
+
+            verify(exactly = 1) { result.error("ARG_INVALID", any(), null) }
+            verify(exactly = 0) { result.success(any()) }
+            assertFalse(PurchaselyFlutterPlugin.displayCallbacks.containsKey(requestId))
+        }
+        verify { prepared wasNot Called }
+        assertEquals(replacement, PurchaselyFlutterPlugin.loadedPresentations[replaced])
+    }
 
     // region exposed (6.3.0)
 

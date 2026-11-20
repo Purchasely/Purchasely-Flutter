@@ -818,6 +818,12 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
             result.safeError("-1", "requestId is required", null)
             return
         }
+        val loaded = loadedPresentations[requestId]
+        // Reloading a stale NONE handle can display a different presentation.
+        if (a["requiresDeactivatedPreload"] == true && loaded?.type != PLYPresentationType.DEACTIVATED) {
+            result.safeError("ARG_INVALID", "display: the deactivated presentation handle expired; preload it again", null)
+            return
+        }
         val transition = parseTransition(a["transition"] as? Map<*, *>)
         val ctx: Context = activity ?: context
 
@@ -838,7 +844,6 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
 
         try {
             // A loaded presentation displays directly; otherwise display from the prepared.
-            val loaded = loadedPresentations[requestId]
             if (loaded != null) {
                 loaded.display(ctx, transition, onDismissed)
             } else {

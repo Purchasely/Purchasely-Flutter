@@ -509,6 +509,27 @@ void main() {
       await outcome;
     });
 
+    test('display() on a deactivated preload requires that native handle',
+        () async {
+      messenger.setMockMethodCallHandler(const MethodChannel(methodChannelName),
+          (call) async {
+        calls.add(call);
+        if (call.method == 'preload') {
+          return <String, Object?>{'type': 2};
+        }
+        throw PlatformException(code: 'ARG_INVALID', message: 'expired handle');
+      });
+      final request = PLYPresentationBuilder.placement('home').build();
+      final presentation = await request.preload();
+
+      final outcome = await presentation.display();
+
+      final displayCall = calls.singleWhere((call) => call.method == 'display');
+      expect(
+          (displayCall.arguments as Map)['requiresDeactivatedPreload'], true);
+      expect(outcome.error?.code, 'ARG_INVALID');
+    });
+
     test(
         're-display() preserves a dynamic default source (not the resolved '
         'screen)', () async {

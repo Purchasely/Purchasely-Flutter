@@ -213,6 +213,8 @@ class PurchaselyBridge {
         'display',
         <String, Object?>{
           'requestId': presentation.requestId,
+          if (presentation.type == PLYPresentationType.deactivated)
+            'requiresDeactivatedPreload': true,
           // The native side may have to rebuild the request from these args
           // (e.g. a retry after a failed display dropped the native request):
           // resend the ORIGINAL source — falling back to inference from the
