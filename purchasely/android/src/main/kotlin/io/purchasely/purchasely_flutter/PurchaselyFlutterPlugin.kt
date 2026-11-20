@@ -896,9 +896,8 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
      * presentation; the native handle cannot be rebuilt from the map, so we look
      * it up in the registry.
      */
-    private fun clientPresentation(presentationMap: Map<*, *>?, method: String): PLYPresentationBase.Loaded? {
-        val requestId = presentationMap?.get("requestId") as? String
-        val loaded = requestId?.let { loadedPresentations[it] }
+    private fun clientPresentation(requestId: String?, method: String): PLYPresentationBase.Loaded? {
+        val loaded = requestId?.let { activeInlineClientPresentations[it] ?: loadedPresentations[it] }
         if (loaded == null) {
             Log.w("PurchaselyFlutter", "$method: no loaded presentation found for this handle — pass the PLYPresentation returned by preload()")
         }
@@ -906,13 +905,24 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
     }
 
     private fun clientPresentationDisplayed(presentationMap: Map<*, *>?) {
-        val loaded = clientPresentation(presentationMap, "clientPresentationDisplayed") ?: return
+        val requestId = presentationMap?.get("requestId") as? String
+        val loaded = clientPresentation(requestId, "clientPresentationDisplayed") ?: return
         Purchasely.clientPresentationDisplayed(loaded)
+        if (requestId != null && loaded.type == PLYPresentationType.CLIENT) {
+            pinCompletedInlineClient(requestId, loaded)
+        }
     }
 
     private fun clientPresentationClosed(presentationMap: Map<*, *>?) {
-        val loaded = clientPresentation(presentationMap, "clientPresentationClosed") ?: return
-        Purchasely.clientPresentationClosed(loaded)
+        val requestId = presentationMap?.get("requestId") as? String
+        val loaded = clientPresentation(requestId, "clientPresentationClosed") ?: return
+        try {
+            Purchasely.clientPresentationClosed(loaded)
+        } finally {
+            if (requestId != null && activeInlineClientPresentations.remove(requestId, loaded)) {
+                retainCompletedInlinePresentation(requestId, loaded)
+            }
+        }
     }
     //endregion
 
@@ -1659,11 +1669,22 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
         val loadedPresentations = ConcurrentHashMap<String, PLYPresentationBase.Loaded>()
         val displayCallbacks = ConcurrentHashMap<String, (PLYPresentationOutcome) -> Unit>()
         private val completedInlinePresentations = LinkedHashMap<String, PLYPresentationBase.Loaded>()
+        // Closing a client-rendered paywall must reach the same handle sent to the SDK on display.
+        private val activeInlineClientPresentations = ConcurrentHashMap<String, PLYPresentationBase.Loaded>()
+
+        private fun pinCompletedInlineClient(requestId: String, presentation: PLYPresentationBase.Loaded) {
+            synchronized(completedInlinePresentations) {
+                if (completedInlinePresentations[requestId] !== presentation) return
+                completedInlinePresentations.remove(requestId)
+                activeInlineClientPresentations[requestId] = presentation
+            }
+        }
 
         /** Keeps recent no-view handles eligible for explicit exposure. */
         internal fun retainCompletedInlinePresentation(requestId: String, presentation: PLYPresentationBase.Loaded) {
             synchronized(completedInlinePresentations) {
                 if (loadedPresentations[requestId] !== presentation) return
+                if (activeInlineClientPresentations[requestId] === presentation) return
                 completedInlinePresentations.remove(requestId)
                 completedInlinePresentations[requestId] = presentation
                 if (completedInlinePresentations.size > REQUEST_RETENTION_CAP) {
