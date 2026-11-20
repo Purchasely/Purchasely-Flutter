@@ -1,3 +1,8 @@
+## 6.3.0
+- Updated Android Purchasely Player SDK to `io.purchasely:player:6.3.0`.
+- Aligns the extension package version with `purchasely_flutter` 6.3.0.
+- Full changelog available at https://docs.purchasely.com/changelog/63-subscription-status-listener.
+
 ## 6.2.0
 - Updated Android Purchasely Player SDK to `io.purchasely:player:6.2.0`.
 - Aligns the extension package version with `purchasely_flutter` 6.2.0.

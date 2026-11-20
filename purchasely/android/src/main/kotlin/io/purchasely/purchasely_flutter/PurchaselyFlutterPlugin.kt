@@ -72,6 +72,10 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
     private lateinit var userAttributeChannel: EventChannel
     private lateinit var presentationChannel: EventChannel
     private lateinit var webRedemptionChannel: EventChannel
+    private lateinit var userSubscriptionStatusChannel: EventChannel
+
+    /** The one native status listener while a Dart listener is attached, else null. */
+    private var userSubscriptionStatusListener: UserSubscriptionStatusListener? = null
 
     /**
      * The Dart-side `purchasely-web-redemption` sink, or null while no Dart listener is
@@ -106,6 +110,8 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
         // `activePresentationSink` is deliberately NOT cleared here: it is a companion-level
         // static shared with the inline NativeView, which outlives a single attachment.
         if (::webRedemptionChannel.isInitialized) webRedemptionChannel.setStreamHandler(null)
+        if (::userSubscriptionStatusChannel.isInitialized) userSubscriptionStatusChannel.setStreamHandler(null)
+        removeUserSubscriptionStatusListener()
         if (::eventChannel.isInitialized) eventChannel.setStreamHandler(null)
         if (::purchaseChannel.isInitialized) purchaseChannel.setStreamHandler(null)
         if (::userAttributeChannel.isInitialized) userAttributeChannel.setStreamHandler(null)
@@ -235,6 +241,30 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
                 webRedemptionSink = null
             }
         })
+
+        // 6.3.0 user subscription status. Its own native listener, not the single-slot
+        // `purchaseListener`: the SDK sends the current status on add, then every change.
+        userSubscriptionStatusChannel = EventChannel(flutterPluginBinding.binaryMessenger, USER_SUBSCRIPTION_STATUS_CHANNEL)
+        userSubscriptionStatusChannel.setStreamHandler(object : EventChannel.StreamHandler {
+            override fun onListen(arguments: Any?, events: EventChannel.EventSink?) {
+                removeUserSubscriptionStatusListener()
+                val listener = UserSubscriptionStatusListener { status ->
+                    val body = userSubscriptionStatusToMap(status)
+                    Handler(Looper.getMainLooper()).post { events?.success(body) }
+                }
+                userSubscriptionStatusListener = listener
+                Purchasely.addUserSubscriptionStatusListener(listener)
+            }
+
+            override fun onCancel(arguments: Any?) {
+                removeUserSubscriptionStatusListener()
+            }
+        })
+    }
+
+    private fun removeUserSubscriptionStatusListener() {
+        userSubscriptionStatusListener?.let { Purchasely.removeUserSubscriptionStatusListener(it) }
+        userSubscriptionStatusListener = null
     }
 
     /**
@@ -266,6 +296,7 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
                 result.safeSuccess(true)
             }
             "back" -> back(args, result)
+            "exposed" -> exposed(args, result)
             "clientPresentationDisplayed" -> {
                 clientPresentationDisplayed(args?.get("presentation") as? Map<*, *>)
                 result.safeSuccess(true)
@@ -693,7 +724,7 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
             }
             .build()
 
-        Purchasely.sdkBridgeVersion = "6.2.0"
+        Purchasely.sdkBridgeVersion = "6.3.0"
         Purchasely.appTechnology = PLYAppTechnology.FLUTTER
 
         Purchasely.start { error ->
@@ -787,6 +818,12 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
             result.safeError("-1", "requestId is required", null)
             return
         }
+        val loaded = loadedPresentations[requestId]
+        // Reloading a stale NONE handle can display a different presentation.
+        if (a["requiresDeactivatedPreload"] == true && loaded?.type != PLYPresentationType.DEACTIVATED) {
+            result.safeError("ARG_INVALID", "display: the deactivated presentation handle expired; preload it again", null)
+            return
+        }
         val transition = parseTransition(a["transition"] as? Map<*, *>)
         val ctx: Context = activity ?: context
 
@@ -807,7 +844,6 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
 
         try {
             // A loaded presentation displays directly; otherwise display from the prepared.
-            val loaded = loadedPresentations[requestId]
             if (loaded != null) {
                 loaded.display(ctx, transition, onDismissed)
             } else {
@@ -844,6 +880,18 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
         val requestId = args?.get("requestId") as? String
         val loaded = requestId?.let { loadedPresentations[it] }
         loaded?.back()
+        result.safeSuccess(true)
+    }
+
+    /** Native `Loaded.exposed()` on the handle kept from the preload; a missing handle is an argument error. */
+    private fun exposed(args: Map<String, Any?>?, result: Result) {
+        val requestId = args?.get("requestId") as? String
+        val loaded = requestId?.let { loadedPresentations[it] }
+        if (loaded == null) {
+            result.safeError("ARG_INVALID", "exposed: no loaded presentation for this requestId, pass a presentation returned by preload()", null)
+            return
+        }
+        loaded.exposed()
         result.safeSuccess(true)
     }
 
@@ -1503,6 +1551,7 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
                 "PERSONALIZATION" -> PLYDataProcessingPurpose.Personalization
                 "THIRD_PARTY_INTEGRATIONS" -> PLYDataProcessingPurpose.ThirdPartyIntegrations
                 "ALL_NON_ESSENTIALS" -> PLYDataProcessingPurpose.AllNonEssentials
+                "SUPPORT_INVESTIGATION" -> PLYDataProcessingPurpose.SupportInvestigation
                 else -> null // Ignore any unrecognized strings
             }
         }.toSet()
@@ -1585,6 +1634,7 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
     companion object {
         private const val PRESENTATION_EVENTS_CHANNEL = "purchasely-presentation-events"
         private const val WEB_REDEMPTION_CHANNEL = "purchasely-web-redemption"
+        private const val USER_SUBSCRIPTION_STATUS_CHANNEL = "purchasely-user-subscription-status"
 
         private lateinit var channel : MethodChannel
 
@@ -1613,6 +1663,23 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
             )
         val loadedPresentations = ConcurrentHashMap<String, PLYPresentationBase.Loaded>()
         val displayCallbacks = ConcurrentHashMap<String, (PLYPresentationOutcome) -> Unit>()
+        private val inlineExposureHandles = LinkedHashMap<String, PLYPresentationBase.Loaded>()
+
+        /** Keeps recent deactivated inline handles eligible for explicit exposure. */
+        internal fun retainInlineExposureHandle(requestId: String, presentation: PLYPresentationBase.Loaded) {
+            synchronized(inlineExposureHandles) {
+                if (loadedPresentations[requestId] !== presentation) return
+                inlineExposureHandles.remove(requestId)
+                inlineExposureHandles[requestId] = presentation
+                if (inlineExposureHandles.size > REQUEST_RETENTION_CAP) {
+                    val entries = inlineExposureHandles.entries.iterator()
+                    val eldest = entries.next()
+                    // Loaded uses identity equality. Leave a newer preload for the same ID alone.
+                    loadedPresentations.remove(eldest.key, eldest.value)
+                    entries.remove()
+                }
+            }
+        }
 
         /**
          * Posts a presentation lifecycle envelope onto the shared
@@ -1687,6 +1754,13 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
         // invocation id (`ply_ic_<nanos>`) sent to Dart so `interceptorResolve`
         // can route to the right SDK completion.
         val pendingInterceptors = ConcurrentHashMap<String, (PLYInterceptResult) -> Unit>()
+
+        /** `{isActive, reason (enum name or null), subscription (same map as userSubscriptions, or null)}`. */
+        internal fun userSubscriptionStatusToMap(status: PLYUserSubscriptionStatus): Map<String, Any?> = mapOf(
+            "isActive" to status.isActive,
+            "reason" to status.reason?.name,
+            "subscription" to status.subscription?.let { transformSubscriptionToMap(it) },
+        )
 
         /**
          * Maps one [PLYSubscriptionData] to the Dart `PLYSubscription` shape.

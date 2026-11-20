@@ -151,14 +151,22 @@ void main() {
         debugPrint('S7 Android → restoreAllProducts=$restored after '
             '${restoreSw.elapsedMilliseconds}ms');
       } on TimeoutException {
+        // Native Android 6.3.0 (#1938) answers BillingUnavailable at once: a timeout is a lost callback.
+        fail('restoreAllProducts never replied after '
+            '${restoreSw.elapsedMilliseconds}ms: expected BillingUnavailable');
+      } on PlatformException catch (e) {
+        // Native Android 6.3.0 (#1938) reports BillingUnavailable to onError instead of false.
+        // Any other restore error must still fail the test.
+        if (!e.toString().contains('BillingUnavailable')) rethrow;
         restoreHandledCleanly = true;
-        debugPrint('S7 Android → restoreAllProducts TimeoutException after '
-            '${restoreSw.elapsedMilliseconds}ms (clean bounded failure, as '
-            'documented on restoreAllProducts)');
+        debugPrint(
+            'S7 Android → restoreAllProducts PlatformException(${e.code}): '
+            '${e.message} after ${restoreSw.elapsedMilliseconds}ms');
       }
       expect(restoreHandledCleanly, isTrue,
-          reason: 'restoreAllProducts must return false or throw '
-              'TimeoutException — never hang past the 15s bound');
+          reason:
+              'restoreAllProducts must return false or throw BillingUnavailable, '
+              'never hang past the 15s bound');
       expect(restoreSw.elapsed, lessThan(const Duration(seconds: 20)),
           reason: 'restoreAllProducts must fast-fail, not stall near/above '
               'its own timeout budget');

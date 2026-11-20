@@ -51,7 +51,7 @@ Add the Purchasely Flutter SDK to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  purchasely_flutter: 6.2.0
+  purchasely_flutter: 6.3.0
 ```
 
 Then run:
@@ -73,8 +73,8 @@ Google Play Billing extension:
 
 ```yaml
 dependencies:
-  purchasely_flutter: 6.2.0
-  purchasely_google: 6.2.0
+  purchasely_flutter: 6.3.0
+  purchasely_google: 6.3.0
 ```
 
 #### Video Player (Required for Video Paywalls)
@@ -83,14 +83,14 @@ If your presentations contain videos, add the Android video player extension:
 
 ```yaml
 dependencies:
-  purchasely_android_player: 6.2.0
+  purchasely_android_player: 6.3.0
 ```
 
 > ⚠️ **All Purchasely packages must be at the exact same version.** Mismatched
 > versions will cause runtime errors or unexpected behavior.
 
 > **Native dependency.** This release targets the Purchasely 6.2 native SDKs
-> (iOS `Purchasely 6.2.0`, Android `io.purchasely:core 6.2.0`), published on the
+> (iOS `Purchasely 6.3.0`, Android `io.purchasely:core 6.3.0`), published on the
 > CocoaPods trunk and Maven Central — so the project builds from the public
 > repositories.
 
@@ -857,6 +857,23 @@ try {
 | `deactivated` | No paywall for this placement |
 | `client` | Your own paywall (BYOS) |
 
+`display()` on a `deactivated` or `client` presentation shows nothing. The
+future resolves once with an outcome that carries the presentation, with no
+error and no purchase result. The native SDK still sends `EXPERIMENT_EXPOSED`
+for a `deactivated` presentation.
+
+If your app renders a `deactivated` presentation itself and does not call
+`display()`, call `exposed()` on the presentation returned by `preload()` when
+the user would have seen the screen (6.3.0). It sends `EXPERIMENT_EXPOSED` at
+each call.
+
+```dart
+final presentation = await request.preload();
+if (presentation.type == PLYPresentationType.deactivated) {
+  await presentation.exposed();
+}
+```
+
 ---
 
 ## Inline Presentations
@@ -865,6 +882,11 @@ To render a presentation inline (embedded) inside your widget tree — as oppose
 to full-screen / modal — use the `PLYPresentationView` widget with a
 `PLYPresentationRequest`. The widget preloads the request and hands the resulting
 presentation to the native inline view.
+
+The widget embeds `normal` and `fallback` presentations. For a `client`
+presentation, render your own widget and report its lifecycle with
+`Purchasely.clientPresentationDisplayed()` and
+`Purchasely.clientPresentationClosed()`.
 
 ```dart
 import 'package:purchasely_flutter/native_view_widget.dart';

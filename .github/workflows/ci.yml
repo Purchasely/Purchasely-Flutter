@@ -189,25 +189,35 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.24.x"
+          # Not 3.24.x: there the SwiftPM flag has no effect and `flutter build ios` runs pod install.
+          flutter-version: "3.41.4"
           channel: "stable"
           cache: true
 
-      - name: Setup CocoaPods cache
-        uses: actions/cache@v6
-        with:
-          path: purchasely/example/ios/Pods
-          key: ${{ runner.os }}-pods-${{ hashFiles('purchasely/example/ios/Podfile.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-pods-
+      # SwiftPM is the main iOS path. The Purchasely pod of a new native version can
+      # lag behind the SwiftPM tag, so the CocoaPods path is only the `Build iOS` job.
+      - name: Enable Swift Package Manager
+        run: flutter config --enable-swift-package-manager
 
       - name: Install Flutter dependencies
         working-directory: purchasely
         run: flutter pub get
 
-      - name: Install CocoaPods dependencies
+      - name: Prepare SwiftPM example
         working-directory: purchasely/example/ios
-        run: pod install --repo-update
+        run: |
+          pod deintegrate
+          rm -rf Pods Podfile Podfile.lock
+          sed -i '' '/Pods\/Target Support Files\/Pods-Runner\/Pods-Runner\..*\.xcconfig/d' Flutter/Debug.xcconfig Flutter/Release.xcconfig
+
+      # A full build, not --config-only: Flutter 3.24 adds the SwiftPM integration only on a build.
+      - name: Add the plugin package to the Runner project
+        working-directory: purchasely/example
+        run: flutter build ios --debug --simulator --no-codesign
+
+      # RunnerTests is hostless, so it needs the plugin package in its own link phase.
+      - name: Link the plugin package into RunnerTests
+        run: python3 .github/scripts/link-runnertests-spm.py purchasely/example/ios/Runner.xcodeproj/project.pbxproj
 
       - name: Boot iOS Simulator
         id: boot-sim
@@ -229,7 +239,7 @@ jobs:
         working-directory: purchasely/example/ios
         run: |
           # RunnerTests is a HOSTLESS logic-test bundle (no TEST_HOST — see the
-          # Podfile/pbxproj), so `test` runs the XCTest cases WITHOUT launching
+          # pbxproj), so `test` runs the XCTest cases WITHOUT launching
           # the full Flutter example app, which SIGSEGVs on headless CI sims.
           # `set -o pipefail` + no `|| true`: a real failure gates the job.
           set -o pipefail
@@ -252,10 +262,10 @@ jobs:
           retention-days: 7
 
   # ============================================
-  # iOS Build
+  # iOS Build (CocoaPods fallback, kept for compatibility)
   # ============================================
   build-ios:
-    name: Build iOS
+    name: Build iOS (CocoaPods fallback)
     runs-on: macos-latest
     needs: [analyze]
     steps:
@@ -303,7 +313,8 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.24.x"
+          # Not 3.24.x: there the SwiftPM flag has no effect and `flutter build ios` runs pod install.
+          flutter-version: "3.41.4"
           channel: "stable"
           cache: true
 
@@ -324,6 +335,12 @@ jobs:
       - name: Build iOS with SwiftPM (Debug - Simulator)
         working-directory: purchasely/example
         run: flutter build ios --debug --simulator --no-codesign
+
+      - name: Check that the build used SwiftPM
+        working-directory: purchasely/example/ios
+        run: |
+          grep -q XCLocalSwiftPackageReference Runner.xcodeproj/project.pbxproj || {
+            echo "::error::flutter build ios did not add the SwiftPM integration: the build used CocoaPods"; exit 1; }
 
   # ============================================
   # Android Build

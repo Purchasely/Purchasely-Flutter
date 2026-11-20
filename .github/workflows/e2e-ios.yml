@@ -101,6 +101,10 @@ jobs:
           key: ${{ runner.os }}-pub-${{ hashFiles('purchasely/pubspec.lock', 'purchasely/example/pubspec.lock') }}
           restore-keys: ${{ runner.os }}-pub-
 
+      # SwiftPM is the main iOS path; the Purchasely pod can lag behind the SwiftPM tag.
+      - name: Enable Swift Package Manager
+        run: flutter config --enable-swift-package-manager
+
       - name: Install Flutter deps (purchasely)
         working-directory: purchasely
         run: flutter pub get
@@ -109,19 +113,12 @@ jobs:
         working-directory: purchasely/example
         run: flutter pub get
 
-      - name: Cache CocoaPods
-        uses: actions/cache@v4
-        with:
-          path: |
-            purchasely/example/ios/Pods
-            ~/Library/Caches/CocoaPods
-          key: ${{ runner.os }}-pods-${{ hashFiles('purchasely/example/ios/Podfile.lock') }}
-          restore-keys: ${{ runner.os }}-pods-
-
-      - name: Install CocoaPods deps
+      - name: Prepare SwiftPM example
         working-directory: purchasely/example/ios
-        # No --repo-update: the CDN resolves specs without cloning the full repo.
-        run: pod install
+        run: |
+          pod deintegrate
+          rm -rf Pods Podfile Podfile.lock
+          sed -i '' '/Pods\/Target Support Files\/Pods-Runner\/Pods-Runner\..*\.xcconfig/d' Flutter/Debug.xcconfig Flutter/Release.xcconfig
 
       - name: Install idb-companion + idb Python client
         run: |

@@ -34,8 +34,12 @@ Native tests:
 # Android (build once first to generate the gradle wrapper)
 cd purchasely/example && flutter build apk --debug
 cd android && ./gradlew :purchasely_flutter:testDebugUnitTest
-# iOS (hostless RunnerTests bundle)
-cd purchasely/example/ios && pod install --repo-update
+# iOS (hostless RunnerTests bundle). SwiftPM is the main path, as in CI: see the
+# `ios-unit-tests` job in `.github/workflows/ci.yml` for the exact steps
+# (enable SwiftPM, deintegrate CocoaPods, `flutter build ios --config-only`,
+# `.github/scripts/link-runnertests-spm.py`). CocoaPods is only a fallback:
+# `cd purchasely/example/ios && pod install --repo-update`
+cd purchasely/example/ios
 xcodebuild test -workspace Runner.xcworkspace -scheme Runner -destination 'platform=iOS Simulator,name=<an installed iPhone>' -only-testing:RunnerTests
 ```
 
@@ -79,7 +83,8 @@ Do not test:
 
 ## CI
 
-- `ci.yml` (PRs and pushes to main, master, develop): format, analyze, Dart tests, public API check, Android and iOS native tests, iOS (CocoaPods and SwiftPM) and Android builds, a Flutter 3.44 / AGP 9 job, version consistency. Dart and iOS jobs use Flutter 3.24.x. Android jobs use Flutter 3.44.0 and Java 17. The public API job uses Flutter 3.44.0.
+- `ci.yml` (PRs and pushes to main, master, develop): format, analyze, Dart tests, public API check, Android and iOS native tests, iOS (SwiftPM and CocoaPods) and Android builds, a Flutter 3.44 / AGP 9 job, version consistency. Dart and iOS jobs use Flutter 3.24.x. Android jobs use Flutter 3.44.0 and Java 17. The public API job uses Flutter 3.44.0.
+- Swift Package Manager is the main iOS path. `ios-unit-tests` (RunnerTests), `build-ios-swiftpm` and `e2e-ios.yml` run through SwiftPM. CocoaPods is only a compatibility fallback: the `Build iOS (CocoaPods fallback)` job. A new native iOS version can reach SwiftPM (a git tag) before it reaches CocoaPods trunk, so only the fallback job can fail for that reason.
 - Keep `minSdk = 23` in `purchasely/example/android/app/build.gradle`. A local `flutter build` rewrites it, and `version-check` fails when it is gone. Restore it before you commit.
 - `e2e-android.yml` and `e2e-ios.yml` run on a real backend. They start when a PR opens and on the `run-ci` label, not on every push. Read the test log, not only the job status. The test catalog is `purchasely/example/integration_test/E2E_TEST_INDEX.md`.
 

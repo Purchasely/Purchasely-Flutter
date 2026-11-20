@@ -165,6 +165,10 @@ pub.dev gets three packages: `purchasely_flutter` (folder `purchasely/`), `purch
   the result of the other jobs. `Validate Podspec` only gives a warning, and `CI Success` does
   not read it. To run `ci.yml` again on the same commit, use **Re-run jobs** in the Actions tab,
   or `gh run rerun <run id>`.
+- **iOS jobs:** SwiftPM is the main iOS path (`ios-unit-tests`, `build-ios-swiftpm`, `e2e-ios.yml`).
+  `Build iOS (CocoaPods fallback)` checks CocoaPods compatibility only. If it fails with "None of your
+  spec sources contain a spec satisfying the dependency: Purchasely", the pod of the native version is
+  not on CocoaPods trunk yet. Verify that before you read it as a code regression.
 - **E2E on the head commit:** `e2e-android.yml` and `e2e-ios.yml` run when the PR opens, not
   at each push. After each push, add the `run-ci` label. The workflow removes the label at each
   run. On a Dependabot PR or a PR from a fork, remove the label by hand before you add it

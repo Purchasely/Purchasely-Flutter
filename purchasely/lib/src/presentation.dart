@@ -60,7 +60,15 @@ abstract class PLYPresentationActions {
       PLYPresentation presentation, PLYTransition? transition);
   Future<void> close(PLYPresentation presentation);
   Future<void> back(PLYPresentation presentation);
+
+  /// Wired up by `bridge.dart` with [instance]. A static, not an interface
+  /// method: a new method breaks a class that implements this exported class.
+  static Future<void> Function(PLYPresentation presentation) exposedCall =
+      _exposedNotInitialised;
 }
+
+Future<void> _exposedNotInitialised(PLYPresentation _) => throw StateError(
+    'Purchasely bridge not initialised — call any presentation entry point first.');
 
 class _UninitialisedActions extends PLYPresentationActions {
   StateError _err() => StateError(
@@ -221,6 +229,14 @@ class PLYPresentation {
   /// Navigate to the previous flow step or dismiss the current one
   /// (matches `back()` on Android).
   Future<void> back() => PLYPresentationActions.instance.back(this);
+
+  /// Tells Purchasely the app reached the moment it would have shown this
+  /// presentation: sends `EXPERIMENT_EXPOSED` for the experiment it serves, at
+  /// each call, and nothing when it serves none. Call it for a
+  /// [PLYPresentationType.deactivated] presentation (a campaign NONE arm) that
+  /// the app renders itself without calling [display]. Native SDKs ignore it
+  /// for any other type. Requires a presentation returned by `preload()`.
+  Future<void> exposed() => PLYPresentationActions.exposedCall(this);
 }
 
 /// Convenience extension so a preload future can be chained directly to display:

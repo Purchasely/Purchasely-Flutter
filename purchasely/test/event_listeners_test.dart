@@ -173,6 +173,86 @@ void main() {
     });
   });
 
+  group('addUserSubscriptionStatusListener (6.3.0)', () {
+    const channel = EventChannel('purchasely-user-subscription-status');
+    final subscription = {
+      'purchaseToken': 'token-1',
+      'subscriptionSource': 1,
+      'plan': {'vendorId': 'plan_monthly'},
+      'product': {
+        'name': 'Premium',
+        'vendorId': 'product_premium',
+        'plans': <String, dynamic>{},
+      },
+    };
+
+    tearDown(() {
+      Purchasely.removeUserSubscriptionStatusListener();
+      messenger.setMockStreamHandler(channel, null);
+    });
+
+    test('decodes every reason, with the subscription', () async {
+      emitOnListen(channel, [
+        for (final r in ['PURCHASED', 'RESTORED', 'EXPIRED', 'WEB_REDEEMED'])
+          {
+            'isActive': r != 'EXPIRED',
+            'reason': r,
+            'subscription': subscription
+          },
+      ]);
+
+      final received = <PLYUserSubscriptionStatus>[];
+      Purchasely.addUserSubscriptionStatusListener(received.add);
+      await pumpEventQueue();
+
+      expect(received.map((s) => s.reason), [
+        PLYUserSubscriptionStatusReason.purchased,
+        PLYUserSubscriptionStatusReason.restored,
+        PLYUserSubscriptionStatusReason.expired,
+        PLYUserSubscriptionStatusReason.webRedeemed,
+      ]);
+      expect(received.map((s) => s.isActive), [true, true, false, true]);
+      expect(received.first.subscription?.purchaseToken, 'token-1');
+      expect(received.first.subscription?.plan?.vendorId, 'plan_monthly');
+    });
+
+    test('a status call has a null reason, and may have no subscription',
+        () async {
+      emitOnListen(channel, [
+        {'isActive': false, 'reason': null, 'subscription': null},
+        {'isActive': true, 'reason': null, 'subscription': subscription},
+      ]);
+
+      final received = <PLYUserSubscriptionStatus>[];
+      Purchasely.addUserSubscriptionStatusListener(received.add);
+      await pumpEventQueue();
+
+      expect(received[0].isActive, false);
+      expect(received[0].reason, isNull);
+      expect(received[0].subscription, isNull);
+      expect(received[1].reason, isNull);
+      expect(received[1].subscription?.purchaseToken, 'token-1');
+    });
+
+    test('remove cancels the channel subscription', () async {
+      var cancelled = false;
+      messenger.setMockStreamHandler(
+        channel,
+        MockStreamHandler.inline(
+          onListen: (arguments, sink) {},
+          onCancel: (arguments) => cancelled = true,
+        ),
+      );
+
+      Purchasely.addUserSubscriptionStatusListener((_) {});
+      await pumpEventQueue();
+      Purchasely.removeUserSubscriptionStatusListener();
+      await pumpEventQueue();
+
+      expect(cancelled, true);
+    });
+  });
+
   group('addWebRedemptionListener (6.1.0)', () {
     test('decodes a granted redemption, subscription included', () async {
       emitOnListen(const EventChannel('purchasely-web-redemption'), [
@@ -275,6 +355,57 @@ void main() {
 
       Purchasely.removeWebRedemptionListener();
       expect(Purchasely.webRedemptions, isNull);
+    });
+  });
+
+  group('experiment analytics events (6.3.0)', () {
+    for (final name in ['EXPERIMENT_ASSIGNED', 'EXPERIMENT_EXPOSED']) {
+      test('decodes $name with its experiment ids', () async {
+        emitOnListen(const EventChannel('purchasely-events'), [
+          {
+            'name': name,
+            'properties': {
+              'event_name': name,
+              'event_created_at': '2026-11-18T10:00:00Z',
+              'experiment_id': 'camp_1',
+              'experiment_variant_id': 'var_a',
+            },
+          },
+        ]);
+
+        final received = <PLYEvent>[];
+        Purchasely.listenToEvents(received.add);
+        await pumpEventQueue();
+
+        expect(received.single.name, PLYEventName.values.byName(name));
+        expect(received.single.properties.event_name,
+            PLYEventName.values.byName(name));
+        expect(received.single.properties.experiment_id, 'camp_1');
+        expect(received.single.properties.experiment_variant_id, 'var_a');
+
+        Purchasely.stopListeningToEvents();
+      });
+    }
+
+    test('an event without experiment ids reports null ids', () async {
+      emitOnListen(const EventChannel('purchasely-events'), [
+        {
+          'name': 'APP_STARTED',
+          'properties': {
+            'event_name': 'APP_STARTED',
+            'event_created_at': '2026-11-18T10:00:00Z',
+          },
+        },
+      ]);
+
+      final received = <PLYEvent>[];
+      Purchasely.listenToEvents(received.add);
+      await pumpEventQueue();
+
+      expect(received.single.properties.experiment_id, isNull);
+      expect(received.single.properties.experiment_variant_id, isNull);
+
+      Purchasely.stopListeningToEvents();
     });
   });
 

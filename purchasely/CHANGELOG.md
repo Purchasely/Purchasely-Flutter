@@ -1,3 +1,47 @@
+## 6.3.0
+
+Native SDKs: iOS `Purchasely 6.3.0`, Android `io.purchasely:core 6.3.0`.
+
+Full changelog available at https://docs.purchasely.com/changelog/63-subscription-status-listener.
+
+### Added
+
+- Added `PLYPresentation.exposed()` (MOB-676). It tells Purchasely the app
+  reached the moment it would have shown a `PLYPresentationType.deactivated`
+  presentation (a campaign NONE arm) that it renders itself. It needs the
+  presentation returned by `preload()`; a missing handle raises a
+  `PlatformException` with code `ARG_INVALID`.
+- Added `PLYEventName.EXPERIMENT_ASSIGNED` and `PLYEventName.EXPERIMENT_EXPOSED`,
+  and `PLYEventProperties.experiment_id` / `experiment_variant_id` (MOB-676).
+
+- Added `Purchasely.addUserSubscriptionStatusListener` and
+  `removeUserSubscriptionStatusListener` (MOB-647). The callback receives a
+  `PLYUserSubscriptionStatus` with `isActive`, `reason`
+  (`purchased`, `restored`, `expired`, `webRedeemed`, or `null` for a status
+  call) and `subscription` (the `userSubscriptions()` type, or `null`). The
+  native SDK sends the current status first, then every change.
+- Added `PLYDataProcessingPurpose.supportInvestigation` (iOS and Android 6.3.0).
+  `allNonEssentials` now includes it natively.
+
+### Deprecated
+
+- `Purchasely.listenToPurchases` and `stopListeningToPurchases`. Use
+  `addUserSubscriptionStatusListener`.
+
+### Changed
+
+- Android: `restoreAllProducts` and `silentRestoreAllProducts` now throw a `PlatformException` (`BillingUnavailable`) when Google Play billing is unavailable (no Google account, old Play services). 6.2.0 returned `false`. This comes from the native Android 6.3.0 (#1938). Catch the exception before you upgrade.
+- `display()` on a `deactivated` or `client` presentation shows nothing and
+  resolves once with an outcome that carries the presentation, no error and no
+  purchase result. The native SDK sends `EXPERIMENT_EXPOSED` from it (MOB-676).
+
+### Fixed
+
+- Android: mounting a deactivated or client presentation inline leaves the
+  view empty and reports the native outcome. Up to 64 recent deactivated
+  inline preload handles remain available for `exposed()`. Calling `display()`
+  or `exposed()` with an expired handle returns `ARG_INVALID`.
+
 ## 6.2.0
 
 Native SDKs: iOS `Purchasely 6.2.0`, Android `io.purchasely:core 6.2.0`.

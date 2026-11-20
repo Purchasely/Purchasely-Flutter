@@ -11,6 +11,11 @@ import 'src/ply_transformers.dart';
 import 'src/presentation.dart' show PLYPresentation, PLYPresentationType;
 import 'src/presentation_outcome.dart' show PLYPresentationOutcome;
 import 'src/purchasely_builder.dart' show PLYLogLevel, PurchaselyBuilder;
+import 'src/user_subscription_status.dart' as user_subscription_status
+    show
+        PLYUserSubscriptionStatusListener,
+        addUserSubscriptionStatusListener,
+        removeUserSubscriptionStatusListener;
 import 'src/web_redemption.dart' as web_redemption
     show
         PLYWebRedemptionListener,
@@ -35,6 +40,8 @@ export 'src/presentation_outcome.dart';
 export 'src/presentation_request.dart';
 export 'src/purchasely_builder.dart';
 export 'src/transition.dart';
+export 'src/user_subscription_status.dart'
+    show PLYUserSubscriptionStatus, PLYUserSubscriptionStatusReason;
 export 'src/web_redemption.dart'
     show
         PLYWebRedemptionContext,
@@ -497,12 +504,31 @@ class Purchasely {
   static void removeWebRedemptionListener() =>
       web_redemption.removeWebRedemptionListener();
 
+  /// Registers [block] for the user's subscription status, replacing any
+  /// listener already registered (6.3.0).
+  ///
+  /// The native SDK sends the current status first when it knows it (a status
+  /// call: [PLYUserSubscriptionStatus.reason] is `null`), then every change:
+  /// a subscription purchased, restored, redeemed from the web or expired.
+  /// Replaces [listenToPurchases].
+  static void addUserSubscriptionStatusListener(
+          user_subscription_status.PLYUserSubscriptionStatusListener block) =>
+      user_subscription_status.addUserSubscriptionStatusListener(block);
+
+  /// Removes the listener registered with [addUserSubscriptionStatusListener].
+  static void removeUserSubscriptionStatusListener() =>
+      user_subscription_status.removeUserSubscriptionStatusListener();
+
+  @Deprecated('Use addUserSubscriptionStatusListener for subscriptions. '
+      'For a non-consumable purchase, read the purchase result of the display() outcome.')
   static void listenToPurchases(Function block) {
     purchases = _purchases.receiveBroadcastStream().listen((event) {
       block(event);
     });
   }
 
+  @Deprecated('Use addUserSubscriptionStatusListener for subscriptions. '
+      'For a non-consumable purchase, read the purchase result of the display() outcome.')
   static void stopListeningToPurchases() {
     purchases?.cancel();
   }
@@ -780,10 +806,10 @@ class Purchasely {
   /// Replaces the persisted set of revoked purposes; it does not merge.
   ///
   /// Pass the complete list every time. Passing `[]` grants everything back.
-  /// On iOS, `allNonEssentials` is analytics, campaigns, personalization, and
-  /// thirdPartyIntegrations; it excludes identifiedAnalytics and refundHandling,
-  /// which must be added explicitly when needed. On Android, `allNonEssentials`
-  /// includes identifiedAnalytics, and refundHandling is ignored.
+  /// On both platforms, `allNonEssentials` is analytics, identifiedAnalytics,
+  /// campaigns, personalization, thirdPartyIntegrations and
+  /// supportInvestigation. It excludes refundHandling (iOS only, ignored on
+  /// Android), which must be added explicitly when needed.
   static void revokeDataProcessingConsent(
       List<PLYDataProcessingPurpose> purposes) {
     List<String> mappedPurposes = purposes
@@ -919,7 +945,10 @@ class Purchasely {
       selectedOptions,
       displayedOptions,
       properties['web_checkout_provider'],
-    )..redemption = _redemptionFromMap(properties['redemption']);
+    )
+      ..redemption = _redemptionFromMap(properties['redemption'])
+      ..experiment_id = properties['experiment_id'] as String?
+      ..experiment_variant_id = properties['experiment_variant_id'] as String?;
   }
 
   /// Maps the `redemption` block of a `REDEMPTION_CONSUMED` /
@@ -995,6 +1024,8 @@ class Purchasely {
         return "THIRD_PARTY_INTEGRATIONS";
       case PLYDataProcessingPurpose.refundHandling:
         return "REFUND_HANDLING";
+      case PLYDataProcessingPurpose.supportInvestigation:
+        return "SUPPORT_INVESTIGATION";
     }
   }
 }
@@ -1065,7 +1096,12 @@ enum PLYDataProcessingPurpose {
   /// revoked-consent flag as `refund-handling` in the
   /// `X-PRIVACY-CONSENT-REVOKED-FEATURES` header for refusal of consumption
   /// data processing attached to a refund request. Gates no SDK behaviour.
-  refundHandling
+  refundHandling,
+
+  /// Purchasely iOS and Android >= 6.3.0. Processing of the data that Purchasely
+  /// support uses to investigate an issue reported by the user. Part of
+  /// `allNonEssentials`.
+  supportInvestigation
 }
 
 enum PLYThemeMode { light, dark, system }
@@ -1139,6 +1175,15 @@ enum PLYEventName {
   /// A Web2App redemption failed. New in 6.1.0 on both native platforms. Read
   /// `properties.redemption?.error_code` and `properties.error_message`.
   REDEMPTION_FAILED,
+
+  /// The user was assigned to an arm of a campaign experiment. New in 6.3.0.
+  /// Read `properties.experiment_id` and `properties.experiment_variant_id`.
+  EXPERIMENT_ASSIGNED,
+
+  /// The user was exposed to the arm of a campaign experiment (a screen shown,
+  /// or a NONE arm at `display()` / `exposed()`). New in 6.3.0. Read
+  /// `properties.experiment_id` and `properties.experiment_variant_id`.
+  EXPERIMENT_EXPOSED,
 
   /// Sentinel for a native event name this enum doesn't (yet) declare a case
   /// for. Never silently misclassified as [APP_CONFIGURED] — see
@@ -1259,6 +1304,13 @@ class PLYEventProperties {
   /// in 6.1.0. Assigned after construction, like [PLYPlan.commitmentInfo], so
   /// the positional constructor stays source-compatible.
   PLYEventPropertyRedemption? redemption;
+
+  /// Set on `EXPERIMENT_ASSIGNED` and `EXPERIMENT_EXPOSED`, null otherwise. New
+  /// in 6.3.0. Assigned after construction, like [redemption].
+  String? experiment_id;
+
+  /// The arm of [experiment_id] the user got. See [experiment_id].
+  String? experiment_variant_id;
 
   PLYEventProperties(
       this.sdk_version,

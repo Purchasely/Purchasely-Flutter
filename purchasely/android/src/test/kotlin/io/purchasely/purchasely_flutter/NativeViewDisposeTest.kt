@@ -4,16 +4,22 @@ import android.app.Activity
 import android.content.Context
 import android.os.Looper
 import android.widget.FrameLayout
+import io.flutter.plugin.common.MethodCall
+import io.flutter.plugin.common.MethodChannel
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkObject
+import io.mockk.mockkStatic
 import io.mockk.slot
 import io.mockk.unmockkAll
 import io.mockk.verify
+import io.purchasely.ext.Purchasely
 import io.purchasely.ext.presentation.PLYPresentationBase
 import io.purchasely.ext.presentation.PLYPresentationOutcome
 import io.purchasely.ext.presentation.PLYPresentationState
+import io.purchasely.ext.presentation.PLYPresentationType
 import io.purchasely.ext.presentation.PLYPurchaseResult
+import io.purchasely.models.PLYError
 import io.purchasely.views.presentation.PLYPresentationView
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.After
@@ -105,7 +111,138 @@ class NativeViewDisposeTest {
         assertTrue(events.none { it["event"] == "onDismissed" })
     }
 
-    private fun attachedView(): NativeView {
+    @Test
+    fun `a presentation with no native view reports its outcome once and keeps its preload handle`() {
+        val error = PLYError.Unknown(IllegalStateException("cannot be embedded as a view"))
+        val outcome = PLYPresentationOutcome(error = error)
+        val presentation = presentationWithoutView(outcome)
+        every { PurchaselyFlutterPlugin.outcomeToMap(any()) } answers {
+            mapOf("error" to (firstArg<PLYPresentationOutcome>().error === error))
+        }
+        PurchaselyFlutterPlugin.loadedPresentations[requestId] = presentation
+
+        val view = attachedView()
+
+        assertEquals(0, (view.view as FrameLayout).childCount)
+        assertTrue(events.none { it["event"] == "onPresented" })
+
+        view.dispose()
+
+        val dismissed = events.filter { it["event"] == "onDismissed" }
+        assertEquals("onDismissed events: $dismissed", 1, dismissed.size)
+        assertEquals(true, (dismissed.single()["outcome"] as Map<*, *>)["error"])
+        assertEquals(presentation, PurchaselyFlutterPlugin.loadedPresentations[requestId])
+    }
+
+    @Test
+    fun `no-view retention evicts completed handles without consuming active or replacement preloads`() {
+        val loaded = PurchaselyFlutterPlugin.loadedPresentations
+        val active = loaded[requestId]
+        attachedView()
+
+        val outcome = PLYPresentationOutcome(error = PLYError.Unknown(IllegalStateException("cannot embed")))
+        loaded["oldest"] = presentationWithoutView(outcome)
+        attachedView("oldest").dispose()
+
+        loaded["replaced"] = presentationWithoutView(outcome)
+        attachedView("replaced").dispose()
+        val replacement = mockk<PLYPresentationBase.Loaded>()
+        loaded["replaced"] = replacement
+
+        val retained = (1..64).associate { index ->
+            val id = "no-view-$index"
+            val presentation = presentationWithoutView(outcome)
+            loaded[id] = presentation
+            attachedView(id).dispose()
+            id to presentation
+        }
+
+        assertFalse(loaded.containsKey("oldest"))
+        assertEquals(replacement, loaded["replaced"])
+        assertEquals(active, loaded[requestId])
+        assertEquals(retained, loaded.filterKeys { it in retained })
+    }
+
+    @Test
+    fun `a client reported before inline attachment remains available for app notifications`() {
+        val loaded = PurchaselyFlutterPlugin.loadedPresentations
+        val outcome = PLYPresentationOutcome(error = PLYError.Unknown(IllegalStateException("cannot embed")))
+        val clientId = "client-open"
+        val client = presentationWithoutView(outcome, PLYPresentationType.CLIENT)
+        loaded[clientId] = client
+        mockkStatic(Purchasely::class)
+        every { Purchasely.clientPresentationDisplayed(any()) } returns Unit
+        every { Purchasely.clientPresentationClosed(any()) } returns Unit
+        val plugin = PurchaselyFlutterPlugin()
+
+        notifyClient(plugin, "clientPresentationDisplayed", clientId)
+        attachedView(clientId).dispose()
+        mountNoViewBatch("while-client-open", outcome)
+        notifyClient(plugin, "clientPresentationClosed", clientId)
+
+        verify(exactly = 1) { Purchasely.clientPresentationDisplayed(client) }
+        verify(exactly = 1) { Purchasely.clientPresentationClosed(client) }
+        assertEquals(client, loaded[clientId])
+
+        mountNoViewBatch("after-client-closed", outcome)
+        assertEquals(client, loaded[clientId])
+    }
+
+    @Test
+    fun `client notifications resolve the latest preload for the same request`() {
+        val loaded = PurchaselyFlutterPlugin.loadedPresentations
+        val outcome = PLYPresentationOutcome(error = PLYError.Unknown(IllegalStateException("cannot embed")))
+        val clientId = "client-replaced"
+        val client = presentationWithoutView(outcome, PLYPresentationType.CLIENT)
+        loaded[clientId] = client
+        attachedView(clientId).dispose()
+        mockkStatic(Purchasely::class)
+        every { Purchasely.clientPresentationDisplayed(any()) } returns Unit
+        every { Purchasely.clientPresentationClosed(any()) } returns Unit
+        val plugin = PurchaselyFlutterPlugin()
+
+        notifyClient(plugin, "clientPresentationDisplayed", clientId)
+        val replacement = presentationWithoutView(outcome, PLYPresentationType.CLIENT)
+        loaded[clientId] = replacement
+        notifyClient(plugin, "clientPresentationDisplayed", clientId)
+        notifyClient(plugin, "clientPresentationClosed", clientId)
+
+        verify(exactly = 1) { Purchasely.clientPresentationDisplayed(client) }
+        verify(exactly = 1) { Purchasely.clientPresentationDisplayed(replacement) }
+        verify(exactly = 1) { Purchasely.clientPresentationClosed(replacement) }
+        assertEquals(replacement, loaded[clientId])
+    }
+
+    private fun notifyClient(plugin: PurchaselyFlutterPlugin, method: String, requestId: String) {
+        val result = mockk<MethodChannel.Result>(relaxed = true)
+        val arguments = mapOf("presentation" to mapOf("requestId" to requestId))
+        plugin.onMethodCall(MethodCall(method, arguments), result)
+        verify(exactly = 1) { result.success(true) }
+    }
+
+    private fun mountNoViewBatch(prefix: String, outcome: PLYPresentationOutcome) {
+        repeat(64) { index ->
+            val id = "$prefix-$index"
+            PurchaselyFlutterPlugin.loadedPresentations[id] = presentationWithoutView(outcome)
+            attachedView(id).dispose()
+        }
+    }
+
+    private fun presentationWithoutView(
+        outcome: PLYPresentationOutcome,
+        presentationType: PLYPresentationType = PLYPresentationType.DEACTIVATED,
+    ): PLYPresentationBase.Loaded =
+        mockk<PLYPresentationBase.Loaded>(relaxed = true) {
+            every { state } returns this@NativeViewDisposeTest.state
+            every { type } returns presentationType
+            // The native SDK calls back synchronously, then returns null.
+            every { buildView(any<Context>(), any()) } answers {
+                secondArg<(PLYPresentationOutcome) -> Unit>().invoke(outcome)
+                null
+            }
+        }
+
+    private fun attachedView(requestId: String = this.requestId): NativeView {
         val view = NativeView(root.context, 1, mapOf("requestId" to requestId))
         root.addView(view.view)
         shadowOf(Looper.getMainLooper()).idle()

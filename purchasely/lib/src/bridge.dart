@@ -9,7 +9,7 @@
 //   - EventChannel  : `purchasely-presentation-events`  — events native → Dart
 //
 // MethodChannel verbs:
-//   start, preload, display, close, back,
+//   start, preload, display, close, back, exposed,
 //   registerInterceptor, removeInterceptor, removeAllInterceptors,
 //   interceptorResolve
 //
@@ -69,6 +69,7 @@ class PurchaselyBridge {
     final bridge = _instance!;
     if (!_wired) {
       PLYPresentationActions.instance = _BridgePresentationActions(bridge);
+      PLYPresentationActions.exposedCall = bridge._exposed;
       PLYPresentationRequestActions.instance =
           _BridgePresentationRequestActions(bridge);
       bridge._listenEvents();
@@ -83,6 +84,7 @@ class PurchaselyBridge {
     _instance = null;
     _wired = false;
     PLYPresentationActions.instance = _uninitialisedPresentation;
+    PLYPresentationActions.exposedCall = _uninitialisedExposed;
     PLYPresentationRequestActions.instance = _uninitialisedRequest;
   }
 
@@ -211,6 +213,8 @@ class PurchaselyBridge {
         'display',
         <String, Object?>{
           'requestId': presentation.requestId,
+          if (presentation.type == PLYPresentationType.deactivated)
+            'requiresDeactivatedPreload': true,
           // The native side may have to rebuild the request from these args
           // (e.g. a retry after a failed display dropped the native request):
           // resend the ORIGINAL source — falling back to inference from the
@@ -250,6 +254,13 @@ class PurchaselyBridge {
   Future<void> _back(PLYPresentation presentation) async {
     await _method.invokeMethod<dynamic>(
       'back',
+      <String, Object?>{'requestId': presentation.requestId},
+    );
+  }
+
+  Future<void> _exposed(PLYPresentation presentation) async {
+    await _method.invokeMethod<dynamic>(
+      'exposed',
       <String, Object?>{'requestId': presentation.requestId},
     );
   }
@@ -581,6 +592,9 @@ class _BridgePresentationRequestActions extends PLYPresentationRequestActions {
 }
 
 // --- Sentinels reused by `debugReset` -------------------------------------
+
+Future<void> _uninitialisedExposed(PLYPresentation _) => throw StateError(
+    'Purchasely bridge not initialised — call any presentation entry point first.');
 
 final PLYPresentationActions _uninitialisedPresentation =
     _UninitialisedPresentationActions();

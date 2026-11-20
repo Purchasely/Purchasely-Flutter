@@ -27,7 +27,7 @@ class SwiftPurchaselyFlutterPluginTests: XCTestCase {
         // Mirrors the chain used by `SwiftPurchaselyFlutterPlugin.start(...)`.
         let builder = Purchasely.apiKey("test-api-key")
             .appTechnology(.flutter)
-            .sdkBridgeVersion("6.2.0")
+            .sdkBridgeVersion("6.3.0")
             .runningMode(.full)
             .logLevel(.debug)
             .storekitSettings(.storeKit2)
@@ -71,6 +71,12 @@ class SwiftPurchaselyFlutterPluginTests: XCTestCase {
         XCTAssertEqual(
             SwiftPurchaselyFlutterPlugin.dataProcessingPurposes(from: ["REFUND_HANDLING", "IDENTIFIED_ANALYTICS", "ALL_NON_ESSENTIALS"]),
             expected)
+    }
+
+    func testConsentMappingKeepsSupportInvestigation() {
+        XCTAssertEqual(
+            SwiftPurchaselyFlutterPlugin.dataProcessingPurposes(from: ["SUPPORT_INVESTIGATION"]),
+            [.supportInvestigation])
     }
 
     func testConsentMappingOfAnEmptyListIsEmpty() {
@@ -472,6 +478,31 @@ class SwiftPurchaselyFlutterPluginTests: XCTestCase {
         // `UNKNOWN` event.
         XCTAssertEqual(PLYEvent.redemptionConsumed.name, "REDEMPTION_CONSUMED")
         XCTAssertEqual(PLYEvent.redemptionFailed.name, "REDEMPTION_FAILED")
+    }
+
+    func testExperimentEventsAndExposedExistOnTheNativeSdk() {
+        // The two 6.3.0 analytics events the Dart `PLYEventName` enum declares, and the
+        // `exposed()` call behind `PLYPresentation.exposed()`.
+        XCTAssertEqual(PLYEvent.experimentAssigned.name, "EXPERIMENT_ASSIGNED")
+        XCTAssertEqual(PLYEvent.experimentExposed.name, "EXPERIMENT_EXPOSED")
+        let exposed: (any PLYPresentation) -> () -> Void = { $0.exposed }
+        XCTAssertNotNil(exposed)
+    }
+
+    func testUserSubscriptionStatusBody() {
+        let sub: [String: Any] = ["purchaseToken": "t"]
+        let purchased = UserSubscriptionStatusHandler.body(isActive: true, reason: .purchased, subscription: sub)
+        XCTAssertEqual(purchased["reason"] as? String, "PURCHASED")
+        XCTAssertEqual(purchased["isActive"] as? Bool, true)
+        XCTAssertEqual((purchased["subscription"] as? [String: Any])?["purchaseToken"] as? String, "t")
+
+        let status = UserSubscriptionStatusHandler.body(isActive: false, reason: .none, subscription: nil)
+        XCTAssertTrue(status["reason"] is NSNull)
+        XCTAssertTrue(status["subscription"] is NSNull)
+
+        XCTAssertEqual(UserSubscriptionStatusHandler.body(isActive: true, reason: .webRedeemed, subscription: nil)["reason"] as? String, "WEB_REDEEMED")
+        XCTAssertEqual(UserSubscriptionStatusHandler.body(isActive: false, reason: .expired, subscription: nil)["reason"] as? String, "EXPIRED")
+        XCTAssertEqual(UserSubscriptionStatusHandler.body(isActive: true, reason: .restored, subscription: nil)["reason"] as? String, "RESTORED")
     }
 
     // MARK: - Presentation builder factories (v6)

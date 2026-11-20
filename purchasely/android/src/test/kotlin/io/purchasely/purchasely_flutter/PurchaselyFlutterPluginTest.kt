@@ -8,6 +8,9 @@ import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding
 import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
+import io.purchasely.ext.presentation.PLYPresentationBase
+import io.purchasely.ext.presentation.PLYPresentationType
+import io.mockk.Called
 import io.mockk.MockKAnnotations
 import io.mockk.every
 import io.mockk.impl.annotations.MockK
@@ -25,6 +28,8 @@ import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
+import io.purchasely.ext.PLYUserSubscriptionStatus
+import io.purchasely.ext.PLYUserSubscriptionStatusReason
 import io.purchasely.ext.Purchasely
 import io.purchasely.ext.DistributionType
 import io.purchasely.ext.PLYSubscriptionStatus
@@ -730,6 +735,81 @@ class PurchaselyFlutterPluginTest {
 
         /** The thread name without the coroutine suffix that the debug agent appends. */
         fun threadName(): String = Thread.currentThread().name.substringBefore(" @")
+    }
+
+    // endregion
+
+    @Test
+    fun `display refuses an unavailable deactivated preload before starting a request`() {
+        plugin.onAttachedToEngine(mockFlutterPluginBinding)
+        val expired = "expired-none"
+        val replaced = "replaced-none"
+        val prepared = mockk<PLYPresentationBase.Prepared>(relaxed = true)
+        val replacement = mockk<PLYPresentationBase.Loaded>(relaxed = true)
+        every { replacement.type } returns PLYPresentationType.NORMAL
+        PurchaselyFlutterPlugin.loadedPresentations[replaced] = replacement
+        PurchaselyFlutterPlugin.preparedRequests[expired] = prepared
+
+        for (requestId in listOf(expired, replaced)) {
+            val result = mockk<MethodChannel.Result>(relaxed = true)
+            val displayArgs = mapOf("requestId" to requestId, "requiresDeactivatedPreload" to true)
+
+            plugin.onMethodCall(MethodCall("display", displayArgs), result)
+
+            verify(exactly = 1) { result.error("ARG_INVALID", any(), null) }
+            verify(exactly = 0) { result.success(any()) }
+            assertFalse(PurchaselyFlutterPlugin.displayCallbacks.containsKey(requestId))
+        }
+        verify { prepared wasNot Called }
+        assertEquals(replacement, PurchaselyFlutterPlugin.loadedPresentations[replaced])
+    }
+
+    // region exposed (6.3.0)
+
+    @Test
+    fun `exposed without a loaded presentation returns an argument error`() {
+        plugin.onAttachedToEngine(mockFlutterPluginBinding)
+
+        plugin.onMethodCall(MethodCall("exposed", mapOf("requestId" to "missing")), mockResult)
+
+        verify { mockResult.error("ARG_INVALID", any(), null) }
+    }
+
+    @Test
+    fun `exposed calls the native handle kept from the preload`() {
+        val loaded = mockk<PLYPresentationBase.Loaded>(relaxed = true)
+        PurchaselyFlutterPlugin.loadedPresentations["req-1"] = loaded
+        plugin.onAttachedToEngine(mockFlutterPluginBinding)
+
+        plugin.onMethodCall(MethodCall("exposed", mapOf("requestId" to "req-1")), mockResult)
+
+        verify(exactly = 1) { loaded.exposed() }
+        verify { mockResult.success(true) }
+    }
+
+    // region user subscription status (6.3.0)
+
+    @Test
+    fun `userSubscriptionStatusToMap maps reason by name and reuses the subscription map`() {
+        val data = stubbedSubscriptionData(StoreType.GOOGLE_PLAY_STORE)
+        val map = PurchaselyFlutterPlugin.userSubscriptionStatusToMap(
+            PLYUserSubscriptionStatus(true, PLYUserSubscriptionStatusReason.WEB_REDEEMED, data)
+        )
+
+        assertEquals(true, map["isActive"])
+        assertEquals("WEB_REDEEMED", map["reason"])
+        assertEquals(PurchaselyFlutterPlugin.transformSubscriptionToMap(data), map["subscription"])
+    }
+
+    @Test
+    fun `userSubscriptionStatusToMap keeps a status call with null reason and subscription`() {
+        val map = PurchaselyFlutterPlugin.userSubscriptionStatusToMap(
+            PLYUserSubscriptionStatus(false, null, null)
+        )
+
+        assertEquals(false, map["isActive"])
+        assertTrue(map.containsKey("reason") && map["reason"] == null)
+        assertTrue(map.containsKey("subscription") && map["subscription"] == null)
     }
 
     // endregion
