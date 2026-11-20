@@ -108,15 +108,9 @@ class NativeViewDisposeTest {
 
     @Test
     fun `a presentation with no native view reports its outcome once and keeps its preload handle`() {
-        val presentation = mockk<PLYPresentationBase.Loaded>(relaxed = true)
-        every { presentation.state } returns state
         val error = PLYError.Unknown(IllegalStateException("cannot be embedded as a view"))
         val outcome = PLYPresentationOutcome(error = error)
-        // The native SDK calls back synchronously, then returns null.
-        every { presentation.buildView(any<Context>(), any()) } answers {
-            secondArg<(PLYPresentationOutcome) -> Unit>().invoke(outcome)
-            null
-        }
+        val presentation = presentationWithoutView(outcome)
         every { PurchaselyFlutterPlugin.outcomeToMap(any()) } answers {
             mapOf("error" to (firstArg<PLYPresentationOutcome>().error === error))
         }
@@ -135,7 +129,46 @@ class NativeViewDisposeTest {
         assertEquals(presentation, PurchaselyFlutterPlugin.loadedPresentations[requestId])
     }
 
-    private fun attachedView(): NativeView {
+    @Test
+    fun `no-view retention evicts completed handles without consuming active or replacement preloads`() {
+        val loaded = PurchaselyFlutterPlugin.loadedPresentations
+        val active = loaded[requestId]
+        attachedView()
+
+        val outcome = PLYPresentationOutcome(error = PLYError.Unknown(IllegalStateException("cannot embed")))
+        loaded["oldest"] = presentationWithoutView(outcome)
+        attachedView("oldest").dispose()
+
+        loaded["replaced"] = presentationWithoutView(outcome)
+        attachedView("replaced").dispose()
+        val replacement = mockk<PLYPresentationBase.Loaded>()
+        loaded["replaced"] = replacement
+
+        val retained = (1..64).associate { index ->
+            val id = "no-view-$index"
+            val presentation = presentationWithoutView(outcome)
+            loaded[id] = presentation
+            attachedView(id).dispose()
+            id to presentation
+        }
+
+        assertFalse(loaded.containsKey("oldest"))
+        assertEquals(replacement, loaded["replaced"])
+        assertEquals(active, loaded[requestId])
+        assertEquals(retained, loaded.filterKeys { it in retained })
+    }
+
+    private fun presentationWithoutView(outcome: PLYPresentationOutcome): PLYPresentationBase.Loaded =
+        mockk<PLYPresentationBase.Loaded>(relaxed = true) {
+            every { state } returns this@NativeViewDisposeTest.state
+            // The native SDK calls back synchronously, then returns null.
+            every { buildView(any<Context>(), any()) } answers {
+                secondArg<(PLYPresentationOutcome) -> Unit>().invoke(outcome)
+                null
+            }
+        }
+
+    private fun attachedView(requestId: String = this.requestId): NativeView {
         val view = NativeView(root.context, 1, mapOf("requestId" to requestId))
         root.addView(view.view)
         shadowOf(Looper.getMainLooper()).idle()

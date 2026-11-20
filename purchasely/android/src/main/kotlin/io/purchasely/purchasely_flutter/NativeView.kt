@@ -84,8 +84,11 @@ internal class NativeView(
             )
         }
         // A non-embeddable presentation reports its error synchronously and returns null.
-        // It can still be exposed by the caller, so only an actual view consumes the handle.
-        val presentationView = presentation.buildView(context) { dismiss(it) } ?: return
+        val presentationView = presentation.buildView(context) { dismiss(it) }
+        if (presentationView == null) {
+            PurchaselyFlutterPlugin.retainCompletedInlinePresentation(requestId, presentation)
+            return
+        }
         hasInlineView = true
         // The SDK skips the buildView callback when the view tree lifecycle owner is already
         // destroyed (a FlutterFragment host; a FlutterActivity has no owner, so the callback

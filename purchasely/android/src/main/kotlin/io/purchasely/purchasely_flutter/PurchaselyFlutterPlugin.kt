@@ -1658,6 +1658,23 @@ class PurchaselyFlutterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, 
             )
         val loadedPresentations = ConcurrentHashMap<String, PLYPresentationBase.Loaded>()
         val displayCallbacks = ConcurrentHashMap<String, (PLYPresentationOutcome) -> Unit>()
+        private val completedInlinePresentations = LinkedHashMap<String, PLYPresentationBase.Loaded>()
+
+        /** Keeps recent no-view handles eligible for explicit exposure. */
+        internal fun retainCompletedInlinePresentation(requestId: String, presentation: PLYPresentationBase.Loaded) {
+            synchronized(completedInlinePresentations) {
+                if (loadedPresentations[requestId] !== presentation) return
+                completedInlinePresentations.remove(requestId)
+                completedInlinePresentations[requestId] = presentation
+                if (completedInlinePresentations.size > REQUEST_RETENTION_CAP) {
+                    val entries = completedInlinePresentations.entries.iterator()
+                    val eldest = entries.next()
+                    // Loaded uses identity equality. Leave a newer preload for the same ID alone.
+                    loadedPresentations.remove(eldest.key, eldest.value)
+                    entries.remove()
+                }
+            }
+        }
 
         /**
          * Posts a presentation lifecycle envelope onto the shared
