@@ -164,19 +164,19 @@ class NativeViewDisposeTest {
     }
 
     @Test
-    fun `an opened inline client presentation survives eviction until its close reaches native`() {
+    fun `a client reported before inline attachment remains available for app notifications`() {
         val loaded = PurchaselyFlutterPlugin.loadedPresentations
         val outcome = PLYPresentationOutcome(error = PLYError.Unknown(IllegalStateException("cannot embed")))
         val clientId = "client-open"
         val client = presentationWithoutView(outcome, PLYPresentationType.CLIENT)
         loaded[clientId] = client
-        attachedView(clientId).dispose()
         mockkStatic(Purchasely::class)
         every { Purchasely.clientPresentationDisplayed(any()) } returns Unit
         every { Purchasely.clientPresentationClosed(any()) } returns Unit
         val plugin = PurchaselyFlutterPlugin()
 
         notifyClient(plugin, "clientPresentationDisplayed", clientId)
+        attachedView(clientId).dispose()
         mountNoViewBatch("while-client-open", outcome)
         notifyClient(plugin, "clientPresentationClosed", clientId)
 
@@ -185,11 +185,11 @@ class NativeViewDisposeTest {
         assertEquals(client, loaded[clientId])
 
         mountNoViewBatch("after-client-closed", outcome)
-        assertFalse(loaded.containsKey(clientId))
+        assertEquals(client, loaded[clientId])
     }
 
     @Test
-    fun `closing an opened inline client uses its own handle even after a replacement preload`() {
+    fun `client notifications resolve the latest preload for the same request`() {
         val loaded = PurchaselyFlutterPlugin.loadedPresentations
         val outcome = PLYPresentationOutcome(error = PLYError.Unknown(IllegalStateException("cannot embed")))
         val clientId = "client-replaced"
@@ -202,12 +202,14 @@ class NativeViewDisposeTest {
         val plugin = PurchaselyFlutterPlugin()
 
         notifyClient(plugin, "clientPresentationDisplayed", clientId)
-        val replacement = mockk<PLYPresentationBase.Loaded>()
+        val replacement = presentationWithoutView(outcome, PLYPresentationType.CLIENT)
         loaded[clientId] = replacement
+        notifyClient(plugin, "clientPresentationDisplayed", clientId)
         notifyClient(plugin, "clientPresentationClosed", clientId)
 
-        verify(exactly = 1) { Purchasely.clientPresentationClosed(client) }
-        verify(exactly = 0) { Purchasely.clientPresentationClosed(replacement) }
+        verify(exactly = 1) { Purchasely.clientPresentationDisplayed(client) }
+        verify(exactly = 1) { Purchasely.clientPresentationDisplayed(replacement) }
+        verify(exactly = 1) { Purchasely.clientPresentationClosed(replacement) }
         assertEquals(replacement, loaded[clientId])
     }
 

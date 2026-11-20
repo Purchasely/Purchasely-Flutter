@@ -8,6 +8,7 @@ import io.flutter.plugin.platform.PlatformView
 import io.purchasely.ext.presentation.PLYPresentationBase
 import io.purchasely.ext.presentation.PLYPresentationOutcome
 import io.purchasely.ext.presentation.PLYPresentationState
+import io.purchasely.ext.presentation.PLYPresentationType
 
 internal class NativeView(
     context: Context,
@@ -86,7 +87,9 @@ internal class NativeView(
         // A non-embeddable presentation reports its error synchronously and returns null.
         val presentationView = presentation.buildView(context) { dismiss(it) }
         if (presentationView == null) {
-            PurchaselyFlutterPlugin.retainCompletedInlinePresentation(requestId, presentation)
+            if (presentation.type == PLYPresentationType.DEACTIVATED) {
+                PurchaselyFlutterPlugin.retainInlineExposureHandle(requestId, presentation)
+            }
             return
         }
         hasInlineView = true

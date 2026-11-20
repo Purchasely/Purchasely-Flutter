@@ -883,6 +883,11 @@ to full-screen / modal — use the `PLYPresentationView` widget with a
 `PLYPresentationRequest`. The widget preloads the request and hands the resulting
 presentation to the native inline view.
 
+The widget embeds `normal` and `fallback` presentations. For a `client`
+presentation, render your own widget and report its lifecycle with
+`Purchasely.clientPresentationDisplayed()` and
+`Purchasely.clientPresentationClosed()`.
+
 ```dart
 import 'package:purchasely_flutter/native_view_widget.dart';
 import 'package:purchasely_flutter/purchasely_flutter.dart';
