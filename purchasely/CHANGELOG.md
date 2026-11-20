@@ -35,6 +35,11 @@ Full changelog available at https://docs.purchasely.com/changelog/63-subscriptio
   resolves once with an outcome that carries the presentation, no error and no
   purchase result. The native SDK sends `EXPERIMENT_EXPOSED` from it (MOB-676).
 
+### Fixed
+
+- Android: mounting a deactivated or client presentation inline leaves the
+  view empty and reports the native outcome without crashing the app.
+
 ## 6.2.0
 
 Native SDKs: iOS `Purchasely 6.2.0`, Android `io.purchasely:core 6.2.0`.

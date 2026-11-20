@@ -14,6 +14,7 @@ import io.purchasely.ext.presentation.PLYPresentationBase
 import io.purchasely.ext.presentation.PLYPresentationOutcome
 import io.purchasely.ext.presentation.PLYPresentationState
 import io.purchasely.ext.presentation.PLYPurchaseResult
+import io.purchasely.models.PLYError
 import io.purchasely.views.presentation.PLYPresentationView
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.After
@@ -103,6 +104,34 @@ class NativeViewDisposeTest {
 
         verify(exactly = 0) { PurchaselyFlutterPlugin.outcomeToMap(any()) }
         assertTrue(events.none { it["event"] == "onDismissed" })
+    }
+
+    @Test
+    fun `a presentation with no native view adds no child, sends no onPresented and sends onDismissed once`() {
+        val presentation = mockk<PLYPresentationBase.Loaded>(relaxed = true)
+        every { presentation.state } returns state
+        val error = PLYError.Unknown(IllegalStateException("cannot be embedded as a view"))
+        val outcome = PLYPresentationOutcome(error = error)
+        // The native SDK calls back synchronously, then returns null.
+        every { presentation.buildView(any<Context>(), any()) } answers {
+            secondArg<(PLYPresentationOutcome) -> Unit>().invoke(outcome)
+            null
+        }
+        every { PurchaselyFlutterPlugin.outcomeToMap(any()) } answers {
+            mapOf("error" to (firstArg<PLYPresentationOutcome>().error === error))
+        }
+        PurchaselyFlutterPlugin.loadedPresentations[requestId] = presentation
+
+        val view = attachedView()
+
+        assertEquals(0, (view.view as FrameLayout).childCount)
+        assertTrue(events.none { it["event"] == "onPresented" })
+
+        view.dispose()
+
+        val dismissed = events.filter { it["event"] == "onDismissed" }
+        assertEquals("onDismissed events: $dismissed", 1, dismissed.size)
+        assertEquals(true, (dismissed.single()["outcome"] as Map<*, *>)["error"])
     }
 
     private fun attachedView(): NativeView {

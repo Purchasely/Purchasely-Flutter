@@ -92,6 +92,9 @@ internal class NativeView(
             val state = presentation.state.value
             if (state is PLYPresentationState.Dismissed) dismiss(state.outcome)
         }
+        // Non-embeddable presentations report an outcome without creating a view.
+        if (presentationView == null) return
+
         Log.d("Purchasely", "Presentation built successfully.")
         layout.addView(presentationView)
 
