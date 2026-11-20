@@ -65,26 +65,28 @@ internal class NativeView(
         }
 
         var dismissed = false
+        var hasInlineView = false
         fun dismiss(outcome: PLYPresentationOutcome) {
             if (dismissed) return
             // Surface the embedded outcome through the SAME presentation-events
             // sink and envelope shape as the full-screen path, keyed by the
             // request's `requestId`, so the Dart `onDismissed` callback (and the
             // pending `display()` future) fire for the inline path too.
-            // Only the loaded handle and display callback are dropped: the
-            // prepared request stays registered so a re-display of the same
-            // Dart handle keeps its original source (same policy as the
-            // full-screen path).
             dismissed = true
-            PurchaselyFlutterPlugin.loadedPresentations.remove(requestId)
-            PurchaselyFlutterPlugin.displayCallbacks.remove(requestId)
+            if (hasInlineView) {
+                PurchaselyFlutterPlugin.loadedPresentations.remove(requestId)
+                PurchaselyFlutterPlugin.displayCallbacks.remove(requestId)
+            }
             PurchaselyFlutterPlugin.emitPresentationEvent(
                 PurchaselyFlutterPlugin.eventEnvelope("onDismissed", requestId).apply {
                     put("outcome", PurchaselyFlutterPlugin.outcomeToMap(outcome))
                 }
             )
         }
-        val presentationView = presentation.buildView(context) { dismiss(it) }
+        // A non-embeddable presentation reports its error synchronously and returns null.
+        // It can still be exposed by the caller, so only an actual view consumes the handle.
+        val presentationView = presentation.buildView(context) { dismiss(it) } ?: return
+        hasInlineView = true
         // The SDK skips the buildView callback when the view tree lifecycle owner is already
         // destroyed (a FlutterFragment host; a FlutterActivity has no owner, so the callback
         // still comes), but it still ends the session: send the dismissal from that state.
@@ -92,9 +94,6 @@ internal class NativeView(
             val state = presentation.state.value
             if (state is PLYPresentationState.Dismissed) dismiss(state.outcome)
         }
-        // Non-embeddable presentations report an outcome without creating a view.
-        if (presentationView == null) return
-
         Log.d("Purchasely", "Presentation built successfully.")
         layout.addView(presentationView)
 

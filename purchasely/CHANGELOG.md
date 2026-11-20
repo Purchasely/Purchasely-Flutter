@@ -38,7 +38,8 @@ Full changelog available at https://docs.purchasely.com/changelog/63-subscriptio
 ### Fixed
 
 - Android: mounting a deactivated or client presentation inline leaves the
-  view empty and reports the native outcome without crashing the app.
+  view empty, reports the native outcome, and keeps the preloaded presentation
+  available for `exposed()`.
 
 ## 6.2.0
 

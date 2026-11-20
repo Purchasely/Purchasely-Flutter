@@ -107,7 +107,7 @@ class NativeViewDisposeTest {
     }
 
     @Test
-    fun `a presentation with no native view adds no child, sends no onPresented and sends onDismissed once`() {
+    fun `a presentation with no native view reports its outcome once and keeps its preload handle`() {
         val presentation = mockk<PLYPresentationBase.Loaded>(relaxed = true)
         every { presentation.state } returns state
         val error = PLYError.Unknown(IllegalStateException("cannot be embedded as a view"))
@@ -132,6 +132,7 @@ class NativeViewDisposeTest {
         val dismissed = events.filter { it["event"] == "onDismissed" }
         assertEquals("onDismissed events: $dismissed", 1, dismissed.size)
         assertEquals(true, (dismissed.single()["outcome"] as Map<*, *>)["error"])
+        assertEquals(presentation, PurchaselyFlutterPlugin.loadedPresentations[requestId])
     }
 
     private fun attachedView(): NativeView {
